@@ -26,16 +26,24 @@ for version in 11.6.6 11.10.0; do
       grep "^${snapshot}\$" | head -1)
 
     # Rule A: MPR staged without corresponding describe-snapshot.mdl.
+    # Exception: if the snapshot has no pending changes (content unchanged after
+    # make update-snapshots), the snapshot is already up-to-date — nothing to stage.
+    # This happens when a MDL syntax-only refactor (e.g. begin→{}) produces the same
+    # BSON and thus the same describe output, while the MPR binary still differs.
     if [ -n "$staged_mpr" ] && [ -z "$staged_snapshot" ]; then
-        echo "" >&2
-        echo "COMMIT BLOCKED: ${golden_dir}/mprcontents/ staged without describe-snapshot.mdl." >&2
-        echo "" >&2
-        echo "  Run: make update-snapshots" >&2
-        echo "  Then: git add ${snapshot}" >&2
-        echo "" >&2
-        echo "SOP: .githooks/sop/06-describe-snapshot-sync.md" >&2
-        echo "CONTEXT: TRIGGER_FILE=${staged_mpr}" >&2
-        exit 1
+        snapshot_dirty=$(git status --porcelain "${snapshot}" 2>/dev/null | head -1)
+        if [ -n "$snapshot_dirty" ]; then
+            echo "" >&2
+            echo "COMMIT BLOCKED: ${golden_dir}/mprcontents/ staged without describe-snapshot.mdl." >&2
+            echo "" >&2
+            echo "  Run: make update-snapshots" >&2
+            echo "  Then: git add ${snapshot}" >&2
+            echo "" >&2
+            echo "SOP: .githooks/sop/06-describe-snapshot-sync.md" >&2
+            echo "CONTEXT: TRIGGER_FILE=${staged_mpr}" >&2
+            exit 1
+        fi
+        # Snapshot is clean (content unchanged after make update-snapshots) — allow.
     fi
 
     # Rule B: describe-snapshot.mdl staged → validate with mxcli check.

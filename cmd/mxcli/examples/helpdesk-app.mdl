@@ -271,36 +271,36 @@ create or modify microflow HD.ACT_Ticket_Submit
   ($Ticket: HD.Ticket)
   returns boolean as $Success
   folder 'Ticket'
-begin
-  if $Ticket/Subject = '' then
+{
+  if $Ticket/Subject = '' {
       validation feedback $Ticket/Subject message 'Subject is required';
       return false;
-  end if;
+  }
 
   -- Compute SLA due date based on priority.
   -- Hours: Critical=2, High=8, default=24.
   -- MDL has no else-if; use nested if/else.
-  if $Ticket/Priority = HD.TicketPriority.Critical then
+  if $Ticket/Priority = HD.TicketPriority.Critical {
     change $Ticket (
       Status   = HD.TicketStatus.Open,
       SLADueAt = addHours('[%CurrentDateTime%]', @HD.SLA_CRITICAL_HOURS)
     );
-  else
-    if $Ticket/Priority = HD.TicketPriority.High then
+  } else {
+    if $Ticket/Priority = HD.TicketPriority.High {
       change $Ticket (
         Status   = HD.TicketStatus.Open,
         SLADueAt = addHours('[%CurrentDateTime%]', @HD.SLA_HIGH_HOURS)
       );
-    else
+    } else {
       change $Ticket (
         Status   = HD.TicketStatus.Open,
         SLADueAt = addHours('[%CurrentDateTime%]', 24)
       );
-    end if;
-  end if;
+    }
+  }
   commit $Ticket;
   return true;
-end;
+}
 /
 
 -- ACT_Ticket_Validate: multi-field validation feedback demo
@@ -314,31 +314,31 @@ create or modify microflow HD.ACT_Ticket_Validate
   ($Ticket: HD.Ticket)
   returns boolean as $Valid
   folder 'Ticket'
-begin
-  declare $Valid boolean = true;
+{
+  declare $Valid: boolean = true;
 
   -- Plain form: no template args, bail-early on empty subject
-  if $Ticket/Subject = '' then
+  if $Ticket/Subject = '' {
     validation feedback $Ticket/Subject message 'Subject is required.';
     set $Valid = false;
-  else
+  } else {
     -- objects form: {1} placeholder bound to the attribute value via objects clause
-    if length($Ticket/Subject) < 3 then
+    if length($Ticket/Subject) < 3 {
       validation feedback $Ticket/Subject message 'Subject ''{1}'' is too short (minimum 3 characters).' objects [$Ticket/Subject];
       set $Valid = false;
-    end if;
-  end if;
+    }
+  }
 
   -- Field: Description — required when Priority is Critical
-  if $Ticket/Priority = HD.TicketPriority.Critical then
-    if $Ticket/Description = '' or $Ticket/Description = empty then
+  if $Ticket/Priority = HD.TicketPriority.Critical {
+    if $Ticket/Description = '' or $Ticket/Description = empty {
       validation feedback $Ticket/Description message 'Description is required for Critical tickets.';
       set $Valid = false;
-    end if;
-  end if;
+    }
+  }
 
   return $Valid;
-end;
+}
 /
 
 -- ACT_Ticket_Assign: Open → InProgress, set Agent
@@ -347,18 +347,18 @@ create or modify microflow HD.ACT_Ticket_Assign
   ($Ticket: HD.Ticket, $Agent: HD.Agent)
   returns boolean as $Success
   folder 'Ticket'
-begin
-  if $Ticket/Status != HD.TicketStatus.Open then
+{
+  if $Ticket/Status != HD.TicketStatus.Open {
       show message 'Only Open tickets can be assigned.' type warning;
       return false;
-  end if;
+  }
   change $Ticket (
     Status = HD.TicketStatus.InProgress,
     HD.Ticket_Agent = $Agent
   );
   commit $Ticket;
   return true;
-end;
+}
 /
 
 -- ACT_Ticket_Resolve: InProgress → Resolved
@@ -367,12 +367,12 @@ create or modify microflow HD.ACT_Ticket_Resolve
   ($Ticket: HD.Ticket)
   returns boolean as $Success
   folder 'Ticket'
-begin
-  if $Ticket/Status != HD.TicketStatus.InProgress then
+{
+  if $Ticket/Status != HD.TicketStatus.InProgress {
       return false;
-  end if;
-  declare $Now datetime = '[%CurrentDateTime%]';
-  declare $IsOver boolean = $Now > $Ticket/SLADueAt and $Ticket/SLADueAt != empty;
+  }
+  declare $Now: datetime = '[%CurrentDateTime%]';
+  declare $IsOver: boolean = $Now > $Ticket/SLADueAt and $Ticket/SLADueAt != empty;
   change $Ticket (
     Status     = HD.TicketStatus.Resolved,
     ResolvedAt = $Now,
@@ -380,7 +380,7 @@ begin
   );
   commit $Ticket;
   return true;
-end;
+}
 /
 
 -- ACT_Ticket_Reopen: Resolved/Closed → Open
@@ -389,18 +389,18 @@ create or modify microflow HD.ACT_Ticket_Reopen
   ($Ticket: HD.Ticket)
   returns boolean as $Success
   folder 'Ticket'
-begin
+{
   if $Ticket/Status != HD.TicketStatus.Resolved
-     and $Ticket/Status != HD.TicketStatus.Closed then
+     and $Ticket/Status != HD.TicketStatus.Closed {
       return false;
-  end if;
+  }
   change $Ticket (
     Status     = HD.TicketStatus.Open,
     ResolvedAt = empty
   );
   commit $Ticket;
   return true;
-end;
+}
 /
 
 -- ACT_Ticket_Close: Resolved → Closed (terminal transition)
@@ -408,14 +408,14 @@ create or modify microflow HD.ACT_Ticket_Close
   ($Ticket: HD.Ticket)
   returns boolean as $Success
   folder 'Ticket'
-begin
-  if $Ticket/Status != HD.TicketStatus.Resolved then
+{
+  if $Ticket/Status != HD.TicketStatus.Resolved {
       return false;
-  end if;
+  }
   change $Ticket (Status = HD.TicketStatus.Closed);
   commit $Ticket;
   return true;
-end;
+}
 /
 
 -- MARK: KnowledgeBase — Microflows
@@ -425,18 +425,18 @@ create or modify microflow KB.ACT_Article_Publish
   ($Article: KB.Article)
   returns boolean as $Success
   folder 'Article'
-begin
-  if $Article/Content = '' or $Article/Content = empty then
+{
+  if $Article/Content = '' or $Article/Content = empty {
       validation feedback $Article/Content message 'Content cannot be empty before publishing.';
       return false;
-  end if;
+  }
   change $Article (
     Status      = KB.ArticleStatus.Published,
     PublishedAt = '[%CurrentDateTime%]'
   );
   commit $Article;
   return true;
-end;
+}
 /
 
 -- ACT_Article_Archive: Published → Archived (terminal)
@@ -444,11 +444,11 @@ create or modify microflow KB.ACT_Article_Archive
   ($Article: KB.Article)
   returns boolean as $Success
   folder 'Article'
-begin
+{
   change $Article (Status = KB.ArticleStatus.Archived);
   commit $Article;
   return true;
-end;
+}
 /
 
 -- ACT_Ticket_MarkCommentsRead: loop over internal comments, un-flag them
@@ -456,17 +456,16 @@ end;
 create or modify microflow HD.ACT_Ticket_MarkCommentsRead
   ($Ticket: HD.Ticket)
   folder 'Ticket'
-begin
+{
   retrieve $Comments from HD.TicketComment
     where [HD.TicketComment_Ticket/HD.Ticket = $Ticket and IsInternal = true]
     limit 100;
-  loop $Comment in $Comments
-  begin
+  loop $Comment in $Comments {
     change $Comment (IsInternal = false);
     commit $Comment;
-  end loop;
+  }
   return;
-end;
+}
 /
 
 -- ACT_EscalationRequest_Cleanup: delete escalation records for a ticket
@@ -474,16 +473,15 @@ end;
 create or modify microflow HD.ACT_EscalationRequest_Cleanup
   ($Ticket: HD.Ticket)
   folder 'Ticket'
-begin
+{
   retrieve $Requests from HD.EscalationRequest
     where [HD.EscalationRequest_Ticket/HD.Ticket = $Ticket]
     limit 50;
-  loop $Req in $Requests
-  begin
+  loop $Req in $Requests {
     delete $Req;
-  end loop;
+  }
   return;
-end;
+}
 /
 
 -- ACT_Ticket_SafeCommit: commit ticket with error rollback
@@ -492,12 +490,12 @@ create or modify microflow HD.ACT_Ticket_SafeCommit
   ($Ticket: HD.Ticket)
   returns boolean as $Success
   folder 'Ticket'
-begin
-  declare $Success boolean = false;
+{
+  declare $Success: boolean = false;
   commit $Ticket on error rollback;
   set $Success = true;
   return $Success;
-end;
+}
 /
 
 -- DS_OverdueTicketCount: count overdue tickets via aggregate
@@ -506,13 +504,13 @@ create or modify microflow HD.DS_OverdueTicketCount
   ()
   returns integer as $Count
   folder 'Ticket'
-begin
+{
   retrieve $Overdue from HD.Ticket
     where [IsOverSLA = true]
     limit 0;
   $Count = COUNT($Overdue);
   return $Count;
-end;
+}
 /
 
 -- DS_TicketsByCompany: retrieve tickets for a given customer company
@@ -523,13 +521,13 @@ create or modify microflow HD.DS_TicketsByCompany
   ($Company: String)
   returns list of HD.Ticket as $Tickets
   folder 'Ticket'
-begin
+{
   retrieve $Tickets from HD.Ticket
     where [HD.Ticket_Customer/HD.Customer/Company = $Company]
     limit 50
     offset 4;
   return $Tickets;
-end;
+}
 /
 
 -- DS_MyTickets: retrieve all tickets created by the currently logged-in user
@@ -538,12 +536,12 @@ create or modify microflow HD.DS_MyTickets
   ()
   returns list of HD.Ticket as $Tickets
   folder 'Ticket'
-begin
+{
   retrieve $Tickets from HD.Ticket
     where [System.owner = '[%CurrentUser%]']
     limit 0;
   return $Tickets;
-end;
+}
 /
 
 -- DS_OpenHighTickets: retrieve open high-priority tickets
@@ -554,12 +552,12 @@ create or modify microflow HD.DS_OpenHighTickets
   ()
   returns list of HD.Ticket as $Tickets
   folder 'Ticket'
-begin
+{
   retrieve $Tickets from HD.Ticket
     where [Status = 'Open' and Priority = 'High']
     limit 0;
   return $Tickets;
-end;
+}
 /
 
 -- DS_TicketPage: retrieve a page of tickets with offset, limit, and sort
@@ -572,15 +570,15 @@ create or modify microflow HD.DS_TicketPage
   ($PageIndex: Integer, $PageSize: Integer)
   returns list of HD.Ticket as $Tickets
   folder 'Ticket'
-begin
-  declare $Offset integer = ($PageIndex - 1) * $PageSize;
+{
+  declare $Offset: integer = ($PageIndex - 1) * $PageSize;
   retrieve $Tickets from HD.Ticket
     where [Status != 'Closed']
     sort by SLADueAt asc, Priority desc
     limit $PageSize
     offset $Offset;
   return $Tickets;
-end;
+}
 /
 
 -- DS_RecentCriticalTickets: retrieve most-recently-created critical tickets
@@ -591,13 +589,13 @@ create or modify microflow HD.DS_RecentCriticalTickets
   ()
   returns list of HD.Ticket as $Tickets
   folder 'Ticket'
-begin
+{
   retrieve $Tickets from HD.Ticket
     where [Priority = 'Critical']
     sort by createdDate desc
     limit 10;
   return $Tickets;
-end;
+}
 /
 
 -- MARK: HelpDesk — Nanoflows
@@ -608,7 +606,7 @@ create or modify nanoflow HD.NF_Ticket_QuickCreate
   ($Customer: HD.Customer, $Subject: string)
   returns HD.Ticket as $Ticket
   folder 'Ticket'
-begin
+{
   $Ticket = create HD.Ticket (
     Subject  = $Subject,
     Status   = HD.TicketStatus.Draft,
@@ -617,7 +615,7 @@ begin
   );
   commit $Ticket;
   return $Ticket;
-end;
+}
 /
 
 -- NF_TicketSearch_Apply: retrieve tickets matching search criteria
@@ -626,13 +624,13 @@ create or modify nanoflow HD.NF_TicketSearch_Apply
   ($Search: HD.TicketSearch)
   returns list of HD.Ticket as $Tickets
   folder 'Ticket/Search'
-begin
+{
   -- Simplified: full retrieve (XPath cross-object reference to non-persistent
   -- entity not supported in this context; filtering done client-side or via
   -- separate microflow call). Demonstrates nanoflow DB retrieve capability.
   retrieve $Tickets from HD.Ticket limit 100;
   return $Tickets;
-end;
+}
 /
 
 -- NF_Priority_GetLabel: pure client-side computation, returns CSS class string
@@ -643,22 +641,22 @@ create or modify nanoflow HD.NF_Priority_GetLabel
   ($PriorityStr: string)
   returns string as $CSSClass
   folder 'Ticket'
-begin
+{
   -- MDL uses nested if/else (no else-if); 'set' keyword for variable reassignment
-  declare $CSSClass string = 'badge-default';
-  if $PriorityStr = 'Critical' then
+  declare $CSSClass: string = 'badge-default';
+  if $PriorityStr = 'Critical' {
     set $CSSClass = 'badge-danger';
-  else
-    if $PriorityStr = 'High' then
+  } else {
+    if $PriorityStr = 'High' {
       set $CSSClass = 'badge-warning';
-    else
-      if $PriorityStr = 'Normal' then
+    } else {
+      if $PriorityStr = 'Normal' {
         set $CSSClass = 'badge-info';
-      end if;
-    end if;
-  end if;
+      }
+    }
+  }
   return $CSSClass;
-end;
+}
 /
 
 -- MARK: KnowledgeBase — Nanoflows
@@ -668,10 +666,10 @@ create or modify microflow KB.SUB_Article_TruncateContent
   ($Article: KB.Article)
   returns string as $Preview
   folder 'Article'
-begin
-  declare $Preview string = $Article/Content;
+{
+  declare $Preview: string = $Article/Content;
   return $Preview;
-end;
+}
 /
 
 -- NF_Article_FormatPreview: call a microflow from a nanoflow
@@ -680,10 +678,10 @@ create or modify nanoflow KB.NF_Article_FormatPreview
   ($Article: KB.Article)
   returns string as $Preview
   folder 'Article'
-begin
+{
   $Preview = call microflow KB.SUB_Article_TruncateContent(Article = $Article);
   return $Preview;
-end;
+}
 /
 
 -- MARK: HelpDesk — Sub-Workflow (WF_SUB_ManagerReview)
@@ -728,47 +726,47 @@ create or modify microflow HD.WFA_GetManagerAssignees
   ($workflow: System.Workflow, $EscalationRequest: HD.EscalationRequest)
   returns list of System.User as $Users
   folder 'Escalation'
-begin
+{
   -- Simplified: full user retrieve (role-based XPath on System.UserRoles
   -- requires specific association path; use admin configuration in production)
   retrieve $Users from System.User limit 10;
   return $Users;
-end;
+}
 /
 
 -- WFS_ microflows: called directly by workflow activities (WFS_ prefix)
 create or modify microflow HD.WFS_SendReminder
   ($EscalationRequest: HD.EscalationRequest)
   folder 'Escalation'
-begin
+{
   log info 'Escalation reminder sent for request ' + toString($EscalationRequest/Reason);
   return;
-end;
+}
 /
 
 create or modify microflow HD.WFS_Approve
   ($EscalationRequest: HD.EscalationRequest)
   folder 'Escalation'
-begin
+{
   retrieve $Ticket from HD.Ticket
     where [HD.EscalationRequest_Ticket/HD.EscalationRequest = $EscalationRequest]
     limit 1;
-  if $Ticket != empty then
+  if $Ticket != empty {
     change $Ticket (Priority = HD.TicketPriority.Critical);
     commit $Ticket;
-  end if;
+  }
   return;
-end;
+}
 /
 
 create or modify microflow HD.WFS_Reject
   ($EscalationRequest: HD.EscalationRequest)
   folder 'Escalation'
-begin
+{
   change $EscalationRequest (RejectionReason = 'Rejected by manager review board.');
   commit $EscalationRequest;
   return;
-end;
+}
 /
 
 -- Sub-workflow: manager review with decision routing and multi-user task fallback
@@ -819,45 +817,45 @@ alter workflow HD.WF_SUB_ManagerReview
 create or modify microflow HD.WFS_Escalation_Initialize
   ($EscalationRequest: HD.EscalationRequest)
   folder 'Escalation'
-begin
+{
   change $EscalationRequest (RequestedAt = '[%CurrentDateTime%]');
   commit $EscalationRequest;
   return;
-end;
+}
 /
 
 create or modify microflow HD.WFS_AutoReject
   ($EscalationRequest: HD.EscalationRequest)
   folder 'Escalation'
-begin
+{
   change $EscalationRequest (RejectionReason = 'Auto-rejected: no manager response within 48 hours.');
   commit $EscalationRequest;
   return;
-end;
+}
 /
 
 create or modify microflow HD.WFS_UpdateTicketPriority
   ($EscalationRequest: HD.EscalationRequest)
   folder 'Escalation'
-begin
+{
   retrieve $Ticket from HD.Ticket
     where [HD.EscalationRequest_Ticket/HD.EscalationRequest = $EscalationRequest]
     limit 1;
-  if $Ticket != empty then
+  if $Ticket != empty {
     change $Ticket (Priority = HD.TicketPriority.Critical, Status = HD.TicketStatus.InProgress);
     commit $Ticket;
-  end if;
+  }
   return;
-end;
+}
 /
 
 create or modify microflow HD.WFS_NotifyAgent
   ($EscalationRequest: HD.EscalationRequest)
   folder 'Escalation'
-begin
+{
   log info 'Agent notified: escalation approved for request ' + toString($EscalationRequest/Reason);
   return;
-end;
+}
 /
 
 -- Parent workflow: full escalation with all major workflow element types
@@ -913,10 +911,10 @@ create or modify microflow HD.ACT_StartEscalation
   ($Ticket: HD.Ticket, $Reason: string)
   returns boolean as $Success
   folder 'Escalation'
-begin
-  if $Ticket/Status != HD.TicketStatus.InProgress then
+{
+  if $Ticket/Status != HD.TicketStatus.InProgress {
     return false;
-  end if;
+  }
   $EscalationRequest = create HD.EscalationRequest (
     Reason          = $Reason,
     RequestedAt     = '[%CurrentDateTime%]',
@@ -928,58 +926,58 @@ begin
   -- standard form is: call workflow Module.WFName($ContextParam)
   call workflow HD.WF_TicketEscalation (EscalationRequest = $EscalationRequest);
   return true;
-end;
+}
 /
 
 -- 2. Workflow create event handler (WFC_ prefix)
 create or modify microflow HD.WFC_EscalationRequest_OnCreate
   ($EscalationRequest: HD.EscalationRequest)
   folder 'Escalation'
-begin
+{
   log info 'EscalationRequest created: ' + toString($EscalationRequest/Reason);
   return;
-end;
+}
 /
 
 -- 3. Change workflow state — Pause / Unpause / Abort / Retry
 create or modify microflow HD.ACT_Workflow_ChangeState
   ($Workflow: System.Workflow, $Operation: string)
   folder 'Escalation/WorkflowAdmin'
-begin
-  if $Operation = 'Pause' then
+{
+  if $Operation = 'Pause' {
     workflow operation pause $Workflow;
-  else
-    if $Operation = 'Unpause' then
+  } else {
+    if $Operation = 'Unpause' {
       workflow operation unpause $Workflow;
-    else
+    } else {
       workflow operation abort $Workflow reason 'Administratively aborted';
-    end if;
-  end if;
+    }
+  }
   return;
-end;
+}
 /
 
 -- 4. Complete user task (system-side completion)
 create or modify microflow HD.ACT_Workflow_CompleteTask
   ($UserTask: System.WorkflowUserTask, $Outcome: string)
   folder 'Escalation/WorkflowAdmin'
-begin
+{
   set task outcome $UserTask 'Approve';
   -- Note: SET TASK OUTCOME requires a string literal, not a variable.
   -- The $Outcome parameter is accepted for dispatch logic but the outcome value
   -- must be specified at design time. Use if/else to dispatch on $Outcome.
   return;
-end;
+}
 /
 
 -- 5. Generate jump-to options (no return value — CE0109 fix).
 create or modify microflow HD.ACT_Workflow_GenerateJumpTo
   ($Workflow: System.Workflow)
   folder 'Escalation/WorkflowAdmin'
-begin
+{
   generate jump to options for $Workflow as HD.WF_TicketEscalation;
   return;
-end;
+}
 /
 
 -- 6. Apply a pre-generated jump-to option (System.WorkflowJumpToDetails).
@@ -988,10 +986,10 @@ end;
 create or modify microflow HD.ACT_Workflow_ApplyJumpTo
   ($JumpOption: System.WorkflowJumpToDetails)
   folder 'Escalation/WorkflowAdmin'
-begin
+{
   apply jump to option $JumpOption;
   return;
-end;
+}
 /
 
 -- 7. Retrieve workflow activity records
@@ -1000,70 +998,70 @@ end;
 create or modify microflow HD.ACT_Workflow_GetHistory
   ($Workflow: System.Workflow)
   folder 'Escalation/WorkflowAdmin'
-begin
+{
   get workflow activity records $Workflow;
   return;
-end;
+}
 /
 
 -- 8. Retrieve workflow context
 create or modify microflow HD.ACT_Workflow_GetContext
   ($Workflow: System.Workflow)
   folder 'Escalation/WorkflowAdmin'
-begin
+{
   get workflow data $Workflow as HD.WF_TicketEscalation;
   return;
-end;
+}
 /
 
 -- 9. Retrieve workflow instances
 create or modify microflow HD.DS_WorkflowInstances
   ($EscalationRequest: HD.EscalationRequest)
   folder 'Escalation/WorkflowAdmin'
-begin
+{
   get workflows for $EscalationRequest;
   return;
-end;
+}
 /
 
 -- 10. Show user task page
 create or modify microflow HD.ACT_Workflow_ShowTaskPage
   ($UserTask: System.WorkflowUserTask)
   folder 'Escalation/WorkflowAdmin'
-begin
+{
   open user task $UserTask;
   return;
-end;
+}
 /
 
 -- 11. Show workflow admin page
 create or modify microflow HD.ACT_Workflow_ShowAdminPage
   ($Workflow: System.Workflow)
   folder 'Escalation/WorkflowAdmin'
-begin
+{
   open workflow $Workflow;
   return;
-end;
+}
 /
 
 -- 12. Lock workflow (System.WorkflowDefinition = the workflow type/definition object)
 create or modify microflow HD.ACT_Workflow_Lock
   ($Workflow: System.WorkflowDefinition)
   folder 'Escalation/WorkflowAdmin'
-begin
+{
   lock workflow $Workflow;
   return;
-end;
+}
 /
 
 -- 13. Unlock workflow
 create or modify microflow HD.ACT_Workflow_Unlock
   ($Workflow: System.WorkflowDefinition)
   folder 'Escalation/WorkflowAdmin'
-begin
+{
   unlock workflow $Workflow;
   return;
-end;
+}
 /
 
 -- Notify the WaitForManagerAvailable activity in WF_TicketEscalation.
@@ -1071,10 +1069,10 @@ end;
 create or modify microflow HD.ACT_Workflow_Notify
   ($Workflow: System.Workflow)
   folder 'Escalation/WorkflowAdmin'
-begin
+{
   notify workflow $Workflow activity HD.WF_TicketEscalation.WaitForManagerAvailable;
   return;
-end;
+}
 /
 
 -- MARK: Pages — KnowledgeBase
@@ -1499,7 +1497,7 @@ create or modify microflow HD.DS_GetMyProfile
   ()
   returns HD.UserProfile as $Profile
   folder 'Account'
-begin
+{
   retrieve $Me from System.User
     where [id = '[%CurrentUser%]']
     limit 1;
@@ -1507,18 +1505,21 @@ begin
   -- of the split variable (CE0090). For System.User in this project:
   --   HD.UserProfile (our custom subtype), Administration.Account (built-in subtype)
   --   System.User (base type), else (null/empty fallback via InheritanceCase Value="")
-  split type $Me
-  case HD.UserProfile
-    cast $Profile;
-    return $Profile;
-  case Administration.Account
-    return empty;
-  case System.User
-    return empty;
-  else
-    return empty;
-  end split;
-end;
+  split type $Me {
+    case HD.UserProfile {
+      cast $Profile;
+      return $Profile;
+    }
+    case Administration.Account {
+      return empty;
+    }
+    case System.User {
+      return empty;
+    } else {
+      return empty;
+    }
+  }
+}
 /
 
 -- R2: HD.JA_HashPassword — Java Action definition
@@ -1540,16 +1541,16 @@ create or modify microflow HD.ACT_ChangePassword
   ($Form: HD.PasswordForm)
   returns boolean as $Success
   folder 'Account'
-begin
-  declare $Success boolean = false;
-  if $Form/NewPassword = '' or $Form/NewPassword = empty then
+{
+  declare $Success: boolean = false;
+  if $Form/NewPassword = '' or $Form/NewPassword = empty {
     validation feedback $Form/NewPassword message 'New password is required.';
     return false;
-  end if;
-  if $Form/NewPassword != $Form/ConfirmPassword then
+  }
+  if $Form/NewPassword != $Form/ConfirmPassword {
     validation feedback $Form/ConfirmPassword message 'Passwords do not match.';
     return false;
-  end if;
+  }
   $Hashed = call java action HD.JA_HashPassword (PlainText = $Form/NewPassword)
     on error without rollback {
       raise error;
@@ -1557,28 +1558,28 @@ begin
   set $Success = true;
   show home page;
   return $Success;
-end;
+}
 /
 
 -- R5 support: action button microflows for Account_Overview
 create or modify microflow HD.ACT_Agent_Deactivate
   ($Agent: HD.Agent)
   folder 'Account'
-begin
+{
   change $Agent (IsActive = false);
   commit $Agent;
   return;
-end;
+}
 /
 
 create or modify microflow HD.ACT_Agent_Reactivate
   ($Agent: HD.Agent)
   folder 'Account'
-begin
+{
   change $Agent (IsActive = true, DeactivationReason = empty);
   commit $Agent;
   return;
-end;
+}
 /
 
 -- R5 (Issue 5 fix): HD.Nav_ChangePassword — no-parameter navigation microflow
@@ -1589,14 +1590,14 @@ end;
 create or modify microflow HD.Nav_ChangePassword
   ()
   folder 'Account'
-begin
+{
   $NewPasswordForm = create HD.PasswordForm (
     NewPassword     = '',
     ConfirmPassword = ''
   );
   show page HD.ChangeMyPassword (Form: $NewPasswordForm);
   return;
-end;
+}
 /
 
 -- MARK: Account Management — Pages
