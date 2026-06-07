@@ -331,8 +331,9 @@ type DataGridSpec struct {
 	Columns           []DataGridColumnSpec
 	HeaderWidgetsBSON []bson.D // Pre-serialized CONTROLBAR widgets for filtersPlaceholder
 	// Paging overrides (empty string = use template default)
-	PagingOverrides map[string]string // camelCase widget key → string value
-	SelectionMode   string            // empty = no override
+	PagingOverrides  map[string]string // camelCase widget key → string value
+	SelectionMode    string            // empty = no override
+	ColumnsFilterable bool             // true = set DataGrid2 columnsFilterable property to "true"
 }
 
 // FilterWidgetSpec carries inputs for building a filter widget.
@@ -346,6 +347,15 @@ type FilterWidgetSpec struct {
 
 // WidgetBuilderBackend provides pluggable widget construction capabilities.
 type WidgetBuilderBackend interface {
+	// BeginPageBuild initialises the per-page widget-type cache.  Must be called
+	// before building any widget BSON for a page; EndPageBuild must be called when done.
+	// When active, widgets of the same type on the same page share one type schema,
+	// matching Studio Pro's canonical format.
+	BeginPageBuild()
+
+	// EndPageBuild clears the per-page widget-type cache.
+	EndPageBuild()
+
 	// LoadWidgetTemplate loads a widget template by ID and returns a builder
 	// for applying property operations. projectPath is used for runtime template
 	// augmentation from .mpk files.

@@ -62,6 +62,7 @@ func execCreatePageV3(ctx *ExecContext, s *ast.CreatePageStmtV3) error {
 	}
 
 	// Build the page BEFORE deleting the old one (atomic: if build fails, old page is preserved)
+	ctx.Backend.BeginPageBuild()
 	pb := &pageBuilder{
 		backend:          ctx.Backend,
 		moduleID:         moduleID,
@@ -81,6 +82,7 @@ func execCreatePageV3(ctx *ExecContext, s *ast.CreatePageStmtV3) error {
 	// buildPageV3 now returns *genPg.Page directly (Stage 3.3.5.Cat-B).
 	// The builder sets pb.lastContainerID to the resolved folder/module ID.
 	genPage, err := pb.buildPageV3(s)
+	ctx.Backend.EndPageBuild()
 	if err != nil {
 		return mdlerrors.NewBackend("build page", err)
 	}
@@ -184,6 +186,7 @@ func execCreateSnippetV3(ctx *ExecContext, s *ast.CreateSnippetStmtV3) error {
 	}
 
 	// Build the snippet BEFORE deleting the old one (atomic: if build fails, old snippet is preserved)
+	ctx.Backend.BeginPageBuild()
 	pb := &pageBuilder{
 		backend:          ctx.Backend,
 		moduleID:         moduleID,
@@ -203,6 +206,7 @@ func execCreateSnippetV3(ctx *ExecContext, s *ast.CreateSnippetStmtV3) error {
 	// buildSnippetV3 now returns *genPg.Snippet directly (Stage 3.3.5.Cat-B).
 	// The builder sets pb.lastContainerID to the resolved folder/module ID.
 	genSnippet, err := pb.buildSnippetV3(s)
+	ctx.Backend.EndPageBuild()
 	if err != nil {
 		return mdlerrors.NewBackend("build snippet", err)
 	}

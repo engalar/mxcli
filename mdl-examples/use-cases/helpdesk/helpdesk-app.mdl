@@ -72,9 +72,10 @@
 --     database (from HD.Ticket)      → DataGrid/Gallery database source
 --     microflow (DS_MyTickets, no args → omit parens) → DataGrid microflow source (HD.MyTickets_Overview)
 --     nanoflow (NF_TicketSearch_Apply)→ DataGrid nanoflow source (HD.TicketSearch_Results)
---   Widget CE0463: known for dgTickets, fStatus (pre-existing) and Account Management
---                  DataGrid2 widgets with ActionButton in customContent column:
---                  dgAgents, dgCustomers, dgInactiveAgents (same pattern as dgTickets).
+--   Widget CE0463: only Gallery fStatus (pre-existing). DataGrid2 column filters now use
+--                  DataGrid2's native columnsFilterable property instead of embedded
+--                  CustomWidget BSON — eliminates CE0463 for dgTickets, dgAgents,
+--                  dgCustomers, dgInactiveAgents. Page size: 294KB→165KB, 622KB→411KB.
 --                  Studio Pro validates against internal platform definition,
 --                  not the project MPK — exact comparison mechanism TBD.
 --   Note: raise error; (ErrorEvent) generates CE0710 in mx check due to a BSON

@@ -280,6 +280,8 @@ func buildWidgetsFromASTGen(ctx *ExecContext, widgets []*ast.WidgetV3, moduleNam
 		delete(widgetScope, name)
 	}
 
+	ctx.Backend.BeginPageBuild()
+	defer ctx.Backend.EndPageBuild()
 	pb := &pageBuilder{
 		backend:          ctx.Backend,
 		moduleID:         moduleID,

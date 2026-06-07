@@ -25,7 +25,7 @@ mxcli (launcher)  →  Unix socket  →  mxcli-daemon (cmd/mxcli/)
 | `mdl/executor/` executor 逻辑 | `go run ./cmd/mdlrun -p app.mpr -c "..."` | **不需要** |
 | `mdl/executor/` + 需要 flag/socket 路径 | `go test ./mdl/executor/... -run TestXxx` | **不需要** |
 | `mdl/backend/mpr/` BSON 序列化 | `go test ./mdl/backend/mpr/... -run TestGolden -update` | **不需要** |
-| `mdl/backend/mpr/` + 需要 mx check 确认 | `make install-daemon` → `mxcli -p testdata/...` → `mx check` | **需要** |
+| `mdl/backend/mpr/` + 需要 mx check 确认 | `go test ./internal/goldenfs/ -tags linux,integration -run TestHelpdeskGolden_Update -update-golden` → `mx check` → `git restore testdata/` | **不需要** |
 | `cmd/mxcli/daemon_server.go` socket 协议 | `go test ./cmd/mxcli/... -run TestDaemonServer` | **不需要** |
 | `cmd/mxcli-launcher/` launcher 路由/升级 | `go test ./cmd/mxcli-launcher/...` (fake_daemon fixture) | **不需要** |
 | `internal/expr/daemon/` expr daemon | `go test ./internal/expr/daemon/...` | **不需要** |
@@ -69,18 +69,33 @@ go test ./mdl/backend/mpr/... -run TestGolden -v
 go test ./mdl/backend/mpr/... -run TestGolden -update
 ```
 
-**需要 mx check 时（有潜在 CE 错误风险）：**
+**需要 mx check 时（有潜在 CE 错误风险）—— 无需 install-daemon：**
 ```bash
-# 1. 应用改动
-make install-daemon
-./bin/mxcli -p testdata/expr-checker/minimal.mpr -c "create microflow MyFirstModule.ACT_Test () returns Nothing begin return; end;"
+# 1. 重建 helpdesk golden（go test 直接在进程内跑 executor，不走 daemon/socket）
+HELPDESK_VERSION=11.6.6 \
+CGO_ENABLED=0 go test ./internal/goldenfs/ \
+  -tags linux,integration \
+  -run '^TestHelpdeskGolden_Update$' \
+  -update-golden \
+  -v -timeout 10m
 
-# 2. mx check 验证（不得引入新 StorageLoadException）
-~/.mxcli/mxbuild/11.6.6/modeler/mx check testdata/expr-checker/minimal.mpr 2>&1 | grep -i "StorageLoadException\|Invalid"
+# 2. mx check 验证（不得引入新 CE 错误）
+~/.mxcli/mxbuild/11.6.6/modeler/mx check \
+  testdata/helpdesk-golden-11.6.6/minimal.mpr 2>&1 | grep "\[error\]"
+# 应输出 0 行；原始 git 基线是 0 errors
 
 # 3. 还原 testdata
+git restore testdata/helpdesk-golden-11.6.6/ testdata/helpdesk-golden-11.10.0/
+git clean -fd testdata/
+
+# 也可以仅测试单个小项目（更快，但 CE0463 不一定能复现）：
+go run ./cmd/mdlrun -p testdata/expr-checker/minimal.mpr \
+  -c "create microflow MyFirstModule.ACT_Test () returns Nothing begin return; end;"
+~/.mxcli/mxbuild/11.6.6/modeler/mx check testdata/expr-checker/minimal.mpr 2>&1 | grep "\[error\]"
 git restore testdata/expr-checker/
 ```
+
+**关键原因**：`TestHelpdeskGolden_Update` 调用 `executor.ExecuteProgram` + `mprbackend.New()` 完全在进程内，与 daemon 代码路径完全相同，不经 socket 层。`install-daemon` 仅在需要验证 socket 帧格式、并发序列化时才必要。
 
 ---
 
@@ -198,6 +213,50 @@ go run ./cmd/mxcli git fix -p $PROJECT/jack-mom-platform.mpr
 - 不需要 `make build` 或 `install-daemon`，修改源码后直接重跑即可
 
 **何时还是要 `install-daemon`：** 需要验证 `mxcli git notes push` 等涉及网络推送的操作时（因为需要真实的 mxcli launcher 路由）。
+
+---
+
+### 场景 H：BSON 修改 + 重建 helpdesk golden + mx check（无需 install-daemon）
+
+**改了：** `mdl/backend/mpr/`、`mdl/executor/`，需要对完整 helpdesk 项目做 mx check 验证
+
+**核心洞察：** `TestHelpdeskGolden_Update` 直接在 `go test` 进程内调用 executor，与 daemon 完全相同的代码路径，不走 socket。无需安装 daemon。
+
+**最快路径：**
+```bash
+# 1. 重建 golden（约 40s，in-process executor）
+HELPDESK_VERSION=11.6.6 \
+CGO_ENABLED=0 go test ./internal/goldenfs/ \
+  -tags linux,integration \
+  -run '^TestHelpdeskGolden_Update$' \
+  -update-golden \
+  -timeout 10m
+
+# 可并行两个版本（约省 40s）：
+for v in 11.6.6 11.10.0; do
+  HELPDESK_VERSION=$v CGO_ENABLED=0 go test ./internal/goldenfs/ \
+    -tags linux,integration -run '^TestHelpdeskGolden_Update$' \
+    -update-golden -timeout 10m &
+done
+wait
+
+# 2. mx check（原始 git 基线 = 0 errors）
+for v in 11.6.6 11.10.0; do
+  echo "=== $v ==="
+  ~/.mxcli/mxbuild/$v/modeler/mx check testdata/helpdesk-golden-$v/minimal.mpr 2>&1 | \
+    grep "\[error\]" | wc -l
+done
+
+# 3. 还原（避免污染工作区）
+git restore testdata/helpdesk-golden-11.6.6/ testdata/helpdesk-golden-11.10.0/
+git clean -fd testdata/
+```
+
+**注意事项：**
+- `TestHelpdeskGolden_Update` 调用 `e.SetBackendFactory(func() backend.FullBackend { return mprbackend.New() })`，完全 in-process，无 socket 层
+- 重建时 `go test` 会重新编译所有依赖包——源码改动即时生效，无需 `make build`
+- golden 重建后 mx check 预期 **0 errors**（CE0463 会在重建时出现 5 个，是 mxcli widget template 与 Studio Pro 差异的预存在问题，不是代码引入的）
+- 如果要验证真实 daemon socket 路径（如 `BeginPageBuild` 跨请求状态），才需要 install-daemon
 
 ---
 

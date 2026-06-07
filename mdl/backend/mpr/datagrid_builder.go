@@ -33,7 +33,8 @@ const (
 // It loads the template, applies spec overrides, and returns the serialized
 // CustomWidget BSON document (id, name, editable, type, object).
 func (b *MprBackend) buildDataGrid2WidgetDoc(id model.ID, name string, spec backend.DataGridSpec, projectPath string) (bson.D, error) {
-	// Load embedded template
+	// Load embedded template — each instance gets its own type schema with fresh IDs
+	// (shared IDs would cause CE0463 duplicate-$ID errors in Mendix).
 	embeddedType, embeddedObject, embeddedIDs, _, _, err :=
 		widgets.GetTemplateFullBSON(widgetIDDataGrid2, types.GenerateID, projectPath)
 	if err != nil {
@@ -61,6 +62,14 @@ func (b *MprBackend) buildDataGrid2WidgetDoc(id model.ID, name string, spec back
 	// Apply selection mode
 	if spec.SelectionMode != "" {
 		updatedObject = b.applyDataGridSelectionProp(updatedObject, propertyTypeIDs, spec.SelectionMode)
+	}
+
+	// Enable native column filtering when any column has a filter directive.
+	// This sets the DataGrid2 "columnsFilterable" property to "true", which
+	// activates the built-in per-column filter UI without requiring embedded
+	// CustomWidget filter elements (which cause CE0463).
+	if spec.ColumnsFilterable {
+		updatedObject = b.applyDataGridPrimitiveProp(updatedObject, propertyTypeIDs, "columnsFilterable", "true")
 	}
 
 	doc := bson.D{
@@ -732,6 +741,41 @@ func (b *MprBackend) applyDataGridSelectionProp(obj bson.D, propertyTypeIDs map[
 	return result
 }
 
+// applyDataGridPrimitiveProp sets one named primitive property in the DataGrid2 WidgetObject.
+func (b *MprBackend) applyDataGridPrimitiveProp(obj bson.D, propertyTypeIDs map[string]types.PropertyTypeIDEntry, propKey, value string) bson.D {
+	entry, ok := propertyTypeIDs[propKey]
+	if !ok {
+		return obj
+	}
+	result := make(bson.D, 0, len(obj))
+	for _, elem := range obj {
+		if elem.Key == "Properties" {
+			if propsArr, ok := elem.Value.(bson.A); ok && len(propsArr) > 0 {
+				updatedProps := bson.A{propsArr[0]}
+				for _, propVal := range propsArr[1:] {
+					propMap, ok := propVal.(bson.D)
+					if !ok {
+						updatedProps = append(updatedProps, propVal)
+						continue
+					}
+					tp := getTypePointerFromProperty(propMap)
+					if tp == entry.PropertyTypeID {
+						updatedProps = append(updatedProps, clonePropertyWithPrimitiveValue(propMap, value))
+					} else {
+						updatedProps = append(updatedProps, propMap)
+					}
+				}
+				result = append(result, bson.E{Key: "Properties", Value: updatedProps})
+			} else {
+				result = append(result, elem)
+			}
+		} else {
+			result = append(result, elem)
+		}
+	}
+	return result
+}
+
 // ===========================================================================
 // BSON property builders (package-level, no receiver needed)
 // ===========================================================================
@@ -1204,6 +1248,9 @@ func colPropInt(props map[string]any, key string, defaultVal string) string {
 // ===========================================================================
 
 func (b *MprBackend) buildFilterWidgetBSON(spec backend.FilterWidgetSpec, projectPath string) bson.D {
+	// Each filter widget instance gets its own type schema with fresh IDs.
+	// Sharing type-schema $IDs across instances causes CE0463 in Mendix.
+	// See widgetTypeCache / BeginPageBuild for future deduplication work.
 	rawType, rawObject, propertyTypeIDs, _, _, err := widgets.GetTemplateFullBSON(spec.WidgetID, types.GenerateID, projectPath)
 	if err != nil || rawType == nil {
 		if err != nil {
@@ -1284,6 +1331,22 @@ func normalizeHexID(s string) string {
 }
 
 func (b *MprBackend) buildMinimalFilterWidgetBSON(widgetID, filterName string) bson.D {
+	rawType, rawObject := buildMinimalFilterWidgetTypAndObject(widgetID)
+	return bson.D{
+		{Key: "$ID", Value: bsonutil.NewIDBsonBinary()},
+		{Key: "$Type", Value: "CustomWidgets$CustomWidget"},
+		{Key: "Editable", Value: "Inherited"},
+		{Key: "Name", Value: filterName},
+		{Key: "Object", Value: rawObject},
+		{Key: "TabIndex", Value: int32(0)},
+		{Key: "Type", Value: rawType},
+	}
+}
+
+// buildMinimalFilterWidgetTypAndObject builds a fresh (type, object) pair for the minimal
+// filter fallback path.  The objectTypeID ties them together: the type's ObjectType.$ID
+// must match the object's TypePointer.
+func buildMinimalFilterWidgetTypAndObject(widgetID string) (rawType bson.D, rawObject bson.D) {
 	typeID := types.GenerateID()
 	objectTypeID := types.GenerateID()
 	objectID := types.GenerateID()
@@ -1302,38 +1365,32 @@ func (b *MprBackend) buildMinimalFilterWidgetBSON(widgetID, filterName string) b
 		widgetTypeName = "Text filter"
 	}
 
-	return bson.D{
-		{Key: "$ID", Value: bsonutil.NewIDBsonBinary()},
-		{Key: "$Type", Value: "CustomWidgets$CustomWidget"},
-		{Key: "Editable", Value: "Inherited"},
-		{Key: "Name", Value: filterName},
-		{Key: "Object", Value: bson.D{
-			{Key: "$ID", Value: bsonutil.IDToBsonBinary(objectID)},
-			{Key: "$Type", Value: "CustomWidgets$WidgetObject"},
-			{Key: "Properties", Value: bson.A{int32(2)}},
-			{Key: "TypePointer", Value: bsonutil.IDToBsonBinary(objectTypeID)},
+	rawType = bson.D{
+		{Key: "$ID", Value: bsonutil.IDToBsonBinary(typeID)},
+		{Key: "$Type", Value: "CustomWidgets$CustomWidgetType"},
+		{Key: "HelpUrl", Value: ""},
+		{Key: "ObjectType", Value: bson.D{
+			{Key: "$ID", Value: bsonutil.IDToBsonBinary(objectTypeID)},
+			{Key: "$Type", Value: "CustomWidgets$WidgetObjectType"},
+			{Key: "PropertyTypes", Value: bson.A{int32(2)}},
 		}},
-		{Key: "TabIndex", Value: int32(0)},
-		{Key: "Type", Value: bson.D{
-			{Key: "$ID", Value: bsonutil.IDToBsonBinary(typeID)},
-			{Key: "$Type", Value: "CustomWidgets$CustomWidgetType"},
-			{Key: "HelpUrl", Value: ""},
-			{Key: "ObjectType", Value: bson.D{
-				{Key: "$ID", Value: bsonutil.IDToBsonBinary(objectTypeID)},
-				{Key: "$Type", Value: "CustomWidgets$WidgetObjectType"},
-				{Key: "PropertyTypes", Value: bson.A{int32(2)}},
-			}},
-			{Key: "OfflineCapable", Value: true},
-			{Key: "StudioCategory", Value: "Data Controls"},
-			{Key: "StudioProCategory", Value: "Data controls"},
-			{Key: "SupportedPlatform", Value: "Web"},
-			{Key: "WidgetDescription", Value: ""},
-			{Key: "WidgetId", Value: widgetID},
-			{Key: "WidgetName", Value: widgetTypeName},
-			{Key: "WidgetNeedsEntityContext", Value: false},
-			{Key: "WidgetPluginWidget", Value: true},
-		}},
+		{Key: "OfflineCapable", Value: true},
+		{Key: "StudioCategory", Value: "Data Controls"},
+		{Key: "StudioProCategory", Value: "Data controls"},
+		{Key: "SupportedPlatform", Value: "Web"},
+		{Key: "WidgetDescription", Value: ""},
+		{Key: "WidgetId", Value: widgetID},
+		{Key: "WidgetName", Value: widgetTypeName},
+		{Key: "WidgetNeedsEntityContext", Value: false},
+		{Key: "WidgetPluginWidget", Value: true},
 	}
+	rawObject = bson.D{
+		{Key: "$ID", Value: bsonutil.IDToBsonBinary(objectID)},
+		{Key: "$Type", Value: "CustomWidgets$WidgetObject"},
+		{Key: "Properties", Value: bson.A{int32(2)}},
+		{Key: "TypePointer", Value: bsonutil.IDToBsonBinary(objectTypeID)},
+	}
+	return rawType, rawObject
 }
 
 // ===========================================================================

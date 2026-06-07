@@ -1265,18 +1265,10 @@ create or modify page HD.Ticket_Overview (title: 'Tickets', layout: Atlas_Core.A
               buttonstyle: primary
             )
           }
-          column colSubject (attribute: Subject, caption: 'Subject') {
-            pluggablewidget 'com.mendix.widget.web.datagridtextfilter.DatagridTextFilter' fSubject
-          }
-          column colStatus (attribute: Status, caption: 'Status', ColumnWidth: manual, Size: 120) {
-            pluggablewidget 'com.mendix.widget.web.datagriddropdownfilter.DatagridDropdownFilter' fStatus
-          }
-          column colPriority (attribute: Priority, caption: 'Priority', ColumnWidth: manual, Size: 100) {
-            pluggablewidget 'com.mendix.widget.web.datagriddropdownfilter.DatagridDropdownFilter' fPriority
-          }
-          column colSLADueAt (attribute: SLADueAt, caption: 'SLA Due', ColumnWidth: manual, Size: 140) {
-            pluggablewidget 'com.mendix.widget.web.datagriddatefilter.DatagridDateFilter' fSLADue
-          }
+          column colSubject (attribute: Subject, caption: 'Subject')
+          column colStatus (attribute: Status, caption: 'Status', ColumnWidth: manual, Size: 120)
+          column colPriority (attribute: Priority, caption: 'Priority', ColumnWidth: manual, Size: 100)
+          column colSLADueAt (attribute: SLADueAt, caption: 'SLA Due', ColumnWidth: manual, Size: 140)
           column colIsOverSLA (attribute: IsOverSLA, caption: 'Overdue', ColumnWidth: manual, Size: 90)
           column colActions (caption: 'Actions', ShowContentAs: customContent, ColumnWidth: manual, Size: 80) {
             actionbutton btnEdit (caption: 'Edit', action: show_page HD.Ticket_Detail, buttonstyle: default)
@@ -1563,15 +1555,9 @@ create or modify page HD.Account_Overview (
           tabpage tabActive (caption: 'Active Accounts') {
             datagrid dgAgents (datasource: database from HD.Agent sort by Name asc) {
               -- Context: $currentObject (HD.Agent), $dgAgents (selection)
-              column colName (attribute: Name, caption: 'Name') {
-                pluggablewidget 'com.mendix.widget.web.datagridtextfilter.DatagridTextFilter' fAgentName
-              }
-              column colEmail (attribute: Email, caption: 'Email') {
-                pluggablewidget 'com.mendix.widget.web.datagridtextfilter.DatagridTextFilter' fAgentEmail
-              }
-              column colIsActive (attribute: IsActive, caption: 'Active', ColumnWidth: manual, Size: 80) {
-                pluggablewidget 'com.mendix.widget.web.datagriddropdownfilter.DatagridDropdownFilter' fAgentActive
-              }
+              column colName (attribute: Name, caption: 'Name')
+              column colEmail (attribute: Email, caption: 'Email')
+              column colIsActive (attribute: IsActive, caption: 'Active', ColumnWidth: manual, Size: 80)
               column colActions (caption: 'Actions', ShowContentAs: customContent, ColumnWidth: manual, Size: 180) {
                 actionbutton btnEditAgent (caption: 'Edit', action: show_page HD.Agent_Edit, buttonstyle: default)
                 actionbutton btnDeactivate (
@@ -1583,15 +1569,9 @@ create or modify page HD.Account_Overview (
             }
             datagrid dgCustomers (datasource: database from HD.Customer sort by Name asc) {
               -- Context: $currentObject (HD.Customer), $dgCustomers (selection)
-              column colName (attribute: Name, caption: 'Name') {
-                pluggablewidget 'com.mendix.widget.web.datagridtextfilter.DatagridTextFilter' fCustName
-              }
-              column colEmail (attribute: Email, caption: 'Email') {
-                pluggablewidget 'com.mendix.widget.web.datagridtextfilter.DatagridTextFilter' fCustEmail
-              }
-              column colCompany (attribute: Company, caption: 'Company') {
-                pluggablewidget 'com.mendix.widget.web.datagridtextfilter.DatagridTextFilter' fCustCompany
-              }
+              column colName (attribute: Name, caption: 'Name')
+              column colEmail (attribute: Email, caption: 'Email')
+              column colCompany (attribute: Company, caption: 'Company')
               column colActions (caption: 'Actions', ShowContentAs: customContent, ColumnWidth: manual, Size: 200) {
                 actionbutton btnNewTicket (
                   caption: 'New Ticket',
@@ -1609,12 +1589,8 @@ create or modify page HD.Account_Overview (
           tabpage tabInactive (caption: 'Inactive Accounts') {
             datagrid dgInactiveAgents (datasource: database from HD.Agent sort by Name asc) {
               -- Context: $currentObject (HD.Agent), $dgInactiveAgents (selection)
-              column colName (attribute: Name, caption: 'Name') {
-                pluggablewidget 'com.mendix.widget.web.datagridtextfilter.DatagridTextFilter' fIName
-              }
-              column colIsActive (attribute: IsActive, caption: 'Active', ColumnWidth: manual, Size: 80) {
-                pluggablewidget 'com.mendix.widget.web.datagriddropdownfilter.DatagridDropdownFilter' fIActive
-              }
+              column colName (attribute: Name, caption: 'Name')
+              column colIsActive (attribute: IsActive, caption: 'Active', ColumnWidth: manual, Size: 80)
               column colDeactivationReason (attribute: DeactivationReason, caption: 'Reason')
               column colActions (caption: 'Actions', ShowContentAs: customContent, ColumnWidth: manual, Size: 120) {
                 actionbutton btnReactivate (

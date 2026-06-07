@@ -8,8 +8,81 @@ import (
 
 	"go.mongodb.org/mongo-driver/v2/bson"
 
+	"github.com/mendixlabs/mxcli/mdl/backend"
 	"github.com/mendixlabs/mxcli/mdl/bsonutil"
 )
+
+// TestFilterWidgets_EachInstanceHasUniqueTypeID verifies that each filter widget
+// instance gets its own CustomWidgets$CustomWidgetType with unique $IDs.
+//
+// Background: sharing type-schema $IDs across instances (even of the same widgetID)
+// causes CE0463 "widget definition changed" in Mendix because duplicate $IDs appear
+// in the same page BSON document. The correct deduplication approach requires a
+// page-level type registry — a separate architectural change to the column-filter format.
+func TestFilterWidgets_EachInstanceHasUniqueTypeID(t *testing.T) {
+	b := &MprBackend{}
+
+	w1 := b.buildFilterWidgetBSON(backend.FilterWidgetSpec{
+		WidgetID:   widgetIDDataGridTextFilter,
+		FilterName: "fSubject",
+	}, "")
+	w2 := b.buildFilterWidgetBSON(backend.FilterWidgetSpec{
+		WidgetID:   widgetIDDataGridTextFilter,
+		FilterName: "fStatus",
+	}, "")
+
+	type1 := dGetDoc(w1, "Type")
+	type2 := dGetDoc(w2, "Type")
+	if type1 == nil || type2 == nil {
+		t.Fatal("Type field missing from filter widget BSON")
+	}
+
+	// Every instance must have a UNIQUE type $ID to avoid CE0463 duplicate-$ID errors.
+	if binaryEqual(type1[0].Value, type2[0].Value) {
+		t.Error("filter widget instances must NOT share the same CustomWidgetType $ID; " +
+			"shared $IDs in one page BSON cause CE0463 in Mendix")
+	}
+}
+
+// TestFilterWidgets_DifferentTypesHaveDifferentTypeSchemas verifies that filter widgets
+// of different widgetIDs each retain their own CustomWidgetType schema.
+func TestFilterWidgets_DifferentTypesHaveDifferentTypeSchemas(t *testing.T) {
+	b := &MprBackend{}
+
+	wText := b.buildFilterWidgetBSON(backend.FilterWidgetSpec{
+		WidgetID: widgetIDDataGridTextFilter, FilterName: "fText",
+	}, "")
+	wDrop := b.buildFilterWidgetBSON(backend.FilterWidgetSpec{
+		WidgetID: widgetIDDataGridDropdownFilter, FilterName: "fDrop",
+	}, "")
+
+	typeText := dGetDoc(wText, "Type")
+	typeDrop := dGetDoc(wDrop, "Type")
+	if typeText == nil || typeDrop == nil {
+		t.Fatal("Type field missing")
+	}
+
+	if binaryEqual(typeText[0].Value, typeDrop[0].Value) {
+		t.Error("textfilter and dropdownfilter must have different CustomWidgetType $IDs")
+	}
+}
+
+// TestFilterWidgets_BeginEndPageBuildIsNoOp verifies that BeginPageBuild/EndPageBuild
+// exist and do not break widget construction (reserved for future type-registry work).
+func TestFilterWidgets_BeginEndPageBuildIsNoOp(t *testing.T) {
+	b := &MprBackend{}
+	b.BeginPageBuild()
+	defer b.EndPageBuild()
+
+	w := b.buildFilterWidgetBSON(backend.FilterWidgetSpec{
+		WidgetID: widgetIDDataGridTextFilter, FilterName: "f1",
+	}, "")
+
+	if dGetDoc(w, "Type") == nil {
+		t.Error("BeginPageBuild must not break filter widget BSON construction")
+	}
+}
+
 
 func TestDeepCloneWithNewIDs_RegeneratesAllIDs(t *testing.T) {
 	origID1 := bsonutil.NewIDBsonBinary()

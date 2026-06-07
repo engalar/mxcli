@@ -47,6 +47,9 @@ func (m *MockBackend) SerializeWorkflowActivityGen(a element.Element) (any, erro
 // WidgetBuilderBackend
 // ---------------------------------------------------------------------------
 
+func (m *MockBackend) BeginPageBuild() {}
+func (m *MockBackend) EndPageBuild()   {}
+
 func (m *MockBackend) LoadWidgetTemplate(widgetID string, projectPath string) (backend.WidgetObjectBuilder, error) {
 	if m.LoadWidgetTemplateFunc != nil {
 		return m.LoadWidgetTemplateFunc(widgetID, projectPath)

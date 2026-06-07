@@ -70,6 +70,47 @@ type MprBackend struct {
 	// writeUnitContents routes writes through the buffer instead of opening
 	// individual SQLite transactions. Reads are satisfied from the overlay.
 	unitBuf *unitstore.BufferedUnitStore
+
+	// widgetTypeCache is non-nil during a page build (BeginPageBuild..EndPageBuild).
+	// It maps widgetID → widgetTypeCacheEntry, enabling one CustomWidgets$CustomWidgetType
+	// schema to be shared across all instances of the same widget type on a page.
+	// This matches Studio Pro's canonical format and reduces page BSON size by up to 50%
+	// on pages with multiple same-type filter widgets.
+	widgetTypeCache map[string]*widgetTypeCacheEntry
+}
+
+// widgetTypeCacheEntry holds the per-page cached type schema for one widget type.
+type widgetTypeCacheEntry struct {
+	rawType     bson.D                               // shared CustomWidgets$CustomWidgetType
+	rawObject   bson.D                               // template object; deep-cloned per instance
+	propTypeIDs map[string]types.PropertyTypeIDEntry // for property-key → TypePointer lookups
+}
+
+// BeginPageBuild initialises the per-page widget-type cache.  Call before building
+// any widget BSON for a page, and call EndPageBuild when the page is complete.
+func (b *MprBackend) BeginPageBuild() {
+	b.widgetTypeCache = make(map[string]*widgetTypeCacheEntry)
+}
+
+// EndPageBuild clears the per-page widget-type cache so type-schema $IDs do not
+// accidentally leak across different pages.
+func (b *MprBackend) EndPageBuild() {
+	b.widgetTypeCache = nil
+}
+
+// getWidgetTypeCacheEntry returns the cached type entry for widgetID, or nil.
+func (b *MprBackend) getWidgetTypeCacheEntry(widgetID string) *widgetTypeCacheEntry {
+	if b.widgetTypeCache == nil {
+		return nil
+	}
+	return b.widgetTypeCache[widgetID]
+}
+
+// setWidgetTypeCacheEntry stores an entry in the per-page cache (no-op when cache is nil).
+func (b *MprBackend) setWidgetTypeCacheEntry(widgetID string, entry *widgetTypeCacheEntry) {
+	if b.widgetTypeCache != nil {
+		b.widgetTypeCache[widgetID] = entry
+	}
 }
 
 // New creates a new unconnected MprBackend. Call Connect(path) to open a project.

@@ -41,6 +41,8 @@ var _ backend.WidgetObjectBuilder = (*mprWidgetObjectBuilder)(nil)
 
 // LoadWidgetTemplate loads a widget template by ID and returns a builder.
 func (b *MprBackend) LoadWidgetTemplate(widgetID string, projectPath string) (backend.WidgetObjectBuilder, error) {
+	// Each widget instance requires its own type schema with unique $IDs.
+	// Sharing $IDs across instances would cause CE0463 in Mendix.
 	embeddedType, embeddedObject, embeddedIDs, objectTypeID, stableIds, err :=
 		widgets.GetTemplateFullBSON(widgetID, types.GenerateID, projectPath)
 	if err != nil {

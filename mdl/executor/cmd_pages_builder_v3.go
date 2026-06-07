@@ -1916,6 +1916,7 @@ func (pb *pageBuilder) buildDataGridV3(w *ast.WidgetV3) (element.Element, error)
 	// Extract column definitions and CONTROLBAR widgets from children
 	var columns []backend.DataGridColumnSpec
 	var headerWidgetsBSON []bson.D
+	var columnsFilterable bool
 	for _, child := range w.Children {
 		switch strings.ToLower(child.Type) {
 		case "column":
@@ -1929,22 +1930,14 @@ func (pb *pageBuilder) buildDataGridV3(w *ast.WidgetV3) (element.Element, error)
 				Properties: child.Properties,
 			}
 			for _, grandchild := range child.Children {
-				if filterWidgetID := dataGridFilterWidgetID(grandchild.Type); filterWidgetID != "" {
-					// Attributes left empty: column-level filters are auto-bound by DataGrid2 to the column attribute.
-					fw, err := pb.widgetBackend.BuildFilterWidgetGen(backend.FilterWidgetSpec{
-						WidgetID:   filterWidgetID,
-						FilterName: grandchild.Name,
-						FilterType: grandchild.GetFilterType(),
-					}, pb.backend.Path())
-					if err != nil {
-						return nil, mdlerrors.NewBackend("build column filter widget", err)
-					}
-					// Serialize GenCustomWidgetElem to bson.D
-					fwDoc, err := pb.serializeGenWidgetToBsonD(fw)
-					if err != nil {
-						return nil, mdlerrors.NewBackend("serialize filter widget", err)
-					}
-					col.FilterWidgetBSON = fwDoc
+				if dataGridFilterWidgetID(grandchild.Type) != "" {
+					// Column-level filter: enable DataGrid2's built-in column filtering.
+					// We do NOT embed a separate CustomWidget in the column's filter slot —
+					// that causes CE0463 "widget definition changed" because the embedded
+					// type schema doesn't match the installed widget's schema.
+					// Instead we set columnsFilterable so the DataGrid2 property is "true",
+					// which activates the native per-column filter UI.
+					columnsFilterable = true
 				} else {
 					// Build child widget as pre-serialized BSON
 					childDoc, err := pb.buildWidgetBSON(grandchild)
@@ -1994,6 +1987,7 @@ func (pb *pageBuilder) buildDataGridV3(w *ast.WidgetV3) (element.Element, error)
 		HeaderWidgetsBSON: headerWidgetsBSON,
 		PagingOverrides:   pagingOverrides,
 		SelectionMode:     w.GetSelection(),
+		ColumnsFilterable: columnsFilterable,
 	}
 
 	// Use gen-native DataGrid2 builder
