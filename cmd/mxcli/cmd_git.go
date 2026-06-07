@@ -3,10 +3,13 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"io"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
@@ -357,17 +360,20 @@ type doctorCheck struct {
 var gitDoctorCmd = &cobra.Command{
 	Use:   "doctor",
 	Short: "Diagnose Mendix git compatibility (read-only)",
-	Long: `Run 5 read-only health checks on the current git repository:
+	Long: `Run 7 read-only health checks on the current git repository:
 
   1. Git local config (core.autocrlf, mendix.*)
-  2. Remote URL protocol (must be HTTPS, not SSH)
+  2. Remote URL protocol (SSH blocked by Studio Pro; HTTP/HTTPS OK)
   3. Remote refs/notes/mx_metadata existence
   4. Local commits mx_metadata completeness
   5. Notes JSON format validity
+  6. MPR ↔ mprcontents consistency (missing/orphan .mxunit files, merge conflicts)
+  7. Duplicate note blobs (raw-git commits that bypassed Studio Pro)
 
 Examples:
   mxcli git doctor
   mxcli git doctor --remote origin
+  mxcli git doctor -p app.mpr
 `,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		remote, _ := cmd.Flags().GetString("remote")
@@ -386,6 +392,8 @@ func runDoctor(remoteOverride, projectPath string, out io.Writer) error {
 		checkRemoteNotesRef(remote),
 		checkCommitsHaveNotes(),
 		checkNotesJSONFormat(),
+		checkMPRConsistency(projectPath),
+		checkDuplicateNoteBlobs(),
 	}
 
 	failed := 0
@@ -439,10 +447,15 @@ func checkRemoteURL(remote string) doctorCheck {
 		return doctorCheck{Name: "remote-url", OK: false, Detail: fmt.Sprintf("Remote URL — cannot get URL for '%s'", remote)}
 	}
 	url := strings.TrimSpace(string(out))
-	if strings.HasPrefix(url, "https://") {
-		return doctorCheck{Name: "remote-url", OK: true, Detail: fmt.Sprintf("Remote URL: %s (HTTPS)", url)}
+	// Studio Pro requires non-SSH. HTTP is fine for internal Gitea/GitLab servers.
+	if strings.HasPrefix(url, "git@") {
+		return doctorCheck{Name: "remote-url", OK: false, Detail: fmt.Sprintf("Remote URL: %s (SSH not supported by Studio Pro — convert to HTTPS)", url)}
 	}
-	return doctorCheck{Name: "remote-url", OK: false, Detail: fmt.Sprintf("Remote URL: %s (must be HTTPS, not SSH)", url)}
+	protocol := "HTTPS"
+	if strings.HasPrefix(url, "http://") {
+		protocol = "HTTP (internal)"
+	}
+	return doctorCheck{Name: "remote-url", OK: true, Detail: fmt.Sprintf("Remote URL: %s (%s)", url, protocol)}
 }
 
 func checkRemoteNotesRef(remote string) doctorCheck {
@@ -511,6 +524,176 @@ func checkNotesJSONFormat() doctorCheck {
 		return doctorCheck{Name: "notes-json", OK: true, Detail: "Notes JSON format — all valid"}
 	}
 	return doctorCheck{Name: "notes-json", OK: false, Detail: fmt.Sprintf("Notes JSON format — %d malformed notes", malformed)}
+}
+
+// ──────────────────────────────────────────────
+// P0: MPR ↔ mprcontents consistency
+// ──────────────────────────────────────────────
+
+// blobToUUIDForPath converts a 16-byte SQLite GUID blob to the UUID string used
+// for mxunit file paths (Microsoft GUID format: first 3 groups little-endian).
+func blobToUUIDForPath(blob []byte) string {
+	if len(blob) != 16 {
+		return ""
+	}
+	return fmt.Sprintf("%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x",
+		blob[3], blob[2], blob[1], blob[0],
+		blob[5], blob[4],
+		blob[7], blob[6],
+		blob[8], blob[9],
+		blob[10], blob[11], blob[12], blob[13], blob[14], blob[15])
+}
+
+// checkMPRConsistency verifies that every Unit row in the .mpr SQLite database
+// has a corresponding .mxunit file on disk (v2 format), and flags:
+//   - missing .mxunit files (mx check crash trigger)
+//   - orphan .mxunit files not referenced by any Unit row
+//   - Unit rows with TreeConflict != 0 or non-empty ContentsConflicts
+func checkMPRConsistency(projectPath string) doctorCheck {
+	if projectPath == "" {
+		return doctorCheck{Name: "mpr-consistency", OK: true, Detail: "MPR consistency — skipped (no -p flag)"}
+	}
+
+	mprDir := filepath.Dir(projectPath)
+	contentsDir := filepath.Join(mprDir, "mprcontents")
+	if _, err := os.Stat(contentsDir); os.IsNotExist(err) {
+		return doctorCheck{Name: "mpr-consistency", OK: true, Detail: "MPR consistency — v1 format (single-file, no mprcontents/)"}
+	}
+
+	db, err := sql.Open("sqlite", fmt.Sprintf("file:%s?mode=ro", projectPath))
+	if err != nil {
+		return doctorCheck{Name: "mpr-consistency", OK: false, Detail: fmt.Sprintf("MPR consistency — cannot open SQLite: %v", err)}
+	}
+	defer db.Close()
+
+	rows, err := db.Query("SELECT UnitID, TreeConflict, ContentsConflicts FROM Unit")
+	if err != nil {
+		return doctorCheck{Name: "mpr-consistency", OK: false, Detail: fmt.Sprintf("MPR consistency — cannot query Unit table: %v", err)}
+	}
+	defer rows.Close()
+
+	seenUUIDs := make(map[string]bool)
+	var missingFiles, conflictUnits int
+	var missingExamples []string
+
+	for rows.Next() {
+		var blob []byte
+		var treeConflict int64
+		var contentsConflicts sql.NullString
+		if err := rows.Scan(&blob, &treeConflict, &contentsConflicts); err != nil {
+			continue
+		}
+		uuid := blobToUUIDForPath(blob)
+		if uuid == "" {
+			continue
+		}
+		seenUUIDs[uuid] = true
+
+		unitPath := filepath.Join(contentsDir, uuid[0:2], uuid[2:4], uuid+".mxunit")
+		if _, err := os.Stat(unitPath); os.IsNotExist(err) {
+			missingFiles++
+			if len(missingExamples) < 3 {
+				missingExamples = append(missingExamples, uuid[:8]+"…")
+			}
+		}
+		if treeConflict != 0 || (contentsConflicts.Valid && strings.TrimSpace(contentsConflicts.String) != "") {
+			conflictUnits++
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return doctorCheck{Name: "mpr-consistency", OK: false, Detail: fmt.Sprintf("MPR consistency — row scan error: %v", err)}
+	}
+
+	// Count orphan .mxunit files (on disk but not in Unit table).
+	orphanFiles := 0
+	_ = filepath.Walk(contentsDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil || info.IsDir() || !strings.HasSuffix(path, ".mxunit") {
+			return nil
+		}
+		base := strings.TrimSuffix(filepath.Base(path), ".mxunit")
+		if !seenUUIDs[base] {
+			orphanFiles++
+		}
+		return nil
+	})
+
+	totalUnits := len(seenUUIDs)
+	var issues []string
+	if missingFiles > 0 {
+		msg := fmt.Sprintf("%d missing .mxunit file(s)", missingFiles)
+		if len(missingExamples) > 0 {
+			msg += " (" + strings.Join(missingExamples, ", ") + ")"
+		}
+		issues = append(issues, msg)
+	}
+	if conflictUnits > 0 {
+		issues = append(issues, fmt.Sprintf("%d unit(s) with unresolved merge conflicts (TreeConflict/ContentsConflicts)", conflictUnits))
+	}
+	if orphanFiles > 0 {
+		issues = append(issues, fmt.Sprintf("%d orphan .mxunit file(s) on disk (not in Unit table)", orphanFiles))
+	}
+
+	if len(issues) == 0 {
+		return doctorCheck{Name: "mpr-consistency", OK: true,
+			Detail: fmt.Sprintf("MPR consistency — OK (%d units, no missing files or conflicts)", totalUnits)}
+	}
+	return doctorCheck{Name: "mpr-consistency", OK: false,
+		Detail: fmt.Sprintf("MPR consistency — %d unit(s): %s", totalUnits, strings.Join(issues, "; "))}
+}
+
+// ──────────────────────────────────────────────
+// P1: Duplicate note blob detection
+// ──────────────────────────────────────────────
+
+// checkDuplicateNoteBlobs detects commits that share identical mx_metadata note
+// blobs — a reliable indicator that the notes were attached after the fact
+// (e.g. by mxcli git fix) rather than generated by Studio Pro at commit time.
+// When Studio Pro commits, it generates a unique blob per commit because
+// ModelChanges lists exactly what changed; blob reuse means ModelChanges is
+// empty/generic, hiding which documents were actually modified.
+func checkDuplicateNoteBlobs() doctorCheck {
+	listCmd := gitExecCommand("git", "notes", "--ref=mx_metadata", "list")
+	listOut, err := listCmd.Output()
+	if err != nil || len(strings.TrimSpace(string(listOut))) == 0 {
+		return doctorCheck{Name: "note-blobs", OK: true, Detail: "Note blobs — no notes to check"}
+	}
+
+	// Map blob hash → list of commit short SHAs sharing it.
+	blobCommits := make(map[string][]string)
+	for _, line := range strings.Split(strings.TrimSpace(string(listOut)), "\n") {
+		parts := strings.Fields(line)
+		if len(parts) != 2 {
+			continue
+		}
+		blobHash, commitSHA := parts[0], parts[1]
+		short := commitSHA
+		if len(short) > 7 {
+			short = short[:7]
+		}
+		blobCommits[blobHash] = append(blobCommits[blobHash], short)
+	}
+
+	var dupBlobs, dupCommits int
+	var examples []string
+	for _, commits := range blobCommits {
+		if len(commits) > 1 {
+			dupBlobs++
+			dupCommits += len(commits)
+			if len(examples) < 2 {
+				examples = append(examples, fmt.Sprintf("%s (shared by %s)", commits[0], strings.Join(commits[1:minInt(len(commits), 4)], ", ")))
+			}
+		}
+	}
+
+	if dupBlobs == 0 {
+		return doctorCheck{Name: "note-blobs", OK: true, Detail: "Note blobs — all unique (Studio Pro generated)"}
+	}
+	detail := fmt.Sprintf("Note blobs — %d blob(s) shared across %d commits (raw-git suspected): %s",
+		dupBlobs, dupCommits, strings.Join(examples, "; "))
+	if dupBlobs > 2 {
+		detail += fmt.Sprintf(" … (+%d more)", dupBlobs-2)
+	}
+	return doctorCheck{Name: "note-blobs", OK: false, Detail: detail}
 }
 
 // notedCommits returns the set of commit SHAs that have an mx_metadata note.

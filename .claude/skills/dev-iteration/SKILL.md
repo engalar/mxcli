@@ -29,6 +29,7 @@ mxcli (launcher)  →  Unix socket  →  mxcli-daemon (cmd/mxcli/)
 | `cmd/mxcli/daemon_server.go` socket 协议 | `go test ./cmd/mxcli/... -run TestDaemonServer` | **不需要** |
 | `cmd/mxcli-launcher/` launcher 路由/升级 | `go test ./cmd/mxcli-launcher/...` (fake_daemon fixture) | **不需要** |
 | `internal/expr/daemon/` expr daemon | `go test ./internal/expr/daemon/...` | **不需要** |
+| `cmd/mxcli/cmd_git.go` git 子命令针对外部项目 | `GIT_DIR=$PROJECT/.git GIT_WORK_TREE=$PROJECT go run ./cmd/mxcli git doctor -p $PROJECT/app.mpr` | **不需要** |
 | 任意改动，需要完整 mxcli 路径端到端确认 | `make install-daemon && mxcli -p app.mpr -c "..."` | **需要** |
 | 跨 section BSON 状态传播（回归风险高） | `make test-section-check` | **需要** |
 
@@ -162,6 +163,41 @@ make install-daemon
 ```
 
 **已知缺失：** 没有 `MXCLI_DAEMON_BIN` env var 让 launcher 直接用 `./bin/mxcli-daemon` 而不走 `~/.mxcli/daemon/` 路径。如果实现了，可省去 install-daemon 步骤。
+
+---
+
+### 场景 G：调试 `cmd/mxcli` 子命令（git doctor/fix/commit）针对外部项目
+
+**改了：** `cmd/mxcli/cmd_git.go`、`cmd/mxcli/cmd_*.go` 中需要真实 git 仓库上下文的命令
+
+**核心问题：** `go run ./cmd/mxcli` 必须在 mxcli 源码目录执行（go.mod 所在处），但命令内部的 `git` 子进程继承进程 CWD，默认会操作 mxcli 源码仓库而非目标项目。
+
+**解决方案：** 用 `GIT_DIR` + `GIT_WORK_TREE` 环境变量重定向 git 上下文：
+
+```bash
+PROJECT=/path/to/mendix-project
+GIT_DIR=$PROJECT/.git \
+GIT_WORK_TREE=$PROJECT \
+go run ./cmd/mxcli git doctor -p $PROJECT/app.mpr
+
+# 实际示例（调试客户项目）：
+PROJECT=/mnt/data_sdd/jack-mom-platform-feature_1.0.0_2
+GIT_DIR=$PROJECT/.git \
+GIT_WORK_TREE=$PROJECT \
+go run ./cmd/mxcli git doctor -p $PROJECT/jack-mom-platform.mpr
+
+# git fix（修复缺失 notes）：
+GIT_DIR=$PROJECT/.git \
+GIT_WORK_TREE=$PROJECT \
+go run ./cmd/mxcli git fix -p $PROJECT/jack-mom-platform.mpr
+```
+
+**注意事项：**
+- `GIT_DIR` 让 git 找到 `.git` 元数据，`GIT_WORK_TREE` 让 git 知道工作树根路径，二者缺一不可
+- `go run` 的编译仍在 mxcli 源码目录完成，首次运行有编译耗时（约 3-10s），后续热缓存很快
+- 不需要 `make build` 或 `install-daemon`，修改源码后直接重跑即可
+
+**何时还是要 `install-daemon`：** 需要验证 `mxcli git notes push` 等涉及网络推送的操作时（因为需要真实的 mxcli launcher 路由）。
 
 ---
 
