@@ -386,18 +386,14 @@ func entitySpecFromGen(moduleName string, e *genDm.Entity) entityMDLSpec {
 			continue
 		}
 		attrName := lastAttrSegment(vr.AttributeQualifiedName())
-		ruleType := ""
-		if ri := vr.RuleInfo(); ri != nil {
-			ruleType = ri.TypeName()
-		}
 		msg := genENUSText(vr.ErrorMessage())
-		switch ruleType {
-		case "DomainModels$RequiredRuleInfo":
+		switch vr.RuleInfo().(type) {
+		case *genDm.RequiredRuleInfo:
 			notNull[attrName] = true
 			if msg != "" {
 				notNullErr[attrName] = msg
 			}
-		case "DomainModels$UniqueRuleInfo":
+		case *genDm.UniqueRuleInfo:
 			unique[attrName] = true
 			if msg != "" {
 				uniqueErr[attrName] = msg
