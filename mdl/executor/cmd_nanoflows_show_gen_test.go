@@ -76,9 +76,9 @@ func TestDescribeNanoflowGenToString_StructuralSkeleton(t *testing.T) {
 
 	mustContain(t, out,
 		"create or modify nanoflow FeedbackModule.ACT_Open_Feedback_Modal", // resolved module name
-		"\nbegin\n", // body open
-		"\nend;",    // body close
-		"\n/",       // statement terminator
+		"\n{\n", // body open
+		"\n}",   // body close
+		"\n/",   // statement terminator
 	)
 
 	if strings.Contains(out, "<unknown>") {
@@ -101,9 +101,9 @@ func TestDescribeNanoflowGenToString_IfElseFraming(t *testing.T) {
 
 	mustContain(t, out,
 		"create or modify nanoflow FeedbackModule.SUB_Feedback_GetOrCreate",
-		"if ", " then\n",
-		"\n  else\n",
-		"\n  end if;",
+		"if ", " {\n",
+		"} else {\n",
+		"\n}",
 	)
 	if strings.Contains(out, "<unknown>") {
 		t.Errorf("module name should resolve from container chain (no <unknown>); got:\n%s", out)

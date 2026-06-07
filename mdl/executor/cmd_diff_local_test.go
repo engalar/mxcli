@@ -132,8 +132,8 @@ func TestMicroflowBsonToMDL_DecodesViaCodec(t *testing.T) {
 		"create or modify microflow FeedbackModule.SUB_Feedback_SendToServer", // header
 		"$Feedback: FeedbackModule.Feedback",                                  // parameter with resolved entity QN
 		"\nreturns ",                                                          // returns clause now appears (entity return)
-		"\nbegin\n",                                                           // body open
-		"\nend;",                                                              // body close
+		"\n{\n",                                                               // body open
+		"\n}",                                                                 // body close
 		"\n/",                                                                 // statement terminator
 		"call microflow ",                                                     // body actually rendered (not stub)
 	)
@@ -161,8 +161,8 @@ func TestNanoflowBsonToMDL_DecodesViaCodec(t *testing.T) {
 	mustContain(t, out,
 		"create or modify nanoflow FeedbackModule.SUB_Feedback_GetOrCreate",
 		"\nreturns ",
-		"\nbegin\n",
-		"\nend;",
+		"\n{\n",
+		"\n}",
 		"\n/",
 	)
 }

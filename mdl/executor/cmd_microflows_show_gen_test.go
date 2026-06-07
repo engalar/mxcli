@@ -93,9 +93,9 @@ func TestDescribeMicroflowGenToString_StructuralSkeleton(t *testing.T) {
 
 	mustContain(t, out,
 		"create or modify microflow MyFirstModule.MyFirstLogic", // resolved module name
-		"\nbegin\n", // body open
-		"\nend;",    // body close
-		"\n/",       // statement terminator
+		"\n{\n",  // body open
+		"\n}",    // body close
+		"\n/",    // statement terminator
 	)
 
 	// Stage 3.2.2.a: the SQL-backed module-name resolution should never
@@ -128,9 +128,9 @@ func TestDescribeMicroflowGenToString_IfElseFraming(t *testing.T) {
 
 	mustContain(t, out,
 		"create or modify microflow Administration.SaveNewAccount", // resolved module name
-		"if ", " then\n",
-		"\n  else\n",
-		"\n  end if;",
+		"if ", " {\n",
+		"} else {\n",
+		"\n}",
 	)
 	if strings.Contains(out, "<unknown>") {
 		t.Errorf("module name should resolve from container chain (no <unknown>); got:\n%s", out)
@@ -155,7 +155,7 @@ func TestDescribeMicroflowGenToString_IfElseFraming(t *testing.T) {
 // TestDescribeMicroflowGenToString_InheritanceSplitFraming exercises the
 // InheritanceSplit framing on Administration.ManageMyAccount, which
 // case-splits on the current user's specialised type.
-// MDL syntax: split type $Var \n case Module.Entity \n body \n else \n body \n end split;
+// MDL {} syntax: split type $Var { case Module.Entity { body } else { body } }
 func TestDescribeMicroflowGenToString_InheritanceSplitFraming(t *testing.T) {
 	w := openMprWriterForTest(t)
 	mf := findMicroflowByQN(t, w, "Administration.ManageMyAccount")
@@ -167,14 +167,14 @@ func TestDescribeMicroflowGenToString_InheritanceSplitFraming(t *testing.T) {
 
 	mustContain(t, out,
 		"create or modify microflow Administration.ManageMyAccount",
-		"split type $",        // correct split header (not "case $Var inheritance")
+		"split type $",         // correct split header
 		"case Administration.", // case branch with entity name (not "when ... then")
-		"end split;",          // correct terminator (not "end case;")
 	)
 	mustNotContain(t, out,
 		" inheritance", // old wrong syntax
 		"when ",        // old wrong syntax
 		"end case;",    // old wrong syntax
+		"end split;",   // old wrong syntax (replaced by "}")
 		"<unknown>",
 	)
 }

@@ -41,8 +41,8 @@ func TestExecCreateNanoflowGen_EmptyBodyRoundTrip(t *testing.T) {
 	}
 	mustContain(t, rendered,
 		"create or modify nanoflow MyFirstModule.NF_GenSmoke ()",
-		"\nbegin\n",
-		"\nend;",
+		"\n{\n",
+		"\n}",
 	)
 }
 
