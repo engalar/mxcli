@@ -196,8 +196,7 @@ func DescribeMicroflowGenToString(ctx *ExecContext, mf *genMf.Microflow) (string
 		lines = append(lines, returnLine)
 	}
 
-	// Begin block.
-	lines = append(lines, "begin")
+	lines = append(lines, "{")
 
 	bodyLines := renderGenMicroflowBody(ctx, mf)
 	if len(bodyLines) == 0 {
@@ -207,7 +206,7 @@ func DescribeMicroflowGenToString(ctx *ExecContext, mf *genMf.Microflow) (string
 			lines = append(lines, "  "+l)
 		}
 	}
-	lines = append(lines, "end;")
+	lines = append(lines, "}")
 
 	// Allowed module roles → grant execute footer.
 	// Keep fully-qualified names (e.g. "HD.AgentRole") and filter out the
@@ -800,19 +799,19 @@ func emitExclusiveSplitGen(
 		return
 	}
 
-	// Boolean split: emit `if <expr> then` with optional `else` branch.
+	// Boolean split: emit `if <expr> {` with optional `} else {` branch.
 	expr := exclusiveSplitExpressionGen(split)
-	*lines = append(*lines, indentStr+"if "+expr+" then")
+	*lines = append(*lines, indentStr+"if "+expr+" {")
 
 	trueFlow, falseFlow := pickBooleanBranchesGen(flows)
 	if trueFlow != nil {
 		traverseFlowGenUntilMerge(ctx, trueFlow.DestinationRefID(), mergeID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, lines, indent+1)
 	}
 	if falseFlow != nil && falseFlow.DestinationRefID() != mergeID {
-		*lines = append(*lines, indentStr+"else")
+		*lines = append(*lines, indentStr+"} else {")
 		traverseFlowGenUntilMerge(ctx, falseFlow.DestinationRefID(), mergeID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, lines, indent+1)
 	}
-	*lines = append(*lines, indentStr+"end if;")
+	*lines = append(*lines, indentStr+"}")
 }
 
 func emitInheritanceSplitGen(
@@ -833,23 +832,32 @@ func emitInheritanceSplitGen(
 	if varName == "" {
 		varName = "Variable"
 	}
-	// MDL syntax: split type $Var \n case QualifiedName \n body \n [else \n body] \n end split;
-	*lines = append(*lines, indentStr+"split type $"+varName)
+	// MDL {} canonical form: split type $Var { case QN { body } [else { body }] }
+	innerIndent := strings.Repeat("  ", indent+1)
+	*lines = append(*lines, indentStr+"split type $"+varName+" {")
 	var elseFlow *genMf.SequenceFlow
+	var caseFlows []*genMf.SequenceFlow
 	for _, f := range findNormalFlowsGen(flowsByOrigin[currentID]) {
 		label := inheritanceCaseLabelGen(f)
 		if label == "_" {
 			elseFlow = f
 			continue
 		}
-		*lines = append(*lines, indentStr+"case "+label)
-		traverseFlowGenUntilMerge(ctx, f.DestinationRefID(), mergeID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, lines, indent+1)
+		caseFlows = append(caseFlows, f)
 	}
-	if elseFlow != nil {
-		*lines = append(*lines, indentStr+"else")
-		traverseFlowGenUntilMerge(ctx, elseFlow.DestinationRefID(), mergeID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, lines, indent+1)
+	for i, f := range caseFlows {
+		label := inheritanceCaseLabelGen(f)
+		*lines = append(*lines, innerIndent+"case "+label+" {")
+		traverseFlowGenUntilMerge(ctx, f.DestinationRefID(), mergeID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, lines, indent+2)
+		if i == len(caseFlows)-1 && elseFlow != nil {
+			*lines = append(*lines, innerIndent+"} else {")
+			traverseFlowGenUntilMerge(ctx, elseFlow.DestinationRefID(), mergeID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, lines, indent+2)
+			*lines = append(*lines, innerIndent+"}")
+		} else {
+			*lines = append(*lines, innerIndent+"}")
+		}
 	}
-	*lines = append(*lines, indentStr+"end split;")
+	*lines = append(*lines, indentStr+"}")
 }
 
 func emitLoopedActivityGen(
@@ -862,10 +870,8 @@ func emitLoopedActivityGen(
 ) {
 	// Header line: `loop $var in $list` / `while <cond>`.
 	header := "loop"
-	endKw := "end loop;"
 	if _, isWhile := loop.LoopSource().(*genMf.WhileLoopCondition); isWhile {
 		header = "while true"
-		endKw = "end while;"
 	} else if il, ok := loop.LoopSource().(*genMf.IterableList); ok && il != nil {
 		iterVar := il.VariableName()
 		listVar := il.ListVariableName()
@@ -873,8 +879,7 @@ func emitLoopedActivityGen(
 			header = fmt.Sprintf("loop $%s in $%s", iterVar, listVar)
 		}
 	}
-	*lines = append(*lines, indentStr+header)
-	*lines = append(*lines, indentStr+"begin")
+	*lines = append(*lines, indentStr+header+" {")
 
 	// Nested body: traverse the loop's own ObjectCollection. Reuses
 	// the same gen traverser so structural framing nests correctly.
@@ -942,7 +947,7 @@ func emitLoopedActivityGen(
 		traverseFlowGen(ctx, startID, innerActivities, innerByOrigin, innerByDest, innerSplitMerge, visited, &bodyLines, indent+1)
 		*lines = append(*lines, bodyLines...)
 	}
-	*lines = append(*lines, indentStr+endKw)
+	*lines = append(*lines, indentStr+"}")
 }
 
 // ────────────────────────────────────────────────────────

@@ -44,6 +44,11 @@
 --           permission gaps now auto-diagnosed with MDL fix suggestions.
 -- Note    : page model now extracts microflow/nanoflow datasource refs (MicroflowSettings.
 --           Microflow / Nanoflow by-name fields) so access analysis sees MF-sourced DataViews.
+-- Note    : Golden rebuilt 2026-06-07 after describe syntax migration to {} canonical form:
+--           microflow/nanoflow bodies now emit { } instead of begin/end;, if { } else { }
+--           instead of if then/else/end if, loop $x { } instead of loop/begin/end loop,
+--           split type $x { case X { } else { } } instead of split type/case/end split.
+--           Also fixes AllowedRoles fallback to AllowedModuleRoles for human-edited pages.
 --
 -- Edge cases covered:
 --   Domain    : self-ref association, cross-module association,

@@ -289,12 +289,12 @@ create or modify microflow KB.ACT_Article_Publish (
   $Article: KB.Article
 )
 returns Boolean as $Success
-begin
-  if $Article/Content = '' or $Article/Content = empty then
+{
+  if $Article/Content = '' or $Article/Content = empty {
     @position(530,300)
     validation feedback $Article/Content message 'Content cannot be empty before publishing.';
     return false;
-  else
+  } else {
     @position(730,200)
     change $Article (Status = KB.ArticleStatus.Published
     , PublishedAt = [%CurrentDateTime%]
@@ -302,8 +302,8 @@ begin
     @position(890,200)
     commit $Article;
     return true;
-  end if;
-end;
+  }
+}
 
 grant execute on microflow KB.ACT_Article_Publish to KB.Contributor, KB.Admin;
 /
@@ -311,14 +311,14 @@ create or modify microflow KB.ACT_Article_Archive (
   $Article: KB.Article
 )
 returns Boolean as $Success
-begin
+{
   @position(360,200)
   change $Article (Status = KB.ArticleStatus.Archived
   );
   @position(520,200)
   commit $Article;
   return true;
-end;
+}
 
 grant execute on microflow KB.ACT_Article_Archive to KB.Contributor, KB.Admin;
 /
@@ -326,21 +326,21 @@ create or modify microflow KB.SUB_Article_TruncateContent (
   $Article: KB.Article
 )
 returns String as $Preview
-begin
+{
   @position(360,200)
   declare $Preview String = $Article/Content;
   return $Preview;
-end;
+}
 /
 create or modify nanoflow KB.NF_Article_FormatPreview (
   $Article: KB.Article
 )
 returns String
-begin
+{
   @position(360,200)
   $Preview = call microflow KB.SUB_Article_TruncateContent(Article = $Article);
   return $Preview;
-end;
+}
 
 grant execute on nanoflow KB.NF_Article_FormatPreview to KB.Reader, KB.Contributor, KB.Admin;
 /
@@ -348,35 +348,35 @@ create or modify microflow HD.ACT_Ticket_Submit (
   $Ticket: HD.Ticket
 )
 returns Boolean as $Success
-begin
-  if $Ticket/Subject = '' then
+{
+  if $Ticket/Subject = '' {
     @position(530,300)
     validation feedback $Ticket/Subject message 'Subject is required';
     return false;
-  else
-    if $Ticket/Priority = HD.TicketPriority.Critical then
+  } else {
+    if $Ticket/Priority = HD.TicketPriority.Critical {
       @position(900,200)
       change $Ticket (Status = HD.TicketStatus.Open
       , SLADueAt = addHours([%CurrentDateTime%], @HD.SLA_CRITICAL_HOURS)
       );
-    else
-      if $Ticket/Priority = HD.TicketPriority.High then
+    } else {
+      if $Ticket/Priority = HD.TicketPriority.High {
         @position(1070,300)
         change $Ticket (Status = HD.TicketStatus.Open
         , SLADueAt = addHours([%CurrentDateTime%], @HD.SLA_HIGH_HOURS)
         );
-      else
+      } else {
         @position(1070,400)
         change $Ticket (Status = HD.TicketStatus.Open
         , SLADueAt = addHours([%CurrentDateTime%], 24)
         );
-      end if;
-    end if;
+      }
+    }
     @position(1510,200)
     commit $Ticket;
     return true;
-  end if;
-end;
+  }
+}
 
 grant execute on microflow HD.ACT_Ticket_Submit to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
 /
@@ -385,12 +385,12 @@ create or modify microflow HD.ACT_Ticket_Assign (
   $Agent: HD.Agent
 )
 returns Boolean as $Success
-begin
-  if $Ticket/Status != HD.TicketStatus.Open then
+{
+  if $Ticket/Status != HD.TicketStatus.Open {
     @position(530,300)
     show message 'Only Open tickets can be assigned.' type warning;
     return false;
-  else
+  } else {
     @position(730,200)
     change $Ticket (Status = HD.TicketStatus.InProgress
     , HD.Ticket_Agent = $Agent
@@ -398,8 +398,8 @@ begin
     @position(890,200)
     commit $Ticket;
     return true;
-  end if;
-end;
+  }
+}
 
 grant execute on microflow HD.ACT_Ticket_Assign to HD.AgentRole, HD.ManagerRole;
 /
@@ -407,10 +407,10 @@ create or modify microflow HD.ACT_Ticket_Resolve (
   $Ticket: HD.Ticket
 )
 returns Boolean as $Success
-begin
-  if $Ticket/Status != HD.TicketStatus.InProgress then
+{
+  if $Ticket/Status != HD.TicketStatus.InProgress {
     return false;
-  else
+  } else {
     @position(690,200)
     declare $Now DateTime = [%CurrentDateTime%];
     @position(850,200)
@@ -423,8 +423,8 @@ begin
     @position(1170,200)
     commit $Ticket;
     return true;
-  end if;
-end;
+  }
+}
 
 grant execute on microflow HD.ACT_Ticket_Resolve to HD.AgentRole, HD.ManagerRole;
 /
@@ -432,18 +432,18 @@ create or modify microflow HD.ACT_Ticket_Reopen (
   $Ticket: HD.Ticket
 )
 returns Boolean as $Success
-begin
-  if $Ticket/Status != HD.TicketStatus.Resolved and $Ticket/Status != HD.TicketStatus.Closed then
+{
+  if $Ticket/Status != HD.TicketStatus.Resolved and $Ticket/Status != HD.TicketStatus.Closed {
     return false;
-  else
+  } else {
     @position(690,200)
     change $Ticket (Status = HD.TicketStatus.Open
     , ResolvedAt = empty);
     @position(850,200)
     commit $Ticket;
     return true;
-  end if;
-end;
+  }
+}
 
 grant execute on microflow HD.ACT_Ticket_Reopen to HD.AgentRole, HD.ManagerRole;
 /
@@ -451,18 +451,18 @@ create or modify microflow HD.ACT_Ticket_Close (
   $Ticket: HD.Ticket
 )
 returns Boolean as $Success
-begin
-  if $Ticket/Status != HD.TicketStatus.Resolved then
+{
+  if $Ticket/Status != HD.TicketStatus.Resolved {
     return false;
-  else
+  } else {
     @position(690,200)
     change $Ticket (Status = HD.TicketStatus.Closed
     );
     @position(850,200)
     commit $Ticket;
     return true;
-  end if;
-end;
+  }
+}
 
 grant execute on microflow HD.ACT_Ticket_Close to HD.AgentRole, HD.ManagerRole;
 /
@@ -470,7 +470,7 @@ create or modify microflow HD.ACT_Ticket_SafeCommit (
   $Ticket: HD.Ticket
 )
 returns Boolean as $Success
-begin
+{
   @position(360,200)
   declare $Success Boolean = false;
   @position(520,200)
@@ -479,48 +479,46 @@ begin
   set $Success = true
   ;
   return $Success;
-end;
+}
 /
 create or modify microflow HD.ACT_Ticket_MarkCommentsRead (
   $Ticket: HD.Ticket
 )
-begin
+{
   @position(360,200)
   retrieve $Comments from HD.TicketComment
       where HD.TicketComment_Ticket/HD.Ticket = $Ticket and IsInternal = true
       limit 100;
-  loop $Comment in $Comments
-  begin
+  loop $Comment in $Comments {
     @position(150,80)
     change $Comment (IsInternal = false
     );
     @position(310,80)
     commit $Comment;
-  end loop;
+  }
   return;
-end;
+}
 /
 create or modify microflow HD.ACT_EscalationRequest_Cleanup (
   $Ticket: HD.Ticket
 )
-begin
+{
   @position(360,200)
   retrieve $Requests from HD.EscalationRequest
       where HD.EscalationRequest_Ticket/HD.Ticket = $Ticket
       limit 50;
-  loop $Req in $Requests
-  begin
+  loop $Req in $Requests {
     @position(150,80)
     delete $Req;
-  end loop;
+  }
   return;
-end;
+}
 
 grant execute on microflow HD.ACT_EscalationRequest_Cleanup to HD.AgentRole, HD.ManagerRole;
 /
 create or modify microflow HD.DS_OverdueTicketCount ()
 returns Integer as $Count
-begin
+{
   @position(360,200)
   retrieve $Overdue from HD.Ticket
       where IsOverSLA = true
@@ -528,49 +526,49 @@ begin
   @position(520,200)
   $Count = count($Overdue);
   return $Count;
-end;
+}
 /
 create or modify microflow HD.DS_TicketsByCompany (
   $Company: String
 )
 returns List of HD.Ticket as $Tickets
-begin
+{
   @position(360,200)
   retrieve $Tickets from HD.Ticket
       where HD.Ticket_Customer/HD.Customer/Company = $Company
       limit 50
       offset 4;
   return $Tickets;
-end;
+}
 /
 create or modify microflow HD.DS_MyTickets ()
 returns List of HD.Ticket as $Tickets
-begin
+{
   @position(360,200)
   retrieve $Tickets from HD.Ticket
       where System.owner = '[%CurrentUser%]'
       limit 0;
   return $Tickets;
-end;
+}
 
 grant execute on microflow HD.DS_MyTickets to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
 /
 create or modify microflow HD.DS_OpenHighTickets ()
 returns List of HD.Ticket as $Tickets
-begin
+{
   @position(360,200)
   retrieve $Tickets from HD.Ticket
       where Status = HD.TicketStatus.Open and Priority = HD.TicketPriority.High
       limit 0;
   return $Tickets;
-end;
+}
 /
 create or modify microflow HD.DS_TicketPage (
   $PageIndex: Integer,
   $PageSize: Integer
 )
 returns List of HD.Ticket as $Tickets
-begin
+{
   @position(360,200)
   declare $Offset Integer = ($PageIndex - 1) * $PageSize;
   @position(520,200)
@@ -580,25 +578,25 @@ begin
       limit $PageSize
       offset $Offset;
   return $Tickets;
-end;
+}
 /
 create or modify microflow HD.DS_RecentCriticalTickets ()
 returns List of HD.Ticket as $Tickets
-begin
+{
   @position(360,200)
   retrieve $Tickets from HD.Ticket
       where Priority = HD.TicketPriority.Critical
       sort by HD.Ticket.createdDate desc
       limit 10;
   return $Tickets;
-end;
+}
 /
 create or modify nanoflow HD.NF_Ticket_QuickCreate (
   $Customer: HD.Customer,
   $Subject: String
 )
 returns Ticket
-begin
+{
   @position(360,200)
   $Ticket = create HD.Ticket (Subject = $Subject
   , Status = HD.TicketStatus.Draft
@@ -608,7 +606,7 @@ begin
   @position(520,200)
   commit $Ticket;
   return $Ticket;
-end;
+}
 
 grant execute on nanoflow HD.NF_Ticket_QuickCreate to HD.CustomerRole, HD.AgentRole;
 /
@@ -616,12 +614,12 @@ create or modify nanoflow HD.NF_TicketSearch_Apply (
   $Search: HD.TicketSearch
 )
 returns List of HD.Ticket
-begin
+{
   @position(360,200)
   retrieve $Tickets from HD.Ticket
       limit 100;
   return $Tickets;
-end;
+}
 
 grant execute on nanoflow HD.NF_TicketSearch_Apply to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
 /
@@ -629,28 +627,28 @@ create or modify nanoflow HD.NF_Priority_GetLabel (
   $PriorityStr: String
 )
 returns String
-begin
+{
   @position(360,200)
   declare $CSSClass String = 'badge-default';
-  if $PriorityStr = 'Critical' then
+  if $PriorityStr = 'Critical' {
     @position(690,200)
     set $CSSClass = 'badge-danger'
     ;
-  else
-    if $PriorityStr = 'High' then
+  } else {
+    if $PriorityStr = 'High' {
       @position(860,300)
       set $CSSClass = 'badge-warning'
       ;
-    else
-      if $PriorityStr = 'Normal' then
+    } else {
+      if $PriorityStr = 'Normal' {
         @position(1030,500)
         set $CSSClass = 'badge-info'
         ;
-      end if;
-    end if;
-  end if;
+      }
+    }
+  }
   return $CSSClass;
-end;
+}
 
 grant execute on nanoflow HD.NF_Priority_GetLabel to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
 /
@@ -659,122 +657,122 @@ create or modify microflow HD.WFA_GetManagerAssignees (
   $EscalationRequest: HD.EscalationRequest
 )
 returns List of System.User as $Users
-begin
+{
   @position(360,200)
   retrieve $Users from System.User
       limit 10;
   return $Users;
-end;
+}
 /
 create or modify microflow HD.WFS_SendReminder (
   $EscalationRequest: HD.EscalationRequest
 )
-begin
+{
   @position(360,200)
   log info node 'Application' '{1}' with ({1} = 'Escalation reminder sent for request ' + toString($EscalationRequest/Reason));
   return;
-end;
+}
 /
 create or modify microflow HD.WFS_Approve (
   $EscalationRequest: HD.EscalationRequest
 )
-begin
+{
   @position(360,200)
   retrieve $Ticket from HD.Ticket
       where HD.EscalationRequest_Ticket/HD.EscalationRequest = $EscalationRequest
       limit 1;
-  if $Ticket != empty then
+  if $Ticket != empty {
     @position(690,300)
     change $Ticket (Priority = HD.TicketPriority.Critical
     );
     @position(850,300)
     commit $Ticket;
-  end if;
+  }
   return;
-end;
+}
 /
 create or modify microflow HD.WFS_Reject (
   $EscalationRequest: HD.EscalationRequest
 )
-begin
+{
   @position(360,200)
   change $EscalationRequest (RejectionReason = 'Rejected by manager review board.'
   );
   @position(520,200)
   commit $EscalationRequest;
   return;
-end;
+}
 /
 create or modify microflow HD.WFS_Escalation_Initialize (
   $EscalationRequest: HD.EscalationRequest
 )
-begin
+{
   @position(360,200)
   change $EscalationRequest (RequestedAt = [%CurrentDateTime%]
   );
   @position(520,200)
   commit $EscalationRequest;
   return;
-end;
+}
 /
 create or modify microflow HD.WFS_AutoReject (
   $EscalationRequest: HD.EscalationRequest
 )
-begin
+{
   @position(360,200)
   change $EscalationRequest (RejectionReason = 'Auto-rejected: no manager response within 48 hours.'
   );
   @position(520,200)
   commit $EscalationRequest;
   return;
-end;
+}
 /
 create or modify microflow HD.WFS_UpdateTicketPriority (
   $EscalationRequest: HD.EscalationRequest
 )
-begin
+{
   @position(360,200)
   retrieve $Ticket from HD.Ticket
       where HD.EscalationRequest_Ticket/HD.EscalationRequest = $EscalationRequest
       limit 1;
-  if $Ticket != empty then
+  if $Ticket != empty {
     @position(690,300)
     change $Ticket (Priority = HD.TicketPriority.Critical
     , Status = HD.TicketStatus.InProgress
     );
     @position(850,300)
     commit $Ticket;
-  end if;
+  }
   return;
-end;
+}
 /
 create or modify microflow HD.WFS_NotifyAgent (
   $EscalationRequest: HD.EscalationRequest
 )
-begin
+{
   @position(360,200)
   log info node 'Application' '{1}' with ({1} = 'Agent notified: escalation approved for request ' + toString($EscalationRequest/Reason));
   return;
-end;
+}
 /
 create or modify microflow HD.WFC_EscalationRequest_OnCreate (
   $EscalationRequest: HD.EscalationRequest
 )
-begin
+{
   @position(360,200)
   log info node 'Application' '{1}' with ({1} = 'EscalationRequest created: ' + toString($EscalationRequest/Reason));
   return;
-end;
+}
 /
 create or modify microflow HD.ACT_StartEscalation (
   $Ticket: HD.Ticket,
   $Reason: String
 )
 returns Boolean as $Success
-begin
-  if $Ticket/Status != HD.TicketStatus.InProgress then
+{
+  if $Ticket/Status != HD.TicketStatus.InProgress {
     return false;
-  else
+  } else {
     @position(690,200)
     $EscalationRequest = create HD.EscalationRequest (Reason = $Reason
     , RequestedAt = [%CurrentDateTime%]
@@ -785,8 +783,8 @@ begin
     @position(1010,200)
     call workflow HD.WF_TicketEscalation (EscalationRequest = $EscalationRequest);
     return true;
-  end if;
-end;
+  }
+}
 
 grant execute on microflow HD.ACT_StartEscalation to HD.AgentRole, HD.ManagerRole;
 /
@@ -794,21 +792,21 @@ create or modify microflow HD.ACT_Workflow_ChangeState (
   $Workflow: System.Workflow,
   $Operation: String
 )
-begin
-  if $Operation = 'Pause' then
+{
+  if $Operation = 'Pause' {
     @position(530,200)
     workflow operation pause $Workflow;
-  else
-    if $Operation = 'Unpause' then
+  } else {
+    if $Operation = 'Unpause' {
       @position(700,300)
       workflow operation unpause $Workflow;
-    else
+    } else {
       @position(700,400)
       workflow operation abort $Workflow reason 'Administratively aborted';
-    end if;
-  end if;
+    }
+  }
   return;
-end;
+}
 
 grant execute on microflow HD.ACT_Workflow_ChangeState to HD.ManagerRole;
 /
@@ -816,140 +814,143 @@ create or modify microflow HD.ACT_Workflow_CompleteTask (
   $UserTask: System.WorkflowUserTask,
   $Outcome: String
 )
-begin
+{
   @position(360,200)
   set task outcome $UserTask 'Approve';
   return;
-end;
+}
 
 grant execute on microflow HD.ACT_Workflow_CompleteTask to HD.ManagerRole;
 /
 create or modify microflow HD.ACT_Workflow_GenerateJumpTo (
   $Workflow: System.Workflow
 )
-begin
+{
   @position(360,200)
   generate jump to options for $Workflow as HD.WF_TicketEscalation;
   return;
-end;
+}
 
 grant execute on microflow HD.ACT_Workflow_GenerateJumpTo to HD.ManagerRole;
 /
 create or modify microflow HD.ACT_Workflow_ApplyJumpTo (
   $JumpOption: System.WorkflowJumpToDetails
 )
-begin
+{
   @position(360,200)
   apply jump to option $JumpOption;
   return;
-end;
+}
 
 grant execute on microflow HD.ACT_Workflow_ApplyJumpTo to HD.ManagerRole;
 /
 create or modify microflow HD.ACT_Workflow_GetHistory (
   $Workflow: System.Workflow
 )
-begin
+{
   @position(360,200)
   get workflow activity records $Workflow;
   return;
-end;
+}
 
 grant execute on microflow HD.ACT_Workflow_GetHistory to HD.ManagerRole;
 /
 create or modify microflow HD.ACT_Workflow_GetContext (
   $Workflow: System.Workflow
 )
-begin
+{
   @position(360,200)
   get workflow data $Workflow as HD.WF_TicketEscalation;
   return;
-end;
+}
 
 grant execute on microflow HD.ACT_Workflow_GetContext to HD.ManagerRole;
 /
 create or modify microflow HD.DS_WorkflowInstances (
   $EscalationRequest: HD.EscalationRequest
 )
-begin
+{
   @position(360,200)
   get workflows for $EscalationRequest;
   return;
-end;
+}
 
 grant execute on microflow HD.DS_WorkflowInstances to HD.ManagerRole;
 /
 create or modify microflow HD.ACT_Workflow_ShowTaskPage (
   $UserTask: System.WorkflowUserTask
 )
-begin
+{
   @position(360,200)
   open user task $UserTask;
   return;
-end;
+}
 /
 create or modify microflow HD.ACT_Workflow_ShowAdminPage (
   $Workflow: System.Workflow
 )
-begin
+{
   @position(360,200)
   open workflow $Workflow;
   return;
-end;
+}
 /
 create or modify microflow HD.ACT_Workflow_Lock (
   $Workflow: System.WorkflowDefinition
 )
-begin
+{
   @position(360,200)
   lock workflow $Workflow;
   return;
-end;
+}
 
 grant execute on microflow HD.ACT_Workflow_Lock to HD.ManagerRole;
 /
 create or modify microflow HD.ACT_Workflow_Unlock (
   $Workflow: System.WorkflowDefinition
 )
-begin
+{
   @position(360,200)
   unlock workflow $Workflow;
   return;
-end;
+}
 
 grant execute on microflow HD.ACT_Workflow_Unlock to HD.ManagerRole;
 /
 create or modify microflow HD.ACT_Workflow_Notify (
   $Workflow: System.Workflow
 )
-begin
+{
   @position(360,200)
   notify workflow $Workflow;
   return;
-end;
+}
 
 grant execute on microflow HD.ACT_Workflow_Notify to HD.ManagerRole;
 /
 create or modify microflow HD.DS_GetMyProfile ()
 returns UserProfile as $Profile
-begin
+{
   @position(360,200)
   retrieve $Me from System.User
       where id = '[%CurrentUser%]'
       limit 1;
-  split type $Me
-  case HD.UserProfile
-    @position(690,200)
-    cast $Profile;
-    return $Profile;
-  case Administration.Account
-    return empty;
-  case System.User
-    return empty;
-  else
-    return empty;
-  end split;
-end;
+  split type $Me {
+    case HD.UserProfile {
+      @position(690,200)
+      cast $Profile;
+      return $Profile;
+    }
+    case Administration.Account {
+      return empty;
+    }
+    case System.User {
+      return empty;
+    } else {
+      return empty;
+    }
+  }
+}
 
 grant execute on microflow HD.DS_GetMyProfile to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
 /
@@ -960,19 +961,19 @@ create or modify microflow HD.ACT_ChangePassword (
   $Form: HD.PasswordForm
 )
 returns Boolean as $Success
-begin
+{
   @position(360,200)
   declare $Success Boolean = false;
-  if $Form/NewPassword = '' or $Form/NewPassword = empty then
+  if $Form/NewPassword = '' or $Form/NewPassword = empty {
     @position(690,300)
     validation feedback $Form/NewPassword message 'New password is required.';
     return false;
-  else
-    if $Form/NewPassword != $Form/ConfirmPassword then
+  } else {
+    if $Form/NewPassword != $Form/ConfirmPassword {
       @position(1060,300)
       validation feedback $Form/ConfirmPassword message 'Passwords do not match.';
       return false;
-    else
+    } else {
       @position(1260,200)
       $Hashed = call java action HD.JA_HashPassword(PlainText = $Form/NewPassword);
       @position(1420,200)
@@ -981,37 +982,37 @@ begin
       @position(1580,200)
       show home page;
       return $Success;
-    end if;
-  end if;
-end;
+    }
+  }
+}
 
 grant execute on microflow HD.ACT_ChangePassword to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
 /
 create or modify microflow HD.ACT_Agent_Deactivate (
   $Agent: HD.Agent
 )
-begin
+{
   @position(360,200)
   change $Agent (IsActive = false
   );
   @position(520,200)
   commit $Agent;
   return;
-end;
+}
 
 grant execute on microflow HD.ACT_Agent_Deactivate to HD.ManagerRole;
 /
 create or modify microflow HD.ACT_Agent_Reactivate (
   $Agent: HD.Agent
 )
-begin
+{
   @position(360,200)
   change $Agent (IsActive = true
   , DeactivationReason = empty);
   @position(520,200)
   commit $Agent;
   return;
-end;
+}
 
 grant execute on microflow HD.ACT_Agent_Reactivate to HD.ManagerRole;
 /

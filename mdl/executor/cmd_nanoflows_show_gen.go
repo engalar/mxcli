@@ -148,8 +148,7 @@ func DescribeNanoflowGenToString(ctx *ExecContext, nf *genMf.Nanoflow) (string, 
 		lines = append(lines, returnLine)
 	}
 
-	// Begin block.
-	lines = append(lines, "begin")
+	lines = append(lines, "{")
 
 	bodyLines := renderGenNanoflowBody(ctx, nf)
 	if len(bodyLines) == 0 {
@@ -159,7 +158,7 @@ func DescribeNanoflowGenToString(ctx *ExecContext, nf *genMf.Nanoflow) (string, 
 			lines = append(lines, "  "+l)
 		}
 	}
-	lines = append(lines, "end;")
+	lines = append(lines, "}")
 
 	// Allowed module roles → grant execute footer.
 	// Keep fully-qualified names and filter out the auto-created "User" placeholder.

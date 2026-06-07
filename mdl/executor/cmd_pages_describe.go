@@ -132,7 +132,16 @@ func describePage(ctx *ExecContext, name ast.QualifiedName) error {
 	}
 
 	// Add GRANT VIEW if roles are assigned, excluding the auto-created User placeholder.
-	if allowed := filterAutoDocumentRoles(foundPage.AllowedRolesQualifiedNames()); len(allowed) > 0 {
+	// Prefer AllowedRoles (gen field) but fall back to AllowedModuleRoles from raw BSON:
+	// human-edited mxunit files may only store the Studio Pro field (AllowedModuleRoles)
+	// without the newer AllowedRoles field written by mxcli's gen path.
+	pageRoles := foundPage.AllowedRolesQualifiedNames()
+	if len(pageRoles) == 0 {
+		if rawData, err := ctx.Backend.GetRawUnit(pageID); err == nil {
+			pageRoles = readVersionedStringArray(rawData["AllowedModuleRoles"]) // nolint:describe-raw-bson — no gen accessor for AllowedModuleRoles; this is a fallback for human-edited pages missing the AllowedRoles field
+		}
+	}
+	if allowed := filterAutoDocumentRoles(pageRoles); len(allowed) > 0 {
 		fmt.Fprintf(ctx.Output, "\n\ngrant view on page %s.%s to %s;",
 			modName, foundPage.Name(), strings.Join(allowed, ", "))
 	}
@@ -575,6 +584,20 @@ func getBsonArrayElements(v any) []any {
 	}
 	// No type indicator, return as-is
 	return arr
+}
+
+// readVersionedStringArray extracts strings from a Mendix versioned BSON array.
+// Mendix stores role lists as [int32(version), "A.Role", "B.Role", ...]; this
+// helper skips the version prefix and returns only the string entries.
+func readVersionedStringArray(v any) []string {
+	elems := getBsonArrayElements(v)
+	result := make([]string, 0, len(elems))
+	for _, e := range elems {
+		if s, ok := e.(string); ok {
+			result = append(result, s)
+		}
+	}
+	return result
 }
 
 // getPageWidgetsFromRaw extracts widgets from raw page BSON.

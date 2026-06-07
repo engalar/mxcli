@@ -169,8 +169,8 @@ create or modify page MyFirstModule.Home_Web (title: 'Homepage', layout: Atlas_C
   }
 }
 create or modify microflow MyFirstModule.MyFirstLogic ()
-begin
+{
   return;
   -- @annotation 'Microflows are used to define server logic in your app.\r\n\r\n- For client logic you can use Nanoflows\r\n- For business process logic you can use Workflows\r\n\r\nDocumentation: https://docs.mendix.com/refguide/application-logic'
-end;
+}
 /
