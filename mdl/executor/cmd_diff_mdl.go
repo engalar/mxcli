@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
-	"github.com/mendixlabs/mxcli/mdl/canonical"
 	"github.com/mendixlabs/mxcli/model"
 	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 )
@@ -17,15 +16,11 @@ import (
 // Statement to MDL Converters
 // ============================================================================
 
-// entityStmtToMDL converts a CreateEntityStmt to MDL text via the canonical
-// EntityModel pipeline (Lift → ToMDL). Both proposed (stmt) and current (gen)
-// renderings share the same serializer so diff output is byte-stable.
-func entityStmtToMDL(ctx *ExecContext, s *ast.CreateEntityStmt) string {
-	doc, err := ctx.ModelCodecs.LiftFrom(s)
-	if err != nil {
-		return fmt.Sprintf("/* entity lift error: %v */", err)
-	}
-	return doc.ToMDL() + ";\n/"
+// entityStmtToMDL converts a CreateEntityStmt to MDL text. Both proposed (stmt)
+// and current (gen) renderings share renderEntityMDL so diff output is byte-stable.
+func entityStmtToMDL(_ *ExecContext, s *ast.CreateEntityStmt) string {
+	spec := entitySpecFromAST(s)
+	return renderEntityMDL(spec, false) + ";\n/"
 }
 
 // viewEntityStmtToMDL converts a CreateViewEntityStmt to MDL text
@@ -91,12 +86,9 @@ func enumerationStmtToMDL(ctx *ExecContext, s *ast.CreateEnumerationStmt) string
 }
 
 // associationStmtToMDL converts a CreateAssociationStmt to MDL text
-func associationStmtToMDL(ctx *ExecContext, s *ast.CreateAssociationStmt) string {
-	doc, err := ctx.ModelCodecs.LiftFrom(s)
-	if err != nil {
-		return fmt.Sprintf("/* association lift error: %v */", err)
-	}
-	return doc.ToMDL() + ";\n/"
+func associationStmtToMDL(_ *ExecContext, s *ast.CreateAssociationStmt) string {
+	spec := assocSpecFromAST(s)
+	return renderAssocMDL(spec) + ";\n/"
 }
 
 // microflowStmtToMDL converts a CreateMicroflowStmt to MDL text
@@ -436,14 +428,10 @@ func microflowStatementToMDL(ctx *ExecContext, stmt ast.MicroflowStatement, inde
 // Project to MDL Converters
 // ============================================================================
 
-// entityToMDLGen converts a gen-typed project entity to MDL text via the
-// canonical EntityModel pipeline (Hydrate → ToMDL).
-func entityToMDLGen(ctx *ExecContext, moduleName string, entity *genDm.Entity) string {
-	doc, _, err := ctx.ModelCodecs.HydrateFrom(entity, canonical.HydrateCtx{ModuleName: moduleName})
-	if err != nil {
-		return fmt.Sprintf("/* entity hydrate error: %v */", err)
-	}
-	return doc.ToMDL() + ";\n/"
+// entityToMDLGen converts a gen-typed project entity to MDL text.
+func entityToMDLGen(_ *ExecContext, moduleName string, entity *genDm.Entity) string {
+	spec := entitySpecFromGen(moduleName, entity)
+	return renderEntityMDL(spec, false) + ";\n/"
 }
 
 // viewEntityFromProjectToMDLGen converts a gen-typed view entity to MDL.
@@ -520,22 +508,16 @@ func enumerationToMDL(ctx *ExecContext, moduleName string, enum *model.Enumerati
 }
 
 // associationToMDLGen converts a gen-typed project association to MDL.
-func associationToMDLGen(ctx *ExecContext, moduleName string, assoc *genDm.Association, dm *genDm.DomainModel) string {
-	// Build entity ID → name map from the domain model.
+func associationToMDLGen(_ *ExecContext, moduleName string, assoc *genDm.Association, dm *genDm.DomainModel) string {
+	// Build entity ID → qualified name map from the domain model.
 	entityNames := make(map[string]string)
 	for _, item := range dm.EntitiesItems() {
 		if e, ok := item.(*genDm.Entity); ok {
-			entityNames[string(e.ID())] = e.Name()
+			entityNames[string(e.ID())] = moduleName + "." + e.Name()
 		}
 	}
-	doc, _, err := ctx.ModelCodecs.HydrateFrom(assoc, canonical.HydrateCtx{
-		ModuleName:  moduleName,
-		EntityNames: entityNames,
-	})
-	if err != nil {
-		return fmt.Sprintf("/* association hydrate error: %v */", err)
-	}
-	return doc.ToMDL() + ";\n/"
+	spec := assocSpecFromGen(moduleName, assoc, entityNames)
+	return renderAssocMDL(spec) + ";\n/"
 }
 
 // crossAssociationToMDLGen converts a gen-typed cross-association to MDL.
