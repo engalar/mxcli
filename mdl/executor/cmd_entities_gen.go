@@ -366,20 +366,12 @@ func describeEntityGen(ctx *ExecContext, name ast.QualifiedName) error {
 		return mdlerrors.NewNotFound("entity", name.String())
 	}
 
-	// Canonical-model pipeline: Hydrate → ToMDLStatement(true) renders doc +
-	// position + kind + extends + attributes (incl. validation/default/
-	// calculated) + indexes, with the `create or modify` prefix injected at
-	// the statement line so DESCRIBE output is idempotent on re-execution.
-	m, warns, err := hydrateEntityModel(ctx, modName, entity)
-	if err != nil {
-		return fmt.Errorf("describe entity: hydrate: %w", err)
-	}
-	for _, w := range warns {
-		if ctx.Logger != nil {
-			ctx.Logger.Warn("describe entity hydrate", "entity", name.String(), "field", w.Field, "msg", w.Message)
-		}
-	}
-	fmt.Fprint(ctx.Output, m.ToMDLStatement(true))
+	// gen → spec → MDL pipeline: entitySpecFromGen extracts doc + position +
+	// kind + extends + attributes (incl. validation/default/calculated) +
+	// indexes; renderEntityMDL injects the `create or modify` prefix at the
+	// statement line so DESCRIBE output is idempotent on re-execution.
+	spec := entitySpecFromGen(modName, entity)
+	fmt.Fprint(ctx.Output, renderEntityMDL(spec, true))
 	fmt.Fprintln(ctx.Output, ";")
 
 	outputEntityAccessGrantsGen(ctx, entity, name.Module, name.Name)
