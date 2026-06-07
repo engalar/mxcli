@@ -1,11 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
-// Stage 3.3.4 D2: execCreateEntityGen — gen-typed CREATE ENTITY executor.
-// Composes D1 builders (astToEntityGen, astToValidationRulesGen) with
-// the D8 backend write bridge (CreateEntityGen). The legacy
-// execCreateEntity in cmd_entities.go is left in place until D9 cuts
-// over the dispatcher; intermediate sub-features (custom error
-// messages, MODIFY semantics, position auto-layout) follow in D3.
+// execCreateEntityGen — gen-typed CREATE ENTITY executor. Builds a gen
+// *Entity via buildEntityFromAST and writes it through the backend
+// (Create/UpdateEntityGen), handling MODIFY semantics, custom error
+// messages, and position auto-layout.
 
 package executor
 
@@ -14,26 +12,16 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
-	"github.com/mendixlabs/mxcli/mdl/canonical"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
 	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 )
 
-// execCreateEntityGen handles CREATE ENTITY on the gen-typed write path.
-// Builds the gen *Entity via astToEntityGen and writes via
-// ctx.Backend.CreateEntityGen. Invalidates the domainmodel cache so
-// subsequent reads see the new entity.
-//
-// Limitations vs legacy execCreateEntity (filled in by D3 sub-commits):
-//   - CREATE OR MODIFY semantics not yet wired (always treats as
-//     pure CREATE; ALREADY_EXISTS error matches legacy on conflict).
-//   - Position auto-layout (X = 100 + N*150 etc.) deferred — caller-
-//     supplied @Position annotation is honored, otherwise location
-//     defaults to (0,0) which Studio Pro auto-positions on first open.
-//   - Indexes / event handlers / validation rules attached via
-//     entity-level builders (D1.d, D1.e) but not yet wired here —
-//     follow-up D3.add-index / D3.add-event-handler land them.
+// execCreateEntityGen handles CREATE [OR MODIFY] ENTITY on the gen-typed
+// write path. Builds the gen *Entity via buildEntityFromAST (attributes,
+// indexes, validation rules, event handlers) and writes via
+// ctx.Backend.Create/UpdateEntityGen, then invalidates the domainmodel
+// cache so subsequent reads see the change.
 func execCreateEntityGen(ctx *ExecContext, s *ast.CreateEntityStmt) error {
 	if !ctx.Connected() {
 		return mdlerrors.NewNotConnected()
@@ -74,56 +62,9 @@ func execCreateEntityGen(ctx *ExecContext, s *ast.CreateEntityStmt) error {
 		}
 	}
 
-	// Canonical path: the EntityModel now models event handlers, so the
-	// codec pipeline handles every CREATE ENTITY statement.
-	if ctx.ModelCodecs != nil {
-		if err := persistEntityCanonical(ctx, s, dm, existingEntity, module); err != nil {
-			return err
-		}
-		return nil
+	if err := persistEntityDirect(ctx, s, dm, existingEntity, module); err != nil {
+		return err
 	}
-
-	// Legacy path (absent codec registry — should not occur in production).
-	entity := astToEntityGen(s)
-	if entity == nil {
-		return mdlerrors.NewValidation("failed to build gen entity from AST")
-	}
-	// Location is set to origin; RelayoutDomainModel assigns the real position.
-	if entity.Location() == "" && s.Position == nil {
-		entity.SetLocation(layoutPos(0, 0))
-	}
-
-	if existingEntity != nil {
-		entity.SetID(element.ID(existingEntity.ID()))
-		if err := ctx.Backend.UpdateEntityGen(model.ID(dm.ID()), entity); err != nil {
-			return mdlerrors.NewBackend("update entity (gen)", err)
-		}
-		invalidateDomainModelGenForModule(ctx, module.ID)
-		invalidateDomainModelsCache(ctx)
-		invalidateHierarchy(ctx)
-		fmt.Fprintf(ctx.Output, "Modified entity: %s\n", s.Name)
-		ctx.trackModifiedDomainModel(module.ID, module.Name)
-		return nil
-	}
-
-	if err := ctx.Backend.CreateEntityGen(model.ID(dm.ID()), entity); err != nil {
-		return mdlerrors.NewBackend("create entity (gen)", err)
-	}
-
-	invalidateDomainModelGenForModule(ctx, module.ID)
-	invalidateDomainModelsCache(ctx)
-	invalidateHierarchy(ctx)
-
-	if s.Position == nil {
-		if err := ctx.Backend.RelayoutDomainModel(model.ID(dm.ID())); err != nil {
-			fmt.Fprintf(ctx.Output, "warning: auto-layout failed: %v\n", err)
-		} else {
-			invalidateDomainModelGenForModule(ctx, module.ID)
-		}
-	}
-
-	fmt.Fprintf(ctx.Output, "Created entity: %s\n", s.Name)
-	ctx.trackModifiedDomainModel(module.ID, module.Name)
 	return nil
 }
 
@@ -136,13 +77,12 @@ func parseEntityLocation(loc string) (x, y int, ok bool) {
 	return x, y, err == nil
 }
 
-// persistEntityCanonical routes CREATE ENTITY through the canonical model
-// pipeline: Lift the AST -> EntityModel -> Persist. Pre-injects two
-// Mendix-specific invariants the parser doesn't carry: a Boolean attribute
-// without an explicit default gets `default false`, and an entity without
-// an explicit @Position gets stacked auto-layout based on the current DM
-// entity count.
-func persistEntityCanonical(ctx *ExecContext, s *ast.CreateEntityStmt, dm *genDm.DomainModel, existing element.Element, module *model.Module) error {
+// persistEntityDirect builds a gen *Entity from the AST and writes it via the
+// backend (Create/UpdateEntityGen). Pre-injects two Mendix-specific invariants
+// the parser doesn't carry: a Boolean attribute without an explicit default
+// gets `default false`, and an entity without an explicit @Position gets stacked
+// auto-layout based on the current DM entity count.
+func persistEntityDirect(ctx *ExecContext, s *ast.CreateEntityStmt, dm *genDm.DomainModel, existing element.Element, module *model.Module) error {
 	stmt := *s
 	if stmt.Position == nil {
 		if existing != nil {
@@ -203,25 +143,22 @@ func persistEntityCanonical(ctx *ExecContext, s *ast.CreateEntityStmt, dm *genDm
 		stmt.Attributes = attrs
 	}
 
-	doc, err := ctx.ModelCodecs.LiftFrom(&stmt)
+	gen, err := buildEntityFromAST(stmt.Name.Module, &stmt)
 	if err != nil {
-		return mdlerrors.NewBackend("CREATE ENTITY: lift", err)
+		return mdlerrors.NewBackend("CREATE ENTITY: build gen entity", err)
 	}
 
-	var existingID model.ID
 	if existing != nil {
 		if elem, ok := existing.(interface{ ID() element.ID }); ok {
-			existingID = model.ID(elem.ID())
+			gen.SetID(elem.ID())
 		}
-	}
-
-	pCtx := canonical.PersistContext{
-		DomainModelID:    model.ID(dm.ID()),
-		ExistingEntityID: existingID,
-		Backend:          ctx.Backend,
-	}
-	if err := doc.Persist(pCtx); err != nil {
-		return mdlerrors.NewBackend("CREATE ENTITY: persist", err)
+		if err := ctx.Backend.UpdateEntityGen(model.ID(dm.ID()), gen); err != nil {
+			return mdlerrors.NewBackend("CREATE ENTITY: update", err)
+		}
+	} else {
+		if err := ctx.Backend.CreateEntityGen(model.ID(dm.ID()), gen); err != nil {
+			return mdlerrors.NewBackend("CREATE ENTITY: create", err)
+		}
 	}
 
 	invalidateDomainModelGenForModule(ctx, module.ID)
