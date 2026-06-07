@@ -70,7 +70,6 @@ func (e *Executor) newExecContext(ctx context.Context) *ExecContext {
 	return &ExecContext{
 		Context:           ctx,
 		Backend:           e.backend,
-		ModelCodecs:       e.modelCodecs,
 		Microflows:        extractMicroflowsRepo(e.backend),
 		Nanoflows:         extractNanoflowsRepo(e.backend),
 		Security:          extractSecurityRepo(e.backend),

@@ -14,9 +14,6 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	"github.com/mendixlabs/mxcli/mdl/backend"
-	"github.com/mendixlabs/mxcli/mdl/canonical"
-	assocmodel "github.com/mendixlabs/mxcli/mdl/canonical/association"
-	entitymodel "github.com/mendixlabs/mxcli/mdl/canonical/entity"
 	"github.com/mendixlabs/mxcli/mdl/catalog"
 	"github.com/mendixlabs/mxcli/mdl/diaglog"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
@@ -281,7 +278,6 @@ type Executor struct {
 	sqlMgr         *sqllib.Manager                    // external SQL connection manager (lazy init)
 	themeRegistry  *ThemeRegistry                     // cached theme design property definitions (lazy init)
 	registry       *Registry                          // statement dispatch registry
-	modelCodecs    *canonical.DefaultRegistry         // canonical Lift/Hydrate codec registry
 	catalogMu      sync.RWMutex                       // protects catalog field from background goroutine writes
 	catalogGen     uint64                             // monotonic generation counter for catalog swaps
 }
@@ -291,32 +287,13 @@ type Executor struct {
 // do not pollute stdout when the caller redirects stdout to a file.
 func New(output io.Writer) *Executor {
 	guard := newOutputGuard(output, maxOutputLines)
-	mc := canonical.NewDefaultRegistry()
-	entitymodel.RegisterCodec(mc)
-	assocmodel.RegisterCodec(mc)
 	return &Executor{
 		output:       guard,
 		statusOutput: os.Stderr,
 		guard:        guard,
 		settings:     make(map[string]any),
 		registry:     NewRegistry(),
-		modelCodecs:  mc,
 	}
-}
-
-// hydrateEntityModel hydrates a gen-typed entity through the codec registry
-// and type-asserts the result to *entity.EntityModel. executor.go is the
-// only executor file allowed to import mdl/canonical/entity directly (see Guard 4).
-func hydrateEntityModel(ctx *ExecContext, moduleName string, genEnt any) (*entitymodel.EntityModel, []canonical.Warning, error) {
-	doc, warns, err := ctx.ModelCodecs.HydrateFrom(genEnt, canonical.HydrateCtx{ModuleName: moduleName})
-	if err != nil {
-		return nil, nil, err
-	}
-	m, ok := doc.(*entitymodel.EntityModel)
-	if !ok {
-		return nil, warns, fmt.Errorf("hydrateEntityModel: unexpected type %T", doc)
-	}
-	return m, warns, nil
 }
 
 // SetBackendFactory sets the factory function used to create backend instances on Connect.
