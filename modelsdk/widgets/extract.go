@@ -3,6 +3,7 @@
 package widgets
 
 import (
+	"encoding/hex"
 	"fmt"
 	"log"
 	"os"
@@ -151,13 +152,16 @@ func findCustomWidget(doc bson.D, widgetID string) (bson.D, bson.D) {
 }
 
 // bsonWidgetToTemplate converts extracted Type and Object bson.D documents into a
-// WidgetTemplate. Binary UUIDs are replaced with consistent placeholder hex strings
-// so that GetTemplateFullBSON's collectIDs+remap step works correctly.
+// WidgetTemplate. Binary UUIDs are stored as UUID-order 32-char hex strings using
+// a shared idMap (same binary → same hex across Type+Object). StableIds=true tells
+// GetTemplateFullBSON to use collectIDsIdentity, preserving the original Studio Pro
+// $IDs so Mendix doesn't trigger CE0463 for repeated instances of the same widget type.
 func bsonWidgetToTemplate(typeDoc, objectDoc bson.D, widgetID string) (*WidgetTemplate, error) {
-	// Build a consistent UUID→placeholder mapping across both documents.
-	idMap := make(map[string]string)
-	typeMap := bsonDToMapWithIDMap(typeDoc, idMap)
-	objectMap := bsonDToMapWithIDMap(objectDoc, idMap)
+	// bsonDToMapPreserveIDs converts binary UUIDs to UUID-order 32-char hex via a shared
+	// map so the same binary gets the same hex string across both documents.
+	sharedIDMap := make(map[string]string) // raw-bytes key → uuid-order hex value
+	typeMap := bsonDToMapPreserveIDs(typeDoc, sharedIDMap)
+	objectMap := bsonDToMapPreserveIDs(objectDoc, sharedIDMap)
 
 	typeMapTyped, ok := typeMap.(map[string]any)
 	if !ok {
@@ -170,10 +174,66 @@ func bsonWidgetToTemplate(typeDoc, objectDoc bson.D, widgetID string) (*WidgetTe
 
 	return &WidgetTemplate{
 		WidgetID:  widgetID,
-		Generated: true, // skip augmentFromMPK — BSON already correct
+		Generated: true,  // skip augmentFromMPK — Studio Pro BSON is authoritative
+		StableIds: true,  // use collectIDsIdentity so original $IDs are reused
 		Type:      typeMapTyped,
 		Object:    objectMapTyped,
 	}, nil
+}
+
+// bsonDToMapPreserveIDs converts a bson.D to map[string]any, encoding each binary
+// UUID as a 32-char UUID-order hex string. A shared idMap ensures the same binary
+// always maps to the same hex across both Type and Object documents (so TypePointers
+// in Object correctly reference PropertyType $IDs from Type after remapping).
+func bsonDToMapPreserveIDs(doc bson.D, idMap map[string]string) any {
+	m := make(map[string]any, len(doc))
+	for _, e := range doc {
+		m[e.Key] = bsonValuePreserveIDs(e.Value, idMap)
+	}
+	return m
+}
+
+func bsonValuePreserveIDs(val any, idMap map[string]string) any {
+	switch v := val.(type) {
+	case bson.D:
+		return bsonDToMapPreserveIDs(v, idMap)
+	case bson.A:
+		result := make([]any, 0, len(v))
+		for _, item := range v {
+			result = append(result, bsonValuePreserveIDs(item, idMap))
+		}
+		return result
+	case bson.Binary:
+		return binaryToUUIDOrderHex(v.Data, idMap)
+	default:
+		return v
+	}
+}
+
+// binaryToUUIDOrderHex converts a Microsoft GUID binary to the UUID-byte-order 32-char hex
+// string that round-trips through hexToIDBlob back to the original binary. A shared
+// idMap ensures the same binary always produces the same hex string.
+func binaryToUUIDOrderHex(data []byte, idMap map[string]string) string {
+	key := string(data)
+	if h, ok := idMap[key]; ok {
+		return h
+	}
+	var h string
+	if len(data) == 16 {
+		// Convert from Microsoft GUID byte order (segments 1-3 are little-endian)
+		// to UUID byte order by reversing those segments. hexToIDBlob then applies
+		// the same swap in reverse to recover the original binary.
+		uuid := make([]byte, 16)
+		uuid[0], uuid[1], uuid[2], uuid[3] = data[3], data[2], data[1], data[0]
+		uuid[4], uuid[5] = data[5], data[4]
+		uuid[6], uuid[7] = data[7], data[6]
+		copy(uuid[8:], data[8:])
+		h = hex.EncodeToString(uuid)
+	} else {
+		h = hex.EncodeToString(data)
+	}
+	idMap[key] = h
+	return h
 }
 
 // bsonDToMapWithIDMap converts a bson.D to map[string]any, replacing binary UUIDs

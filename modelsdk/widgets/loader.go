@@ -340,13 +340,21 @@ func GetTemplateFullBSON(widgetID string, idGenerator func() string, projectPath
 	}
 	stableIds := tmpl.StableIds
 
-	// Phase 1: Collect all $ID values from Type and create old->new ID mappings
+	// Phase 1: Build old→new ID mappings.
+	// Stable-ID templates (extracted from Studio Pro instances) use identity mapping
+	// so the original $IDs are preserved — this prevents CE0463 which Mendix triggers
+	// when widget instances of the same type have different embedded type $IDs.
 	idMapping := make(map[string]string)
-	collectIDs(tmpl.Type, idGenerator, idMapping)
-
-	// Also collect IDs from Object
-	if tmpl.Object != nil {
-		collectIDs(tmpl.Object, idGenerator, idMapping)
+	if stableIds {
+		collectIDsIdentity(tmpl.Type, idMapping)
+		if tmpl.Object != nil {
+			collectIDsIdentity(tmpl.Object, idMapping)
+		}
+	} else {
+		collectIDs(tmpl.Type, idGenerator, idMapping)
+		if tmpl.Object != nil {
+			collectIDs(tmpl.Object, idGenerator, idMapping)
+		}
 	}
 
 	// Phase 2: Convert Type JSON to BSON, replacing IDs using the mapping
@@ -825,14 +833,19 @@ func collectIDs(data map[string]any, idGenerator func() string, idMapping map[st
 	}
 }
 
-// collectIDsIdentity maps each $ID to itself (identity). Used for non-placeholder
-// templates to preserve the original widget type $IDs so Mendix recognises the
-// embedded CustomWidgetType as the known installed widget version.
+// collectIDsIdentity maps every 32-char UUID-order hex string to its UUID-with-dashes
+// form. This is used for stable-ID templates (extracted from existing Studio Pro
+// instances) to preserve their original widget type $IDs through the remapping step.
+//
+// Why UUID-with-dashes? jsonToBSONWithMappingAndObjectType stores idMapping[v] as
+// PropertyTypeID. getTypePointerFromProperty returns types.BlobToUUID(binary) which
+// produces UUID-with-dashes. Both must use the same format for TypePointer matching.
 func collectIDsIdentity(data map[string]any, idMapping map[string]string) {
-	for key, val := range data {
-		if key == "$ID" {
-			if id, ok := val.(string); ok && len(id) == 32 {
-				idMapping[id] = id // identity: old → same
+	for _, val := range data {
+		// Map ALL 32-char hex strings ($ID, TypePointer, ObjectTypeID refs …).
+		if id, ok := val.(string); ok && len(id) == 32 && isHexString(id) {
+			if _, seen := idMapping[id]; !seen {
+				idMapping[id] = uuidOrderHexToUUIDString(id)
 			}
 		}
 		switch v := val.(type) {
@@ -842,6 +855,13 @@ func collectIDsIdentity(data map[string]any, idMapping map[string]string) {
 			collectIDsIdentityInArray(v, idMapping)
 		}
 	}
+}
+
+// uuidOrderHexToUUIDString converts a 32-char UUID-order hex string (no dashes)
+// to a standard UUID string with dashes ("xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx").
+// hexToIDBlob(uuidOrderHexToUUIDString(h)) round-trips back to the original binary.
+func uuidOrderHexToUUIDString(h string) string {
+	return h[0:8] + "-" + h[8:12] + "-" + h[12:16] + "-" + h[16:20] + "-" + h[20:32]
 }
 
 func collectIDsIdentityInArray(arr []any, idMapping map[string]string) {

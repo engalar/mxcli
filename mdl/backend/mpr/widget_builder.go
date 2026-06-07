@@ -266,6 +266,12 @@ func (ob *mprWidgetObjectBuilder) PropertyTypeIDs() map[string]types.PropertyTyp
 // ---------------------------------------------------------------------------
 
 func (ob *mprWidgetObjectBuilder) EnsureRequiredObjectLists() {
+	// Skip for stable-ID templates (extracted from Studio Pro instances): the object
+	// is already complete. Adding list properties would create extra binary entries
+	// that differ from the source template's object, causing CE0463 inconsistency.
+	if ob.stableIds {
+		return
+	}
 	ob.object = ensureRequiredObjectLists(ob.object, ob.propertyTypeIDs)
 }
 
