@@ -122,8 +122,8 @@ func TestNewExecutorContext_RepoSmokeMicroflows(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ctx.Microflows.ListAll: %v", err)
 	}
-	if len(mfs) != 16 {
-		t.Errorf("ctx.Microflows.ListAll: got %d, want 16 (fixture)", len(mfs))
+	if len(mfs) != 17 {
+		t.Errorf("ctx.Microflows.ListAll: got %d, want 17 (fixture)", len(mfs))
 	}
 }
 

@@ -11,7 +11,7 @@ import (
 	mmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
 )
 
-const fixtureMicroflowCount = 16
+const fixtureMicroflowCount = 17
 
 func TestMicroflowRepo_ListAll_FixtureCount(t *testing.T) {
 	w := openTestWriter(t)
