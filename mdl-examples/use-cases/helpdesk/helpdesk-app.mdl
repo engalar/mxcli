@@ -2658,3 +2658,59 @@ create or modify nanoflow FT.NF_FT_LoadOrders
   return $Orders;
 }
 /
+
+-- ============================================================================
+-- MARK: FieldTech — REST & JSON Integration
+-- ============================================================================
+-- SMS gateway notification for completed dispatches.
+-- JSON webhook import for external work-order systems.
+-- ============================================================================
+
+-- JSON structure for the SMS gateway request body.
+-- 'snippet' provides a sample JSON document; executor infers the schema.
+create json structure FT.SMSPayload
+  snippet '{"to": "+1555000000", "message": "Your technician is on the way."}';
+
+-- REST client: SMS gateway.
+-- Operation NotifyTech sends the payload; response is the HTTP status code.
+create rest client FT.SMSGateway (
+  BaseUrl:        'https://sms.example.com/api/v1',
+  authentication: none
+)
+{
+  operation NotifyTech {
+    method:  post,
+    path:    '/messages',
+    headers: ('Content-Type' = 'application/json', 'Accept' = 'application/json'),
+    body:    json from $Payload,
+    response: status as $StatusCode
+  }
+};
+
+-- JSON structure for the external work-order webhook payload.
+create json structure FT.WorkOrderPayload
+  snippet '{"ticketRef": "HD-001", "techName": "Jane Smith", "scheduledAt": "2026-06-10T09:00:00Z"}';
+
+-- Import mapping: JSON webhook → FT.WorkOrderImport non-persistent entity.
+create import mapping FT.WorkOrderImport_Mapping
+  with json structure FT.WorkOrderPayload
+{
+  create FT.WorkOrderImport {
+    TicketRef   = ticketRef,
+    TechName    = techName,
+    ScheduledAt = scheduledAt
+  }
+};
+
+-- Export mapping: FT.DispatchOrder → JSON for outbound reporting.
+-- Demonstrates CREATE EXPORT MAPPING syntax (entity → JSON).
+-- Root element has no `from` keyword: the entity name is stated directly,
+-- and each child line is `jsonField = Attribute`.
+create export mapping FT.DispatchOrder_Export
+  with json structure FT.WorkOrderPayload
+{
+  FT.DispatchOrder {
+    ticketRef   = SiteNotes,
+    scheduledAt = DispatchedAt
+  }
+};
