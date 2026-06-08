@@ -8,14 +8,14 @@ import (
 	"path/filepath"
 	"strings"
 
-	"go.mongodb.org/mongo-driver/v2/bson"
-
 	mprrepos "github.com/mendixlabs/mxcli/mdl/backend/mpr/repos"
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
+	"github.com/mendixlabs/mxcli/modelsdk/codec"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
 	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 	msdkprojects "github.com/mendixlabs/mxcli/modelsdk/gen/projects"
+	genSec "github.com/mendixlabs/mxcli/modelsdk/gen/security"
 	modelsdkmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
 )
 
@@ -199,35 +199,32 @@ func (b *MprBackend) createModuleViaModelsdk(module *model.Module) error {
 		return fmt.Errorf("failed to insert domain model unit: %w", err)
 	}
 
-	// ModuleSecurity unit — inline BSON (static 3-field document)
+	// ModuleSecurity unit — gen-typed (SOLID-I: use interface, not raw BSON).
+	// NewModuleSecurity() initialises ModuleRoles as a PartList with version marker
+	// int32(3), matching Studio Pro-created modules and ensuring role resolution works.
 	msID := modelsdkmpr.GenerateID()
-	msContents, err := bson.Marshal(bson.M{
-		"$ID":         modelsdkmpr.IDToBsonBinary(msID),
-		"$Type":       "Security$ModuleSecurity",
-		"ModuleRoles": bson.A{int32(1)},
-	})
+	ms := genSec.NewModuleSecurity()
+	ms.SetID(element.ID(msID))
+	msContents, err := (&codec.Encoder{}).Encode(ms)
 	if err != nil {
-		return fmt.Errorf("failed to serialize module security: %w", err)
+		return fmt.Errorf("failed to encode module security: %w", err)
 	}
 	if err := b.insertUnit(msID, string(module.ID), "ModuleSecurity", "Security$ModuleSecurity", msContents); err != nil {
 		return fmt.Errorf("failed to insert module security unit: %w", err)
 	}
 
-	// ModuleSettings unit — inline BSON (static default document)
+	// ModuleSettings unit — gen-typed (SOLID-I: use interface, not raw BSON).
 	settingsID := modelsdkmpr.GenerateID()
-	settingsContents, err := bson.Marshal(bson.M{
-		"$ID":                 modelsdkmpr.IDToBsonBinary(settingsID),
-		"$Type":               "Projects$ModuleSettings",
-		"BasedOnVersion":      "",
-		"ExportLevel":         "Source",
-		"ExtensionName":       "",
-		"JarDependencies":     bson.A{int32(2)},
-		"ProtectedModuleType": "AddOn",
-		"SolutionIdentifier":  "",
-		"Version":             "1.0.0",
-	})
+	mset := msdkprojects.NewModuleSettings()
+	mset.SetID(element.ID(settingsID))
+	mset.SetExportLevel("Source")
+	mset.SetProtectedModuleType("AddOn")
+	mset.SetVersion("1.0.0")
+	mset.SetSolutionIdentifier("")
+	mset.SetExtensionName("")
+	settingsContents, err := (&codec.Encoder{}).Encode(mset)
 	if err != nil {
-		return fmt.Errorf("failed to serialize module settings: %w", err)
+		return fmt.Errorf("failed to encode module settings: %w", err)
 	}
 	if err := b.insertUnit(settingsID, string(module.ID), "ModuleSettings", "Projects$ModuleSettings", settingsContents); err != nil {
 		return fmt.Errorf("failed to insert module settings unit: %w", err)
