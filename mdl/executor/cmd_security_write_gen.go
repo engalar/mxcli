@@ -85,7 +85,10 @@ func execGrantMicroflowAccessGen(ctx *ExecContext, s *ast.GrantMicroflowAccessSt
 			return nil
 		}
 
-		merged, added := mergeAllowedRoles(mf.AllowedModuleRolesQualifiedNames(), validRoles)
+		// Strip auto-provisioned "Module.User" before merging explicit grants so that
+		// documents created in programmatic modules (CE0148 fix) don't accumulate a
+		// "Module.User" alongside cross-module roles that Mendix can't resolve.
+		merged, added := mergeAllowedRoles(filterAutoDocumentRoles(mf.AllowedModuleRolesQualifiedNames()), validRoles)
 		mf.SetAllowedModuleRolesQualifiedNames(merged)
 
 		if err := ctx.Microflows.Update(mf); err != nil {
@@ -200,7 +203,7 @@ func execGrantNanoflowAccessGen(ctx *ExecContext, s *ast.GrantNanoflowAccessStmt
 			return nil
 		}
 
-		merged, added := mergeAllowedRoles(nf.AllowedModuleRolesQualifiedNames(), validRoles)
+		merged, added := mergeAllowedRoles(filterAutoDocumentRoles(nf.AllowedModuleRolesQualifiedNames()), validRoles)
 		nf.SetAllowedModuleRolesQualifiedNames(merged)
 
 		if err := ctx.Nanoflows.Update(nf); err != nil {

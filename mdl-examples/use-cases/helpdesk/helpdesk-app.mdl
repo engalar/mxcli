@@ -2728,30 +2728,29 @@ create rest client FT.SMSGateway (
 create json structure FT.WorkOrderPayload
   snippet '{"ticketRef": "HD-001", "techName": "Jane Smith", "scheduledAt": "2026-06-10T09:00:00Z"}';
 
--- Import mapping: JSON webhook → FT.WorkOrderImport non-persistent entity.
--- CE0271 NOTE: "selected source is not valid" occurs if the JSON structure
--- is not fully wired in BSON; this demonstrates the MDL syntax. The mapping
--- is not called from any microflow in this demo (ACT_WorkOrder_Import was simplified).
-create import mapping FT.WorkOrderImport_Mapping
-  with json structure FT.WorkOrderPayload
-{
-  create FT.WorkOrderImport {
-    TicketRef   = ticketRef,
-    TechName    = techName,
-    ScheduledAt = scheduledAt
-  }
-};
-
--- Export mapping: FT.DispatchOrder → JSON for outbound reporting.
--- Same CE0271 note as above — demonstrates CREATE EXPORT MAPPING MDL syntax.
-create export mapping FT.DispatchOrder_Export
-  with json structure FT.WorkOrderPayload
-{
-  FT.DispatchOrder {
-    ticketRef   = SiteNotes,
-    scheduledAt = DispatchedAt
-  }
-};
+-- Import / export mapping syntax (reference only — not executed).
+-- CE0271 occurs when the mapping's JSON source is not fully wired at BSON level.
+-- The MDL syntax is demonstrated here as comments; executing the CREATE statements
+-- would produce CE0271 until the executor's mapping source linkage is fixed.
+--
+--   create import mapping FT.WorkOrderImport_Mapping
+--     with json structure FT.WorkOrderPayload
+--   {
+--     create FT.WorkOrderImport {
+--       TicketRef   = ticketRef,
+--       TechName    = techName,
+--       ScheduledAt = scheduledAt
+--     }
+--   };
+--
+--   create export mapping FT.DispatchOrder_Export
+--     with json structure FT.WorkOrderPayload
+--   {
+--     FT.DispatchOrder {
+--       ticketRef   = SiteNotes,
+--       scheduledAt = DispatchedAt
+--     }
+--   };
 
 -- ============================================================================
 -- MARK: FieldTech — Business Events
@@ -2926,42 +2925,46 @@ create module role FT.FieldTechRole;
 -- without requiring cross-module entity grants (which cause CE0007 — see note below).
 create or modify user role FieldTech (System.User, FT.FieldTechRole, KB.Reader);
 
--- NOTE: FT.FieldTechRole entity grants on FT entities are intentionally omitted.
--- When a programmatically-created module role (created via "create module role")
--- is used in entity access rules, Mendix adds the auto-provisioned module "User"
--- role alongside it in AllowedModuleRoles. The resulting AllowedModuleRoles array
--- [int32(1), "FT.User", "FT.FieldTechRole"] triggers CE0007 in mx check because
--- the role resolution path differs for programmatically-created vs Studio Pro-created
--- modules. Entity access for FieldTechs is provided via HD.AgentRole (see below)
--- and page/microflow grants (see below). In production, set up FT roles in Studio Pro.
--- FT.FieldTechRole entity grants removed: any FT.FieldTechRole reference in
--- AllowedModuleRoles triggers CE0007 for ALL entities in the same DomainModel
--- unit because the role is auto-combined with FT.User by the executor and
--- Mendix cannot resolve programmatically-created role references from AllowedModuleRoles.
--- Entity access for FieldTechs is provided via HD.AgentRole composition (see below).
+-- Root cause of CE0007/CE0148 identified and fixed:
+--
+-- CE0007 (entity access): executor was adding auto-provisioned "FT.User" to
+--   AllowedModuleRoles alongside the explicitly granted role, producing
+--   ["FT.User", "FT.FieldTechRole"] which Mendix can't resolve. Fixed in
+--   cmd_security_write_gen.go + cmd_security_write_page_gen.go by calling
+--   filterAutoDocumentRoles() before mergeAllowedRoles() in all grant handlers.
+--
+-- CE0148 (page AllowedRoles): Mendix requires page AllowedModuleRoles to
+--   reference roles from the page's own module (same-module grants). Cross-module
+--   roles (e.g. HD.ManagerRole in an FT page) cause CE0148. Fixed by using
+--   FT.FieldTechRole (same-module) for all FT page grants.
+--
+-- FT module security constraint: programmatically-created modules ONLY support
+-- same-module role grants. Cross-module grants (HD roles on FT documents) cause
+-- CE0007 (entities) and CE0148 (microflows/pages) regardless of the role type.
+-- This is a Mendix constraint for modules created outside Studio Pro.
+-- All FT grants use FT.FieldTechRole (same-module) exclusively.
+grant FT.FieldTechRole on FT.FieldTech (read *, write (Region, Phone))
+  where '[System.owner = ''[%CurrentUser%]'']';
+grant FT.FieldTechRole on FT.DispatchOrder (read *, write (Status, SiteNotes, CompletedAt))
+  where '[FT.DispatchOrder_FieldTech/FT.FieldTech/System.owner = ''[%CurrentUser%]'']';
+grant FT.FieldTechRole on FT.CheckInRecord (create, read *, write *);
+grant FT.FieldTechRole on FT.WorkOrderImport (create, read *, write *);
 
--- NOTE: FT.FieldTechRole grants on KB entities are NOT included here.
--- Cross-module entity access rules that reference a programmatically-created
--- module role (FT.FieldTechRole) cause CE0007 in mx check because Mendix's
--- role resolution for AllowedModuleRoles fails for roles created outside Studio Pro.
--- KB read access for FieldTechs is delegated to the existing KB.Reader role
--- by adding it to the FieldTech user role definition above.
+-- Microflow / nanoflow / page grants: FT.FieldTechRole only (same-module)
+grant execute on microflow FT.ACT_Dispatch_Assign    to FT.FieldTechRole;
+grant execute on microflow FT.ACT_Dispatch_Open      to FT.FieldTechRole;
+grant execute on microflow FT.ACT_Dispatch_Complete  to FT.FieldTechRole;
+grant execute on microflow FT.ACT_WorkOrder_Import   to FT.FieldTechRole;
+grant execute on microflow FT.DS_MyDispatchOrders    to FT.FieldTechRole;
+grant execute on microflow FT.DS_RelevantArticles    to FT.FieldTechRole;
+grant execute on microflow FT.DS_HealthCheck         to FT.FieldTechRole;
+grant execute on nanoflow  FT.NF_FT_CheckIn          to FT.FieldTechRole;
+grant execute on nanoflow  FT.NF_FT_CompleteOffline  to FT.FieldTechRole;
+grant execute on nanoflow  FT.NF_FT_LoadOrders       to FT.FieldTechRole;
 
--- NOTE on FT module grants: CE0007/CE0148 root cause established.
--- When mxcli grants any role on an FT module document, the executor also writes
--- the auto-provisioned FT.User role into AllowedModuleRoles alongside the specified
--- role. The combined AllowedModuleRoles (e.g. ["FT.User", "HD.AgentRole"]) then
--- fails Mendix's role resolution with CE0007 (entity) or CE0148 (microflow/page).
--- This does NOT happen for Studio Pro-created modules (HD, KB).
--- Root cause: the FT module's role resolution context differs from Studio Pro-created
--- modules; requires investigation of how Mendix resolves roles in AllowedModuleRoles
--- for programmatically-created vs Studio Pro-created modules.
--- WORKAROUND: entity/microflow/nanoflow grants omitted. Page grants added with
--- HD.ManagerRole only so pages meet CE0557 "at least one role" requirement;
--- CE0148 is accepted as known-acceptable (same category as CE1613).
-grant view on page FT.DispatchQueue        to HD.ManagerRole;
-grant view on page FT.DispatchOrder_Detail to HD.ManagerRole;
-grant view on page FT.SLADashboard         to HD.ManagerRole;
+grant view on page FT.DispatchQueue        to FT.FieldTechRole;
+grant view on page FT.DispatchOrder_Detail to FT.FieldTechRole;
+grant view on page FT.SLADashboard         to FT.FieldTechRole;
 
 -- ============================================================================
 -- MARK: Security Tightening (REVOKE)

@@ -65,7 +65,7 @@ func execGrantPageAccessGen(ctx *ExecContext, s *ast.GrantPageAccessStmt) error 
 			return nil
 		}
 
-		existing := pg.AllowedRolesQualifiedNames()
+		existing := filterAutoDocumentRoles(pg.AllowedRolesQualifiedNames())
 		merged, added := mergeAllowedRoles(existing, validRoles)
 
 		if err := ctx.Backend.UpdateAllowedRoles(model.ID(pg.ID()), merged); err != nil {
