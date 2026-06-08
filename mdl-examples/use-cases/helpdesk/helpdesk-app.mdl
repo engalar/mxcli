@@ -60,6 +60,25 @@
 --           (DELETE_BUT_KEEP_REFERENCES) instead of BSON-style camelCase strings.
 -- Note    : Nanoflow repository layer added (mdl/backend/mpr/repos/nanoflows.go +
 --           mdl/repos/nanoflows.go) mirroring the microflow repo pattern; no BSON output change.
+-- Note    : FieldTech (FT) extension added (Tasks 1-10): FT module demonstrating new MDL
+--           features — cascade/prevent delete_behavior, multi-column index, VIEW ENTITY/OQL
+--           (LEFT OUTER JOIN, count/avg), REST client, JSON structures, import/export mappings,
+--           Business Event Service (publish/subscribe), offline nanoflows (CALL JAVASCRIPT
+--           ACTION + connectivity guard), ALTER PAGE INSERT, ALTER SETTINGS MODEL, REVOKE,
+--           reversed() XPath, CREATE LIST, page url slug, page variables.
+-- Note    : FT extension — features NOT executable on a baseline project (documented inline):
+--           (1) SYNCHRONIZE: planned MDL activity, no grammar support yet — omitted from
+--               nanoflows. (2) OfflineNative navigation profile: mxcli ALTER PAGE/navigation
+--               can only patch existing profiles, not create new ones — shown as a commented
+--               example (enable Native mobile in Studio Pro first).
+-- Note    : FT extension — known-acceptable mx check errors: 3× CE1613 from the
+--           NanoflowCommons.GetCurrentLocation JS action (the NanoflowCommons marketplace
+--           module is not installed in testdata; install it to clear these). No
+--           StorageLoadException; project loads cleanly.
+-- Note    : FT extension — page actionbuttons call server-side microflows (FT.ACT_CheckIn,
+--           FT.ACT_Dispatch_Complete) rather than nanoflows-with-params, working around a
+--           known mxcli bug where a page nanoflow parameter mapping crashes mx check
+--           ("Parameter property ... null"). Offline nanoflows remain defined for Task 4.
 --
 -- Edge cases covered:
 --   Domain    : self-ref association, cross-module association,
@@ -3023,3 +3042,53 @@ revoke FT.FieldTechRole on KB.ArticleRating (write *);
 alter settings model
   AfterStartupMicroflow = FT.ACT_FT_Initialize,
   HealthCheckMicroflow  = FT.DS_HealthCheck;
+
+-- ============================================================================
+-- MARK: HD — Page Evolution (ALTER PAGE)
+-- ============================================================================
+-- Retrofit HD.Ticket_Detail to add dispatch controls without rebuilding
+-- the full page. ALTER PAGE modifies the BSON widget tree in-place,
+-- preserving all existing widget IDs and properties.
+--
+-- Widget names (from HD.Ticket_Detail definition above):
+--   btnAssignAgent  — actionbutton in the header row
+--   rComments       — the row containing dgComments
+-- ============================================================================
+
+-- Add "Dispatch FieldTech" button after the existing "Assign Agent" button.
+alter page HD.Ticket_Detail {
+  insert after btnAssignAgent {
+    actionbutton btnDispatch (
+      caption:     'Dispatch FieldTech',
+      action:      microflow FT.ACT_Dispatch_Open (Ticket: $currentObject),
+      buttonstyle: default
+    )
+  }
+};
+
+-- Add a dispatch-history grid right after the comments grid so managers and
+-- agents see all dispatch orders for a ticket on the same detail page.
+--
+-- IMPORTANT — ALTER PAGE anchor limitation: mxcli's ALTER PAGE can only anchor
+-- INSERT on a widget that has a stored Name. LayoutGrid Rows and Columns carry
+-- NO persisted Name (DESCRIBE derives positional "row1"/"col2" at read time), so
+-- a row name like `rComments` is NOT a valid anchor (the executor errors with
+-- `widget "rComments" not found`). We therefore anchor on the named leaf widget
+-- `dgComments` (the comments datagrid) and insert a sibling datagrid after it.
+alter page HD.Ticket_Detail {
+  insert after dgComments {
+    datagrid dgDispatchHistory (
+      datasource: $currentObject/FT.DispatchOrder_Ticket/FT.DispatchOrder
+    ) {
+      -- DataGrid columns must bind to real attributes, not associations:
+      -- a column with `attribute: FT.DispatchOrder_FieldTech` (an association)
+      -- crashes mx check ("Attribute property ... null"). Show the order's own
+      -- attributes here; the technician is reachable via the association in a
+      -- nested dataview if needed.
+      column colDStatus    (attribute: Status,      caption: 'Status',    ColumnWidth: manual, Size: 100)
+      column colDDispatched (attribute: DispatchedAt, caption: 'Dispatched', ColumnWidth: manual, Size: 140)
+      column colDCompleted  (attribute: CompletedAt,  caption: 'Completed',  ColumnWidth: manual, Size: 140)
+      column colDNotes      (attribute: SiteNotes,    caption: 'Notes')
+    }
+  }
+};

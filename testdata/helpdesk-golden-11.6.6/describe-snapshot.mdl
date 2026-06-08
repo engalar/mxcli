@@ -1345,6 +1345,11 @@ create or modify page HD.Ticket_Detail (
               action: show_page HD.Agent_Select,
               buttonstyle: default
             )
+            actionbutton btnDispatch (
+              caption: 'Dispatch FieldTech',
+              action: microflow FT.ACT_Dispatch_Open(Ticket: $currentObject),
+              buttonstyle: default
+            )
           }
         }
       }
@@ -1354,6 +1359,12 @@ create or modify page HD.Ticket_Detail (
         datagrid dgComments {
           column colContent (attribute: Content, caption: 'Comment')
           column colIsInternal (attribute: IsInternal, caption: 'Internal', ColumnWidth: manual, Size: 90)
+        }
+        datagrid dgDispatchHistory {
+          column colStatus (attribute: Status, caption: 'Status', ColumnWidth: manual, Size: 100)
+          column colDispatchedAt (attribute: DispatchedAt, caption: 'Dispatched', ColumnWidth: manual, Size: 140)
+          column colCompletedAt (attribute: CompletedAt, caption: 'Completed', ColumnWidth: manual, Size: 140)
+          column colSiteNotes (attribute: SiteNotes, caption: 'Notes')
         }
       }
     }
