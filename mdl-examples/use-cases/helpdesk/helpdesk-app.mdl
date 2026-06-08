@@ -2563,3 +2563,98 @@ create or modify microflow FT.DS_RelevantArticles
   return $Articles;
 }
 /
+
+-- ============================================================================
+-- MARK: FieldTech — Nanoflows (Offline)
+-- ============================================================================
+-- These nanoflows run on the FieldTech's mobile device (OfflineNative profile).
+-- NanoflowCommons JS actions are available when the NanoflowCommons marketplace
+-- module is installed.
+--
+-- NOTE on SYNCHRONIZE: Mendix native/offline apps use a SYNCHRONIZE activity to
+-- push offline-committed objects to the server. SYNCHRONIZE is a planned MDL
+-- feature but is NOT yet implemented in the current grammar — there is no
+-- `synchronize` keyword. These nanoflows therefore rely on COMMIT (which queues
+-- the change locally in offline context) plus a connectivity guard; the actual
+-- server sync is performed by the Mendix offline runtime automatically. When
+-- SYNCHRONIZE lands in MDL, add `synchronize $Object;` after the relevant commits.
+-- ============================================================================
+
+-- NF_FT_CheckIn: capture GPS on arrival at site, store as CheckInRecord.
+-- New activities: CALL JAVASCRIPT ACTION (device GPS).
+create or modify nanoflow FT.NF_FT_CheckIn
+  ($Order: FT.DispatchOrder)
+  folder 'Mobile'
+{
+  -- CALL JAVASCRIPT ACTION: invokes a NanoflowCommons device API client-side.
+  -- Returns a NanoflowCommons.Geolocation object with Latitude, Longitude, Timestamp.
+  $Location = call javascript action NanoflowCommons.GetCurrentLocation (
+    timeout      = 10000,
+    maximumAge   = 0,
+    highAccuracy = true
+  ) on error continue;
+
+  if $Location = empty {
+    show message 'Could not obtain GPS location. Check device permissions.' type warning;
+    return;
+  }
+
+  $Record = create FT.CheckInRecord (
+    Latitude    = $Location/Latitude,
+    Longitude   = $Location/Longitude,
+    CheckedInAt = '[%CurrentDateTime%]',
+    FT.CheckInRecord_DispatchOrder = $Order
+  );
+  commit $Record;
+
+  change $Order (Status = FT.DispatchStatus.OnSite);
+  commit $Order;
+  return;
+}
+/
+
+-- NF_FT_CompleteOffline: FieldTech marks order complete while offline.
+-- Changes persist locally; the offline runtime pushes to server when back online.
+create or modify nanoflow FT.NF_FT_CompleteOffline
+  ($Order: FT.DispatchOrder, $Notes: string)
+  folder 'Mobile'
+{
+  change $Order (
+    Status      = FT.DispatchStatus.Completed,
+    CompletedAt = '[%CurrentDateTime%]',
+    SiteNotes   = $Notes
+  );
+  commit $Order;
+
+  -- Connectivity guard: report sync intent based on connection state.
+  -- (When SYNCHRONIZE is implemented, call it in the online branch.)
+  $IsOnline = call javascript action NanoflowCommons.IsConnectedToServer ();
+  if $IsOnline {
+    show message 'Order completed and queued for sync.' type information;
+  } else {
+    show message 'Offline — order saved locally and will sync automatically.' type information;
+  }
+  return;
+}
+/
+
+-- NF_FT_LoadOrders: refresh order list for the current FieldTech.
+create or modify nanoflow FT.NF_FT_LoadOrders
+  ()
+  returns list of FT.DispatchOrder as $Orders
+  folder 'Mobile'
+{
+  -- Connectivity guard demonstrates the offline pattern; the offline runtime
+  -- pulls server data automatically when a connection is available.
+  $IsOnline = call javascript action NanoflowCommons.IsConnectedToServer ();
+  if $IsOnline {
+    log info 'Online — fetching latest dispatch orders.';
+  }
+  retrieve $Orders from FT.DispatchOrder
+    where [FT.DispatchOrder_FieldTech/FT.FieldTech/System.owner = '[%CurrentUser%]'
+           and Status != 'Completed']
+    sort by DispatchedAt asc
+    limit 50;
+  return $Orders;
+}
+/
