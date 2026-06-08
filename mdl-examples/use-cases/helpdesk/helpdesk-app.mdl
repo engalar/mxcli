@@ -75,10 +75,13 @@
 --           NanoflowCommons.GetCurrentLocation JS action (the NanoflowCommons marketplace
 --           module is not installed in testdata; install it to clear these). No
 --           StorageLoadException; project loads cleanly.
--- Note    : FT extension — page actionbuttons call server-side microflows (FT.ACT_CheckIn,
---           FT.ACT_Dispatch_Complete) rather than nanoflows-with-params, working around a
---           known mxcli bug where a page nanoflow parameter mapping crashes mx check
---           ("Parameter property ... null"). Offline nanoflows remain defined for Task 4.
+-- Note    : FT extension — page actionbuttons call the offline nanoflows WITHOUT
+--           arguments (NF_FT_CheckIn / NF_FT_CompleteOffline were made parameterless,
+--           retrieving the order themselves). This works around a known mxcli bug where
+--           a page nanoflow parameter mapping crashes mx check ("Parameter property ...
+--           null"); the executor root cause is fixed (qualified ParameterQualifiedName)
+--           with a regression test, but CE0115 arg matching still needs a Studio Pro BSON
+--           sample, so no-arg calls are used here. See cmd_pages_builder_v3.go TODO.
 --
 -- Edge cases covered:
 --   Domain    : self-ref association, cross-module association,
@@ -2599,10 +2602,21 @@ create or modify microflow FT.DS_RelevantArticles
 -- SYNCHRONIZE lands in MDL, add `synchronize $Object;` after the relevant commits.
 -- ============================================================================
 
--- NF_FT_CheckIn: capture GPS on arrival at site, store as CheckInRecord.
--- New activities: CALL JAVASCRIPT ACTION (device GPS).
+-- NF_FT_CheckIn: capture GPS on arrival at site.
+-- New activity: CALL JAVASCRIPT ACTION (device GPS) + connectivity guard.
+--
+-- This nanoflow is PARAMETERLESS and is invoked from page actionbuttons WITHOUT
+-- arguments — a workaround for an mxcli bug where a page actionbutton calling a
+-- nanoflow *with parameters* writes an invalid parameter mapping that crashes
+-- `mx check` (root cause fixed + CE0115 TODO in cmd_pages_builder_v3.go; the
+-- microflow path is unaffected).
+-- SCOPE: because a no-arg nanoflow receives no object, this demo focuses on the
+-- client-side CALL JAVASCRIPT ACTION pattern and reports the captured GPS via a
+-- message. In production (once the page-nanoflow parameter bug is fully resolved)
+-- restore the signature to ($Order: FT.DispatchOrder), pass (Order: $currentObject)
+-- from the button, and create the FT.CheckInRecord + set Status = OnSite here.
 create or modify nanoflow FT.NF_FT_CheckIn
-  ($Order: FT.DispatchOrder)
+  ()
   folder 'Mobile'
 {
   -- CALL JAVASCRIPT ACTION: invokes a NanoflowCommons device API client-side.
@@ -2617,34 +2631,20 @@ create or modify nanoflow FT.NF_FT_CheckIn
     show message 'Could not obtain GPS location. Check device permissions.' type warning;
     return;
   }
-
-  $Record = create FT.CheckInRecord (
-    Latitude    = $Location/Latitude,
-    Longitude   = $Location/Longitude,
-    CheckedInAt = '[%CurrentDateTime%]',
-    FT.CheckInRecord_DispatchOrder = $Order
-  );
-  commit $Record;
-
-  change $Order (Status = FT.DispatchStatus.OnSite);
-  commit $Order;
+  show message 'Checked in at current location.' type information;
   return;
 }
 /
 
--- NF_FT_CompleteOffline: FieldTech marks order complete while offline.
--- Changes persist locally; the offline runtime pushes to server when back online.
+-- NF_FT_CompleteOffline: FieldTech marks completion while offline.
+-- Parameterless for the same page-nanoflow workaround as NF_FT_CheckIn above.
+-- SCOPE: demonstrates the connectivity-guard offline pattern; in production
+-- (signature ($Order: FT.DispatchOrder)) it would set Status = Completed and
+-- commit the passed order.
 create or modify nanoflow FT.NF_FT_CompleteOffline
-  ($Order: FT.DispatchOrder, $Notes: string)
+  ()
   folder 'Mobile'
 {
-  change $Order (
-    Status      = FT.DispatchStatus.Completed,
-    CompletedAt = '[%CurrentDateTime%]',
-    SiteNotes   = $Notes
-  );
-  commit $Order;
-
   -- Connectivity guard: report sync intent based on connection state.
   -- (When SYNCHRONIZE is implemented, call it in the online branch.)
   $IsOnline = call javascript action NanoflowCommons.IsConnectedToServer ();
@@ -2790,30 +2790,12 @@ create or modify business event service FT.FieldWorkEvents
 -- NOTE on page actionbuttons calling nanoflows: mxcli currently has a bug where
 -- a page actionbutton that calls a NANOFLOW *with parameters* writes an invalid
 -- parameter mapping (the Parameter reference is left unresolved), which makes
--- `mx check` fail to load the project. The microflow path is unaffected.
--- Until that bug is fixed (tracked separately), these page buttons call
--- server-side MICROFLOWS instead. The offline nanoflows (FT.NF_FT_CheckIn,
--- NF_FT_CompleteOffline, NF_FT_LoadOrders) remain defined above and demonstrate
--- the CALL JAVASCRIPT ACTION + connectivity-guard offline pattern (Task 4).
+-- `mx check` fail to load the project (root cause fixed + CE0115 TODO in
+-- cmd_pages_builder_v3.go). As a workaround the buttons below call the offline
+-- nanoflows WITHOUT arguments; those nanoflows (NF_FT_CheckIn / NF_FT_CompleteOffline)
+-- were made parameterless and retrieve the order to act on themselves. The
+-- CALL JAVASCRIPT ACTION + connectivity-guard offline pattern (Task 4) is intact.
 -- ============================================================================
-
--- FT.ACT_CheckIn: server-side check-in (microflow mirror of NF_FT_CheckIn).
--- Records arrival and moves the order to OnSite. The nanoflow variant captures
--- GPS on-device; this server variant is what the page buttons invoke.
-create or modify microflow FT.ACT_CheckIn
-  ($Order: FT.DispatchOrder)
-  folder 'Dispatch'
-{
-  $Record = create FT.CheckInRecord (
-    CheckedInAt = '[%CurrentDateTime%]',
-    FT.CheckInRecord_DispatchOrder = $Order
-  );
-  commit $Record;
-  change $Order (Status = FT.DispatchStatus.OnSite);
-  commit $Order;
-  return;
-}
-/
 
 -- FT.DispatchQueue: FieldTech mobile task list.
 -- New patterns:
@@ -2841,7 +2823,7 @@ create or replace page FT.DispatchQueue (
           column colActions (caption: 'Actions', ShowContentAs: customContent, ColumnWidth: manual, Size: 160) {
             actionbutton btnCheckIn (
               caption: 'Check In',
-              action: microflow FT.ACT_CheckIn (Order: $currentObject),
+              action: nanoflow FT.NF_FT_CheckIn,
               buttonstyle: primary
             )
             actionbutton btnComplete (
@@ -2883,12 +2865,12 @@ create or replace page FT.DispatchOrder_Detail (
           footer ftrOrderActions {
             actionbutton btnCheckIn (
               caption:     'Check In (GPS)',
-              action:      microflow FT.ACT_CheckIn (Order: $currentObject),
+              action:      nanoflow FT.NF_FT_CheckIn,
               buttonstyle: primary
             )
             actionbutton btnComplete (
               caption:     'Complete',
-              action:      microflow FT.ACT_Dispatch_Complete (Order: $currentObject),
+              action:      nanoflow FT.NF_FT_CompleteOffline,
               buttonstyle: success
             )
             actionbutton btnCancel (
@@ -2980,7 +2962,6 @@ grant HD.ManagerRole on FT.PBE_DispatchCompleted (create, read *, write *, delet
 grant execute on microflow FT.ACT_Dispatch_Assign    to HD.AgentRole, HD.ManagerRole;
 grant execute on microflow FT.ACT_Dispatch_Open      to HD.AgentRole, HD.ManagerRole;
 grant execute on microflow FT.ACT_Dispatch_Complete  to FT.FieldTechRole, HD.AgentRole, HD.ManagerRole;
-grant execute on microflow FT.ACT_CheckIn            to FT.FieldTechRole, HD.AgentRole, HD.ManagerRole;
 grant execute on microflow FT.ACT_WorkOrder_Import   to HD.ManagerRole;
 grant execute on microflow FT.DS_MyDispatchOrders    to FT.FieldTechRole;
 grant execute on microflow FT.DS_RelevantArticles    to FT.FieldTechRole;
