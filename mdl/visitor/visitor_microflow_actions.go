@@ -1210,6 +1210,21 @@ func buildDownloadFileStatement(ctx parser.IDownloadFileStatementContext) *ast.D
 	return stmt
 }
 
+// buildSynchronizeStatement converts synchronizeStatement context to SynchronizeStmt.
+// Grammar: SYNCHRONIZE VARIABLE?
+// A variable present means SelectedObjects mode; absent means All mode.
+func buildSynchronizeStatement(ctx parser.ISynchronizeStatementContext) *ast.SynchronizeStmt {
+	if ctx == nil {
+		return nil
+	}
+	syncCtx := ctx.(*parser.SynchronizeStatementContext)
+	stmt := &ast.SynchronizeStmt{}
+	if variable := syncCtx.VARIABLE(); variable != nil {
+		stmt.Variable = strings.TrimPrefix(variable.GetText(), "$")
+	}
+	return stmt
+}
+
 // buildValidationFeedbackStatement converts validationFeedbackStatement context to ValidationFeedbackStmt.
 // Grammar: VALIDATION FEEDBACK attributePath MESSAGE expression (OBJECTS LBRACKET expressionList RBRACKET)?
 func buildValidationFeedbackStatement(ctx parser.IValidationFeedbackStatementContext) *ast.ValidationFeedbackStmt {

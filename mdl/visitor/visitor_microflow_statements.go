@@ -110,6 +110,8 @@ func buildMicroflowStatement(ctx parser.IMicroflowStatementContext) ast.Microflo
 		stmt = &ast.ClosePageStmt{NumberOfPages: 1}
 	} else if mfCtx.ShowHomePageStatement() != nil {
 		stmt = &ast.ShowHomePageStmt{}
+	} else if sync := mfCtx.SynchronizeStatement(); sync != nil {
+		stmt = buildSynchronizeStatement(sync)
 	} else if showMsg := mfCtx.ShowMessageStatement(); showMsg != nil {
 		stmt = buildShowMessageStatement(showMsg)
 	} else if download := mfCtx.DownloadFileStatement(); download != nil {
@@ -559,6 +561,8 @@ func setStatementAnnotations(stmt ast.MicroflowStatement, ann *ast.ActivityAnnot
 	case *ast.ClosePageStmt:
 		s.Annotations = ann
 	case *ast.ShowHomePageStmt:
+		s.Annotations = ann
+	case *ast.SynchronizeStmt:
 		s.Annotations = ann
 	case *ast.ShowMessageStmt:
 		s.Annotations = ann
