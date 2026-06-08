@@ -2610,6 +2610,23 @@ create or modify microflow FT.DS_RelevantArticles
 }
 /
 
+-- DS_CategoryChildren: list the direct child categories of a parent.
+-- Demonstrates single-hop reversed() on a self-referencing association.
+-- KB.Category_Parent goes FROM KB.Category TO KB.Category (self-reference);
+-- reversed() walks the FK backwards to find children pointing at $ParentCategory.
+-- Validated: mx check 0 errors on 11.6.6 and 11.10.0.
+create or modify microflow FT.DS_CategoryChildren
+  ($ParentCategory: KB.Category)
+  returns list of KB.Category as $Children
+  folder 'Dispatch'
+{
+  retrieve $Children from KB.Category
+    where [KB.Category_Parent[reversed()] = $ParentCategory]
+    limit 50;
+  return $Children;
+}
+/
+
 -- ============================================================================
 -- MARK: FieldTech — Nanoflows (Offline)
 -- ============================================================================
