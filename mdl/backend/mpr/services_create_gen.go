@@ -124,9 +124,91 @@ func (b *MprBackend) createBusinessEventServiceGen(svc *model.BusinessEventServi
 	g.SetExcluded(svc.Excluded)
 	g.SetExportLevel(svc.ExportLevel)
 	g.SetDocument(svc.Document)
-	// Definition (Part) and OperationImplementations (PartList) start empty;
-	// the executor sets them via dedicated mutator operations after create.
+
+	if svc.Definition != nil {
+		g.SetDefinition(buildBEDefinition(svc.Definition))
+	}
+	for _, op := range svc.OperationImplementations {
+		g.AddOperationImplementations(buildBEServiceOperation(op))
+	}
+
 	return mprrepos.NewServiceRepository(w).Create(string(svc.ContainerID), "Documents", g)
+}
+
+// buildBEDefinition converts a model.BusinessEventDefinition to its gen element.
+func buildBEDefinition(def *model.BusinessEventDefinition) *genBE.BusinessEventDefinition {
+	g := genBE.NewBusinessEventDefinition()
+	g.SetServiceName(def.ServiceName)
+	g.SetEventNamePrefix(def.EventNamePrefix)
+	for _, ch := range def.Channels {
+		g.AddChannels(buildBEChannel(ch))
+	}
+	return g
+}
+
+// buildBEChannel converts a model.BusinessEventChannel to its gen element.
+func buildBEChannel(ch *model.BusinessEventChannel) *genBE.Channel {
+	g := genBE.NewChannel()
+	g.SetChannelName(ch.ChannelName)
+	for _, msg := range ch.Messages {
+		g.AddMessages(buildBEMessage(msg))
+	}
+	return g
+}
+
+// buildBEMessage converts a model.BusinessEventMessage to its gen element.
+func buildBEMessage(msg *model.BusinessEventMessage) *genBE.Message {
+	g := genBE.NewMessage()
+	g.SetMessageName(msg.MessageName)
+	g.SetCanPublish(msg.CanPublish)
+	g.SetCanSubscribe(msg.CanSubscribe)
+	for _, attr := range msg.Attributes {
+		g.AddAttributes(buildBEMessageAttribute(attr))
+	}
+	return g
+}
+
+// buildBEMessageAttribute converts a model.BusinessEventAttribute to its gen element.
+func buildBEMessageAttribute(attr *model.BusinessEventAttribute) *genBE.MessageAttribute {
+	g := genBE.NewMessageAttribute()
+	g.SetAttributeName(attr.AttributeName)
+	g.SetAttributeType(beAttrTypeElem(attr.AttributeType))
+	return g
+}
+
+// buildBEServiceOperation converts a model.ServiceOperation to its gen element.
+func buildBEServiceOperation(op *model.ServiceOperation) *genBE.ServiceOperation {
+	g := genBE.NewServiceOperation()
+	g.SetMessageName(op.MessageName)
+	g.SetOperation(op.Operation)
+	if op.Entity != "" {
+		g.SetEntityQualifiedName(op.Entity)
+	}
+	if op.Microflow != "" {
+		g.SetMicroflowQualifiedName(op.Microflow)
+	}
+	return g
+}
+
+// beAttrTypeElem converts a Business Events attribute type string ("Long",
+// "String", etc.) to the matching gen DataType element.
+func beAttrTypeElem(t string) element.Element {
+	switch t {
+	case "Integer":
+		return genDt.NewIntegerType()
+	case "Long":
+		// Mendix OQL uses Long for 64-bit integers; DataTypes has no separate
+		// LongType gen element, so we use IntegerType as the closest available.
+		return genDt.NewIntegerType()
+	case "Decimal":
+		return genDt.NewDecimalType()
+	case "Boolean":
+		return genDt.NewBooleanType()
+	case "DateTime":
+		return genDt.NewDateTimeType()
+	default: // "String" and unknown
+		return genDt.NewStringType()
+	}
 }
 
 // dbDataTypeElemFromString converts a DataTypes$* type-name string (as stored in

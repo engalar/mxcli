@@ -56,6 +56,8 @@ grant KB.Reader on KB.Category (read *);
 grant KB.Contributor on KB.Category (create, read *, write *);
 
 grant KB.Admin on KB.Category (create, delete, read *, write *);
+
+grant FT.FieldTechRole on KB.Category (read *);
 /
 @Position(1100, 50)
 create or modify persistent entity KB.Tag (
@@ -67,6 +69,8 @@ grant KB.Reader on KB.Tag (read *);
 grant KB.Contributor on KB.Tag (create, read *, write *);
 
 grant KB.Admin on KB.Tag (create, delete, read *, write *);
+
+grant FT.FieldTechRole on KB.Tag (read *);
 /
 @Position(400, 50)
 create or modify persistent entity KB.Article (
@@ -84,6 +88,8 @@ grant KB.Reader on KB.Article (read *) where '[Status = ''Published'']';
 grant KB.Contributor on KB.Article (create, delete, read *, write *);
 
 grant KB.Admin on KB.Article (create, delete, read *, write *);
+
+grant FT.FieldTechRole on KB.Article (read *) where '[Status = ''Published'']';
 /
 @Position(750, 50)
 create or modify persistent entity KB.ArticleTag (
@@ -94,6 +100,8 @@ grant KB.Reader on KB.ArticleTag (read *);
 grant KB.Contributor on KB.ArticleTag (create, delete, read *, write *);
 
 grant KB.Admin on KB.ArticleTag (create, delete, read *, write *);
+
+grant FT.FieldTechRole on KB.ArticleTag (read *);
 /
 @Position(50, 50)
 create or modify persistent entity KB.ArticleRating (
@@ -107,6 +115,8 @@ grant KB.Reader on KB.ArticleRating (read (KB.ArticleRating_Article, Score, Comm
 grant KB.Contributor on KB.ArticleRating (create, delete, read *, write *);
 
 grant KB.Admin on KB.ArticleRating (create, delete, read *, write *);
+
+grant FT.FieldTechRole on KB.ArticleRating (read *);
 /
 @Position(750, 50)
 create or modify persistent entity HD.Customer (
@@ -1335,6 +1345,11 @@ create or modify page HD.Ticket_Detail (
               action: show_page HD.Agent_Select,
               buttonstyle: default
             )
+            actionbutton btnDispatch (
+              caption: 'Dispatch FieldTech',
+              action: microflow FT.ACT_Dispatch_Open(Ticket: $currentObject),
+              buttonstyle: default
+            )
           }
         }
       }
@@ -1344,6 +1359,12 @@ create or modify page HD.Ticket_Detail (
         datagrid dgComments {
           column colContent (attribute: Content, caption: 'Comment')
           column colIsInternal (attribute: IsInternal, caption: 'Internal', ColumnWidth: manual, Size: 90)
+        }
+        datagrid dgDispatchHistory {
+          column colStatus (attribute: Status, caption: 'Status', ColumnWidth: manual, Size: 100)
+          column colDispatchedAt (attribute: DispatchedAt, caption: 'Dispatched', ColumnWidth: manual, Size: 140)
+          column colCompletedAt (attribute: CompletedAt, caption: 'Completed', ColumnWidth: manual, Size: 140)
+          column colSiteNotes (attribute: SiteNotes, caption: 'Notes')
         }
       }
     }
@@ -1701,6 +1722,8 @@ create or modify page HD.Customer_Edit (
 
 grant view on page HD.Customer_Edit to HD.AgentRole, HD.ManagerRole;
 alter settings model
+  AfterStartupMicroflow = 'FT.ACT_FT_Initialize',
+  HealthCheckMicroflow = 'FT.DS_HealthCheck',
   HashAlgorithm = 'BCrypt',
   BcryptCost = 12,
   JavaVersion = 'Java21',
