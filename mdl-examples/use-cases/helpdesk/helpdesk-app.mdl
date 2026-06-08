@@ -2991,3 +2991,35 @@ revoke FT.FieldTechRole on KB.ArticleRating (write *);
 -- widget `visible:` expressions or in security XPath constraints, e.g.
 --   visible: ['[%UserRole_FieldTechRole%]']
 -- FieldTech-role pages are already gated by the page grants above.
+
+-- ============================================================================
+-- MARK: FieldTech — Navigation & Settings
+-- ============================================================================
+
+-- OfflineNative profile: for FieldTech mobile devices.
+--
+-- NOTE: `create or replace navigation` in mxcli currently only *replaces* an
+-- existing profile — the executor cannot *create* a new navigation profile that
+-- the project doesn't already have (it errors with "navigation profile not found:
+-- OfflineNative (available: Responsive)"). Native/offline profiles must first be
+-- enabled in Studio Pro (Project → Settings → enable Native mobile). Once the
+-- OfflineNative profile exists, the statement below configures it. It is shown
+-- here as a documented example (commented out so the script runs against a
+-- baseline project that only has the Responsive profile).
+--
+-- create or replace navigation OfflineNative
+--   home page FT.DispatchQueue for FieldTech
+--   home page HD.Ticket_Overview
+--   login page Administration.login
+--   menu (
+--     menu item 'My Orders'    page FT.DispatchQueue;
+--     menu item 'Order Detail' page FT.DispatchOrder_Detail;
+--   );
+
+-- alter settings model: wire AfterStartup and HealthCheck microflows.
+-- AfterStartupMicroflow runs once after the Mendix runtime starts.
+-- HealthCheckMicroflow is polled by load balancers / monitoring.
+-- Syntax: no parentheses, `=` assignments, comma-separated.
+alter settings model
+  AfterStartupMicroflow = FT.ACT_FT_Initialize,
+  HealthCheckMicroflow  = FT.DS_HealthCheck;

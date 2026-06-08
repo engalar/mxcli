@@ -1711,6 +1711,8 @@ create or modify page HD.Customer_Edit (
 
 grant view on page HD.Customer_Edit to HD.AgentRole, HD.ManagerRole;
 alter settings model
+  AfterStartupMicroflow = 'FT.ACT_FT_Initialize',
+  HealthCheckMicroflow = 'FT.DS_HealthCheck',
   HashAlgorithm = 'BCrypt',
   BcryptCost = 12,
   JavaVersion = 'Java21',
