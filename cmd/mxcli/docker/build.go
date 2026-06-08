@@ -174,6 +174,18 @@ func Build(opts BuildOptions) error {
 		if err := cmd.Run(); err != nil {
 			return fmt.Errorf("mxbuild failed: %w", err)
 		}
+
+		// React client frontend build (deploy layout only, only when rollup.config.mjs present)
+		if RollupConfigExists(deployDir) {
+			if err := BuildFrontend(FrontendBuildOptions{
+				DeployDir:  deployDir,
+				MxBuildDir: filepath.Dir(mxbuildPath),
+				Stdout:     w,
+			}); err != nil {
+				return err
+			}
+		}
+
 		fmt.Fprintln(w, "Build complete.")
 		return nil
 	}
@@ -248,17 +260,6 @@ func Build(opts BuildOptions) error {
 			fmt.Fprintf(w, "  [error]   %s: %v\n", r.Description, r.Error)
 		} else {
 			fmt.Fprintf(w, "  [%s] %s\n", r.Status, r.Description)
-		}
-	}
-
-	// Step 8: React client frontend build (deploy layout only, only when rollup.config.mjs present)
-	if isDeployLayout(padDir) && RollupConfigExists(padDir) {
-		if err := BuildFrontend(FrontendBuildOptions{
-			DeployDir:  padDir,
-			MxBuildDir: filepath.Dir(mxbuildPath),
-			Stdout:     w,
-		}); err != nil {
-			return err
 		}
 	}
 
