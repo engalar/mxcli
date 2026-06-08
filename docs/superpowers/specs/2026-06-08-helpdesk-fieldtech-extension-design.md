@@ -55,10 +55,10 @@ This single narrative arc requires:
 Two view entities aggregated over existing data:
 
 ```mdl
--- SLA compliance rate per agent
+-- SLA compliance rate per agent (IsOverSLA is boolean; count overdue via WHERE subquery)
 CREATE VIEW ENTITY FT.TicketSLAStats AS
   SELECT COUNT(t.ID) AS TotalTickets,
-         SUM(CASE WHEN t.IsOverSLA THEN 1 ELSE 0 END) AS OverSLACount
+         COUNT(t.IsOverSLA) AS OverSLACount
   FROM HD.Ticket t
   LEFT JOIN HD.Agent a ON HD.Ticket_Agent
   GROUP BY a.ID;
@@ -162,9 +162,9 @@ Demonstrates: `CREATE BUSINESS EVENT SERVICE`, `message ... publish entity`, `me
 ```mdl
 -- KB.Reader was granted write on ArticleRating in the baseline; tighten:
 revoke write on KB.ArticleRating from KB.Reader;
--- FieldTech cannot execute Agent-only escalation microflows:
-revoke execute on microflow HD.ACT_StartEscalation from HD.AgentRole;
-grant execute on microflow HD.ACT_StartEscalation to HD.AgentRole, HD.ManagerRole;
+-- FieldTech should not be able to execute ticket escalation:
+-- (FieldTechRole is never granted HD.ACT_StartEscalation, so no revoke needed;
+--  this section demonstrates the REVOKE syntax via the KB.Reader correction above)
 ```
 
 Demonstrates: `REVOKE` statement.
@@ -181,9 +181,11 @@ create or modify user role FieldTech (System.User, FT.FieldTechRole);
 create or replace navigation OfflineNative
   home page FT.DispatchQueue for FieldTech
   menu (
-    menu item 'My Orders' page FT.DispatchQueue;
-    menu item 'Check In'  nanoflow FT.NF_FT_CheckIn;
+    menu item 'My Orders'    page FT.DispatchQueue;
+    menu item 'Check In'     page FT.DispatchOrder_Detail;
   );
+  -- Note: menu items reference pages only; offline check-in nanoflow is
+  -- triggered via an actionbutton inside FT.DispatchOrder_Detail.
 ```
 
 Demonstrates: offline navigation profile (separate from Responsive).
