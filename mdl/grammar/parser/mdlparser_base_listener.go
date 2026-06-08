@@ -1136,6 +1136,12 @@ func (s *BaseMDLParserListener) EnterThrowStatement(ctx *ThrowStatementContext) 
 // ExitThrowStatement is called when production throwStatement is exited.
 func (s *BaseMDLParserListener) ExitThrowStatement(ctx *ThrowStatementContext) {}
 
+// EnterSynchronizeStatement is called when production synchronizeStatement is entered.
+func (s *BaseMDLParserListener) EnterSynchronizeStatement(ctx *SynchronizeStatementContext) {}
+
+// ExitSynchronizeStatement is called when production synchronizeStatement is exited.
+func (s *BaseMDLParserListener) ExitSynchronizeStatement(ctx *SynchronizeStatementContext) {}
+
 // EnterValidationFeedbackStatement is called when production validationFeedbackStatement is entered.
 func (s *BaseMDLParserListener) EnterValidationFeedbackStatement(ctx *ValidationFeedbackStatementContext) {
 }

@@ -146,6 +146,7 @@ microflowStatement
     | annotation* showMessageStatement SEMICOLON?
     | annotation* downloadFileStatement SEMICOLON?
     | annotation* throwStatement SEMICOLON?
+    | annotation* synchronizeStatement SEMICOLON?
     | annotation* listOperationStatement SEMICOLON?
     | annotation* aggregateListStatement SEMICOLON?
     | annotation* addToListStatement SEMICOLON?
@@ -521,6 +522,12 @@ downloadFileStatement
 
 throwStatement
     : THROW expression
+    ;
+
+// SYNCHRONIZE $Order;   -- sync a specific variable (SelectedObjects mode)
+// SYNCHRONIZE;          -- sync all (All mode)
+synchronizeStatement
+    : SYNCHRONIZE VARIABLE?
     ;
 
 // VALIDATION FEEDBACK $Product/Code MESSAGE 'Product code cannot be empty';

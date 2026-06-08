@@ -659,6 +659,15 @@ type ClosePageStmt struct {
 
 func (s *ClosePageStmt) isMicroflowStatement() {}
 
+// SynchronizeStmt represents: SYNCHRONIZE [$variable]
+// Variable is empty for "All Objects" mode, set to the variable name for "SelectedObjects" mode.
+type SynchronizeStmt struct {
+	Variable    string               // e.g. "Order" (without $), or "" for all-objects sync
+	Annotations *ActivityAnnotations // Optional @position, @caption, @color, @annotation
+}
+
+func (s *SynchronizeStmt) isMicroflowStatement() {}
+
 // ShowHomePageStmt represents: SHOW HOME PAGE
 type ShowHomePageStmt struct {
 	Annotations *ActivityAnnotations // Optional @position, @caption, @color, @annotation

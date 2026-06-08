@@ -544,6 +544,9 @@ type MDLParserListener interface {
 	// EnterThrowStatement is called when entering the throwStatement production.
 	EnterThrowStatement(c *ThrowStatementContext)
 
+	// EnterSynchronizeStatement is called when entering the synchronizeStatement production.
+	EnterSynchronizeStatement(c *SynchronizeStatementContext)
+
 	// EnterValidationFeedbackStatement is called when entering the validationFeedbackStatement production.
 	EnterValidationFeedbackStatement(c *ValidationFeedbackStatementContext)
 
@@ -1971,6 +1974,9 @@ type MDLParserListener interface {
 
 	// ExitThrowStatement is called when exiting the throwStatement production.
 	ExitThrowStatement(c *ThrowStatementContext)
+
+	// ExitSynchronizeStatement is called when exiting the synchronizeStatement production.
+	ExitSynchronizeStatement(c *SynchronizeStatementContext)
 
 	// ExitValidationFeedbackStatement is called when exiting the validationFeedbackStatement production.
 	ExitValidationFeedbackStatement(c *ValidationFeedbackStatementContext)
