@@ -42,7 +42,36 @@ func (b *MprBackend) createJsonStructureGen(js *types.JsonStructure) error {
 		g.SetExportLevel(js.ExportLevel)
 	}
 	g.SetJsonSnippet(js.JsonSnippet)
+	for _, e := range js.Elements {
+		g.AddElements(jsonElementToGen(e))
+	}
 	return mprrepos.NewServiceRepository(w).Create(string(js.ContainerID), "Documents", g)
+}
+
+// jsonElementToGen converts a parsed types.JsonElement tree into the gen
+// JsonElement structure Mendix serializes. Without this tree (only the raw
+// JsonSnippet), an import/export mapping referencing the structure fails mx
+// check with CE0271 "The selected source is not valid."
+func jsonElementToGen(e *types.JsonElement) *genJS.JsonElement {
+	g := genJS.NewJsonElement()
+	g.SetID(element.ID(modelsdkmpr.GenerateID()))
+	g.SetExposedName(e.ExposedName)
+	g.SetExposedItemName(e.ExposedItemName)
+	g.SetPath(e.Path)
+	g.SetElementType(e.ElementType)
+	g.SetPrimitiveType(e.PrimitiveType)
+	g.SetMinOccurs(int32(e.MinOccurs))
+	g.SetMaxOccurs(int32(e.MaxOccurs))
+	g.SetNillable(e.Nillable)
+	g.SetIsDefaultType(e.IsDefaultType)
+	g.SetMaxLength(int32(e.MaxLength))
+	g.SetFractionDigits(int32(e.FractionDigits))
+	g.SetTotalDigits(int32(e.TotalDigits))
+	g.SetOriginalValue(e.OriginalValue)
+	for _, child := range e.Children {
+		g.AddChildren(jsonElementToGen(child))
+	}
+	return g
 }
 
 // ── DatabaseConnection ────────────────────────────────────────────────────

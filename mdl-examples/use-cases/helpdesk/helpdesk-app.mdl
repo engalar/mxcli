@@ -2395,11 +2395,13 @@ create or modify association FT.CheckInRecord_DispatchOrder
   owner default;
 
 -- FT.WorkOrderImport: non-persistent webhook buffer for JSON import.
+-- ScheduledAt is dateTime to match the ISO-8601 scheduledAt field in the
+-- WorkOrderPayload JSON structure (import mapping enforces type alignment).
 create or modify non-persistent entity FT.WorkOrderImport (
   RawPayload:   string,
   TicketRef:    string(200),
   TechName:     string(200),
-  ScheduledAt:  string(50)
+  ScheduledAt:  datetime
 );
 
 -- ============================================================================
@@ -2526,10 +2528,14 @@ create or modify microflow FT.ACT_WorkOrder_Import
   ($JsonPayload: string)
   folder 'Dispatch'
 {
-  -- IMPORT FROM MAPPING syntax demonstrated via comment; CE0241 occurs when the
-  -- mapping's JSON source reference is not resolvable in the executor. The pattern:
+  -- IMPORT FROM MAPPING syntax demonstrated via comment. The import mapping
+  -- itself (FT.WorkOrderImport_Mapping) is now valid (CE0271 fixed — the JSON
+  -- structure carries a parsed element tree). The `import from mapping` ACTIVITY
+  -- has a separate executor gap: ImportMappingCall writes the mapping reference
+  -- under the wrong BSON key ("ImportMapping" instead of "ReturnValueMapping")
+  -- and omits required fields (Commit, ContentType, Range), producing CE0241.
+  -- The pattern:
   --   $Imported = import from mapping FT.WorkOrderImport_Mapping($JsonPayload);
-  -- In production: use the mapping result to populate the DispatchOrder fields.
   $Order = create FT.DispatchOrder (
     Status     = FT.DispatchStatus.Pending,
     SiteNotes  = 'Imported from payload: ' + $JsonPayload
@@ -2752,29 +2758,29 @@ create rest client FT.SMSGateway (
 create json structure FT.WorkOrderPayload
   snippet '{"ticketRef": "HD-001", "techName": "Jane Smith", "scheduledAt": "2026-06-10T09:00:00Z"}';
 
--- Import / export mapping syntax (reference only — not executed).
--- CE0271 occurs when the mapping's JSON source is not fully wired at BSON level.
--- The MDL syntax is demonstrated here as comments; executing the CREATE statements
--- would produce CE0271 until the executor's mapping source linkage is fixed.
---
---   create import mapping FT.WorkOrderImport_Mapping
---     with json structure FT.WorkOrderPayload
---   {
---     create FT.WorkOrderImport {
---       TicketRef   = ticketRef,
---       TechName    = techName,
---       ScheduledAt = scheduledAt
---     }
---   };
---
---   create export mapping FT.DispatchOrder_Export
---     with json structure FT.WorkOrderPayload
---   {
---     FT.DispatchOrder {
---       ticketRef   = SiteNotes,
---       scheduledAt = DispatchedAt
---     }
---   };
+-- Import mapping: JSON webhook payload → FT.WorkOrderImport non-persistent entity.
+-- The JSON structure's parsed element tree binds the source; previously this
+-- produced CE0271 because mxcli stored only the raw JsonSnippet with no element
+-- tree. Now createJsonStructureGen serializes the full JsonElement tree.
+create import mapping FT.WorkOrderImport_Mapping
+  with json structure FT.WorkOrderPayload
+{
+  create FT.WorkOrderImport {
+    TicketRef   = ticketRef,
+    TechName    = techName,
+    ScheduledAt = scheduledAt
+  }
+};
+
+-- Export mapping: FT.DispatchOrder → JSON for outbound reporting.
+create export mapping FT.DispatchOrder_Export
+  with json structure FT.WorkOrderPayload
+{
+  FT.DispatchOrder {
+    ticketRef   = SiteNotes,
+    scheduledAt = DispatchedAt
+  }
+};
 
 -- ============================================================================
 -- MARK: FieldTech — Business Events

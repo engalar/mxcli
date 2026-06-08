@@ -130,6 +130,14 @@ func (b *MprBackend) updateJsonStructureViaModelsdk(js *types.JsonStructure) err
 		typed.SetExcluded(js.Excluded)
 		typed.SetExportLevel(js.ExportLevel)
 		typed.SetJsonSnippet(js.JsonSnippet)
+		// Rebuild the element tree so it matches the new snippet. Without this
+		// the structure exposes no source and mappings fail mx check (CE0271).
+		for i := len(typed.ElementsItems()) - 1; i >= 0; i-- {
+			typed.RemoveElements(i)
+		}
+		for _, e := range js.Elements {
+			typed.AddElements(jsonElementToGen(e))
+		}
 		return nil
 	})
 }

@@ -12,6 +12,7 @@ import (
 func SerializeImportMapping(im *model.ImportMapping) ([]byte, error) {
 	elements := bson.A{int32(2)}
 	for _, elem := range im.Elements {
+		normalizeRootMappingElement(elem.Kind, &elem.ExposedName, &elem.MinOccurs)
 		elements = append(elements, serImportMappingElement(elem, "(Object)"))
 	}
 
@@ -48,6 +49,20 @@ func SerializeImportMapping(im *model.ImportMapping) ([]byte, error) {
 		"WsdlFile":                        "",
 	}
 	return bson.Marshal(doc)
+}
+
+// normalizeRootMappingElement ensures a root object mapping element binds to the
+// JSON structure root via ExposedName "Root" when the caller left it blank.
+// A blank ExposedName leaves the source unbound and triggers CE0271. MinOccurs is
+// left untouched: it must match the JSON structure root element (whose default is
+// 0); forcing it to 1 triggers CE5015 "MinOccurs does not match schema element".
+func normalizeRootMappingElement(kind string, exposedName *string, _ *int) {
+	if kind != "Object" {
+		return
+	}
+	if *exposedName == "" {
+		*exposedName = "Root"
+	}
 }
 
 func serImportMappingElement(elem *model.ImportMappingElement, parentPath string) bson.M {
@@ -146,6 +161,9 @@ func serImportValueElement(id string, elem *model.ImportMappingElement, parentPa
 func SerializeExportMapping(em *model.ExportMapping) ([]byte, error) {
 	elements := bson.A{int32(2)}
 	for _, elem := range em.Elements {
+		if elem.Kind == "Object" && elem.ExposedName == "" {
+			elem.ExposedName = "Root"
+		}
 		elements = append(elements, serExportMappingElement(elem, "(Object)"))
 	}
 
