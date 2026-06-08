@@ -53,6 +53,8 @@
 --           a duplicate module 'minimal' (bf242742 + DomainModel/Settings/Security children)
 --           deleted in commits 6bff72805/7c6f98308 but never purged from the Unit table;
 --           mx check crashed with DirectoryNotFoundException until this was cleaned up.
+--           Follow-up: those 4 mxunit files were accidentally re-added in cb3ab29c9 and
+--           are now removed; the SQLite fix remains intact.
 --
 -- Edge cases covered:
 --   Domain    : self-ref association, cross-module association,
