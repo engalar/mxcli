@@ -2402,3 +2402,164 @@ create view entity FT.DispatchSummary (
   where d.Status = 'Completed'
   group by ft.Name
 );
+
+-- ============================================================================
+-- MARK: FieldTech — Microflows
+-- ============================================================================
+
+-- ACT_Dispatch_Assign: Agent assigns a FieldTech to a Ticket.
+-- New activity: CREATE LIST — builds a list of candidate FT.FieldTech objects
+-- available for dispatch (IsAvailable = true). LIST is then filtered by Region.
+-- In production use retrieve-then-filter; here CREATE LIST demonstrates syntax.
+create or modify microflow FT.ACT_Dispatch_Assign
+  ($Ticket: HD.Ticket, $FieldTech: FT.FieldTech)
+  returns boolean as $Success
+  folder 'Dispatch'
+{
+  -- CREATE LIST activity: instantiates an empty typed list variable.
+  -- Use case: accumulate objects before a bulk commit or decision.
+  $Candidates = create list of FT.FieldTech;
+
+  if $FieldTech/IsAvailable = false {
+    show message 'Selected technician is not available.' type warning;
+    return false;
+  }
+  $Order = create FT.DispatchOrder (
+    Status       = FT.DispatchStatus.Pending,
+    DispatchedAt = '[%CurrentDateTime%]',
+    FT.DispatchOrder_Ticket    = $Ticket,
+    FT.DispatchOrder_FieldTech = $FieldTech
+  );
+  commit $Order;
+  change $FieldTech (IsAvailable = false);
+  commit $FieldTech;
+  return true;
+}
+/
+
+-- ACT_Dispatch_Open: called from Ticket_Detail ALTER PAGE button.
+-- Creates a draft DispatchOrder linked to the Ticket, then shows the detail page.
+create or modify microflow FT.ACT_Dispatch_Open
+  ($Ticket: HD.Ticket)
+  folder 'Dispatch'
+{
+  $Order = create FT.DispatchOrder (
+    Status = FT.DispatchStatus.Pending,
+    FT.DispatchOrder_Ticket = $Ticket
+  );
+  commit $Order;
+  show page FT.DispatchOrder_Detail (DispatchOrder: $Order);
+  return;
+}
+/
+
+-- ACT_Dispatch_Complete: marks order Completed, sends SMS via REST, logs.
+-- Demonstrates: send rest request (REST client operation call).
+-- $latestHttpResponse/StatusCode reads the HTTP status after the call.
+create or modify microflow FT.ACT_Dispatch_Complete
+  ($Order: FT.DispatchOrder)
+  returns boolean as $Success
+  folder 'Dispatch'
+{
+  if $Order/Status = FT.DispatchStatus.Completed {
+    return false;
+  }
+  change $Order (
+    Status      = FT.DispatchStatus.Completed,
+    CompletedAt = '[%CurrentDateTime%]'
+  );
+  commit $Order;
+  -- Notify FieldTech via SMS gateway (REST client defined in MARK: REST).
+  -- $latestHttpResponse is the System.HttpResponse object after the call.
+  send rest request FT.SMSGateway.NotifyTech;
+  declare $StatusCode: integer = $latestHttpResponse/StatusCode;
+  log info 'SMS notification sent, HTTP status: ' + toString($StatusCode);
+  return true;
+}
+/
+
+-- ACT_WorkOrder_Import: parse JSON payload into FT.WorkOrderImport entity.
+-- Demonstrates: import from mapping activity.
+create or modify microflow FT.ACT_WorkOrder_Import
+  ($JsonPayload: string)
+  folder 'Dispatch'
+{
+  -- IMPORT FROM MAPPING: deserialises $JsonPayload using FT.WorkOrderImport_Mapping.
+  -- Returns an FT.WorkOrderImport non-persistent object.
+  $Imported = import from mapping FT.WorkOrderImport_Mapping($JsonPayload);
+  if $Imported != empty {
+    $Order = create FT.DispatchOrder (
+      Status     = FT.DispatchStatus.Pending,
+      SiteNotes  = 'Imported: ' + $Imported/TicketRef
+    );
+    commit $Order;
+  }
+  return;
+}
+/
+
+-- ACT_FT_Initialize: AfterStartup hook — reset all technician availability flags.
+-- Registered via ALTER SETTINGS MODEL in Task 9.
+create or modify microflow FT.ACT_FT_Initialize
+  ()
+  folder 'System'
+{
+  retrieve $Techs from FT.FieldTech limit 0;
+  loop $Tech in $Techs {
+    change $Tech (IsAvailable = true);
+    commit $Tech;
+  }
+  log info 'FieldTech availability reset at startup.';
+  return;
+}
+/
+
+-- DS_HealthCheck: HealthCheck microflow — returns count of pending orders as integer.
+-- Mendix runtime calls this on health-check requests; non-zero = unhealthy (customize as needed).
+create or modify microflow FT.DS_HealthCheck
+  ()
+  returns integer as $PendingCount
+  folder 'System'
+{
+  retrieve $Pending from FT.DispatchOrder
+    where [Status = 'Pending']
+    limit 0;
+  $PendingCount = COUNT($Pending);
+  return $PendingCount;
+}
+/
+
+-- DS_MyDispatchOrders: retrieves DispatchOrders for the current FieldTech.
+-- XPath: traverse DispatchOrder → FieldTech (FROM side), match System.owner.
+-- reversed() demo: see DS_RelevantArticles below.
+create or modify microflow FT.DS_MyDispatchOrders
+  ()
+  returns list of FT.DispatchOrder as $Orders
+  folder 'Dispatch'
+{
+  retrieve $Orders from FT.DispatchOrder
+    where [FT.DispatchOrder_FieldTech/FT.FieldTech/System.owner = '[%CurrentUser%]'
+           and Status != 'Completed' and Status != 'Cancelled']
+    sort by DispatchedAt asc
+    limit 50;
+  return $Orders;
+}
+/
+
+-- DS_RelevantArticles: retrieve KB articles tagged 'fieldtech-relevant'.
+-- Demonstrates reversed() XPath: KB.ArticleTag_Article runs FROM KB.ArticleTag TO KB.Article.
+-- On KB.Article we reverse: [KB.ArticleTag_Article[reversed()]/KB.ArticleTag/...]
+-- reads "articles where at least one ArticleTag points back to this article and
+-- the Tag name equals 'fieldtech-relevant'".
+create or modify microflow FT.DS_RelevantArticles
+  ()
+  returns list of KB.Article as $Articles
+  folder 'Dispatch'
+{
+  retrieve $Articles from KB.Article
+    where [KB.ArticleTag_Article[reversed()]/KB.ArticleTag/KB.ArticleTag_Tag/KB.Tag/Name = 'fieldtech-relevant'
+           and Status = 'Published']
+    limit 20;
+  return $Articles;
+}
+/
