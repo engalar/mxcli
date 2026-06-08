@@ -49,6 +49,10 @@
 --           instead of if then/else/end if, loop $x { } instead of loop/begin/end loop,
 --           split type $x { case X { } else { } } instead of split type/case/end split.
 --           Also fixes AllowedRoles fallback to AllowedModuleRoles for human-edited pages.
+-- Note    : minimal.mpr SQLite Unit table patched 2026-06-08: removed 4 dangling rows for
+--           a duplicate module 'minimal' (bf242742 + DomainModel/Settings/Security children)
+--           deleted in commits 6bff72805/7c6f98308 but never purged from the Unit table;
+--           mx check crashed with DirectoryNotFoundException until this was cleaned up.
 --
 -- Edge cases covered:
 --   Domain    : self-ref association, cross-module association,
