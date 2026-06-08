@@ -55,6 +55,9 @@
 --           mx check crashed with DirectoryNotFoundException until this was cleaned up.
 --           Follow-up: those 4 mxunit files were accidentally re-added in cb3ab29c9 and
 --           are now removed; the SQLite fix remains intact.
+-- Note    : Golden rebuilt 2026-06-08 after fixing delete_behavior output: astDeleteBehaviorStr
+--           and genAssocDeleteBehaviorToMDL now emit MDL canonical uppercase keywords
+--           (DELETE_BUT_KEEP_REFERENCES) instead of BSON-style camelCase strings.
 --
 -- Edge cases covered:
 --   Domain    : self-ref association, cross-module association,

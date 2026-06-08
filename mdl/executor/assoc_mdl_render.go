@@ -23,16 +23,18 @@ type assocMDLSpec struct {
 }
 
 // renderAssocMDL renders an association spec as deterministic MDL text.
+// Uses "create or modify association" for idempotent re-import semantics,
+// and "delete_behavior" (underscore form) matching the canonical MDL syntax.
 func renderAssocMDL(spec assocMDLSpec) string {
 	var sb strings.Builder
 	if spec.documentation != "" {
 		fmt.Fprintf(&sb, "/**\n * %s\n */\n", spec.documentation)
 	}
-	fmt.Fprintf(&sb, "create association %s.%s\n", spec.module, spec.name)
+	fmt.Fprintf(&sb, "create or modify association %s.%s\n", spec.module, spec.name)
 	fmt.Fprintf(&sb, "from %s to %s\n", spec.fromQN, spec.toQN)
 	fmt.Fprintf(&sb, "type %s\n", spec.assocType)
 	fmt.Fprintf(&sb, "owner %s\n", spec.owner)
-	fmt.Fprintf(&sb, "delete behavior %s", spec.deleteBehavior)
+	fmt.Fprintf(&sb, "delete_behavior %s", spec.deleteBehavior)
 	return sb.String()
 }
 
@@ -67,17 +69,11 @@ func astOwnerStr(o ast.OwnerType) string {
 func astDeleteBehaviorStr(d ast.DeleteBehavior) string {
 	switch d {
 	case ast.DeleteCascade:
-		return "DeleteMeAndReferences"
-	case ast.DeleteBoth:
-		return "DeleteBoth"
-	case ast.DeleteKeepParentDeleteChild:
-		return "KeepParentDeleteChild"
-	case ast.DeleteKeepChildDeleteParent:
-		return "KeepChildDeleteParent"
+		return "DELETE_AND_REFERENCES"
 	case ast.DeleteIfNoReferences:
-		return "DeleteIfNoReferences"
+		return "DELETE_IF_NO_REFERENCES"
 	default:
-		return "DeleteMeButKeepReferences"
+		return "DELETE_BUT_KEEP_REFERENCES"
 	}
 }
 
@@ -103,7 +99,7 @@ func assocSpecFromGen(moduleName string, a *genDm.Association, entityNames map[s
 		owner = "Both"
 	}
 
-	deleteBehavior := "DeleteMeButKeepReferences"
+	deleteBehavior := "DELETE_BUT_KEEP_REFERENCES"
 	if dbe, ok := a.DeleteBehavior().(*genDm.AssociationDeleteBehavior); ok && dbe != nil {
 		deleteBehavior = genAssocDeleteBehaviorToMDL(dbe.ChildDeleteBehavior())
 	}
@@ -124,16 +120,10 @@ func assocSpecFromGen(moduleName string, a *genDm.Association, entityNames map[s
 func genAssocDeleteBehaviorToMDL(child string) string {
 	switch child {
 	case "DeleteMeAndReferences":
-		return "DeleteMeAndReferences"
-	case "DeleteBoth":
-		return "DeleteBoth"
-	case "KeepParentDeleteChild":
-		return "KeepParentDeleteChild"
-	case "KeepChildDeleteParent":
-		return "KeepChildDeleteParent"
+		return "DELETE_AND_REFERENCES"
 	case "DeleteMeIfNoReferences", "DeleteIfNoReferences":
-		return "DeleteIfNoReferences"
-	default:
-		return "DeleteMeButKeepReferences"
+		return "DELETE_IF_NO_REFERENCES"
+	default: // "DeleteMeButKeepReferences" and any unknown value
+		return "DELETE_BUT_KEEP_REFERENCES"
 	}
 }

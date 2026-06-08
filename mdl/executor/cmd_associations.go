@@ -601,6 +601,9 @@ func describeAssociation(ctx *ExecContext, name ast.QualifiedName) error {
 	for _, m := range mods {
 		moduleNames[m.ID] = m.Name
 	}
+	// entityNames keyed by ID string for assocSpecFromGen compatibility.
+	entityNamesByIDStr := make(map[string]string)
+	// entityNames keyed by model.ID for cross-module lookup.
 	entityNames := make(map[model.ID]string)
 	for _, p := range pairs {
 		if p.DM == nil {
@@ -612,36 +615,10 @@ func describeAssociation(ctx *ExecContext, name ast.QualifiedName) error {
 			if !ok {
 				continue
 			}
-			entityNames[model.ID(entity.ID())] = modName + "." + entity.Name()
+			qn := modName + "." + entity.Name()
+			entityNamesByIDStr[string(entity.ID())] = qn
+			entityNames[model.ID(entity.ID())] = qn
 		}
-	}
-
-	formatAssocDetails := func(assocType, owner, storage string, deleteBehavior interface{}) {
-		typeName := "Reference"
-		if assocType == "ReferenceSet" {
-			typeName = "ReferenceSet"
-		}
-		fmt.Fprintf(ctx.Output, "type %s\n", typeName)
-		ownerStr := "Default"
-		if owner == "Both" {
-			ownerStr = "Both"
-		}
-		fmt.Fprintf(ctx.Output, "owner %s\n", ownerStr)
-		if storage == "Column" {
-			fmt.Fprintln(ctx.Output, "storage column")
-		}
-		childDel := "DELETE_BUT_KEEP_REFERENCES"
-		if dbe, ok := deleteBehavior.(*genDm.AssociationDeleteBehavior); ok && dbe != nil {
-			switch dbe.ChildDeleteBehavior() {
-			case "DeleteMeAndReferences":
-				childDel = "DELETE_CASCADE"
-			case "DeleteMeIfNoReferences":
-				childDel = "DELETE_IF_NO_REFERENCES"
-			case "DeleteMeButKeepReferences", "":
-				childDel = "DELETE_BUT_KEEP_REFERENCES"
-			}
-		}
-		fmt.Fprintf(ctx.Output, "delete_behavior %s;\n", childDel)
 	}
 
 	for _, p := range pairs {
@@ -657,16 +634,10 @@ func describeAssociation(ctx *ExecContext, name ast.QualifiedName) error {
 			if !ok || assoc.Name() != name.Name {
 				continue
 			}
-			fromQN := entityNames[model.ID(assoc.ParentRefID())]
-			toQN := entityNames[model.ID(assoc.ChildRefID())]
-			fmt.Fprintf(ctx.Output, "%s\n", describeAssociationComment(assoc.Type(), assoc.Owner(), fromQN, toQN))
-			if doc := assoc.Documentation(); doc != "" {
-				fmt.Fprintf(ctx.Output, "/**\n * %s\n */\n", doc)
-			}
-			fmt.Fprintf(ctx.Output, "create or modify association %s.%s\n", modName, assoc.Name())
-			fmt.Fprintf(ctx.Output, "from %s to %s\n", fromQN, toQN)
-			formatAssocDetails(assoc.Type(), assoc.Owner(), assoc.StorageFormat(), assoc.DeleteBehavior())
-			fmt.Fprintln(ctx.Output, "/")
+			spec := assocSpecFromGen(modName, assoc, entityNamesByIDStr)
+			comment := describeAssociationComment(assoc.Type(), assoc.Owner(), spec.fromQN, spec.toQN)
+			fmt.Fprintf(ctx.Output, "%s\n", comment)
+			fmt.Fprintf(ctx.Output, "%s;\n/\n", renderAssocMDL(spec))
 			return nil
 		}
 		for _, c := range p.DM.CrossAssociationsItems() {
@@ -678,14 +649,32 @@ func describeAssociation(ctx *ExecContext, name ast.QualifiedName) error {
 			if fromQN == "" {
 				fromQN = string(ca.ParentRefID())
 			}
-			fmt.Fprintf(ctx.Output, "%s\n", describeAssociationComment(ca.Type(), ca.Owner(), fromQN, ca.ChildQualifiedName()))
-			if doc := ca.Documentation(); doc != "" {
-				fmt.Fprintf(ctx.Output, "/**\n * %s\n */\n", doc)
+			toQN := ca.ChildQualifiedName()
+			deleteBehavior := "DELETE_BUT_KEEP_REFERENCES"
+			if dbe, ok := ca.DeleteBehavior().(*genDm.AssociationDeleteBehavior); ok && dbe != nil {
+				deleteBehavior = genAssocDeleteBehaviorToMDL(dbe.ChildDeleteBehavior())
 			}
-			fmt.Fprintf(ctx.Output, "create or modify association %s.%s\n", modName, ca.Name())
-			fmt.Fprintf(ctx.Output, "from %s to %s\n", fromQN, ca.ChildQualifiedName())
-			formatAssocDetails(ca.Type(), ca.Owner(), ca.StorageFormat(), ca.DeleteBehavior())
-			fmt.Fprintln(ctx.Output, "/")
+			assocType := "Reference"
+			if ca.Type() == "ReferenceSet" {
+				assocType = "ReferenceSet"
+			}
+			owner := "Default"
+			if ca.Owner() == "Both" {
+				owner = "Both"
+			}
+			spec := assocMDLSpec{
+				module:         modName,
+				name:           ca.Name(),
+				fromQN:         fromQN,
+				toQN:           toQN,
+				documentation:  ca.Documentation(),
+				assocType:      assocType,
+				owner:          owner,
+				deleteBehavior: deleteBehavior,
+			}
+			comment := describeAssociationComment(ca.Type(), ca.Owner(), fromQN, toQN)
+			fmt.Fprintf(ctx.Output, "%s\n", comment)
+			fmt.Fprintf(ctx.Output, "%s;\n/\n", renderAssocMDL(spec))
 			return nil
 		}
 	}
