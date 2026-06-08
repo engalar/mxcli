@@ -2630,9 +2630,9 @@ create or modify nanoflow FT.NF_FT_CheckIn
   -- CALL JAVASCRIPT ACTION: invokes a NanoflowCommons device API client-side.
   -- Returns a NanoflowCommons.Geolocation object with Latitude, Longitude, Timestamp.
   $Location = call javascript action NanoflowCommons.GetCurrentLocation (
-    timeout      = 10000,
-    maximumAge   = 0,
-    highAccuracy = true
+    Timeout      = 10000,
+    MaximumAge   = 0,
+    HighAccuracy = true
   ) on error continue;
 
   if $Location = empty {
@@ -2745,52 +2745,28 @@ create export mapping FT.DispatchOrder_Export
 -- ============================================================================
 -- MARK: FieldTech — Business Events
 -- ============================================================================
--- Event-driven integration: publish DispatchCompleted to external monitoring;
--- subscribe to ExternalWorkOrderReceived for inbound webhook-style ingestion.
--- In production: PBE_* entities must extend BusinessEvents.PublishedBusinessEvent
--- (requires the BusinessEvents marketplace module). This demo uses a regular
--- persistent entity so the syntax compiles without the module installed.
+-- REMOVED from executable baseline. Reason:
+--   Studio Pro's Business Events Build Extension (EntityAttributesNotChangedChecks)
+--   iterates ALL ServiceOperation elements and calls get_Entity() on each.
+--   For subscribe operations (where Entity is null), this causes a crash:
+--     NullReferenceException in ServiceOperationProxy.get_Entity()
+--     → ProxyId(null) → GetApiInterfaceForIdTarget(null) → crash
+--   The crash occurs regardless of whether entity is set on publish ops or not.
+--   Root constraint: BusinessEvents marketplace module must be installed for
+--   any BusinessEventService to survive mx check.
+--   Since testdata/helpdesk-clean-* does not include the BusinessEvents module,
+--   the BES cannot be included in this executable baseline.
+--
+-- Reference syntax (not executed):
+--   create or modify business event service FT.FieldWorkEvents
+--   ( ServiceName: 'FieldWorkEvents', EventNamePrefix: 'ft' )
+--   {
+--     message DispatchCompleted (DispatchOrderId: long, CompletedAt: string)
+--       publish entity FT.PBE_DispatchCompleted;  -- entity must extend BusinessEvents.PublishedBusinessEvent
+--     message ExternalWorkOrderReceived (TicketRef: string, ScheduledAt: string)
+--       subscribe microflow FT.ACT_WorkOrder_Import;
+--   };
 -- ============================================================================
-
--- PBE entity: attributes must exactly match the published message attributes.
-create or modify persistent entity FT.PBE_DispatchCompleted (
-  DispatchOrderId: long,
-  TicketId:        long,
-  CompletedAt:     string(50)
-);
-
-create or modify association FT.PBE_DispatchCompleted_DispatchOrder
-  from FT.PBE_DispatchCompleted to FT.DispatchOrder
-  type reference
-  owner default;
-
--- Business Event Service definition.
--- ServiceName: identifies the service in the event broker (Kafka topic prefix).
--- EventNamePrefix: prefixed to message names for full topic names.
-create or modify business event service FT.FieldWorkEvents
-(
-  ServiceName:     'FieldWorkEvents',
-  EventNamePrefix: 'ft'
-)
-{
-  -- PUBLISH: this app produces DispatchCompleted events.
-  -- entity FT.PBE_DispatchCompleted is the carrier object.
-  message DispatchCompleted (
-    DispatchOrderId: long,
-    TicketId:        long,
-    CompletedAt:     string
-  ) publish
-    entity FT.PBE_DispatchCompleted;
-
-  -- SUBSCRIBE: this app consumes ExternalWorkOrderReceived events.
-  -- Subscribed events are routed to FT.ACT_WorkOrder_Import.
-  message ExternalWorkOrderReceived (
-    TicketRef:   string,
-    TechName:    string,
-    ScheduledAt: string
-  ) subscribe
-    microflow FT.ACT_WorkOrder_Import;
-};
 
 -- ============================================================================
 -- MARK: FieldTech — Pages
@@ -2964,7 +2940,7 @@ grant HD.AgentRole on FT.FieldTech (read *);
 grant HD.AgentRole on FT.DispatchOrder (create, read *, write *);
 grant HD.ManagerRole on FT.FieldTech (create, read *, write *, delete);
 grant HD.ManagerRole on FT.DispatchOrder (create, read *, write *, delete);
-grant HD.ManagerRole on FT.PBE_DispatchCompleted (create, read *, write *, delete);
+-- FT.PBE_DispatchCompleted removed: entity without BusinessEvents base class caused mx check crash.
 
 -- Microflow / nanoflow grants
 grant execute on microflow FT.ACT_Dispatch_Assign    to HD.AgentRole, HD.ManagerRole;
