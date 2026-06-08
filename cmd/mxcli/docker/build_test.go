@@ -751,3 +751,22 @@ func TestDescribePatches_12x(t *testing.T) {
 		t.Errorf("expected 5 patches for 12.x, got %d", len(patches))
 	}
 }
+
+func TestBuild_FrontendStep_SkippedWhenNoRollupConfig(t *testing.T) {
+	dir := t.TempDir()
+	// No web/rollup.config.mjs created
+	if RollupConfigExists(dir) {
+		t.Error("should not detect React client when rollup.config.mjs absent")
+	}
+}
+
+func TestBuild_FrontendStep_DetectedWhenRollupConfigPresent(t *testing.T) {
+	dir := t.TempDir()
+	webDir := filepath.Join(dir, "web")
+	os.MkdirAll(webDir, 0755)
+	os.WriteFile(filepath.Join(webDir, "rollup.config.mjs"), []byte("export default {}"), 0644)
+
+	if !RollupConfigExists(dir) {
+		t.Error("should detect React client when rollup.config.mjs present")
+	}
+}

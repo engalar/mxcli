@@ -251,6 +251,17 @@ func Build(opts BuildOptions) error {
 		}
 	}
 
+	// Step 8: React client frontend build (deploy layout only, only when rollup.config.mjs present)
+	if isDeployLayout(padDir) && RollupConfigExists(padDir) {
+		if err := BuildFrontend(FrontendBuildOptions{
+			DeployDir:  padDir,
+			MxBuildDir: filepath.Dir(mxbuildPath),
+			Stdout:     w,
+		}); err != nil {
+			return err
+		}
+	}
+
 	fmt.Fprintln(w, "")
 	fmt.Fprintln(w, "Build complete.")
 	return nil
