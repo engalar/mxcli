@@ -4,6 +4,7 @@
 package docker_test
 
 import (
+	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
@@ -121,5 +122,48 @@ func TestStartLocal_MissingPAD_ReturnsError(t *testing.T) {
 	}
 	if cs.Cmd != nil {
 		t.Fatal("expected no command to be started")
+	}
+}
+
+func TestResolveMxInstallPath_MxBuildCacheExactVersion(t *testing.T) {
+	home := t.TempDir()
+	version := "99.0.0"
+	launcherDir := filepath.Join(home, ".mxcli", "mxbuild", version, "runtime", "launcher")
+	os.MkdirAll(launcherDir, 0755)
+	os.WriteFile(filepath.Join(launcherDir, "runtimelauncher.jar"), []byte("fake"), 0644)
+
+	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home)
+	t.Setenv("MX_INSTALL_PATH", "")
+
+	got, err := docker.ResolveMxInstallPathForVersion(version)
+	if err != nil {
+		t.Fatalf("expected to find fake cache, got error: %v", err)
+	}
+	want := filepath.Join(home, ".mxcli", "mxbuild", version)
+	if got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}
+
+func TestResolveMxInstallPath_MxBuildCacheNewest(t *testing.T) {
+	home := t.TempDir()
+	for _, v := range []string{"10.0.0", "11.0.0"} {
+		launcherDir := filepath.Join(home, ".mxcli", "mxbuild", v, "runtime", "launcher")
+		os.MkdirAll(launcherDir, 0755)
+		os.WriteFile(filepath.Join(launcherDir, "runtimelauncher.jar"), []byte("fake"), 0644)
+	}
+
+	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home)
+	t.Setenv("MX_INSTALL_PATH", "")
+
+	got, err := docker.ResolveMxInstallPathForVersion("")
+	if err != nil {
+		t.Fatalf("expected to find newest cache, got error: %v", err)
+	}
+	want := filepath.Join(home, ".mxcli", "mxbuild", "11.0.0")
+	if got != want {
+		t.Errorf("got %q, want %q", got, want)
 	}
 }

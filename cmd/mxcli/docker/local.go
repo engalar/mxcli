@@ -328,10 +328,45 @@ func resolveMxInstallPathForVersion(version string) (string, error) {
 			}
 		}
 	}
+	// Fallback: CDN-cached mxbuild (~/.mxcli/mxbuild/{version}/).
+	// Covers Linux and macOS where Studio Pro is not installed.
+	if home, err2 := os.UserHomeDir(); err2 == nil {
+		mxbuildRoot := filepath.Join(home, ".mxcli", "mxbuild")
+		if version != "" {
+			// Exact version match.
+			candidate := filepath.Join(mxbuildRoot, version)
+			launcher := filepath.Join(candidate, "runtime", "launcher", "runtimelauncher.jar")
+			if _, err2 := os.Stat(launcher); err2 == nil {
+				return candidate, nil
+			}
+		} else {
+			// No version: return newest cached version.
+			if entries, err2 := os.ReadDir(mxbuildRoot); err2 == nil {
+				var best string
+				for _, e := range entries {
+					if !e.IsDir() {
+						continue
+					}
+					launcher := filepath.Join(mxbuildRoot, e.Name(), "runtime", "launcher", "runtimelauncher.jar")
+					if _, err2 := os.Stat(launcher); err2 == nil && e.Name() > best {
+						best = e.Name()
+					}
+				}
+				if best != "" {
+					return filepath.Join(mxbuildRoot, best), nil
+				}
+			}
+		}
+	}
 	if version != "" {
 		return "", fmt.Errorf("Mendix %s not found", version)
 	}
 	return "", fmt.Errorf("Mendix runtime not found")
+}
+
+// ResolveMxInstallPathForVersion is the exported wrapper for tests.
+func ResolveMxInstallPathForVersion(version string) (string, error) {
+	return resolveMxInstallPathForVersion(version)
 }
 
 // resolveMxInstallPath finds the newest installed Mendix runtime (version-agnostic).
