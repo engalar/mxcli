@@ -2714,3 +2714,53 @@ create export mapping FT.DispatchOrder_Export
     scheduledAt = DispatchedAt
   }
 };
+
+-- ============================================================================
+-- MARK: FieldTech — Business Events
+-- ============================================================================
+-- Event-driven integration: publish DispatchCompleted to external monitoring;
+-- subscribe to ExternalWorkOrderReceived for inbound webhook-style ingestion.
+-- In production: PBE_* entities must extend BusinessEvents.PublishedBusinessEvent
+-- (requires the BusinessEvents marketplace module). This demo uses a regular
+-- persistent entity so the syntax compiles without the module installed.
+-- ============================================================================
+
+-- PBE entity: attributes must exactly match the published message attributes.
+create or modify persistent entity FT.PBE_DispatchCompleted (
+  DispatchOrderId: long,
+  TicketId:        long,
+  CompletedAt:     string(50)
+);
+
+create or modify association FT.PBE_DispatchCompleted_DispatchOrder
+  from FT.PBE_DispatchCompleted to FT.DispatchOrder
+  type reference
+  owner default;
+
+-- Business Event Service definition.
+-- ServiceName: identifies the service in the event broker (Kafka topic prefix).
+-- EventNamePrefix: prefixed to message names for full topic names.
+create or modify business event service FT.FieldWorkEvents
+(
+  ServiceName:     'FieldWorkEvents',
+  EventNamePrefix: 'ft'
+)
+{
+  -- PUBLISH: this app produces DispatchCompleted events.
+  -- entity FT.PBE_DispatchCompleted is the carrier object.
+  message DispatchCompleted (
+    DispatchOrderId: long,
+    TicketId:        long,
+    CompletedAt:     string
+  ) publish
+    entity FT.PBE_DispatchCompleted;
+
+  -- SUBSCRIBE: this app consumes ExternalWorkOrderReceived events.
+  -- Subscribed events are routed to FT.ACT_WorkOrder_Import.
+  message ExternalWorkOrderReceived (
+    TicketRef:   string,
+    TechName:    string,
+    ScheduledAt: string
+  ) subscribe
+    microflow FT.ACT_WorkOrder_Import;
+};
