@@ -1091,7 +1091,12 @@ func (pb *pageBuilder) buildClientActionV3(action *ast.ActionV3) (element.Elemen
 		for _, arg := range action.Args {
 			nm := genPg.NewNanoflowParameterMapping()
 			assignFreshID(nm)
-			nm.SetParameterQualifiedName(arg.Name)
+			// Use the fully-qualified "Module.NanoflowName.ParamName" form. A bare
+			// param name leaves Mendix unable to resolve the Parameter reference and
+			// makes `mx check` crash with "Parameter property ... null". Mirrors the
+			// microflow path above.
+			// TODO: CE0115 nanoflow arg matching still broken; needs Studio Pro BSON sample
+			nm.SetParameterQualifiedName(action.Target + "." + arg.Name)
 
 			if strVal, ok := arg.Value.(string); ok {
 				if strings.HasPrefix(strVal, "$") {

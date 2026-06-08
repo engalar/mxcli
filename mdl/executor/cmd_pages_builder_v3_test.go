@@ -425,3 +425,40 @@ func TestBuildTabPageV3_CaptionIsTextsText(t *testing.T) {
 		t.Errorf("TabPage Caption is %T — must be *genTexts.Text, not ClientTemplate", cap)
 	}
 }
+
+// TestBuildClientActionV3_NanoflowParamQualifiedName is a regression guard for the
+// page-actionbutton nanoflow parameter-mapping crash: a nanoflow action with a
+// parameter must store a FULLY-QUALIFIED ParameterQualifiedName
+// ("Module.NanoflowName.ParamName"), not a bare param name. A bare name leaves
+// Mendix unable to resolve the Parameter reference and crashes `mx check` with
+// "Parameter property ... null". (CE0115 arg matching is a separate, still-open
+// issue — see TODO in cmd_pages_builder_v3.go.)
+func TestBuildClientActionV3_NanoflowParamQualifiedName(t *testing.T) {
+	pb := newPageBuilderWithNanoflowStub("MyMod.SomeNF")
+	action := &ast.ActionV3{
+		Type:   "nanoflow",
+		Target: "MyMod.SomeNF",
+		Args:   []ast.FlowArgV3{{Name: "Order", Value: "$currentObject"}},
+	}
+	elem, err := pb.buildClientActionV3(action)
+	if err != nil {
+		t.Fatalf("buildClientActionV3: %v", err)
+	}
+	nfAct, ok := elem.(*genPg.CallNanoflowClientAction)
+	if !ok {
+		t.Fatalf("expected *CallNanoflowClientAction, got %T", elem)
+	}
+	mappings := nfAct.ParameterMappingsItems()
+	if len(mappings) != 1 {
+		t.Fatalf("expected 1 parameter mapping, got %d", len(mappings))
+	}
+	nm, ok := mappings[0].(*genPg.NanoflowParameterMapping)
+	if !ok {
+		t.Fatalf("expected *NanoflowParameterMapping, got %T", mappings[0])
+	}
+	got := nm.ParameterQualifiedName()
+	want := "MyMod.SomeNF.Order"
+	if got != want {
+		t.Errorf("ParameterQualifiedName = %q, want %q (bare name regresses to the mx check crash)", got, want)
+	}
+}
