@@ -50,6 +50,13 @@ func (ctx *FormatContext) Child() *FormatContext {
 	}
 }
 
+// withIndent returns a FormatContext with Indent set to n (absolute), sharing
+// the same writer and dispatcher. Used by formatters that nest children at a
+// fixed depth (e.g. LayoutGrid columns) rather than a single +1 step.
+func (ctx *FormatContext) withIndent(n int) *FormatContext {
+	return &FormatContext{Output: ctx.Output, Indent: n, Dispatcher: ctx.Dispatcher}
+}
+
 // Write writes a single line at the current indent level.
 func (ctx *FormatContext) Write(s string) {
 	fmt.Fprintf(ctx.Output, "%s%s\n", strings.Repeat("  ", ctx.Indent), s)
