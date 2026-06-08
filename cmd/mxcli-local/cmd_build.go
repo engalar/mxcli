@@ -33,6 +33,7 @@ func buildCmd() *cobra.Command {
 				ProjectPath:       projectPath,
 				SkipCheck:         skipCheck,
 				SkipUpdateWidgets: skipUpdateWidgets,
+				UseDeployLayout:   true,
 				Stdout:            os.Stdout,
 			})
 		},
