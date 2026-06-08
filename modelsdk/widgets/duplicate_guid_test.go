@@ -12,8 +12,42 @@
 package widgets
 
 import (
+	"fmt"
 	"testing"
+
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
+
+// minimalStableTemplate returns a minimal WidgetTemplate with StableIds=true
+// (simulating a template extracted from Studio Pro). The hex IDs are fixed
+// so we can verify they get remapped to different values on each call.
+func minimalStableTemplate() *WidgetTemplate {
+	return &WidgetTemplate{
+		WidgetID:  "test.widget.Minimal",
+		StableIds: true,
+		Type: map[string]any{
+			"$ID":   "aabbccdd00112233445566778899aabb",
+			"$Type": "CustomWidgets$CustomWidgetType",
+			"Name":  "test.widget.Minimal",
+			"Properties": []any{
+				map[string]any{
+					"$ID":        "11223344556677889900aabbccddeeff",
+					"$Type":      "CustomWidgets$WidgetPropertyType",
+					"PropertyKey": "caption",
+					"ValueType": map[string]any{
+						"$ID":   "ffeeddccbbaa99887766554433221100",
+						"$Type": "CustomWidgets$WidgetStringType",
+					},
+				},
+			},
+		},
+		Object: map[string]any{
+			"$ID":        "00112233445566778899aabbccddeeff",
+			"$Type":      "CustomWidgets$WidgetObject",
+			"TypePointer": "aabbccdd00112233445566778899aabb",
+		},
+	}
+}
 
 // TestGetTemplateFullBSON_NoDuplicateGuid verifies that two successive calls
 // to GetTemplateFullBSON for the same widget ID produce DIFFERENT Type $IDs.
@@ -21,32 +55,57 @@ import (
 // InvalidOperationException: Duplicate Guid when both instances appear on the
 // same page.
 func TestGetTemplateFullBSON_NoDuplicateGuid(t *testing.T) {
-	widgetID := "com.mendix.widget.web.combobox.Combobox"
+	// Register a synthetic stable-ID template in the session cache so this
+	// test runs without a real project on disk.
+	tmpl := minimalStableTemplate()
+	const widgetID = "test.widget.Minimal"
+	generatedCache.Store(widgetID, tmpl)
+	defer generatedCache.Delete(widgetID)
+
 	counter := 0
 	idGen := func() string {
 		counter++
 		return idForCounter(counter)
 	}
 
-	bsonType1, _, _, objectTypeID1, _, err1 := GetTemplateFullBSON(widgetID, idGen, "")
+	bsonType1, _, _, _, _, err1 := GetTemplateFullBSON(widgetID, idGen, "")
 	if err1 != nil {
-		t.Skipf("template not found for %s: %v", widgetID, err1)
+		t.Fatalf("first call failed: %v", err1)
 	}
-	if bsonType1 == nil {
-		t.Skipf("no template for %s", widgetID)
-	}
-
-	_, _, _, objectTypeID2, _, err2 := GetTemplateFullBSON(widgetID, idGen, "")
+	bsonType2, _, _, _, _, err2 := GetTemplateFullBSON(widgetID, idGen, "")
 	if err2 != nil {
 		t.Fatalf("second call failed: %v", err2)
 	}
 
-	// The ObjectType $IDs must be different — same ID would cause Duplicate Guid.
-	if objectTypeID1 == objectTypeID2 {
-		t.Fatalf("Duplicate Guid detected: both widget instances have ObjectType.$ID = %q\n"+
-			"This would cause InvalidOperationException in Mendix Studio Pro when both\n"+
-			"widgets are on the same page. Do NOT use identity mapping for Type $IDs.", objectTypeID1)
+	// Extract the $ID from the root CustomWidgetType element.
+	rootID1 := bsonDocID(bsonType1)
+	rootID2 := bsonDocID(bsonType2)
+
+	if rootID1 == "" {
+		t.Fatal("first call returned a type with no $ID")
 	}
+	// The root CustomWidgetType $IDs must be different — same ID would cause Duplicate Guid.
+	if rootID1 == rootID2 {
+		t.Fatalf("Duplicate Guid detected: both widget instances have CustomWidgetType.$ID = %q\n"+
+			"This would cause InvalidOperationException in Mendix Studio Pro when both\n"+
+			"widgets are on the same page. Do NOT use identity mapping for Type $IDs.", rootID1)
+	}
+}
+
+// bsonDocID returns the $ID of a BSON document as a hex string, or "".
+// Handles both []byte (raw from hexToIDBlob) and bson.Binary forms.
+func bsonDocID(doc bson.D) string {
+	for _, elem := range doc {
+		if elem.Key == "$ID" {
+			switch v := elem.Value.(type) {
+			case bson.Binary:
+				return fmt.Sprintf("%x", v.Data)
+			case []byte:
+				return fmt.Sprintf("%x", v)
+			}
+		}
+	}
+	return ""
 }
 
 func idForCounter(n int) string {

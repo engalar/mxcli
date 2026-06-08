@@ -341,20 +341,15 @@ func GetTemplateFullBSON(widgetID string, idGenerator func() string, projectPath
 	stableIds := tmpl.StableIds
 
 	// Phase 1: Build old→new ID mappings.
-	// Stable-ID templates (extracted from Studio Pro instances) use identity mapping
-	// so the original $IDs are preserved — this prevents CE0463 which Mendix triggers
-	// when widget instances of the same type have different embedded type $IDs.
+	// Always generate fresh $IDs for every call — Studio Pro generates unique IDs per
+	// widget instance, so each call must produce distinct IDs to avoid Duplicate Guid
+	// when multiple instances of the same widget type appear on the same page.
+	// The stableIds flag controls only EnsureRequiredObjectLists (skip for Studio Pro
+	// extracted templates whose Object is already complete).
 	idMapping := make(map[string]string)
-	if stableIds {
-		collectIDsIdentity(tmpl.Type, idMapping)
-		if tmpl.Object != nil {
-			collectIDsIdentity(tmpl.Object, idMapping)
-		}
-	} else {
-		collectIDs(tmpl.Type, idGenerator, idMapping)
-		if tmpl.Object != nil {
-			collectIDs(tmpl.Object, idGenerator, idMapping)
-		}
+	collectIDs(tmpl.Type, idGenerator, idMapping)
+	if tmpl.Object != nil {
+		collectIDs(tmpl.Object, idGenerator, idMapping)
 	}
 
 	// Phase 2: Convert Type JSON to BSON, replacing IDs using the mapping
