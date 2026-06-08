@@ -121,7 +121,12 @@ func TestNoRawBSONTypeStringsInExecutor(t *testing.T) {
 		"cmd_security_write_entity_gen.go": true,
 		// (b) describe formatter-dispatch registration keys: type strings
 		// identify which BSON $Type each formatter reads; no BSON construction.
-		"widget_fmt_basic.go": true,
+		"widget_fmt_basic.go":     true,
+		"widget_fmt_container.go": true,
+		"widget_fmt_data.go":      true,
+		"widget_fmt_datagrid.go":  true,
+		"widget_fmt_datagrid2.go": true,
+		"widget_fmt_layout.go":    true,
 	}
 
 	entries, err := os.ReadDir(".")
