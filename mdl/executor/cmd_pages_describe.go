@@ -120,11 +120,20 @@ func describePage(ctx *ExecContext, name ast.QualifiedName) error {
 	// Always use the legacy raw-BSON describe path. The IR path was removed
 	// because it produced lossy output (missing rendermode, contentparams,
 	// column captions, etc.). The legacy path handles all widget types correctly.
+	// Phase 1 bridge: route already-parsed widgets through the FormatterDispatcher.
+	// Registered formatters (added incrementally) handle their types; everything
+	// else falls back to the legacy outputWidgetMDLV3 path, so output is unchanged
+	// until a formatter is registered. In Phase 3 this becomes pure dispatcher.
 	rawWidgets := getPageWidgetsFromRaw(ctx, pageID)
 	if len(rawWidgets) > 0 {
+		d := DefaultDispatcher()
+		d.fallback = func(raw map[string]any) WidgetFormatter {
+			return &legacyWidgetFallback{raw: raw, ctx: ctx}
+		}
+		fmtCtx := &FormatContext{Output: ctx.Output, Indent: 1, Dispatcher: d}
 		formatWidgetProps(ctx.Output, "", header, props, " {\n")
 		for _, w := range rawWidgets {
-			outputWidgetMDLV3(ctx, w, 1)
+			d.Format(fmtCtx, rawWidgetToMap(w))
 		}
 		fmt.Fprint(ctx.Output, "}")
 	} else {
@@ -148,6 +157,40 @@ func describePage(ctx *ExecContext, name ast.QualifiedName) error {
 
 	fmt.Fprint(ctx.Output, "\n")
 	return nil
+}
+
+// rawWidgetToMap wraps an already-parsed rawWidget in a minimal raw map for
+// dispatcher dispatch. The parsed widget is carried under "_rawWidget" so that
+// rawWidgetFromMap can retrieve it without re-parsing — this preserves exact
+// legacy behavior during the Phase 1/2 bridge. Removed in Phase 3.
+func rawWidgetToMap(w rawWidget) map[string]any {
+	return map[string]any{"$Type": w.Type, "Name": w.Name, "_rawWidget": w}
+}
+
+// rawWidgetFromMap retrieves the rawWidget carried in a bridge map. If the map
+// was not produced by rawWidgetToMap it parses the raw BSON via parseRawWidget.
+// Removed in Phase 3 when rawWidget is no longer used.
+func rawWidgetFromMap(raw map[string]any) rawWidget {
+	if w, ok := raw["_rawWidget"].(rawWidget); ok {
+		return w
+	}
+	widgets := parseRawWidget(nil, raw)
+	if len(widgets) == 0 {
+		return rawWidget{Type: safeStr(raw, "$Type"), Name: safeStr(raw, "Name")}
+	}
+	return widgets[0]
+}
+
+// legacyWidgetFallback wraps the legacy outputWidgetMDLV3 pipeline as a
+// WidgetFormatter. Used during Phase 1/2 migration as the dispatcher fallback
+// for widget types that do not yet have a dedicated formatter. Removed in Phase 3.
+type legacyWidgetFallback struct {
+	raw map[string]any
+	ctx *ExecContext
+}
+
+func (f *legacyWidgetFallback) FormatMDL(ctx *FormatContext) {
+	outputWidgetMDLV3(f.ctx, rawWidgetFromMap(f.raw), ctx.Indent)
 }
 
 // formatParametersV3 formats parameter expressions for MDL V3 ContentParams clause.
