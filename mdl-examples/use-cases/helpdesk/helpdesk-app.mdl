@@ -2918,3 +2918,76 @@ create or replace page FT.SLADashboard (
     }
   }
 };
+
+-- ============================================================================
+-- MARK: FieldTech — Security
+-- ============================================================================
+
+-- Module role for field technicians
+create module role FT.FieldTechRole;
+
+-- User role: FieldTech maps to System.User + FT.FieldTechRole
+create or modify user role FieldTech (System.User, FT.FieldTechRole);
+
+-- Entity access for FT.FieldTechRole
+-- FT.FieldTech: technician sees only their own profile
+-- (System.owner was set when the FT.FieldTech record was created by the admin)
+grant FT.FieldTechRole on FT.FieldTech (read *, write (Region, Phone))
+  where '[System.owner = ''[%CurrentUser%]'']';
+
+-- FT.DispatchOrder: technician sees orders assigned to them.
+-- Path: FT.DispatchOrder → FT.DispatchOrder_FieldTech (FROM) → FT.FieldTech → System.owner
+grant FT.FieldTechRole on FT.DispatchOrder (read *, write (Status, SiteNotes, CompletedAt))
+  where '[FT.DispatchOrder_FieldTech/FT.FieldTech/System.owner = ''[%CurrentUser%]'']';
+
+grant FT.FieldTechRole on FT.CheckInRecord (create, read *, write *);
+grant FT.FieldTechRole on FT.WorkOrderImport (create, read *, write *);
+
+-- Allow FieldTech to read published KB articles (needed for DS_RelevantArticles)
+grant FT.FieldTechRole on KB.Article (read *)
+  where '[Status = ''Published'']';
+grant FT.FieldTechRole on KB.Tag (read *);
+grant FT.FieldTechRole on KB.ArticleTag (read *);
+grant FT.FieldTechRole on KB.Category (read *);
+
+-- Agent / Manager: full access to FT module
+grant HD.AgentRole on FT.FieldTech (read *);
+grant HD.AgentRole on FT.DispatchOrder (create, read *, write *);
+grant HD.ManagerRole on FT.FieldTech (create, read *, write *, delete);
+grant HD.ManagerRole on FT.DispatchOrder (create, read *, write *, delete);
+grant HD.ManagerRole on FT.PBE_DispatchCompleted (create, read *, write *, delete);
+
+-- Microflow / nanoflow grants
+grant execute on microflow FT.ACT_Dispatch_Assign    to HD.AgentRole, HD.ManagerRole;
+grant execute on microflow FT.ACT_Dispatch_Open      to HD.AgentRole, HD.ManagerRole;
+grant execute on microflow FT.ACT_Dispatch_Complete  to FT.FieldTechRole, HD.AgentRole, HD.ManagerRole;
+grant execute on microflow FT.ACT_CheckIn            to FT.FieldTechRole, HD.AgentRole, HD.ManagerRole;
+grant execute on microflow FT.ACT_WorkOrder_Import   to HD.ManagerRole;
+grant execute on microflow FT.DS_MyDispatchOrders    to FT.FieldTechRole;
+grant execute on microflow FT.DS_RelevantArticles    to FT.FieldTechRole;
+grant execute on microflow FT.DS_HealthCheck         to HD.ManagerRole;
+grant execute on nanoflow  FT.NF_FT_CheckIn          to FT.FieldTechRole;
+grant execute on nanoflow  FT.NF_FT_CompleteOffline  to FT.FieldTechRole;
+grant execute on nanoflow  FT.NF_FT_LoadOrders       to FT.FieldTechRole;
+
+-- Page grants
+grant view on page FT.DispatchQueue        to FT.FieldTechRole;
+grant view on page FT.DispatchOrder_Detail to FT.FieldTechRole;
+grant view on page FT.SLADashboard         to HD.ManagerRole;
+
+-- ============================================================================
+-- MARK: Security Tightening (REVOKE)
+-- ============================================================================
+-- Demonstrate REVOKE on entity access. The revoke entity syntax is
+--   revoke <RoleList> on <Entity> (<accessRights>)?
+-- which removes the named access rights for that role (or all access if the
+-- right list is omitted). Here we drop FieldTech write access to KB.ArticleRating
+-- after granting it — readers should view ratings, not modify them.
+grant FT.FieldTechRole on KB.ArticleRating (read *, write *);
+revoke FT.FieldTechRole on KB.ArticleRating (write *);
+
+-- Note on the [%UserRole_FieldTechRole%] token: Mendix evaluates this token to
+-- true when the current user has the FieldTech user role. It can be used in
+-- widget `visible:` expressions or in security XPath constraints, e.g.
+--   visible: ['[%UserRole_FieldTechRole%]']
+-- FieldTech-role pages are already gated by the page grants above.

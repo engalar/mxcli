@@ -56,6 +56,8 @@ grant KB.Reader on KB.Category (read *);
 grant KB.Contributor on KB.Category (create, read *, write *);
 
 grant KB.Admin on KB.Category (create, delete, read *, write *);
+
+grant FT.FieldTechRole on KB.Category (read *);
 /
 @Position(1100, 50)
 create or modify persistent entity KB.Tag (
@@ -67,6 +69,8 @@ grant KB.Reader on KB.Tag (read *);
 grant KB.Contributor on KB.Tag (create, read *, write *);
 
 grant KB.Admin on KB.Tag (create, delete, read *, write *);
+
+grant FT.FieldTechRole on KB.Tag (read *);
 /
 @Position(400, 50)
 create or modify persistent entity KB.Article (
@@ -84,6 +88,8 @@ grant KB.Reader on KB.Article (read *) where '[Status = ''Published'']';
 grant KB.Contributor on KB.Article (create, delete, read *, write *);
 
 grant KB.Admin on KB.Article (create, delete, read *, write *);
+
+grant FT.FieldTechRole on KB.Article (read *) where '[Status = ''Published'']';
 /
 @Position(750, 50)
 create or modify persistent entity KB.ArticleTag (
@@ -94,6 +100,8 @@ grant KB.Reader on KB.ArticleTag (read *);
 grant KB.Contributor on KB.ArticleTag (create, delete, read *, write *);
 
 grant KB.Admin on KB.ArticleTag (create, delete, read *, write *);
+
+grant FT.FieldTechRole on KB.ArticleTag (read *);
 /
 @Position(50, 50)
 create or modify persistent entity KB.ArticleRating (
@@ -107,6 +115,8 @@ grant KB.Reader on KB.ArticleRating (read (KB.ArticleRating_Article, Score, Comm
 grant KB.Contributor on KB.ArticleRating (create, delete, read *, write *);
 
 grant KB.Admin on KB.ArticleRating (create, delete, read *, write *);
+
+grant FT.FieldTechRole on KB.ArticleRating (read *);
 /
 @Position(750, 50)
 create or modify persistent entity HD.Customer (
