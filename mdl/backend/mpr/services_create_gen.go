@@ -18,6 +18,7 @@ import (
 	genBE "github.com/mendixlabs/mxcli/modelsdk/gen/businessevents"
 	genDB "github.com/mendixlabs/mxcli/modelsdk/gen/databaseconnector"
 	genDt "github.com/mendixlabs/mxcli/modelsdk/gen/datatypes"
+	genDM "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 	genJS "github.com/mendixlabs/mxcli/modelsdk/gen/jsonstructures"
 	modelsdkmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
 )
@@ -191,23 +192,25 @@ func buildBEServiceOperation(op *model.ServiceOperation) *genBE.ServiceOperation
 }
 
 // beAttrTypeElem converts a Business Events attribute type string ("Long",
-// "String", etc.) to the matching gen DataType element.
+// "String", etc.) to the matching gen DomainModels AttributeType element.
+//
+// Business Events MessageAttribute.AttributeType is a DomainModels$*AttributeType,
+// NOT a DataTypes$*Type — Mendix refuses to load the MPR if the wrong type
+// family is used ("cannot be converted to type AttributeTypeBase").
 func beAttrTypeElem(t string) element.Element {
 	switch t {
 	case "Integer":
-		return genDt.NewIntegerType()
+		return genDM.NewIntegerAttributeType()
 	case "Long":
-		// Mendix OQL uses Long for 64-bit integers; DataTypes has no separate
-		// LongType gen element, so we use IntegerType as the closest available.
-		return genDt.NewIntegerType()
+		return genDM.NewLongAttributeType()
 	case "Decimal":
-		return genDt.NewDecimalType()
+		return genDM.NewDecimalAttributeType()
 	case "Boolean":
-		return genDt.NewBooleanType()
+		return genDM.NewBooleanAttributeType()
 	case "DateTime":
-		return genDt.NewDateTimeType()
+		return genDM.NewDateTimeAttributeType()
 	default: // "String" and unknown
-		return genDt.NewStringType()
+		return genDM.NewStringAttributeType()
 	}
 }
 

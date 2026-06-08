@@ -82,11 +82,14 @@
 --           null"); the executor root cause is fixed (qualified ParameterQualifiedName)
 --           with a regression test, but CE0115 arg matching still needs a Studio Pro BSON
 --           sample, so no-arg calls are used here. See cmd_pages_builder_v3.go TODO.
--- Note    : Golden rebuilt 2026-06-08 after fix to createBusinessEventServiceGen:
---           Definition (Part) and OperationImplementations (PartList) were not written,
+-- Note    : Golden rebuilt 2026-06-08 after two-stage fix to createBusinessEventServiceGen:
+--           (1) Definition (Part) and OperationImplementations (PartList) were not written,
 --           causing Studio Pro to crash with "unsupported document type" on TryGetIcon.
---           Fix adds buildBEDefinition / buildBEServiceOperation helpers. Tests:
---           TestCreateBusinessEventServiceGen_WritesDefinition + _OperationEntityIsWritten.
+--           (2) MessageAttribute.AttributeType was written as DataTypes$IntegerType but
+--           Mendix requires DomainModels$*AttributeType (AttributeTypeBase subclass);
+--           wrong type family caused "cannot be converted to type AttributeTypeBase" crash.
+--           Fix uses genDM.New*AttributeType() for all BE message attribute types.
+--           Regression tests: WritesDefinition + AttributeTypeUsesDomainModels + OperationEntityIsWritten.
 --
 -- Edge cases covered:
 --   Domain    : self-ref association, cross-module association,
