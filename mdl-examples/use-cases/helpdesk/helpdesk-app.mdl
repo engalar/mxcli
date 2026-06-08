@@ -2360,3 +2360,45 @@ create or modify non-persistent entity FT.WorkOrderImport (
   TechName:     string(200),
   ScheduledAt:  string(50)
 );
+
+-- ============================================================================
+-- MARK: FieldTech — OQL Analytics
+-- ============================================================================
+-- Two view entities for the SLA dashboard page (FT.SLADashboard).
+-- Demonstrates: CREATE VIEW ENTITY, LEFT OUTER JOIN, count(t.ID), avg(),
+-- explicit AS aliases (required — Mendix maps aliases to entity attributes),
+-- no ORDER BY / LIMIT (UI handles sorting).
+-- ============================================================================
+
+-- SLA compliance per agent: total tickets and overdue count.
+-- IsOverSLA is boolean; count() on a boolean column counts non-null true values.
+create view entity FT.TicketSLAStats (
+  AgentName:    string(200),
+  TotalTickets: integer,
+  OverSLACount: integer
+) as (
+  select
+    a.Name             as AgentName,
+    count(t.ID)        as TotalTickets,
+    count(t.IsOverSLA) as OverSLACount
+  from HD.Ticket as t
+  left outer join t/HD.Ticket_Agent/HD.Agent as a
+  group by a.Name
+);
+
+-- Dispatch completion summary per FieldTech.
+-- avg() on integer (DATEPART result) returns decimal — declared as decimal.
+create view entity FT.DispatchSummary (
+  TechName:    string(200),
+  OrderCount:  integer,
+  AvgHours:    decimal
+) as (
+  select
+    ft.Name                                                             as TechName,
+    count(d.ID)                                                         as OrderCount,
+    avg(datepart(HOUR, d.CompletedAt) - datepart(HOUR, d.DispatchedAt)) as AvgHours
+  from FT.DispatchOrder as d
+  left outer join d/FT.DispatchOrder_FieldTech/FT.FieldTech as ft
+  where d.Status = 'Completed'
+  group by ft.Name
+);
