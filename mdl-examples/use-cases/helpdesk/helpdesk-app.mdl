@@ -2283,3 +2283,80 @@ show languages;
 -- ============================================================================
 -- End of i18n Demo
 -- ============================================================================
+
+-- ============================================================================
+-- MARK: FieldTech — Module & Entities
+-- ============================================================================
+-- Business context: Agents dispatch on-site field technicians for tickets that
+-- require a physical visit. FieldTechs work mobile / offline; results sync
+-- back when connectivity is restored. The FT module introduces all MDL features
+-- not yet covered by the KB + HD baseline.
+-- ============================================================================
+
+create module FT;
+
+create or modify enumeration FT.DispatchStatus (
+  Pending   'Pending',
+  EnRoute   'En Route',
+  OnSite    'On Site',
+  Completed 'Completed',
+  Cancelled 'Cancelled'
+);
+
+-- FT.FieldTech: technician profile. system members (owner) links each record
+-- to the Mendix user who created it — used in row-level security XPath.
+create or modify persistent entity FT.FieldTech (
+  Name:        string(200) not null,
+  Phone:        string(50),
+  Region:       string(100),
+  IsAvailable:  boolean default true
+)
+system members (owner);
+
+-- FT.DispatchOrder: one order per site visit. Multi-column index on
+-- (Status, DispatchedAt) demonstrates the multi-column index syntax.
+create or modify persistent entity FT.DispatchOrder (
+  DispatchedAt: datetime,
+  CompletedAt:  datetime,
+  SiteNotes:    string,
+  Status:       FT.DispatchStatus default Pending
+)
+index (Status)
+index (Status, DispatchedAt);
+
+-- delete_behavior CASCADE: when a DispatchOrder is removed, references are
+-- deleted along with it. FT.DispatchOrder is the FROM entity (the FK owner);
+-- delete_behavior governs what happens to this association on FROM-side delete.
+create or modify association FT.DispatchOrder_Ticket
+  from FT.DispatchOrder to HD.Ticket
+  type reference
+  owner default
+  delete_behavior CASCADE;
+
+-- delete_behavior PREVENT: deleting is blocked while the association is in use.
+-- FT.DispatchOrder is the FROM entity; PREVENT guards the link to FieldTech.
+create or modify association FT.DispatchOrder_FieldTech
+  from FT.DispatchOrder to FT.FieldTech
+  type reference
+  owner default
+  delete_behavior PREVENT;
+
+-- FT.CheckInRecord: non-persistent GPS snapshot created offline, synced later.
+create or modify non-persistent entity FT.CheckInRecord (
+  Latitude:    decimal,
+  Longitude:   decimal,
+  CheckedInAt: datetime
+);
+
+create or modify association FT.CheckInRecord_DispatchOrder
+  from FT.CheckInRecord to FT.DispatchOrder
+  type reference
+  owner default;
+
+-- FT.WorkOrderImport: non-persistent webhook buffer for JSON import.
+create or modify non-persistent entity FT.WorkOrderImport (
+  RawPayload:   string,
+  TicketRef:    string(200),
+  TechName:     string(200),
+  ScheduledAt:  string(50)
+);
