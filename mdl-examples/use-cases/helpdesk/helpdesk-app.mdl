@@ -3014,14 +3014,21 @@ grant view on page FT.SLADashboard         to FT.FieldTechRole;
 
 -- OfflineNative profile: for FieldTech mobile devices.
 --
--- NOTE: `create or replace navigation` in mxcli currently only *replaces* an
--- existing profile — the executor cannot *create* a new navigation profile that
--- the project doesn't already have (it errors with "navigation profile not found:
--- OfflineNative (available: Responsive)"). Native/offline profiles must first be
--- enabled in Studio Pro (Project → Settings → enable Native mobile). Once the
--- OfflineNative profile exists, the statement below configures it. It is shown
--- here as a documented example (commented out so the script runs against a
--- baseline project that only has the Responsive profile).
+-- NOTE: `create or replace navigation` in mxcli only *replaces* an existing
+-- profile — the executor cannot *create* a new navigation profile that the
+-- project doesn't already have (it errors with "navigation profile not found:
+-- OfflineNative (available: Responsive)").
+--
+-- Why this is not implemented: a Navigation$NativeNavigationProfile carries ~20
+-- fields (nativeHomePage, bottomBarItems, otaEnabled, networkTimeoutMs, several
+-- transition enums, etc.) with version-specific defaults, and no Mendix project
+-- available to this repo (Atlas baseline, all testdata) contains a native profile
+-- to use as a known-good BSON reference. Per CLAUDE.md, hand-building such BSON
+-- without a Studio Pro reference is not done — it risks TypeCacheUnknownType /
+-- CE errors. To enable: turn on Native mobile in Studio Pro (Project → Settings),
+-- then the `create or replace navigation OfflineNative` statement below configures
+-- it. Shown here as a documented example (commented out so the script runs against
+-- a baseline project that only has the Responsive profile).
 --
 -- create or replace navigation OfflineNative
 --   home page FT.DispatchQueue for FieldTech
