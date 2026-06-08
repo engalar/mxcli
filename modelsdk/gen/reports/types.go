@@ -325,7 +325,7 @@ type BasicReportAggregate struct {
 	element.Base
 	caption             *property.Part[element.Element]
 	aggregateFunction   *property.Enum[string]
-	applicablePerColumn *property.Primitive[string]
+	applicablePerColumn *property.StringListPrimitive
 }
 
 // Caption returns the value of the caption property.
@@ -351,6 +351,11 @@ func (o *BasicReportAggregate) SetAggregateFunction(v string) {
 // ApplicablePerColumn returns the value of the applicablePerColumn property.
 func (o *BasicReportAggregate) ApplicablePerColumn() string {
 	return o.applicablePerColumn.Get()
+}
+
+// SetApplicablePerColumn sets the value of the applicablePerColumn property.
+func (o *BasicReportAggregate) SetApplicablePerColumn(v string) {
+	o.applicablePerColumn.Set(v)
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
@@ -1564,7 +1569,7 @@ func initBasicReportAggregate() *BasicReportAggregate {
 	o.caption.Bind(&o.Base, 0)
 	o.aggregateFunction = property.NewEnum[string]("AggregateFunction")
 	o.aggregateFunction.Bind(&o.Base, 1)
-	o.applicablePerColumn = property.NewPrimitive[string]("ApplicablePerColumn", property.DecodeString)
+	o.applicablePerColumn = property.NewStringListPrimitive("ApplicablePerColumn")
 	o.applicablePerColumn.Bind(&o.Base, 2)
 	o.SetProperties([]element.Property{o.caption, o.aggregateFunction, o.applicablePerColumn})
 	return o

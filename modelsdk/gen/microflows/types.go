@@ -9062,12 +9062,17 @@ func (o *OpenWorkflowAction) InitFromRaw(raw bson.Raw) {
 
 type OrthogonalPath struct {
 	element.Base
-	segmentPositions *property.Primitive[string]
+	segmentPositions *property.StringListPrimitive
 }
 
 // SegmentPositions returns the value of the segmentPositions property.
 func (o *OrthogonalPath) SegmentPositions() string {
 	return o.segmentPositions.Get()
+}
+
+// SetSegmentPositions sets the value of the segmentPositions property.
+func (o *OrthogonalPath) SetSegmentPositions(v string) {
+	o.segmentPositions.Set(v)
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
@@ -11380,7 +11385,7 @@ type SynchronizeAction struct {
 	element.Base
 	errorHandlingType *property.Enum[string]
 	propType          *property.Enum[string]
-	variableNames     *property.Primitive[string]
+	variableNames     *property.StringListPrimitive
 }
 
 // ErrorHandlingType returns the value of the errorHandlingType property.
@@ -11406,6 +11411,11 @@ func (o *SynchronizeAction) SetType(v string) {
 // VariableNames returns the value of the variableNames property.
 func (o *SynchronizeAction) VariableNames() string {
 	return o.variableNames.Get()
+}
+
+// SetVariableNames sets the value of the variableNames property.
+func (o *SynchronizeAction) SetVariableNames(v string) {
+	o.variableNames.Set(v)
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
@@ -15717,7 +15727,7 @@ func NewOpenWorkflowAction() *OpenWorkflowAction {
 func initOrthogonalPath() *OrthogonalPath {
 	o := &OrthogonalPath{}
 	o.SetTypeName("Microflows$OrthogonalPath")
-	o.segmentPositions = property.NewPrimitive[string]("SegmentPositions", property.DecodeString)
+	o.segmentPositions = property.NewStringListPrimitive("SegmentPositions")
 	o.segmentPositions.Bind(&o.Base, 0)
 	o.SetProperties([]element.Property{o.segmentPositions})
 	return o
@@ -16670,7 +16680,7 @@ func initSynchronizeAction() *SynchronizeAction {
 	o.errorHandlingType.Bind(&o.Base, 0)
 	o.propType = property.NewEnum[string]("Type")
 	o.propType.Bind(&o.Base, 1)
-	o.variableNames = property.NewPrimitive[string]("VariableNames", property.DecodeString)
+	o.variableNames = property.NewStringListPrimitive("VariableNames")
 	o.variableNames.Bind(&o.Base, 2)
 	o.SetProperties([]element.Property{o.errorHandlingType, o.propType, o.variableNames})
 	return o

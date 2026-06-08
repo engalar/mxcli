@@ -4034,12 +4034,17 @@ func (o *NotifyWaitForNotificationActivityTarget) InitFromRaw(raw bson.Raw) {
 
 type OrthogonalPath struct {
 	element.Base
-	segmentPositions *property.Primitive[string]
+	segmentPositions *property.StringListPrimitive
 }
 
 // SegmentPositions returns the value of the segmentPositions property.
 func (o *OrthogonalPath) SegmentPositions() string {
 	return o.segmentPositions.Get()
+}
+
+// SetSegmentPositions sets the value of the segmentPositions property.
+func (o *OrthogonalPath) SetSegmentPositions(v string) {
+	o.segmentPositions.Set(v)
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
@@ -7541,7 +7546,7 @@ func NewNotifyWaitForNotificationActivityTarget() *NotifyWaitForNotificationActi
 func initOrthogonalPath() *OrthogonalPath {
 	o := &OrthogonalPath{}
 	o.SetTypeName("Workflows$OrthogonalPath")
-	o.segmentPositions = property.NewPrimitive[string]("SegmentPositions", property.DecodeString)
+	o.segmentPositions = property.NewStringListPrimitive("SegmentPositions")
 	o.segmentPositions.Bind(&o.Base, 0)
 	o.SetProperties([]element.Property{o.segmentPositions})
 	return o

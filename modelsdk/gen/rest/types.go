@@ -262,7 +262,7 @@ type ConsumedODataService struct {
 	environmentType              *property.Enum[string]
 	metadataHash                 *property.Primitive[string]
 	validated                    *property.Primitive[bool]
-	validatedEntities            *property.Primitive[string]
+	validatedEntities            *property.StringListPrimitive
 	metadataReferences           *property.PartList[element.Element]
 	proxyType                    *property.Enum[string]
 	proxyHost                    *property.ByNameRef[element.Element]
@@ -473,6 +473,11 @@ func (o *ConsumedODataService) SetValidated(v bool) {
 // ValidatedEntities returns the value of the validatedEntities property.
 func (o *ConsumedODataService) ValidatedEntities() string {
 	return o.validatedEntities.Get()
+}
+
+// SetValidatedEntities sets the value of the validatedEntities property.
+func (o *ConsumedODataService) SetValidatedEntities(v string) {
+	o.validatedEntities.Set(v)
 }
 
 // MetadataReferencesItems returns the value of the metadataReferences property.
@@ -3884,7 +3889,7 @@ type RestOperation struct {
 	parameters       *property.PartList[element.Element]
 	queryParameters  *property.PartList[element.Element]
 	responseHandling *property.Part[element.Element]
-	tags             *property.Primitive[string]
+	tags             *property.StringListPrimitive
 }
 
 // Name returns the value of the name property.
@@ -3985,6 +3990,11 @@ func (o *RestOperation) SetResponseHandling(v element.Element) {
 // Tags returns the value of the tags property.
 func (o *RestOperation) Tags() string {
 	return o.tags.Get()
+}
+
+// SetTags sets the value of the tags property.
+func (o *RestOperation) SetTags(v string) {
+	o.tags.Set(v)
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
@@ -4931,7 +4941,7 @@ func initConsumedODataService() *ConsumedODataService {
 	o.metadataHash.Bind(&o.Base, 16)
 	o.validated = property.NewPrimitive[bool]("Validated", property.DecodeBool)
 	o.validated.Bind(&o.Base, 17)
-	o.validatedEntities = property.NewPrimitive[string]("ValidatedEntities", property.DecodeString)
+	o.validatedEntities = property.NewStringListPrimitive("ValidatedEntities")
 	o.validatedEntities.Bind(&o.Base, 18)
 	o.metadataReferences = property.NewPartList[element.Element]("MetadataReferences")
 	o.metadataReferences.Bind(&o.Base, 19)
@@ -6064,7 +6074,7 @@ func initRestOperation() *RestOperation {
 	o.queryParameters.Bind(&o.Base, 6)
 	o.responseHandling = property.NewPart[element.Element]("ResponseHandling")
 	o.responseHandling.Bind(&o.Base, 7)
-	o.tags = property.NewPrimitive[string]("Tags", property.DecodeString)
+	o.tags = property.NewStringListPrimitive("Tags")
 	o.tags.Bind(&o.Base, 8)
 	o.SetProperties([]element.Property{o.name, o.path, o.method, o.timeout, o.headers, o.parameters, o.queryParameters, o.responseHandling, o.tags})
 	return o

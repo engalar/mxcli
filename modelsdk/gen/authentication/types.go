@@ -168,7 +168,7 @@ type OAuth20AuthenticationDetails struct {
 	clientId          *property.ByNameRef[element.Element]
 	clientSecret      *property.ByNameRef[element.Element]
 	tokenEndPoint     *property.ByNameRef[element.Element]
-	scopes            *property.Primitive[string]
+	scopes            *property.StringListPrimitive
 	grantType         *property.Enum[string]
 	audience          *property.Primitive[string]
 }
@@ -238,6 +238,11 @@ func (o *OAuth20AuthenticationDetails) Scopes() string {
 	return o.scopes.Get()
 }
 
+// SetScopes sets the value of the scopes property.
+func (o *OAuth20AuthenticationDetails) SetScopes(v string) {
+	o.scopes.Set(v)
+}
+
 // GrantType returns the value of the grantType property.
 func (o *OAuth20AuthenticationDetails) GrantType() string {
 	return o.grantType.Get()
@@ -304,7 +309,7 @@ type OAuth20AuthCodeDetails struct {
 	clientId              *property.ByNameRef[element.Element]
 	clientSecret          *property.ByNameRef[element.Element]
 	tokenEndPoint         *property.ByNameRef[element.Element]
-	scopes                *property.Primitive[string]
+	scopes                *property.StringListPrimitive
 	grantType             *property.Enum[string]
 	audience              *property.Primitive[string]
 	responseType          *property.Primitive[string]
@@ -376,6 +381,11 @@ func (o *OAuth20AuthCodeDetails) SetTokenEndPointQualifiedName(v string) {
 // Scopes returns the value of the scopes property.
 func (o *OAuth20AuthCodeDetails) Scopes() string {
 	return o.scopes.Get()
+}
+
+// SetScopes sets the value of the scopes property.
+func (o *OAuth20AuthCodeDetails) SetScopes(v string) {
+	o.scopes.Set(v)
 }
 
 // GrantType returns the value of the grantType property.
@@ -496,7 +506,7 @@ type OAuth20ClientCredentialsDetails struct {
 	clientId          *property.ByNameRef[element.Element]
 	clientSecret      *property.ByNameRef[element.Element]
 	tokenEndPoint     *property.ByNameRef[element.Element]
-	scopes            *property.Primitive[string]
+	scopes            *property.StringListPrimitive
 	grantType         *property.Enum[string]
 	audience          *property.Primitive[string]
 }
@@ -564,6 +574,11 @@ func (o *OAuth20ClientCredentialsDetails) SetTokenEndPointQualifiedName(v string
 // Scopes returns the value of the scopes property.
 func (o *OAuth20ClientCredentialsDetails) Scopes() string {
 	return o.scopes.Get()
+}
+
+// SetScopes sets the value of the scopes property.
+func (o *OAuth20ClientCredentialsDetails) SetScopes(v string) {
+	o.scopes.Set(v)
 }
 
 // GrantType returns the value of the grantType property.
@@ -694,7 +709,7 @@ func initOAuth20AuthCodeDetails() *OAuth20AuthCodeDetails {
 	o.clientSecret.Bind(&o.Base, 4)
 	o.tokenEndPoint = property.NewByNameRef[element.Element]("TokenEndPoint", "Constants$Constant")
 	o.tokenEndPoint.Bind(&o.Base, 5)
-	o.scopes = property.NewPrimitive[string]("Scopes", property.DecodeString)
+	o.scopes = property.NewStringListPrimitive("Scopes")
 	o.scopes.Bind(&o.Base, 6)
 	o.grantType = property.NewEnum[string]("GrantType")
 	o.grantType.Bind(&o.Base, 7)
@@ -739,7 +754,7 @@ func initOAuth20ClientCredentialsDetails() *OAuth20ClientCredentialsDetails {
 	o.clientSecret.Bind(&o.Base, 4)
 	o.tokenEndPoint = property.NewByNameRef[element.Element]("TokenEndPoint", "Constants$Constant")
 	o.tokenEndPoint.Bind(&o.Base, 5)
-	o.scopes = property.NewPrimitive[string]("Scopes", property.DecodeString)
+	o.scopes = property.NewStringListPrimitive("Scopes")
 	o.scopes.Bind(&o.Base, 6)
 	o.grantType = property.NewEnum[string]("GrantType")
 	o.grantType.Bind(&o.Base, 7)

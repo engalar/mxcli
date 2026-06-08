@@ -545,7 +545,7 @@ keyword
     // widgetPropertyV3, where they would create ambiguity with propertyValueV3.
     | MICROFLOWS | NANOFLOWS
     | BEGIN | END | IF | ELSE | ELSIF | ELSEIF | THEN | WHILE | LOOP
-    | BREAK | CONTINUE | THROW | RAISE | CASE | WHEN
+    | BREAK | CONTINUE | THROW | RAISE | CASE | WHEN | SYNCHRONIZE
     | CALL | LOG | TRACE | WITH | FOR | TO | OF | RETURNING | RETURNS
     | NOTHING | EXPRESSION | JAVASCRIPT
 

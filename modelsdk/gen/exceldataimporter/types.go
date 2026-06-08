@@ -276,7 +276,7 @@ type DataImporterElement struct {
 	errorMessage    *property.Primitive[string]
 	warningMessage  *property.Primitive[string]
 	children        *property.PartList[element.Element]
-	originalValues  *property.Primitive[string]
+	originalValues  *property.StringListPrimitive
 }
 
 // ElementType returns the value of the elementType property.
@@ -437,6 +437,11 @@ func (o *DataImporterElement) RemoveChildren(index int) {
 // OriginalValues returns the value of the originalValues property.
 func (o *DataImporterElement) OriginalValues() string {
 	return o.originalValues.Get()
+}
+
+// SetOriginalValues sets the value of the originalValues property.
+func (o *DataImporterElement) SetOriginalValues(v string) {
+	o.originalValues.Set(v)
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
@@ -1157,7 +1162,7 @@ func initDataImporterElement() *DataImporterElement {
 	o.warningMessage.Bind(&o.Base, 13)
 	o.children = property.NewPartList[element.Element]("Children")
 	o.children.Bind(&o.Base, 14)
-	o.originalValues = property.NewPrimitive[string]("OriginalValues", property.DecodeString)
+	o.originalValues = property.NewStringListPrimitive("OriginalValues")
 	o.originalValues.Bind(&o.Base, 15)
 	o.SetProperties([]element.Property{o.elementType, o.primitiveType, o.path, o.isDefaultType, o.minOccurs, o.maxOccurs, o.nillable, o.exposedName, o.exposedItemName, o.maxLength, o.fractionDigits, o.totalDigits, o.errorMessage, o.warningMessage, o.children, o.originalValues})
 	return o

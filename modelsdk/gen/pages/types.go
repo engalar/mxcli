@@ -15667,13 +15667,18 @@ func (o *ListViewDatabaseSource) InitFromRaw(raw bson.Raw) {
 
 type ListViewSearch struct {
 	element.Base
-	searchPaths *property.Primitive[string]
+	searchPaths *property.StringListPrimitive
 	searchRefs  *property.PartList[element.Element]
 }
 
 // SearchPaths returns the value of the searchPaths property.
 func (o *ListViewSearch) SearchPaths() string {
 	return o.searchPaths.Get()
+}
+
+// SetSearchPaths sets the value of the searchPaths property.
+func (o *ListViewSearch) SetSearchPaths(v string) {
+	o.searchPaths.Set(v)
 }
 
 // SearchRefsItems returns the value of the searchRefs property.
@@ -18428,7 +18433,7 @@ func (o *NoClientAction) InitFromRaw(raw bson.Raw) {
 type OfflineSchema struct {
 	element.Base
 	role   *property.ByNameRef[element.Element]
-	tables *property.Primitive[string]
+	tables *property.StringListPrimitive
 }
 
 // RoleQualifiedName returns the value of the role property.
@@ -18444,6 +18449,11 @@ func (o *OfflineSchema) SetRoleQualifiedName(v string) {
 // Tables returns the value of the tables property.
 func (o *OfflineSchema) Tables() string {
 	return o.tables.Get()
+}
+
+// SetTables sets the value of the tables property.
+func (o *OfflineSchema) SetTables(v string) {
+	o.tables.Set(v)
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
@@ -21063,7 +21073,7 @@ type ReferenceSetSelector struct {
 	tooltipPage                   *property.ByNameRef[element.Element]
 	onChangeMicroflowSettings     *property.Part[element.Element]
 	onChangeAction                *property.Part[element.Element]
-	constrainedBy                 *property.Primitive[string]
+	constrainedBy                 *property.StringListPrimitive
 	constrainedByRefs             *property.PartList[element.Element]
 	xPathConstraint               *property.Primitive[string]
 	removeAllFromContext          *property.Primitive[bool]
@@ -21308,6 +21318,11 @@ func (o *ReferenceSetSelector) SetOnChangeAction(v element.Element) {
 // ConstrainedBy returns the value of the constrainedBy property.
 func (o *ReferenceSetSelector) ConstrainedBy() string {
 	return o.constrainedBy.Get()
+}
+
+// SetConstrainedBy sets the value of the constrainedBy property.
+func (o *ReferenceSetSelector) SetConstrainedBy(v string) {
+	o.constrainedBy.Set(v)
 }
 
 // ConstrainedByRefsItems returns the value of the constrainedByRefs property.
@@ -21566,8 +21581,8 @@ type RetrievalQuery struct {
 	entityPath          *property.Primitive[string]
 	pageName            *property.Primitive[string]
 	widgetName          *property.Primitive[string]
-	usedAssociations    *property.Primitive[string]
-	usedAttributes      *property.Primitive[string]
+	usedAssociations    *property.StringListPrimitive
+	usedAttributes      *property.StringListPrimitive
 	schemaId            *property.Primitive[string]
 	parameters          *property.PartList[element.Element]
 }
@@ -21667,9 +21682,19 @@ func (o *RetrievalQuery) UsedAssociations() string {
 	return o.usedAssociations.Get()
 }
 
+// SetUsedAssociations sets the value of the usedAssociations property.
+func (o *RetrievalQuery) SetUsedAssociations(v string) {
+	o.usedAssociations.Set(v)
+}
+
 // UsedAttributes returns the value of the usedAttributes property.
 func (o *RetrievalQuery) UsedAttributes() string {
 	return o.usedAttributes.Get()
+}
+
+// SetUsedAttributes sets the value of the usedAttributes property.
+func (o *RetrievalQuery) SetUsedAttributes(v string) {
+	o.usedAttributes.Set(v)
 }
 
 // SchemaId returns the value of the schemaId property.
@@ -21745,7 +21770,7 @@ type RetrievalQueryParameter struct {
 	element.Base
 	name     *property.Primitive[string]
 	propType *property.Primitive[string]
-	types    *property.Primitive[string]
+	types    *property.StringListPrimitive
 }
 
 // Name returns the value of the name property.
@@ -21773,6 +21798,11 @@ func (o *RetrievalQueryParameter) Types() string {
 	return o.types.Get()
 }
 
+// SetTypes sets the value of the types property.
+func (o *RetrievalQueryParameter) SetTypes(v string) {
+	o.types.Set(v)
+}
+
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 // NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *RetrievalQueryParameter) InitFromRaw(raw bson.Raw) {
@@ -21787,8 +21817,8 @@ func (o *RetrievalQueryParameter) InitFromRaw(raw bson.Raw) {
 
 type RetrievalSchema struct {
 	element.Base
-	usedAttributes   *property.Primitive[string]
-	usedAssociations *property.Primitive[string]
+	usedAttributes   *property.StringListPrimitive
+	usedAssociations *property.StringListPrimitive
 	widgetName       *property.Primitive[string]
 	entity           *property.Primitive[string]
 }
@@ -21798,9 +21828,19 @@ func (o *RetrievalSchema) UsedAttributes() string {
 	return o.usedAttributes.Get()
 }
 
+// SetUsedAttributes sets the value of the usedAttributes property.
+func (o *RetrievalSchema) SetUsedAttributes(v string) {
+	o.usedAttributes.Set(v)
+}
+
 // UsedAssociations returns the value of the usedAssociations property.
 func (o *RetrievalSchema) UsedAssociations() string {
 	return o.usedAssociations.Get()
+}
+
+// SetUsedAssociations sets the value of the usedAssociations property.
+func (o *RetrievalSchema) SetUsedAssociations(v string) {
+	o.usedAssociations.Set(v)
 }
 
 // WidgetName returns the value of the widgetName property.
@@ -22891,7 +22931,7 @@ type SelectorXPathSource struct {
 	element.Base
 	sortBar                   *property.Part[element.Element]
 	xPathConstraint           *property.Primitive[string]
-	constrainedBy             *property.Primitive[string]
+	constrainedBy             *property.StringListPrimitive
 	constrainedByRefs         *property.PartList[element.Element]
 	applyContext              *property.Primitive[bool]
 	removeAllFromContext      *property.Primitive[bool]
@@ -22921,6 +22961,11 @@ func (o *SelectorXPathSource) SetXPathConstraint(v string) {
 // ConstrainedBy returns the value of the constrainedBy property.
 func (o *SelectorXPathSource) ConstrainedBy() string {
 	return o.constrainedBy.Get()
+}
+
+// SetConstrainedBy sets the value of the constrainedBy property.
+func (o *SelectorXPathSource) SetConstrainedBy(v string) {
+	o.constrainedBy.Set(v)
 }
 
 // ConstrainedByRefsItems returns the value of the constrainedByRefs property.
@@ -30683,7 +30728,7 @@ func NewListViewDatabaseSource() *ListViewDatabaseSource {
 func initListViewSearch() *ListViewSearch {
 	o := &ListViewSearch{}
 	o.SetTypeName("Forms$ListViewSearch")
-	o.searchPaths = property.NewPrimitive[string]("SearchPaths", property.DecodeString)
+	o.searchPaths = property.NewStringListPrimitive("SearchPaths")
 	o.searchPaths.Bind(&o.Base, 0)
 	o.searchRefs = property.NewPartList[element.Element]("SearchRefs")
 	o.searchRefs.Bind(&o.Base, 1)
@@ -31496,7 +31541,7 @@ func initOfflineSchema() *OfflineSchema {
 	o.SetTypeName("Forms$OfflineSchema")
 	o.role = property.NewByNameRef[element.Element]("Role", "Security$UserRole")
 	o.role.Bind(&o.Base, 0)
-	o.tables = property.NewPrimitive[string]("Tables", property.DecodeString)
+	o.tables = property.NewStringListPrimitive("Tables")
 	o.tables.Bind(&o.Base, 1)
 	o.SetProperties([]element.Property{o.role, o.tables})
 	return o
@@ -32383,7 +32428,7 @@ func initReferenceSetSelector() *ReferenceSetSelector {
 	o.onChangeMicroflowSettings.Bind(&o.Base, 21)
 	o.onChangeAction = property.NewPart[element.Element]("OnChangeAction")
 	o.onChangeAction.Bind(&o.Base, 22)
-	o.constrainedBy = property.NewPrimitive[string]("ConstrainedBy", property.DecodeString)
+	o.constrainedBy = property.NewStringListPrimitive("ConstrainedBy")
 	o.constrainedBy.Bind(&o.Base, 23)
 	o.constrainedByRefs = property.NewPartList[element.Element]("ConstrainedByRefs")
 	o.constrainedByRefs.Bind(&o.Base, 24)
@@ -32478,9 +32523,9 @@ func initRetrievalQuery() *RetrievalQuery {
 	o.pageName.Bind(&o.Base, 6)
 	o.widgetName = property.NewPrimitive[string]("WidgetName", property.DecodeString)
 	o.widgetName.Bind(&o.Base, 7)
-	o.usedAssociations = property.NewPrimitive[string]("UsedAssociations", property.DecodeString)
+	o.usedAssociations = property.NewStringListPrimitive("UsedAssociations")
 	o.usedAssociations.Bind(&o.Base, 8)
-	o.usedAttributes = property.NewPrimitive[string]("UsedAttributes", property.DecodeString)
+	o.usedAttributes = property.NewStringListPrimitive("UsedAttributes")
 	o.usedAttributes.Bind(&o.Base, 9)
 	o.schemaId = property.NewPrimitive[string]("SchemaId", property.DecodeString)
 	o.schemaId.Bind(&o.Base, 10)
@@ -32509,7 +32554,7 @@ func initRetrievalQueryParameter() *RetrievalQueryParameter {
 	o.name.Bind(&o.Base, 0)
 	o.propType = property.NewPrimitive[string]("Type", property.DecodeString)
 	o.propType.Bind(&o.Base, 1)
-	o.types = property.NewPrimitive[string]("Types", property.DecodeString)
+	o.types = property.NewStringListPrimitive("Types")
 	o.types.Bind(&o.Base, 2)
 	o.SetProperties([]element.Property{o.name, o.propType, o.types})
 	return o
@@ -32530,9 +32575,9 @@ func NewRetrievalQueryParameter() *RetrievalQueryParameter {
 func initRetrievalSchema() *RetrievalSchema {
 	o := &RetrievalSchema{}
 	o.SetTypeName("Forms$RetrievalSchema")
-	o.usedAttributes = property.NewPrimitive[string]("UsedAttributes", property.DecodeString)
+	o.usedAttributes = property.NewStringListPrimitive("UsedAttributes")
 	o.usedAttributes.Bind(&o.Base, 0)
-	o.usedAssociations = property.NewPrimitive[string]("UsedAssociations", property.DecodeString)
+	o.usedAssociations = property.NewStringListPrimitive("UsedAssociations")
 	o.usedAssociations.Bind(&o.Base, 1)
 	o.widgetName = property.NewPrimitive[string]("WidgetName", property.DecodeString)
 	o.widgetName.Bind(&o.Base, 2)
@@ -32877,7 +32922,7 @@ func initSelectorXPathSource() *SelectorXPathSource {
 	o.sortBar.Bind(&o.Base, 0)
 	o.xPathConstraint = property.NewPrimitive[string]("XPathConstraint", property.DecodeString)
 	o.xPathConstraint.Bind(&o.Base, 1)
-	o.constrainedBy = property.NewPrimitive[string]("ConstrainedBy", property.DecodeString)
+	o.constrainedBy = property.NewStringListPrimitive("ConstrainedBy")
 	o.constrainedBy.Bind(&o.Base, 2)
 	o.constrainedByRefs = property.NewPartList[element.Element]("ConstrainedByRefs")
 	o.constrainedByRefs.Bind(&o.Base, 3)

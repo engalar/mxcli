@@ -330,7 +330,7 @@ type DataGrid struct {
 	sortBar     *property.Part[element.Element]
 	microflow   *property.ByNameRef[element.Element]
 	columns     *property.PartList[element.Element]
-	weights     *property.Primitive[string]
+	weights     *property.StringListPrimitive
 }
 
 // Name returns the value of the name property.
@@ -431,6 +431,11 @@ func (o *DataGrid) RemoveColumns(index int) {
 // Weights returns the value of the weights property.
 func (o *DataGrid) Weights() string {
 	return o.weights.Get()
+}
+
+// SetWeights sets the value of the weights property.
+func (o *DataGrid) SetWeights(v string) {
+	o.weights.Set(v)
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
@@ -1906,7 +1911,7 @@ type Table struct {
 	element.Base
 	name          *property.Primitive[string]
 	rows          *property.PartList[element.Element]
-	columnWeights *property.Primitive[string]
+	columnWeights *property.StringListPrimitive
 	cellSpacing   *property.Primitive[int32]
 	cellPadding   *property.Primitive[int32]
 	style         *property.Part[element.Element]
@@ -1940,6 +1945,11 @@ func (o *Table) RemoveRows(index int) {
 // ColumnWeights returns the value of the columnWeights property.
 func (o *Table) ColumnWeights() string {
 	return o.columnWeights.Get()
+}
+
+// SetColumnWeights sets the value of the columnWeights property.
+func (o *Table) SetColumnWeights(v string) {
+	o.columnWeights.Set(v)
 }
 
 // CellSpacing returns the value of the cellSpacing property.
@@ -2404,7 +2414,7 @@ func initDataGrid() *DataGrid {
 	o.microflow.Bind(&o.Base, 7)
 	o.columns = property.NewPartList[element.Element]("Columns")
 	o.columns.Bind(&o.Base, 8)
-	o.weights = property.NewPrimitive[string]("Weights", property.DecodeString)
+	o.weights = property.NewStringListPrimitive("Weights")
 	o.weights.Bind(&o.Base, 9)
 	o.SetProperties([]element.Property{o.name, o.entityPath, o.entityRef, o.cellSpacing, o.cellPadding, o.style, o.sortBar, o.microflow, o.columns, o.weights})
 	return o
@@ -2907,7 +2917,7 @@ func initTable() *Table {
 	o.name.Bind(&o.Base, 0)
 	o.rows = property.NewPartList[element.Element]("Rows")
 	o.rows.Bind(&o.Base, 1)
-	o.columnWeights = property.NewPrimitive[string]("ColumnWeights", property.DecodeString)
+	o.columnWeights = property.NewStringListPrimitive("ColumnWeights")
 	o.columnWeights.Bind(&o.Base, 2)
 	o.cellSpacing = property.NewPrimitive[int32]("CellSpacing", property.DecodeInt32)
 	o.cellSpacing.Bind(&o.Base, 3)

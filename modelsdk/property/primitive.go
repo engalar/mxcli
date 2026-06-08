@@ -124,6 +124,91 @@ func EncodeBinaryUUID(id string) any {
 	return bson.Binary{Subtype: 0x00, Data: blob}
 }
 
+// StringListPrimitive stores a list of strings, serialized as a BSON array.
+// Mendix models PrimitiveListProperty (e.g. SynchronizeAction.variableNames)
+// as a JSON array of strings; storing a scalar string triggers an
+// InvalidCastException (JValue → JArray) in mx check.
+type StringListPrimitive struct {
+	propertyBase
+	raw    bson.Raw
+	val    []string
+	loaded bool
+}
+
+func NewStringListPrimitive(name string) *StringListPrimitive {
+	return &StringListPrimitive{propertyBase: propertyBase{name: name}}
+}
+
+func (p *StringListPrimitive) Init(raw bson.Raw) { p.raw = raw }
+
+func (p *StringListPrimitive) load() {
+	if p.loaded {
+		return
+	}
+	p.loaded = true
+	if p.raw == nil {
+		return
+	}
+	val, err := p.raw.LookupErr(p.name)
+	if err != nil {
+		return
+	}
+	arr, ok := val.ArrayOK()
+	if !ok {
+		return
+	}
+	elems, err := arr.Values()
+	if err != nil {
+		return
+	}
+	for _, e := range elems {
+		if s, ok := e.StringValueOK(); ok {
+			p.val = append(p.val, s)
+		}
+	}
+}
+
+// Get returns the list joined by ", " for a flat string view. Callers that
+// need the slice should use GetList.
+func (p *StringListPrimitive) Get() string {
+	p.load()
+	return strings.Join(p.val, ", ")
+}
+
+// GetList returns the underlying string slice.
+func (p *StringListPrimitive) GetList() []string {
+	p.load()
+	return p.val
+}
+
+// Set replaces the list with a single entry (empty string clears the list).
+func (p *StringListPrimitive) Set(v string) {
+	if v == "" {
+		p.val = nil
+	} else {
+		p.val = []string{v}
+	}
+	p.loaded = true
+	p.markDirty()
+}
+
+// SetList replaces the entire list.
+func (p *StringListPrimitive) SetList(vs []string) {
+	p.val = vs
+	p.loaded = true
+	p.markDirty()
+}
+
+// BSONValue returns the list as a BSON array for serialization.
+func (p *StringListPrimitive) BSONValue() any {
+	p.load()
+	arr := bson.A{}
+	for _, s := range p.val {
+		arr = append(arr, s)
+	}
+	return arr
+}
+
 // BinaryUUIDPrimitive stores a UUID string internally but reads/writes as
 // a BSON Binary (Mendix GUID byte-swapped format). Used for PersistentId fields
 // that Studio Pro serializes as Binary rather than as a plain string.

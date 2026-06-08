@@ -2992,7 +2992,7 @@ type RemoteEntitySourceDocument struct {
 	environmentType      *property.Enum[string]
 	metadataHash         *property.Primitive[string]
 	validated            *property.Primitive[bool]
-	validatedEntities    *property.Primitive[string]
+	validatedEntities    *property.StringListPrimitive
 }
 
 // Name returns the value of the name property.
@@ -3178,6 +3178,11 @@ func (o *RemoteEntitySourceDocument) SetValidated(v bool) {
 // ValidatedEntities returns the value of the validatedEntities property.
 func (o *RemoteEntitySourceDocument) ValidatedEntities() string {
 	return o.validatedEntities.Get()
+}
+
+// SetValidatedEntities sets the value of the validatedEntities property.
+func (o *RemoteEntitySourceDocument) SetValidatedEntities(v string) {
+	o.validatedEntities.Set(v)
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.

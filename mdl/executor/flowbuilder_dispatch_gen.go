@@ -176,6 +176,8 @@ func (fb *flowBuilderGen) addStatementGen(stmt ast.MicroflowStatement) element.I
 		return fb.addClosePageActionGen(s)
 	case *ast.ShowHomePageStmt:
 		return fb.addShowHomePageActionGen(s)
+	case *ast.SynchronizeStmt:
+		return fb.addSynchronizeActionGen(s)
 	case *ast.ShowMessageStmt:
 		return fb.addShowMessageActionGen(s)
 	case *ast.DownloadFileStmt:

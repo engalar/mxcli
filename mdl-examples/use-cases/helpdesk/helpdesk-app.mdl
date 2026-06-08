@@ -2654,6 +2654,9 @@ create or modify nanoflow FT.NF_FT_CheckIn
     HighAccuracy = true
   ) on error continue;
   show message 'Check-in attempted — GPS result captured.' type information;
+  -- SYNCHRONIZE: push any locally-committed objects to the server.
+  -- Only has an effect in the native mobile offline context.
+  synchronize;
   return;
 }
 /
@@ -2672,6 +2675,8 @@ create or modify nanoflow FT.NF_FT_CompleteOffline
   -- CE0109 occurs when a JS action result variable is used in a decision expression.
   -- In production: assign to $IsOnline and branch on the result.
   show message 'Order completed — changes will sync to server when online.' type information;
+  -- SYNCHRONIZE: flush queued offline changes when connectivity is available.
+  synchronize;
   return;
 }
 /
@@ -2687,6 +2692,8 @@ create or modify nanoflow FT.NF_FT_LoadOrders
   -- CE0109 (result variable not in scope for decision). See NF_FT_CompleteOffline
   -- for the CALL JAVASCRIPT ACTION syntax demo.
   log info 'Loading dispatch orders.';
+  -- SYNCHRONIZE: pull the latest data from the server before retrieving.
+  synchronize;
   retrieve $Orders from FT.DispatchOrder
     where [FT.DispatchOrder_FieldTech/FT.FieldTech/System.owner = '[%CurrentUser%]'
            and Status != 'Completed']

@@ -1107,7 +1107,7 @@ type MsdMetadata struct {
 	serviceGuid          *property.Primitive[string]
 	versionGuid          *property.Primitive[string]
 	instanceGuid         *property.Primitive[string]
-	supportedProtocols   *property.Primitive[string]
+	supportedProtocols   *property.StringListPrimitive
 	headerAuthentication *property.Primitive[string]
 	microflows           *property.PartList[element.Element]
 	caption              *property.Primitive[string]
@@ -1188,6 +1188,11 @@ func (o *MsdMetadata) SetInstanceGuid(v string) {
 // SupportedProtocols returns the value of the supportedProtocols property.
 func (o *MsdMetadata) SupportedProtocols() string {
 	return o.supportedProtocols.Get()
+}
+
+// SetSupportedProtocols sets the value of the supportedProtocols property.
+func (o *MsdMetadata) SetSupportedProtocols(v string) {
+	o.supportedProtocols.Set(v)
 }
 
 // HeaderAuthentication returns the value of the headerAuthentication property.
@@ -1903,7 +1908,7 @@ func initMsdMetadata() *MsdMetadata {
 	o.versionGuid.Bind(&o.Base, 5)
 	o.instanceGuid = property.NewPrimitive[string]("InstanceGuid", property.DecodeString)
 	o.instanceGuid.Bind(&o.Base, 6)
-	o.supportedProtocols = property.NewPrimitive[string]("SupportedProtocols", property.DecodeString)
+	o.supportedProtocols = property.NewStringListPrimitive("SupportedProtocols")
 	o.supportedProtocols.Bind(&o.Base, 7)
 	o.headerAuthentication = property.NewPrimitive[string]("HeaderAuthentication", property.DecodeString)
 	o.headerAuthentication.Bind(&o.Base, 8)

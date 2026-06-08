@@ -43,7 +43,7 @@ type ConsumedKafkaService struct {
 	environmentType      *property.Enum[string]
 	metadataHash         *property.Primitive[string]
 	validated            *property.Primitive[bool]
-	validatedEntities    *property.Primitive[string]
+	validatedEntities    *property.StringListPrimitive
 	metadataReferences   *property.PartList[element.Element]
 	serviceId            *property.Primitive[string]
 	serviceFeed          *property.Primitive[string]
@@ -235,6 +235,11 @@ func (o *ConsumedKafkaService) SetValidated(v bool) {
 // ValidatedEntities returns the value of the validatedEntities property.
 func (o *ConsumedKafkaService) ValidatedEntities() string {
 	return o.validatedEntities.Get()
+}
+
+// SetValidatedEntities sets the value of the validatedEntities property.
+func (o *ConsumedKafkaService) SetValidatedEntities(v string) {
+	o.validatedEntities.Set(v)
 }
 
 // MetadataReferencesItems returns the value of the metadataReferences property.
@@ -873,7 +878,7 @@ func initConsumedKafkaService() *ConsumedKafkaService {
 	o.metadataHash.Bind(&o.Base, 16)
 	o.validated = property.NewPrimitive[bool]("Validated", property.DecodeBool)
 	o.validated.Bind(&o.Base, 17)
-	o.validatedEntities = property.NewPrimitive[string]("ValidatedEntities", property.DecodeString)
+	o.validatedEntities = property.NewStringListPrimitive("ValidatedEntities")
 	o.validatedEntities.Bind(&o.Base, 18)
 	o.metadataReferences = property.NewPartList[element.Element]("MetadataReferences")
 	o.metadataReferences.Bind(&o.Base, 19)

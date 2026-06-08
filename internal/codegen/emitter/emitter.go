@@ -620,12 +620,19 @@ func buildFieldData(p *dtsparser.JsProp) FieldData {
 		fd.Constructor = "property.NewEnumList[string](\"" + bsonKey + "\")"
 
 	case dtsparser.PKPrimitiveList:
-		fd.FieldType = "*property.Primitive[string]"
+		// Mendix serializes PrimitiveListProperty as a BSON array of strings.
+		// StringListPrimitive serializes as bson.A; a plain Primitive[string]
+		// would emit a scalar and trigger InvalidCastException in mx check.
+		fd.FieldType = "*property.StringListPrimitive"
 		fd.GetterName = getterBase
 		fd.GetterCall = "Get"
 		fd.GetterReturn = "string"
+		fd.SetterName = "Set" + getterBase
+		fd.SetterArg = "string"
+		fd.SetterCall = "Set"
+		fd.HasSetter = true
 		fd.NeedsInit = true
-		fd.Constructor = "property.NewPrimitive[string](\"" + bsonKey + "\", property.DecodeString)"
+		fd.Constructor = "property.NewStringListPrimitive(\"" + bsonKey + "\")"
 
 	default:
 		// PKUnknown -- fall back to string primitive

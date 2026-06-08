@@ -27,7 +27,7 @@ type CustomIcon struct {
 	element.Base
 	name          *property.Primitive[string]
 	characterCode *property.Primitive[int32]
-	tags          *property.Primitive[string]
+	tags          *property.StringListPrimitive
 }
 
 // Name returns the value of the name property.
@@ -53,6 +53,11 @@ func (o *CustomIcon) SetCharacterCode(v int32) {
 // Tags returns the value of the tags property.
 func (o *CustomIcon) Tags() string {
 	return o.tags.Get()
+}
+
+// SetTags sets the value of the tags property.
+func (o *CustomIcon) SetTags(v string) {
+	o.tags.Set(v)
 }
 
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
@@ -199,7 +204,7 @@ func initCustomIcon() *CustomIcon {
 	o.name.Bind(&o.Base, 0)
 	o.characterCode = property.NewPrimitive[int32]("CharacterCode", property.DecodeInt32)
 	o.characterCode.Bind(&o.Base, 1)
-	o.tags = property.NewPrimitive[string]("Tags", property.DecodeString)
+	o.tags = property.NewStringListPrimitive("Tags")
 	o.tags.Bind(&o.Base, 2)
 	o.SetProperties([]element.Property{o.name, o.characterCode, o.tags})
 	return o

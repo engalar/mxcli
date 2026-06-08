@@ -145,6 +145,8 @@ func getStatementAnnotations(stmt ast.MicroflowStatement) *ast.ActivityAnnotatio
 		return s.Annotations
 	case *ast.ShowHomePageStmt:
 		return s.Annotations
+	case *ast.SynchronizeStmt:
+		return s.Annotations
 	case *ast.ShowMessageStmt:
 		return s.Annotations
 	case *ast.DownloadFileStmt:
