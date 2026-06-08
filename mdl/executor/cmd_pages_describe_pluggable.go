@@ -1070,6 +1070,12 @@ func isKnownCustomWidgetType(widgetType string) bool {
 
 // extractExplicitProperties extracts non-default property values from a CustomWidget BSON.
 // Returns attribute references and primitive values for properties that differ from defaults.
+//
+// Default suppression consults the widget's embedded Type schema
+// (Type.ObjectType.PropertyTypes[].ValueType.DefaultValue) so any property whose
+// stored value equals its declared default is omitted — including Boolean
+// defaults that are not "false" and Integer/String/Enumeration defaults that the
+// old hardcoded "true"/"false" check could not catch.
 func extractExplicitProperties(ctx *ExecContext, w map[string]any) []rawExplicitProp {
 	obj, ok := w["Object"].(map[string]any)
 	if !ok {
@@ -1080,6 +1086,7 @@ func extractExplicitProperties(ctx *ExecContext, w map[string]any) []rawExplicit
 	if len(propTypeKeyMap) == 0 {
 		return nil
 	}
+	schema := buildSchemaMap(w)
 
 	var result []rawExplicitProp
 	props := getBsonArrayElements(obj["Properties"])
@@ -1112,8 +1119,7 @@ func extractExplicitProperties(ctx *ExecContext, w map[string]any) []rawExplicit
 
 		// Check for non-default PrimitiveValue
 		if pv := extractString(value["PrimitiveValue"]); pv != "" {
-			// Skip common defaults
-			if pv == "true" || pv == "false" {
+			if isSchemaDefaultValue(schema[typePointerID], pv) {
 				continue
 			}
 			result = append(result, rawExplicitProp{
@@ -1121,6 +1127,46 @@ func extractExplicitProperties(ctx *ExecContext, w map[string]any) []rawExplicit
 				Value: pv,
 			})
 		}
+	}
+	return result
+}
+
+// isSchemaDefaultValue reports whether pv equals the effective default declared
+// by entry. An empty schema entry falls back to the legacy behavior of only
+// suppressing the boolean literals "true"/"false".
+func isSchemaDefaultValue(entry SchemaEntry, pv string) bool {
+	if entry.Key == "" && entry.ValueType == "" {
+		// No schema info — preserve legacy behavior.
+		return pv == "true" || pv == "false"
+	}
+	def := entry.DefaultValue
+	if def == "" {
+		switch entry.ValueType {
+		case "Boolean":
+			def = "false"
+		case "Integer":
+			def = "0"
+		}
+	}
+	return pv == def
+}
+
+// extractExplicitPropertiesFromRaw returns the non-default ExplicitProperties for
+// a CustomWidget using only the embedded Type schema (no AttributeRef handling).
+// It is the schema-introspection equivalent used by the new formatter path and
+// by unit tests; the richer extractExplicitProperties above is used by the legacy
+// describe path that must also resolve attribute bindings.
+func extractExplicitPropertiesFromRaw(raw map[string]any) []rawExplicitProp {
+	schema := buildSchemaMap(raw)
+	props := readProperties(raw)
+	nonDef := filterDefaults(props, schema)
+
+	result := make([]rawExplicitProp, 0, len(nonDef))
+	for _, p := range nonDef {
+		result = append(result, rawExplicitProp{
+			Key:   p.Key,
+			Value: p.PrimitiveValue,
+		})
 	}
 	return result
 }
