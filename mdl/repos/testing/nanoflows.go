@@ -27,19 +27,25 @@ type NanoflowMoveCall struct {
 // methods record their args and either invoke the matching Func or
 // return nil (success). All recorded slices are appended in call order.
 type RecordingNanoflowRepository struct {
-	GotIDs       []model.ID
-	ListedModule []model.ID
-	Created      []NanoflowCreateCall
-	Updated      []*genMf.Nanoflow
-	Deleted      []model.ID
-	Moved        []NanoflowMoveCall
+	GotIDs          []model.ID
+	ListedModule    []model.ID
+	ListedAll       int
+	FoundQNs        []string
+	GetContainerIDs []model.ID
+	Created         []NanoflowCreateCall
+	Updated         []*genMf.Nanoflow
+	Deleted         []model.ID
+	Moved           []NanoflowMoveCall
 
-	GetFunc    func(model.ID) (*genMf.Nanoflow, error)
-	ListFunc   func(model.ID) ([]*genMf.Nanoflow, error)
-	CreateFunc func(NanoflowCreateCall) error
-	UpdateFunc func(*genMf.Nanoflow) error
-	DeleteFunc func(model.ID) error
-	MoveFunc   func(NanoflowMoveCall) error
+	GetFunc                 func(model.ID) (*genMf.Nanoflow, error)
+	ListFunc                func(model.ID) ([]*genMf.Nanoflow, error)
+	ListAllFunc             func() ([]*genMf.Nanoflow, error)
+	FindByQualifiedNameFunc func(string) (*genMf.Nanoflow, error)
+	GetContainerUUIDFunc    func(model.ID) (model.ID, error)
+	CreateFunc              func(NanoflowCreateCall) error
+	UpdateFunc              func(*genMf.Nanoflow) error
+	DeleteFunc              func(model.ID) error
+	MoveFunc                func(NanoflowMoveCall) error
 }
 
 var _ repos.NanoflowRepository = (*RecordingNanoflowRepository)(nil)
@@ -58,6 +64,30 @@ func (m *RecordingNanoflowRepository) List(moduleID model.ID) ([]*genMf.Nanoflow
 		return m.ListFunc(moduleID)
 	}
 	return nil, nil
+}
+
+func (m *RecordingNanoflowRepository) ListAll() ([]*genMf.Nanoflow, error) {
+	m.ListedAll++
+	if m.ListAllFunc != nil {
+		return m.ListAllFunc()
+	}
+	return nil, nil
+}
+
+func (m *RecordingNanoflowRepository) FindByQualifiedName(qn string) (*genMf.Nanoflow, error) {
+	m.FoundQNs = append(m.FoundQNs, qn)
+	if m.FindByQualifiedNameFunc != nil {
+		return m.FindByQualifiedNameFunc(qn)
+	}
+	return nil, nil
+}
+
+func (m *RecordingNanoflowRepository) GetContainerUUID(id model.ID) (model.ID, error) {
+	m.GetContainerIDs = append(m.GetContainerIDs, id)
+	if m.GetContainerUUIDFunc != nil {
+		return m.GetContainerUUIDFunc(id)
+	}
+	return "", nil
 }
 
 func (m *RecordingNanoflowRepository) Create(parentUUID string, containmentName string, nf *genMf.Nanoflow) error {

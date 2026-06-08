@@ -5,7 +5,12 @@ package executor
 import (
 	"testing"
 
+	"github.com/mendixlabs/mxcli/mdl/backend/mock"
 	"github.com/mendixlabs/mxcli/mdl/types"
+	"github.com/mendixlabs/mxcli/model"
+	"github.com/mendixlabs/mxcli/modelsdk/element"
+	genDM "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
+	genSec "github.com/mendixlabs/mxcli/modelsdk/gen/security"
 )
 
 func TestAccessGap_SuggestedMDL_EntityRead(t *testing.T) {
@@ -20,17 +25,8 @@ func TestAccessGap_SuggestedMDL_EntityRead(t *testing.T) {
 	}
 }
 
-func TestAccessGap_SuggestedMDL_EntityWrite(t *testing.T) {
-	g := AccessGap{
-		GapType:    GapEntityWrite,
-		ModuleRole: "HD.CustomerRole",
-		EntityQN:   "HD.PasswordForm",
-	}
-	want := "grant HD.CustomerRole on HD.PasswordForm (create, read *, write *);"
-	if got := g.SuggestedMDL(); got != want {
-		t.Errorf("SuggestedMDL() = %q, want %q", got, want)
-	}
-}
+// TODO(ACC-005): TestAccessGap_SuggestedMDL_EntityWrite — restore when GapEntityWrite
+// detection is implemented in detectGaps.
 
 func TestAccessGap_SuggestedMDL_MFExecute(t *testing.T) {
 	g := AccessGap{
@@ -44,33 +40,140 @@ func TestAccessGap_SuggestedMDL_MFExecute(t *testing.T) {
 	}
 }
 
+// TestUserRoleToModuleRoles exercises buildUserRoleMap via a MockBackend whose
+// GetProjectSecurityGen returns synthetic UserRole items. The old test only
+// asserted a hand-built map; this version calls the real builder function.
 func TestUserRoleToModuleRoles(t *testing.T) {
-	// Simulate ProjectSecurity with two UserRoles
-	mapping := map[string][]string{
-		"Customer": {"HD.CustomerRole", "KB.Reader"},
-		"Agent":    {"HD.AgentRole", "KB.Contributor"},
+	cases := []struct {
+		name       string
+		userRoles  []struct {
+			roleName    string
+			moduleRoles []string
+		}
+		checkRole       string
+		wantModuleRoles []string
+	}{
+		{
+			name: "two user roles with distinct module roles",
+			userRoles: []struct {
+				roleName    string
+				moduleRoles []string
+			}{
+				{"Customer", []string{"HD.CustomerRole", "KB.Reader"}},
+				{"Agent", []string{"HD.AgentRole", "KB.Contributor"}},
+			},
+			checkRole:       "Customer",
+			wantModuleRoles: []string{"HD.CustomerRole", "KB.Reader"},
+		},
+		{
+			name: "user role with no module roles",
+			userRoles: []struct {
+				roleName    string
+				moduleRoles []string
+			}{
+				{"Guest", nil},
+			},
+			checkRole:       "Guest",
+			wantModuleRoles: nil,
+		},
 	}
-	// buildUserRoleMap is derived from ProjectSecurity.UserRolesItems()
-	// We test the helper-output shape directly.
-	if got := mapping["Customer"]; len(got) != 2 {
-		t.Errorf("expected 2 module roles for Customer, got %d", len(got))
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			ps := genSec.NewProjectSecurity()
+			for _, ur := range tc.userRoles {
+				genUR := genSec.NewUserRole()
+				genUR.SetID(element.ID(nextID("ur")))
+				genUR.SetName(ur.roleName)
+				genUR.SetModuleRolesQualifiedNames(ur.moduleRoles)
+				ps.AddUserRoles(genUR)
+			}
+
+			mb := &mock.MockBackend{
+				IsConnectedFunc: func() bool { return true },
+				GetProjectSecurityGenFunc: func() (*genSec.ProjectSecurity, error) {
+					return ps, nil
+				},
+			}
+			ctx, _ := newMockCtx(t, withBackend(mb))
+
+			got, err := buildUserRoleMap(ctx)
+			if err != nil {
+				t.Fatalf("buildUserRoleMap returned error: %v", err)
+			}
+			gotRoles := got[tc.checkRole]
+			if len(gotRoles) != len(tc.wantModuleRoles) {
+				t.Errorf("got %d module roles for %q, want %d: %v", len(gotRoles), tc.checkRole, len(tc.wantModuleRoles), gotRoles)
+				return
+			}
+			for i, want := range tc.wantModuleRoles {
+				if gotRoles[i] != want {
+					t.Errorf("module role[%d] = %q, want %q", i, gotRoles[i], want)
+				}
+			}
+		})
 	}
 }
 
+// TestCollectEntityGrantsForRole exercises buildEntityGrants via a MockBackend
+// whose ListDomainModelsGen returns a synthetic DomainModel with one Entity and
+// one AccessRule. The old test only asserted a hand-built map; this version
+// calls the real builder function.
 func TestCollectEntityGrantsForRole(t *testing.T) {
-	// buildEntityGrants result for "HD.CustomerRole" should report read access.
-	grants := map[string]map[string]entityAccessSummary{
-		"HD.CustomerRole": {
-			"HD.UserProfile": {canRead: true, canWrite: false, canCreate: false},
+	mod := mkModule("HD")
+
+	ent := genDM.NewEntity()
+	ent.SetID(element.ID(nextID("ent")))
+	ent.SetName("UserProfile")
+	ar := genDM.NewAccessRule()
+	ar.SetModuleRolesQualifiedNames([]string{"HD.CustomerRole"})
+	ar.SetDefaultMemberAccessRights("ReadOnly")
+	ar.SetAllowCreate(false)
+	ar.SetAllowDelete(false)
+	ent.AddAccessRules(ar)
+
+	dm := genDM.NewDomainModel()
+	dmID := model.ID(nextID("dm"))
+	dm.SetID(element.ID(dmID))
+	dm.AddEntities(ent)
+
+	// Register dm.ID → mod.ID so FindModuleID resolves the module name "HD".
+	h := mkHierarchy(mod)
+	withContainer(h, dmID, mod.ID)
+
+	mb := &mock.MockBackend{
+		IsConnectedFunc: func() bool { return true },
+		ListDomainModelsGenFunc: func() ([]*genDM.DomainModel, error) {
+			return []*genDM.DomainModel{dm}, nil
 		},
 	}
-	summary := grants["HD.CustomerRole"]["HD.UserProfile"]
+	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
+
+	grants, err := buildEntityGrants(ctx)
+	if err != nil {
+		t.Fatalf("buildEntityGrants returned error: %v", err)
+	}
+
+	summary, ok := grants["HD.CustomerRole"]["HD.UserProfile"]
+	if !ok {
+		t.Fatalf("expected grant for HD.CustomerRole on HD.UserProfile, got map: %v", grants)
+	}
 	if !summary.canRead {
 		t.Error("expected canRead=true for HD.UserProfile")
 	}
 	if summary.canWrite {
 		t.Error("expected canWrite=false for HD.UserProfile")
 	}
+	if summary.canCreate {
+		t.Error("expected canCreate=false for HD.UserProfile")
+	}
+}
+
+// TestCollectMFEntityRefs is a placeholder tracking the TODO in
+// collectMFEntityRefs. Update this test when ObjectsItems() traversal is
+// implemented (Task 5).
+func TestCollectMFEntityRefs(t *testing.T) {
+	t.Skip("TODO(Task 5): collectMFEntityRefs not yet implemented — update when ObjectsItems() traversal is complete")
 }
 
 func TestCollectWidgetEntities(t *testing.T) {
@@ -89,7 +192,7 @@ func TestCollectWidgetEntities(t *testing.T) {
 			},
 		},
 	}
-	result := collectWidgetRefs(pm)
+	result := collectWidgetRefs(pm, map[string]mfMeta{})
 	if !containsStr(result.entityQNs, "HD.UserProfile") {
 		t.Errorf("expected HD.UserProfile in entityQNs, got %v", result.entityQNs)
 	}
@@ -108,7 +211,7 @@ func TestCollectWidgetMFRefs(t *testing.T) {
 			},
 		},
 	}
-	result := collectWidgetRefs(pm)
+	result := collectWidgetRefs(pm, map[string]mfMeta{})
 	if !containsStr(result.directMFQNs, "HD.DS_GetMyProfile") {
 		t.Errorf("expected HD.DS_GetMyProfile in directMFQNs, got %v", result.directMFQNs)
 	}

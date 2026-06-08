@@ -3,10 +3,15 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/json"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"testing"
+
+	_ "modernc.org/sqlite"
 )
 
 func TestBuildMxMetadata_CompactJSON(t *testing.T) {
@@ -472,6 +477,204 @@ func TestRunGitFix_ConvertsSSHToHTTPS(t *testing.T) {
 
 	if !strings.HasPrefix(newURL, "https://") {
 		t.Errorf("SSH URL must be converted to HTTPS, got: %q", newURL)
+	}
+}
+
+// ── GIT-007: previously uncovered helpers ───────────────────────────────────
+
+// TestBlobToUUIDForPath verifies Microsoft little-endian GUID → UUID conversion.
+// Input: bytes 0x01…0x10 → groups 1-3 are swapped little-endian, groups 4-5 big-endian.
+func TestBlobToUUIDForPath(t *testing.T) {
+	blob := []byte{0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
+		0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10}
+	got := blobToUUIDForPath(blob)
+	want := "04030201-0605-0807-090a-0b0c0d0e0f10"
+	if got != want {
+		t.Errorf("blobToUUIDForPath = %q, want %q", got, want)
+	}
+}
+
+func TestBlobToUUIDForPath_WrongLength(t *testing.T) {
+	if got := blobToUUIDForPath([]byte{0x01, 0x02}); got != "" {
+		t.Errorf("expected empty string for wrong-length input, got %q", got)
+	}
+}
+
+// TestCheckDuplicateNoteBlobs_NoDuplicates verifies OK when every note blob is unique.
+func TestCheckDuplicateNoteBlobs_NoDuplicates(t *testing.T) {
+	orig := gitExecCommand
+	defer func() { gitExecCommand = orig }()
+
+	gitExecCommand = func(name string, args ...string) *exec.Cmd {
+		if contains(args, "list") {
+			// Two notes with distinct blob hashes
+			return exec.Command("sh", "-c",
+				`printf 'aaaa0001 commitsha1\nbbbb0002 commitsha2'`)
+		}
+		return exec.Command("sh", "-c", "exit 1")
+	}
+
+	result := checkDuplicateNoteBlobs()
+	if !result.OK {
+		t.Errorf("expected OK when blobs are unique, got: %s", result.Detail)
+	}
+}
+
+// TestCheckDuplicateNoteBlobs_WithDuplicates verifies NOT OK when two commits share a blob.
+func TestCheckDuplicateNoteBlobs_WithDuplicates(t *testing.T) {
+	orig := gitExecCommand
+	defer func() { gitExecCommand = orig }()
+
+	gitExecCommand = func(name string, args ...string) *exec.Cmd {
+		if contains(args, "list") {
+			// Both notes share the same blob hash — simulates raw-git attach
+			return exec.Command("sh", "-c",
+				`printf 'sameblob1234 commitsha1111111\nsameblob1234 commitsha2222222'`)
+		}
+		return exec.Command("sh", "-c", "exit 1")
+	}
+
+	result := checkDuplicateNoteBlobs()
+	if result.OK {
+		t.Errorf("expected NOT OK when blobs are duplicated, got detail: %s", result.Detail)
+	}
+	if !strings.Contains(result.Detail, "shared") {
+		t.Errorf("detail must mention 'shared', got: %s", result.Detail)
+	}
+}
+
+// TestCheckRemoteNotesRef_Present verifies OK when ls-remote returns the notes ref.
+func TestCheckRemoteNotesRef_Present(t *testing.T) {
+	orig := gitExecCommand
+	defer func() { gitExecCommand = orig }()
+
+	gitExecCommand = func(name string, args ...string) *exec.Cmd {
+		if contains(args, "ls-remote") {
+			return exec.Command("sh", "-c",
+				`printf 'abc123def456\trefs/notes/mx_metadata'`)
+		}
+		return exec.Command("sh", "-c", "exit 1")
+	}
+
+	result := checkRemoteNotesRef("origin")
+	if !result.OK {
+		t.Errorf("expected OK when remote ref exists, got: %s", result.Detail)
+	}
+}
+
+// TestCheckRemoteNotesRef_Missing verifies NOT OK when ls-remote returns nothing.
+func TestCheckRemoteNotesRef_Missing(t *testing.T) {
+	orig := gitExecCommand
+	defer func() { gitExecCommand = orig }()
+
+	gitExecCommand = func(name string, args ...string) *exec.Cmd {
+		// ls-remote returns empty output — ref not found
+		return exec.Command("sh", "-c", "exit 0")
+	}
+
+	result := checkRemoteNotesRef("origin")
+	if result.OK {
+		t.Errorf("expected NOT OK when remote ref is missing, got: %s", result.Detail)
+	}
+}
+
+// TestCheckRemoteNotesRef_NoRemote verifies NOT OK when no remote is specified.
+func TestCheckRemoteNotesRef_NoRemote(t *testing.T) {
+	result := checkRemoteNotesRef("")
+	if result.OK {
+		t.Errorf("expected NOT OK when remote is empty, got: %s", result.Detail)
+	}
+}
+
+// TestCheckMPRConsistency_V1Format verifies skip (OK) when no mprcontents/ dir exists.
+func TestCheckMPRConsistency_V1Format(t *testing.T) {
+	dir := t.TempDir()
+	mprPath := filepath.Join(dir, "app.mpr")
+	// Create an empty file; no mprcontents/ subdirectory → v1 format
+	if err := os.WriteFile(mprPath, []byte{}, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	result := checkMPRConsistency(mprPath)
+	if !result.OK {
+		t.Errorf("v1 format should be OK (skipped), got: %s", result.Detail)
+	}
+}
+
+// TestCheckMPRConsistency_AllPresent verifies OK when every Unit row has its .mxunit file.
+func TestCheckMPRConsistency_AllPresent(t *testing.T) {
+	dir := t.TempDir()
+	mprPath := filepath.Join(dir, "app.mpr")
+
+	// Build a minimal SQLite .mpr with a single Unit row.
+	// UnitID is a 16-byte blob that maps to a known UUID.
+	blob := []byte{0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
+		0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10}
+	uuid := blobToUUIDForPath(blob) // "04030201-0605-0807-090a-0b0c0d0e0f10"
+
+	db, err := sql.Open("sqlite", mprPath)
+	if err != nil {
+		t.Fatalf("open SQLite: %v", err)
+	}
+	_, err = db.Exec(`CREATE TABLE Unit (UnitID BLOB, TreeConflict INTEGER, ContentsConflicts TEXT)`)
+	if err != nil {
+		t.Fatalf("create table: %v", err)
+	}
+	_, err = db.Exec(`INSERT INTO Unit VALUES (?, 0, '')`, blob)
+	if err != nil {
+		t.Fatalf("insert row: %v", err)
+	}
+	db.Close()
+
+	// Create the matching mprcontents/<aa>/<bb>/<uuid>.mxunit file.
+	contentsDir := filepath.Join(dir, "mprcontents")
+	unitDir := filepath.Join(contentsDir, uuid[0:2], uuid[2:4])
+	if err := os.MkdirAll(unitDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	unitFile := filepath.Join(unitDir, uuid+".mxunit")
+	if err := os.WriteFile(unitFile, []byte("{}"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	result := checkMPRConsistency(mprPath)
+	if !result.OK {
+		t.Errorf("expected OK when all units present, got: %s", result.Detail)
+	}
+}
+
+// TestCheckMPRConsistency_MissingFile verifies NOT OK when a Unit row has no .mxunit.
+func TestCheckMPRConsistency_MissingFile(t *testing.T) {
+	dir := t.TempDir()
+	mprPath := filepath.Join(dir, "app.mpr")
+
+	blob := []byte{0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88,
+		0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff, 0x00}
+
+	db, err := sql.Open("sqlite", mprPath)
+	if err != nil {
+		t.Fatalf("open SQLite: %v", err)
+	}
+	_, err = db.Exec(`CREATE TABLE Unit (UnitID BLOB, TreeConflict INTEGER, ContentsConflicts TEXT)`)
+	if err != nil {
+		t.Fatalf("create table: %v", err)
+	}
+	_, err = db.Exec(`INSERT INTO Unit VALUES (?, 0, '')`, blob)
+	if err != nil {
+		t.Fatalf("insert row: %v", err)
+	}
+	db.Close()
+
+	// Create mprcontents/ dir but do NOT create the .mxunit file.
+	if err := os.MkdirAll(filepath.Join(dir, "mprcontents"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	result := checkMPRConsistency(mprPath)
+	if result.OK {
+		t.Errorf("expected NOT OK when .mxunit file is missing, got: %s", result.Detail)
+	}
+	if !strings.Contains(result.Detail, "missing") {
+		t.Errorf("detail must mention 'missing', got: %s", result.Detail)
 	}
 }
 

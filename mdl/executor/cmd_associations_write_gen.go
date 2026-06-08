@@ -123,20 +123,14 @@ func astAssociationTypeStringGen(s *ast.CreateAssociationStmt) string {
 	if s == nil {
 		return "Reference"
 	}
-	if s.Type == ast.AssocReferenceSet {
-		return "ReferenceSet"
-	}
-	return "Reference"
+	return astAssocTypeStr(s.Type)
 }
 
 func astAssociationOwnerStringGen(s *ast.CreateAssociationStmt) string {
 	if s == nil {
 		return "Default"
 	}
-	if s.Owner == ast.OwnerBoth {
-		return "Both"
-	}
-	return "Default"
+	return astOwnerStr(s.Owner)
 }
 
 func astAssociationStorageStringGen(s *ast.CreateAssociationStmt) string {

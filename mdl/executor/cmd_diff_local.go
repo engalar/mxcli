@@ -295,7 +295,7 @@ func bsonToMDL(ctx *ExecContext, unitType, unitID string, content []byte) string
 	case strings.Contains(unitType, "DomainModel"):
 		return domainModelBsonToMDL(ctx, raw, qualifiedName)
 	case strings.Contains(unitType, "Entity"):
-		return entityBsonToMDL(ctx, raw, qualifiedName)
+		return entityBsonToMDL(ctx, content, qualifiedName)
 	case strings.Contains(unitType, "Microflow"):
 		return microflowBsonToMDL(ctx, content, qualifiedName)
 	case strings.Contains(unitType, "Nanoflow"):
@@ -332,7 +332,13 @@ func domainModelBsonToMDL(ctx *ExecContext, raw map[string]any, name string) str
 				continue
 			}
 			qn := name + "." + entName
-			lines = append(lines, entityBsonToMDL(ctx, entMap, qn))
+			// Re-marshal the sub-map to bytes so entityBsonToMDL can try the
+			// codec decode path (matching the microflowBsonToMDL pattern).
+			entBytes, marshalErr := bson.Marshal(entMap)
+			if marshalErr != nil {
+				entBytes = nil
+			}
+			lines = append(lines, entityBsonToMDL(ctx, entBytes, qn))
 			lines = append(lines, "")
 		}
 	}
@@ -362,8 +368,43 @@ func domainModelBsonToMDL(ctx *ExecContext, raw map[string]any, name string) str
 	return strings.Join(lines, "\n")
 }
 
-// entityBsonToMDL converts an entity BSON to MDL
-func entityBsonToMDL(ctx *ExecContext, raw map[string]any, qualifiedName string) string {
+// entityBsonToMDL converts an entity BSON document (raw bytes) to MDL.
+//
+// Primary path: decode through modelsdk/codec into a *genDm.Entity, then
+// feed to entitySpecFromGen + renderEntityMDL (matching the microflowBsonToMDL
+// pattern so all three converters share the same canonical render pipeline).
+//
+// Fallback path: if the codec decode fails (e.g. corrupted or partial unit),
+// unmarshal to a raw map and render a best-effort MDL snippet so
+// mxcli diff-local still produces some output rather than aborting the diff.
+func entityBsonToMDL(ctx *ExecContext, content []byte, qualifiedName string) string {
+	// --- Primary path: codec → entitySpecFromGen → renderEntityMDL ---
+	if len(content) > 0 {
+		dec := codec.NewDecoder(codec.DefaultRegistry)
+		elem, err := dec.Decode(bson.Raw(content))
+		if err == nil {
+			if entity, ok := elem.(*genDm.Entity); ok && entity != nil {
+				moduleName := ""
+				if idx := strings.LastIndex(qualifiedName, "."); idx > 0 {
+					moduleName = qualifiedName[:idx]
+				}
+				spec := entitySpecFromGen(moduleName, entity)
+				return renderEntityMDL(spec, false) + ";\n/"
+			}
+		}
+	}
+
+	// --- Fallback path: raw-map rendering ---
+	var raw map[string]any
+	if err := bson.Unmarshal(content, &raw); err != nil {
+		return fmt.Sprintf("-- entity %s\n-- diff-local: BSON parse error: %v\n", qualifiedName, err)
+	}
+	return entityBsonToMDLRaw(ctx, raw, qualifiedName)
+}
+
+// entityBsonToMDLRaw is the fallback raw-map renderer used when the codec
+// decode path in entityBsonToMDL fails. It mirrors the original implementation.
+func entityBsonToMDLRaw(ctx *ExecContext, raw map[string]any, qualifiedName string) string {
 	var lines []string
 
 	// Documentation

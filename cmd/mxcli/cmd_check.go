@@ -190,18 +190,26 @@ Examples:
 
 			// Access gap analysis
 			if !isStructured {
-				gaps, aErr := exec.AnalyzeAccess()
+				gaps, warnings, aErr := exec.AnalyzeAccess()
 				if aErr != nil {
 					fmt.Fprintf(errOut, "Warning: access analysis failed: %v\n", aErr)
-				} else if len(gaps) > 0 {
-					fmt.Fprintf(out, "\nAccess analysis:\n")
-					for _, g := range gaps {
-						fmt.Fprintf(out, "[%s] %s: no %s access\n  → Fix: %s\n\n",
-							g.RuleID(), g.Path, accessGapDesc(g.GapType), g.SuggestedMDL())
-					}
-					fmt.Fprintf(out, "%d access gap(s) found. Apply fixes and re-run check.\n", len(gaps))
 				} else {
-					fmt.Fprintf(out, "✓ No access gaps found.\n")
+					if len(warnings) > 0 {
+						fmt.Fprintf(out, "WARNING: %d page(s) skipped due to parse errors:\n", len(warnings))
+						for _, w := range warnings {
+							fmt.Fprintf(out, "  • %s\n", w)
+						}
+					}
+					if len(gaps) > 0 {
+						fmt.Fprintf(out, "\nAccess analysis:\n")
+						for _, g := range gaps {
+							fmt.Fprintf(out, "[%s] %s: no %s access\n  → Fix: %s\n\n",
+								g.RuleID(), g.Path, accessGapDesc(g.GapType), g.SuggestedMDL())
+						}
+						fmt.Fprintf(out, "%d access gap(s) found. Apply fixes and re-run check.\n", len(gaps))
+					} else {
+						fmt.Fprintf(out, "✓ No access gaps found.\n")
+					}
 				}
 			}
 		}
@@ -217,8 +225,6 @@ func accessGapDesc(gt executor.GapType) string {
 	switch gt {
 	case executor.GapEntityRead:
 		return "read"
-	case executor.GapEntityWrite:
-		return "write"
 	case executor.GapMFExecute:
 		return "execute"
 	default:

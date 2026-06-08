@@ -7,6 +7,8 @@ import (
 	"testing"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
+	"github.com/mendixlabs/mxcli/modelsdk/element"
+	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 )
 
 func TestRenderAssocMDL_Basic(t *testing.T) {
@@ -22,11 +24,11 @@ func TestRenderAssocMDL_Basic(t *testing.T) {
 	out := renderAssocMDL(spec)
 
 	for _, want := range []string{
-		"create association Sales.Order_Customer",
+		"create or modify association Sales.Order_Customer",
 		"from Sales.Order to Sales.Customer",
 		"type Reference",
 		"owner Default",
-		"delete behavior DeleteMeButKeepReferences",
+		"delete_behavior DeleteMeButKeepReferences",
 	} {
 		if !strings.Contains(out, want) {
 			t.Errorf("rendered MDL missing %q\n--- got ---\n%s", want, out)
@@ -150,5 +152,90 @@ func TestGenAssocDeleteBehaviorToMDL(t *testing.T) {
 		if got := genAssocDeleteBehaviorToMDL(c.in); got != c.want {
 			t.Errorf("genAssocDeleteBehaviorToMDL(%q) = %q, want %q", c.in, got, c.want)
 		}
+	}
+}
+
+func TestAssocSpecFromGen(t *testing.T) {
+	const parentID = element.ID("parent-uuid-001")
+	const childID = element.ID("child-uuid-002")
+
+	a := genDm.NewAssociation()
+	a.SetName("Order_Customer")
+	a.SetType("ReferenceSet")
+	a.SetOwner("Both")
+	a.SetDocumentation("Links an order to its customer.")
+	a.SetParentID(parentID)
+	a.SetChildID(childID)
+
+	dbe := genDm.NewAssociationDeleteBehavior()
+	dbe.SetChildDeleteBehavior("DeleteMeAndReferences")
+	a.SetDeleteBehavior(dbe)
+
+	entityNames := map[string]string{
+		string(parentID): "Sales.Order",
+		string(childID):  "Sales.Customer",
+	}
+
+	spec := assocSpecFromGen("Sales", a, entityNames)
+
+	if spec.module != "Sales" {
+		t.Errorf("module = %q, want Sales", spec.module)
+	}
+	if spec.name != "Order_Customer" {
+		t.Errorf("name = %q, want Order_Customer", spec.name)
+	}
+	// ParentRefID maps to fromQN (FROM entity)
+	if spec.fromQN != "Sales.Order" {
+		t.Errorf("fromQN = %q, want Sales.Order", spec.fromQN)
+	}
+	// ChildRefID maps to toQN (TO entity)
+	if spec.toQN != "Sales.Customer" {
+		t.Errorf("toQN = %q, want Sales.Customer", spec.toQN)
+	}
+	if spec.assocType != "ReferenceSet" {
+		t.Errorf("assocType = %q, want ReferenceSet", spec.assocType)
+	}
+	if spec.owner != "Both" {
+		t.Errorf("owner = %q, want Both", spec.owner)
+	}
+	if spec.deleteBehavior != "DeleteMeAndReferences" {
+		t.Errorf("deleteBehavior = %q, want DeleteMeAndReferences", spec.deleteBehavior)
+	}
+	if spec.documentation != "Links an order to its customer." {
+		t.Errorf("documentation = %q", spec.documentation)
+	}
+
+	// Full render round-trip: output must be parseable MDL containing key tokens.
+	out := renderAssocMDL(spec)
+	for _, want := range []string{
+		"create or modify association Sales.Order_Customer",
+		"from Sales.Order to Sales.Customer",
+		"type ReferenceSet",
+		"owner Both",
+		"delete_behavior DeleteMeAndReferences",
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("renderAssocMDL output missing %q\n--- got ---\n%s", want, out)
+		}
+	}
+}
+
+func TestAssocSpecFromGen_FallbackToRawID(t *testing.T) {
+	// When entityNames does not contain the ID, the raw ID string is used as-is.
+	const parentID = element.ID("unknown-parent-id")
+	const childID = element.ID("unknown-child-id")
+
+	a := genDm.NewAssociation()
+	a.SetName("Foo_Bar")
+	a.SetParentID(parentID)
+	a.SetChildID(childID)
+
+	spec := assocSpecFromGen("Mod", a, map[string]string{})
+
+	if spec.fromQN != "unknown-parent-id" {
+		t.Errorf("fromQN fallback = %q, want unknown-parent-id", spec.fromQN)
+	}
+	if spec.toQN != "unknown-child-id" {
+		t.Errorf("toQN fallback = %q, want unknown-child-id", spec.toQN)
 	}
 }

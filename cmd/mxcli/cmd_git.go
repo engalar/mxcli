@@ -209,6 +209,9 @@ Examples:
 			case args[i] == "-p" && i+1 < len(args):
 				projectPath = args[i+1]
 				i++
+			case args[i] == "--project" && i+1 < len(args):
+				projectPath = args[i+1]
+				i++
 			case strings.HasPrefix(args[i], "--project="):
 				projectPath = strings.TrimPrefix(args[i], "--project=")
 			case strings.HasPrefix(args[i], "--version="):
@@ -382,18 +385,41 @@ Examples:
 	},
 }
 
+// loadNotesList runs 'git notes --ref=mx_metadata list' once and returns a
+// blobHash→[]commitSHA map. Multiple commits may share the same blob hash
+// (raw-git attach), so the value is a slice to preserve all entries.
+// All doctor checks share this single result to avoid redundant subprocess
+// invocations per doctor run.
+func loadNotesList() map[string][]string {
+	listCmd := gitExecCommand("git", "notes", "--ref=mx_metadata", "list")
+	out, err := listCmd.Output()
+	result := make(map[string][]string)
+	if err != nil || len(strings.TrimSpace(string(out))) == 0 {
+		return result
+	}
+	for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
+		parts := strings.Fields(line)
+		if len(parts) == 2 {
+			result[parts[0]] = append(result[parts[0]], parts[1]) // blobHash → []commitSHA
+		}
+	}
+	return result
+}
+
 func runDoctor(remoteOverride, projectPath string, out io.Writer) error {
 	remote := resolveRemote(remoteOverride)
 	fmt.Fprintf(out, "Diagnosing Git repo\n\n")
+
+	notesList := loadNotesList()
 
 	checks := []doctorCheck{
 		checkGitConfig(),
 		checkRemoteURL(remote),
 		checkRemoteNotesRef(remote),
-		checkCommitsHaveNotes(),
-		checkNotesJSONFormat(),
+		checkCommitsHaveNotesFromList(notesList),
+		checkNotesJSONFormatFromList(notesList),
 		checkMPRConsistency(projectPath),
-		checkDuplicateNoteBlobs(),
+		checkDuplicateNoteBlobsFromList(notesList),
 	}
 
 	failed := 0
@@ -471,6 +497,10 @@ func checkRemoteNotesRef(remote string) doctorCheck {
 }
 
 func checkCommitsHaveNotes() doctorCheck {
+	return checkCommitsHaveNotesFromList(loadNotesList())
+}
+
+func checkCommitsHaveNotesFromList(notesList map[string][]string) doctorCheck {
 	logCmd := gitExecCommand("git", "log", "--format=%H")
 	logOut, err := logCmd.Output()
 	if err != nil || len(strings.TrimSpace(string(logOut))) == 0 {
@@ -478,7 +508,13 @@ func checkCommitsHaveNotes() doctorCheck {
 	}
 	allCommits := strings.Split(strings.TrimSpace(string(logOut)), "\n")
 
-	noted := notedCommits()
+	// Build noted set from pre-loaded list (blobHash→[]commitSHA map).
+	noted := make(map[string]bool, len(notesList))
+	for _, commitSHAs := range notesList {
+		for _, commitSHA := range commitSHAs {
+			noted[commitSHA] = true
+		}
+	}
 
 	var missing []string
 	for _, sha := range allCommits {
@@ -499,25 +535,25 @@ func checkCommitsHaveNotes() doctorCheck {
 }
 
 func checkNotesJSONFormat() doctorCheck {
-	listCmd := gitExecCommand("git", "notes", "--ref=mx_metadata", "list")
-	listOut, err := listCmd.Output()
-	if err != nil || len(strings.TrimSpace(string(listOut))) == 0 {
+	return checkNotesJSONFormatFromList(loadNotesList())
+}
+
+func checkNotesJSONFormatFromList(notesList map[string][]string) doctorCheck {
+	if len(notesList) == 0 {
 		return doctorCheck{Name: "notes-json", OK: true, Detail: "Notes JSON format — no notes to check"}
 	}
 	malformed := 0
-	for _, line := range strings.Split(string(listOut), "\n") {
-		parts := strings.Fields(line)
-		if len(parts) != 2 {
-			continue
-		}
-		showCmd := gitExecCommand("git", "notes", "--ref=mx_metadata", "show", parts[1])
-		noteOut, err := showCmd.Output()
-		if err != nil {
-			continue
-		}
-		var m map[string]any
-		if err := json.Unmarshal(noteOut, &m); err != nil {
-			malformed++
+	for _, commitSHAs := range notesList {
+		for _, commitSHA := range commitSHAs {
+			showCmd := gitExecCommand("git", "notes", "--ref=mx_metadata", "show", commitSHA)
+			noteOut, err := showCmd.Output()
+			if err != nil {
+				continue
+			}
+			var m map[string]any
+			if err := json.Unmarshal(noteOut, &m); err != nil {
+				malformed++
+			}
 		}
 	}
 	if malformed == 0 {
@@ -652,35 +688,31 @@ func checkMPRConsistency(projectPath string) doctorCheck {
 // ModelChanges lists exactly what changed; blob reuse means ModelChanges is
 // empty/generic, hiding which documents were actually modified.
 func checkDuplicateNoteBlobs() doctorCheck {
-	listCmd := gitExecCommand("git", "notes", "--ref=mx_metadata", "list")
-	listOut, err := listCmd.Output()
-	if err != nil || len(strings.TrimSpace(string(listOut))) == 0 {
+	return checkDuplicateNoteBlobsFromList(loadNotesList())
+}
+
+func checkDuplicateNoteBlobsFromList(notesList map[string][]string) doctorCheck {
+	if len(notesList) == 0 {
 		return doctorCheck{Name: "note-blobs", OK: true, Detail: "Note blobs — no notes to check"}
 	}
 
-	// Map blob hash → list of commit short SHAs sharing it.
-	blobCommits := make(map[string][]string)
-	for _, line := range strings.Split(strings.TrimSpace(string(listOut)), "\n") {
-		parts := strings.Fields(line)
-		if len(parts) != 2 {
-			continue
-		}
-		blobHash, commitSHA := parts[0], parts[1]
-		short := commitSHA
-		if len(short) > 7 {
-			short = short[:7]
-		}
-		blobCommits[blobHash] = append(blobCommits[blobHash], short)
-	}
-
+	// notesList is already blobHash→[]commitSHA; blobs with >1 commit are duplicates.
 	var dupBlobs, dupCommits int
 	var examples []string
-	for _, commits := range blobCommits {
-		if len(commits) > 1 {
+	for _, commitSHAs := range notesList {
+		if len(commitSHAs) > 1 {
 			dupBlobs++
-			dupCommits += len(commits)
+			dupCommits += len(commitSHAs)
 			if len(examples) < 2 {
-				examples = append(examples, fmt.Sprintf("%s (shared by %s)", commits[0], strings.Join(commits[1:minInt(len(commits), 4)], ", ")))
+				// Truncate commit SHAs to 7 chars for display.
+				shorts := make([]string, len(commitSHAs))
+				for i, s := range commitSHAs {
+					if len(s) > 7 {
+						s = s[:7]
+					}
+					shorts[i] = s
+				}
+				examples = append(examples, fmt.Sprintf("%s (shared by %s)", shorts[0], strings.Join(shorts[1:minInt(len(shorts), 4)], ", ")))
 			}
 		}
 	}
@@ -773,13 +805,8 @@ func runGitFix(projectPath, versionFlag, remoteOverride string, out io.Writer) e
 	// Step 4: Push notes
 	if remote != "" {
 		fmt.Fprintf(out, "Step 4: Push notes to %s\n", remote)
-		pushCmd := gitExecCommand("git", "push", remote, "refs/notes/mx_metadata")
-		pushCmd.Stdout = out
-		pushCmd.Stderr = out
-		if err := pushCmd.Run(); err != nil {
-			fmt.Fprintf(out, "  Push failed (may need --force if remote has diverged)\n")
-		} else {
-			fmt.Fprintf(out, "  Pushed.\n")
+		if err := runGitNotesPush(remoteOverride, false, out); err != nil {
+			fmt.Fprintf(out, "  Push failed: %v\n  Retry with: mxcli git notes push --force\n", err)
 		}
 	}
 
@@ -804,7 +831,9 @@ func fixGitConfig(out io.Writer) {
 		current, err := getCmd.Output()
 		if err != nil || strings.TrimSpace(string(current)) == "" {
 			setCmd := gitExecCommand("git", "config", "--local", key, val)
-			if err := setCmd.Run(); err == nil {
+			if err := setCmd.Run(); err != nil {
+				fmt.Fprintf(out, "  FAILED to set %s: %v\n", key, err)
+			} else {
 				fmt.Fprintf(out, "  Set: %s = %s\n", key, val)
 			}
 		} else {

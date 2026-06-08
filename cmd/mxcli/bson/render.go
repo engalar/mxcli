@@ -8,18 +8,25 @@ import (
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
-// Render converts a bson.D document to Normalized DSL text.
+// Render converts a bson.D document to Normalized DSL text using ":" field separators.
 // indent is the base indentation level (0 for top-level).
 func Render(doc bson.D, indent int) string {
 	var sb strings.Builder
-	renderDoc(&sb, doc, indent)
+	renderDoc(&sb, doc, indent, ": ")
 	return strings.TrimRight(sb.String(), "\n")
 }
 
-func renderDoc(sb *strings.Builder, doc bson.D, indent int) {
+// RenderForDiff converts a bson.D document to NDSL text using " =" field separators,
+// suitable for use in unified diff output.
+func RenderForDiff(doc bson.D, indent int) string {
+	var sb strings.Builder
+	renderDoc(&sb, doc, indent, " = ")
+	return strings.TrimRight(sb.String(), "\n")
+}
+
+func renderDoc(sb *strings.Builder, doc bson.D, indent int, sep string) {
 	pad := strings.Repeat("  ", indent)
 
-	// Extract $Type for header
 	typeName := ""
 	for _, e := range doc {
 		if e.Key == "$Type" {
@@ -31,12 +38,11 @@ func renderDoc(sb *strings.Builder, doc bson.D, indent int) {
 		sb.WriteString(pad + typeName + "\n")
 	}
 
-	renderFields(sb, doc, indent+1)
+	renderFields(sb, doc, indent+1, sep)
 }
 
 // renderFields renders only the non-structural fields of a doc, sorted alphabetically.
-// Unlike renderDoc, it does not print the $Type header line.
-func renderFields(sb *strings.Builder, doc bson.D, indent int) {
+func renderFields(sb *strings.Builder, doc bson.D, indent int, sep string) {
 	type field struct {
 		key string
 		val any
@@ -53,19 +59,19 @@ func renderFields(sb *strings.Builder, doc bson.D, indent int) {
 	})
 
 	for _, f := range fields {
-		renderField(sb, f.key, f.val, indent)
+		renderField(sb, f.key, f.val, indent, sep)
 	}
 }
 
-func renderField(sb *strings.Builder, key string, val any, indent int) {
+func renderField(sb *strings.Builder, key string, val any, indent int, sep string) {
 	pad := strings.Repeat("  ", indent)
 
 	switch v := val.(type) {
 	case nil:
-		fmt.Fprintf(sb, "%s%s: null\n", pad, key)
+		fmt.Fprintf(sb, "%s%s%snull\n", pad, key, sep)
 
 	case bson.Binary:
-		fmt.Fprintf(sb, "%s%s: <uuid>\n", pad, key)
+		fmt.Fprintf(sb, "%s%s%s<uuid>\n", pad, key, sep)
 
 	case bson.D:
 		typeName := ""
@@ -76,30 +82,29 @@ func renderField(sb *strings.Builder, key string, val any, indent int) {
 			}
 		}
 		if typeName != "" {
-			fmt.Fprintf(sb, "%s%s: %s\n", pad, key, typeName)
+			fmt.Fprintf(sb, "%s%s%s%s\n", pad, key, sep, typeName)
 		} else {
-			fmt.Fprintf(sb, "%s%s:\n", pad, key)
+			fmt.Fprintf(sb, "%s%s%s\n", pad, key, sep)
 		}
-		renderFields(sb, v, indent+1)
+		renderFields(sb, v, indent+1, sep)
 
 	case bson.A:
-		renderArray(sb, key, v, indent)
+		renderArray(sb, key, v, indent, sep)
 
 	case string:
-		fmt.Fprintf(sb, "%s%s: %q\n", pad, key, v)
+		fmt.Fprintf(sb, "%s%s%s%q\n", pad, key, sep, v)
 
 	case bool:
-		fmt.Fprintf(sb, "%s%s: %v\n", pad, key, v)
+		fmt.Fprintf(sb, "%s%s%s%v\n", pad, key, sep, v)
 
 	default:
-		fmt.Fprintf(sb, "%s%s: %v\n", pad, key, v)
+		fmt.Fprintf(sb, "%s%s%s%v\n", pad, key, sep, v)
 	}
 }
 
-func renderArray(sb *strings.Builder, key string, arr bson.A, indent int) {
+func renderArray(sb *strings.Builder, key string, arr bson.A, indent int, sep string) {
 	pad := strings.Repeat("  ", indent)
 
-	// Check for array marker (first element is int32)
 	markerStr := ""
 	startIdx := 0
 	if len(arr) > 0 {
@@ -111,17 +116,17 @@ func renderArray(sb *strings.Builder, key string, arr bson.A, indent int) {
 
 	elements := arr[startIdx:]
 	if len(elements) == 0 {
-		fmt.Fprintf(sb, "%s%s%s: []\n", pad, key, markerStr)
+		fmt.Fprintf(sb, "%s%s%s%s[]\n", pad, key, markerStr, sep)
 		return
 	}
 
 	fmt.Fprintf(sb, "%s%s%s:\n", pad, key, markerStr)
 	for _, elem := range elements {
-		renderArrayElement(sb, elem, indent+1)
+		renderArrayElement(sb, elem, indent+1, sep)
 	}
 }
 
-func renderArrayElement(sb *strings.Builder, elem any, indent int) {
+func renderArrayElement(sb *strings.Builder, elem any, indent int, sep string) {
 	pad := strings.Repeat("  ", indent)
 
 	switch v := elem.(type) {
@@ -138,7 +143,7 @@ func renderArrayElement(sb *strings.Builder, elem any, indent int) {
 		} else {
 			fmt.Fprintf(sb, "%s-\n", pad)
 		}
-		renderFields(sb, v, indent+2)
+		renderFields(sb, v, indent+2, sep)
 
 	case string:
 		fmt.Fprintf(sb, "%s- %q\n", pad, v)

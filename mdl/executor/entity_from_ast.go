@@ -146,7 +146,7 @@ func buildGenAttrFromAST(a ast.Attribute, dt canonical.DataType) (*genDm.Attribu
 		sv := genDm.NewStoredValue()
 		raw := ""
 		if a.HasDefault {
-			raw = stripAttrDefaultQuotes(formatAttrDefault(a.DefaultValue))
+			raw = stripAttrDefaultQuotes(formatEntityDefault(a.DefaultValue))
 		}
 		// AutoNumber attributes require a StoredValue with seed "1" when no
 		// explicit seed is provided — Mendix enforces CE7247 "Value cannot be
@@ -240,19 +240,6 @@ func buildENUSText(msg string) *genTexts.Text {
 	tr.SetText(msg)
 	t.AddTranslations(tr)
 	return t
-}
-
-// formatAttrDefault renders an ast.Attribute default value as the string the
-// gen StoredValue expects. Strings pass through; everything else gets %v.
-func formatAttrDefault(v any) string {
-	switch x := v.(type) {
-	case nil:
-		return ""
-	case string:
-		return x
-	default:
-		return fmt.Sprintf("%v", x)
-	}
 }
 
 // stripAttrDefaultQuotes removes surrounding single quotes from string default

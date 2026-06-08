@@ -44,6 +44,17 @@
 --           permission gaps now auto-diagnosed with MDL fix suggestions.
 -- Note    : page model now extracts microflow/nanoflow datasource refs (MicroflowSettings.
 --           Microflow / Nanoflow by-name fields) so access analysis sees MF-sourced DataViews.
+-- Note    : Golden rebuilt 2026-06-07 after describe syntax migration to {} canonical form:
+--           microflow/nanoflow bodies now emit { } instead of begin/end;, if { } else { }
+--           instead of if then/else/end if, loop $x { } instead of loop/begin/end loop,
+--           split type $x { case X { } else { } } instead of split type/case/end split.
+--           Also fixes AllowedRoles fallback to AllowedModuleRoles for human-edited pages.
+-- Note    : minimal.mpr SQLite Unit table patched 2026-06-08: removed 4 dangling rows for
+--           a duplicate module 'minimal' (bf242742 + DomainModel/Settings/Security children)
+--           deleted in commits 6bff72805/7c6f98308 but never purged from the Unit table;
+--           mx check crashed with DirectoryNotFoundException until this was cleaned up.
+--           Follow-up: those 4 mxunit files were accidentally re-added in cb3ab29c9 and
+--           are now removed; the SQLite fix remains intact.
 --
 -- Edge cases covered:
 --   Domain    : self-ref association, cross-module association,
@@ -72,9 +83,10 @@
 --     database (from HD.Ticket)      → DataGrid/Gallery database source
 --     microflow (DS_MyTickets, no args → omit parens) → DataGrid microflow source (HD.MyTickets_Overview)
 --     nanoflow (NF_TicketSearch_Apply)→ DataGrid nanoflow source (HD.TicketSearch_Results)
---   Widget CE0463: known for dgTickets, fStatus (pre-existing) and Account Management
---                  DataGrid2 widgets with ActionButton in customContent column:
---                  dgAgents, dgCustomers, dgInactiveAgents (same pattern as dgTickets).
+--   Widget CE0463: fully eliminated. DataGrid2 column filters use columnsFilterable;
+--                  Gallery filter (fStatus) preserves Studio Pro type \$IDs via
+--                  extractTemplateFromProject + stable-ID remapping. Both 11.6.6 and
+--                  11.10.0 now rebuild to 0 CE0463 errors automatically.
 --                  Studio Pro validates against internal platform definition,
 --                  not the project MPK — exact comparison mechanism TBD.
 --   Note: raise error; (ErrorEvent) generates CE0710 in mx check due to a BSON

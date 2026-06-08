@@ -30,6 +30,7 @@ mxcli (launcher)  →  Unix socket  →  mxcli-daemon (cmd/mxcli/)
 | `cmd/mxcli-launcher/` launcher 路由/升级 | `go test ./cmd/mxcli-launcher/...` (fake_daemon fixture) | **不需要** |
 | `internal/expr/daemon/` expr daemon | `go test ./internal/expr/daemon/...` | **不需要** |
 | `cmd/mxcli/cmd_git.go` git 子命令针对外部项目 | `GIT_DIR=$PROJECT/.git GIT_WORK_TREE=$PROJECT go run ./cmd/mxcli git doctor -p $PROJECT/app.mpr` | **不需要** |
+| `cmd/mxcli/tui/` TUI 代码 | `go run ./cmd/mxcli tui -p app.mpr` | **不需要** |
 | 任意改动，需要完整 mxcli 路径端到端确认 | `make install-daemon && mxcli -p app.mpr -c "..."` | **需要** |
 | 跨 section BSON 状态传播（回归风险高） | `make test-section-check` | **需要** |
 
@@ -257,6 +258,24 @@ git clean -fd testdata/
 - 重建时 `go test` 会重新编译所有依赖包——源码改动即时生效，无需 `make build`
 - golden 重建后 mx check 预期 **0 errors**（CE0463 会在重建时出现 5 个，是 mxcli widget template 与 Studio Pro 差异的预存在问题，不是代码引入的）
 - 如果要验证真实 daemon socket 路径（如 `BeginPageBuild` 跨请求状态），才需要 install-daemon
+
+---
+
+### 场景 I：迭代 TUI 代码
+
+**改了：** `cmd/mxcli/tui/*.go`、`cmd/mxcli/cmd_tui.go`
+
+**最快路径：**
+```bash
+go run ./cmd/mxcli tui -p /path/to/app.mpr
+```
+
+**原理：** `cmd/mxcli/` 是 daemon 二进制（`package main`），包含完整的 `tuiCmd`。正常路径是 launcher 检测到 TTY 命令后 exec daemon 二进制——`go run ./cmd/mxcli` 直接跳过这一步，效果相同。
+
+**注意事项：**
+- `MXCLI_LAUNCHER_PATH` 未设置，TUI 内部的 `resolveMxcliPath()` fallback 到 `os.Executable()`（go run 的临时二进制）。TUI 发起的子命令（project-tree、describe 等）每次都是新进程 + 新 SQLite 连接，没有 per-MPR daemon 缓存，但功能正确
+- 修改 TUI 源码后直接重跑即可，无需 `make build`
+- 需要验证 TUI ↔ per-MPR daemon 交互（持久连接、unit cache）时，才需要 `make install-daemon`
 
 ---
 
