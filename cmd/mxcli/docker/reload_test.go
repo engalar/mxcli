@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -260,5 +261,56 @@ func TestReload_ModelOnly_ReloadError(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "model contains errors") {
 		t.Errorf("unexpected error: %v", err)
+	}
+}
+
+func TestReload_Frontend_SkipsWhenNoRollupConfig(t *testing.T) {
+	// When --frontend is set but no rollup.config.mjs exists, Reload should
+	// complete normally without running frontend build.
+	var actions []string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var body map[string]any
+		json.NewDecoder(r.Body).Decode(&body)
+		action := body["action"].(string)
+		actions = append(actions, action)
+
+		w.Header().Set("Content-Type", "application/json")
+		switch action {
+		case "reload_model":
+			w.Write([]byte(`{"result":0,"feedback":{}}`))
+		case "get_ddl_commands":
+			w.Write([]byte(`{"result":0,"feedback":{"ddl_commands":""}}`))
+		default:
+			w.Write([]byte(`{"result":0,"feedback":{}}`))
+		}
+	}))
+	defer server.Close()
+
+	host, port := parseTestServerAddr(t, server.URL)
+
+	dir := t.TempDir()
+	projectPath := filepath.Join(dir, "app.mpr")
+
+	var stdout bytes.Buffer
+	opts := ReloadOptions{
+		ProjectPath: projectPath,
+		SkipBuild:   true,
+		Frontend:    true,
+		Caller:      &DirectM2EECaller{Host: host, Port: port, Token: "testpass"},
+		Stdout:      &stdout,
+		Stderr:      &stdout,
+	}
+
+	err := Reload(opts)
+	if err != nil {
+		t.Fatalf("Reload: %v", err)
+	}
+
+	if strings.Contains(stdout.String(), "React client") {
+		t.Errorf("unexpected frontend build output: %s", stdout.String())
+	}
+
+	if len(actions) == 0 || actions[0] != "reload_model" {
+		t.Errorf("expected reload_model action, got %v", actions)
 	}
 }

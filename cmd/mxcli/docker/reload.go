@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -34,6 +35,10 @@ type ReloadOptions struct {
 
 	// Stderr for error output.
 	Stderr io.Writer
+
+	// Frontend triggers a React client rollup build before reload_model.
+	// Requires deploy layout with deployment/web/rollup.config.mjs.
+	Frontend bool
 }
 
 // Reload performs a hot reload of the Mendix application.
@@ -73,6 +78,25 @@ func Reload(opts ReloadOptions) error {
 			return fmt.Errorf("build failed: %w", err)
 		}
 		fmt.Fprintln(w, "")
+	}
+
+	// Frontend build (--frontend flag)
+	if opts.Frontend && opts.ProjectPath != "" {
+		deployDir := filepath.Join(filepath.Dir(opts.ProjectPath), "deployment")
+		if RollupConfigExists(deployDir) {
+			mxbuildPath, err := resolveMxBuild(opts.MxBuildPath)
+			if err != nil {
+				fmt.Fprintf(w, "warning: cannot resolve mxbuild for frontend build: %v\n", err)
+			} else {
+				if ferr := BuildFrontend(FrontendBuildOptions{
+					DeployDir:  deployDir,
+					MxBuildDir: filepath.Dir(mxbuildPath),
+					Stdout:     w,
+				}); ferr != nil {
+					fmt.Fprintf(w, "warning: frontend build failed: %v\n", ferr)
+				}
+			}
+		}
 	}
 
 	// Reload model

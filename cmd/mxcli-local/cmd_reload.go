@@ -19,6 +19,7 @@ func reloadCmd() *cobra.Command {
 		skipCheck     bool
 		modelOnly     bool
 		cssOnly       bool
+		frontendBuild bool
 	)
 
 	cmd := &cobra.Command{
@@ -30,13 +31,15 @@ Modes:
   (default)      Build the PAD package, then call reload_model
   --model-only   Skip build, just call reload_model (PAD already up to date)
   --css          Update styling only (instant, no build or model reload)
+  --frontend     Rebuild React client frontend (rollup) before reload_model
 
 The admin password must match what was passed to 'mxcli local run --admin-password'.
 Default password: Admin123!`,
 		Example: `  mxcli local reload -p app.mpr
   mxcli local reload -p app.mpr --model-only
   mxcli local reload -p app.mpr --css
-  mxcli local reload -p app.mpr --skip-check`,
+  mxcli local reload -p app.mpr --skip-check
+  mxcli local reload -p app.mpr --frontend`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// --css and --model-only don't need the project path (no build step).
 			if !cssOnly && !modelOnly && projectPath == "" {
@@ -62,9 +65,11 @@ Default password: Admin123!`,
 
 			return docker.Reload(docker.ReloadOptions{
 				ProjectPath: projectPath,
+				MxBuildPath: "",
 				SkipCheck:   skipCheck,
 				SkipBuild:   modelOnly,
 				CSSOnly:     cssOnly,
+				Frontend:    frontendBuild,
 				Caller:      caller,
 				Stdout:      os.Stdout,
 				Stderr:      os.Stderr,
@@ -77,5 +82,6 @@ Default password: Admin123!`,
 	cmd.Flags().BoolVar(&skipCheck, "skip-check", false, "Skip mx check before build")
 	cmd.Flags().BoolVar(&modelOnly, "model-only", false, "Skip build, just call reload_model")
 	cmd.Flags().BoolVar(&cssOnly, "css", false, "CSS hot reload only (update_styling, no build)")
+	cmd.Flags().BoolVar(&frontendBuild, "frontend", false, "rebuild React client frontend before reload_model (requires deploy layout)")
 	return cmd
 }
