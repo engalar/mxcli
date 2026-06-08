@@ -2764,3 +2764,157 @@ create or modify business event service FT.FieldWorkEvents
   ) subscribe
     microflow FT.ACT_WorkOrder_Import;
 };
+
+-- ============================================================================
+-- MARK: FieldTech — Pages
+-- ============================================================================
+-- NOTE on page actionbuttons calling nanoflows: mxcli currently has a bug where
+-- a page actionbutton that calls a NANOFLOW *with parameters* writes an invalid
+-- parameter mapping (the Parameter reference is left unresolved), which makes
+-- `mx check` fail to load the project. The microflow path is unaffected.
+-- Until that bug is fixed (tracked separately), these page buttons call
+-- server-side MICROFLOWS instead. The offline nanoflows (FT.NF_FT_CheckIn,
+-- NF_FT_CompleteOffline, NF_FT_LoadOrders) remain defined above and demonstrate
+-- the CALL JAVASCRIPT ACTION + connectivity-guard offline pattern (Task 4).
+-- ============================================================================
+
+-- FT.ACT_CheckIn: server-side check-in (microflow mirror of NF_FT_CheckIn).
+-- Records arrival and moves the order to OnSite. The nanoflow variant captures
+-- GPS on-device; this server variant is what the page buttons invoke.
+create or modify microflow FT.ACT_CheckIn
+  ($Order: FT.DispatchOrder)
+  folder 'Dispatch'
+{
+  $Record = create FT.CheckInRecord (
+    CheckedInAt = '[%CurrentDateTime%]',
+    FT.CheckInRecord_DispatchOrder = $Order
+  );
+  commit $Record;
+  change $Order (Status = FT.DispatchStatus.OnSite);
+  commit $Order;
+  return;
+}
+/
+
+-- FT.DispatchQueue: FieldTech mobile task list.
+-- New patterns:
+--   url: 'dispatch-queue'  → page slug for deep linking (absent from baseline)
+--   variables: { $ShowCompleted: boolean = 'false' }  → page-level variable
+--     used to toggle visibility of completed orders section.
+create or replace page FT.DispatchQueue (
+  title:     'My Dispatch Queue',
+  layout:    Atlas_Core.Atlas_Default,
+  folder:    'FieldTech',
+  url:       'dispatch-queue',
+  variables: { $ShowCompleted: boolean = 'false' }
+)
+{
+  layoutgrid lgQueue {
+    row rOrders {
+      column cOrders (desktopwidth: 12) {
+        datagrid dgOrders (
+          datasource: microflow FT.DS_MyDispatchOrders,
+          PageSize: 20
+        ) {
+          column colStatus      (attribute: Status,       caption: 'Status',       ColumnWidth: manual, Size: 100)
+          column colDispatched  (attribute: DispatchedAt, caption: 'Dispatched',   ColumnWidth: manual, Size: 140)
+          column colNotes       (attribute: SiteNotes,    caption: 'Notes')
+          column colActions (caption: 'Actions', ShowContentAs: customContent, ColumnWidth: manual, Size: 160) {
+            actionbutton btnCheckIn (
+              caption: 'Check In',
+              action: microflow FT.ACT_CheckIn (Order: $currentObject),
+              buttonstyle: primary
+            )
+            actionbutton btnComplete (
+              caption: 'Complete',
+              action: show_page FT.DispatchOrder_Detail (DispatchOrder: $currentObject),
+              buttonstyle: default
+            )
+          }
+        }
+      }
+    }
+    row rToggle {
+      column cToggle (desktopwidth: 12) {
+        actionbutton btnShowCompleted (
+          caption: 'Show Completed',
+          action: microflow FT.DS_MyDispatchOrders,
+          visible: [$ShowCompleted = false]
+        )
+      }
+    }
+  }
+};
+
+-- FT.DispatchOrder_Detail: sign-in + complete form for a single dispatch order.
+create or replace page FT.DispatchOrder_Detail (
+  title:  'Dispatch Order',
+  layout: Atlas_Core.Atlas_Default,
+  folder: 'FieldTech',
+  params: { $DispatchOrder: FT.DispatchOrder }
+)
+{
+  layoutgrid lgDetail {
+    row rDetail {
+      column cDetail (desktopwidth: 12) {
+        dataview dvOrder (datasource: $DispatchOrder) {
+          dynamictext txtStatus      (content: '{1}', contentparams: [{1} = Status])
+          dynamictext txtDispatched  (content: '{1}', contentparams: [{1} = DispatchedAt])
+          textarea    taNotes        (label: 'Site Notes', attribute: SiteNotes)
+          footer ftrOrderActions {
+            actionbutton btnCheckIn (
+              caption:     'Check In (GPS)',
+              action:      microflow FT.ACT_CheckIn (Order: $currentObject),
+              buttonstyle: primary
+            )
+            actionbutton btnComplete (
+              caption:     'Complete',
+              action:      microflow FT.ACT_Dispatch_Complete (Order: $currentObject),
+              buttonstyle: success
+            )
+            actionbutton btnCancel (
+              caption: 'Cancel',
+              action:  cancel_changes close_page
+            )
+          }
+        }
+      }
+    }
+  }
+};
+
+-- FT.SLADashboard: management view using VIEW ENTITY datasources.
+-- DataGrids backed by FT.TicketSLAStats and FT.DispatchSummary view entities.
+create or replace page FT.SLADashboard (
+  title:  'SLA & Dispatch Dashboard',
+  layout: Atlas_Core.Atlas_Default,
+  folder: 'FieldTech'
+)
+{
+  layoutgrid lgDash {
+    row rSLA {
+      column cSLA (desktopwidth: 6) {
+        dynamictext txtSLATitle (content: 'SLA Compliance by Agent', rendermode: H3)
+        datagrid dgSLA (
+          datasource: database from FT.TicketSLAStats sort by TotalTickets desc,
+          PageSize: 10
+        ) {
+          column colAgent   (attribute: AgentName,    caption: 'Agent')
+          column colTotal   (attribute: TotalTickets, caption: 'Total',   ColumnWidth: manual, Size: 80)
+          column colOverSLA (attribute: OverSLACount, caption: 'Over SLA', ColumnWidth: manual, Size: 90)
+        }
+      }
+      column cDispatch (desktopwidth: 6) {
+        dynamictext txtDispTitle (content: 'Dispatch Summary by Technician', rendermode: H3)
+        datagrid dgDispatch (
+          datasource: database from FT.DispatchSummary sort by OrderCount desc,
+          PageSize: 10
+        ) {
+          column colTech  (attribute: TechName,   caption: 'Technician')
+          column colCount (attribute: OrderCount,  caption: 'Orders',   ColumnWidth: manual, Size: 80)
+          column colAvg   (attribute: AvgHours,    caption: 'Avg Hours', ColumnWidth: manual, Size: 90)
+        }
+      }
+    }
+  }
+};
