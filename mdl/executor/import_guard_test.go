@@ -119,6 +119,9 @@ func TestNoRawBSONTypeStringsInExecutor(t *testing.T) {
 		"cmd_pages_describe_parse.go":      true,
 		"cmd_pages_describe_pluggable.go":  true,
 		"cmd_security_write_entity_gen.go": true,
+		// (b) describe formatter-dispatch registration keys: type strings
+		// identify which BSON $Type each formatter reads; no BSON construction.
+		"widget_fmt_basic.go": true,
 	}
 
 	entries, err := os.ReadDir(".")
