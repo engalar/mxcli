@@ -177,7 +177,17 @@ func formatPropertyValue(p PropertyValue) string {
 
 // extractWidgetTypeID reads the widget ID from Type.WidgetId in a
 // CustomWidgets$CustomWidget raw map. Returns "" if not present.
+//
+// During the Phase 2 bridge top-level widgets are dispatched as bridge maps
+// produced by rawWidgetToMap, which carry the already-parsed rawWidget under
+// "_rawWidget" instead of the original Type.WidgetId BSON. Read the carried
+// WidgetID first so pluggable widgets (Gallery, DataGrid2, ComboBox, Image)
+// dispatch to their registered formatter rather than falling through to the
+// generic formatter. Removed in Phase 3 when the bridge is gone.
 func extractWidgetTypeID(raw map[string]any) string {
+	if w, ok := raw["_rawWidget"].(rawWidget); ok && w.WidgetID != "" {
+		return w.WidgetID
+	}
 	typeDoc, ok := asMap(raw["Type"]) // nolint:describe-raw-bson — pluggable widget ID has no gen accessor
 	if !ok {
 		return ""

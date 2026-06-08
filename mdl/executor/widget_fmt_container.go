@@ -24,6 +24,10 @@ func init() {
 	register(scrollContainerFactory, "Forms$ScrollContainer", "Pages$ScrollContainer")
 	register(tabControlFactory, "Forms$TabControl", "Pages$TabControl")
 	register(tabPageFactory, "Pages$TabPage")
+	// "Footer" is a synthetic container type emitted by the page parser (not a
+	// real Mendix BSON $Type). Registering it keeps footers off the dispatcher
+	// fallback once the fallback becomes GenericPluggableFormatter (Task 15).
+	register(footerFactory, "Footer")
 }
 
 func divContainerFactory(raw map[string]any) WidgetFormatter    { return &legacyDelegate{raw: raw} }
@@ -31,3 +35,4 @@ func groupBoxFactory(raw map[string]any) WidgetFormatter        { return &legacy
 func scrollContainerFactory(raw map[string]any) WidgetFormatter { return &legacyDelegate{raw: raw} }
 func tabControlFactory(raw map[string]any) WidgetFormatter      { return &legacyDelegate{raw: raw} }
 func tabPageFactory(raw map[string]any) WidgetFormatter         { return &legacyDelegate{raw: raw} }
+func footerFactory(raw map[string]any) WidgetFormatter          { return &legacyDelegate{raw: raw} }

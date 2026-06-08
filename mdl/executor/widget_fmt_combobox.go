@@ -2,7 +2,7 @@
 package executor
 
 // ComboBox is a pluggable widget identified by widget ID
-// com.mendix.widget.web.combobox.ComboBox. The CustomWidgets$CustomWidget
+// com.mendix.widget.web.combobox.Combobox. The CustomWidgets$CustomWidget
 // meta-type is registered in widget_fmt_datagrid2.go (Task 11); this file only
 // registers the ComboBox widget ID.
 //
@@ -10,7 +10,10 @@ package executor
 // describe output is byte-identical to the pre-refactor pipeline. Phase 3 emits
 // MDL directly.
 
-const widgetIDComboBox = "com.mendix.widget.web.combobox.ComboBox"
+// widgetIDComboBox is the BSON Type.WidgetId of the pluggable Combo box widget:
+// "com.mendix.widget.web.combobox.Combobox" (lowercase "box") — matching the
+// legacy extractCustomWidgetType switch.
+const widgetIDComboBox = "com.mendix.widget.web.combobox.Combobox"
 
 func init() {
 	DefaultDispatcher().registerBSONType(widgetIDComboBox, FactoryEntry{Factory: comboBoxFactory})

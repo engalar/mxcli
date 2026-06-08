@@ -13,10 +13,13 @@ var (
 func DefaultDispatcher() *FormatterDispatcher {
 	defaultDispatcherOnce.Do(func() {
 		d := newDefaultDispatcher()
-		// Phase 1: only the unknown-widget fallback is installed here. Specific
-		// registrations are added by init() calls in widget_fmt_*.go files.
-		// The legacy bridge fallback (legacyWidgetFallback) is set by
-		// describePage before first use and removed in Phase 3.
+		// Production fallback (Phase 3): any widget type not explicitly registered
+		// is handled by schema introspection. This is only reached for
+		// CustomWidgets$CustomWidget documents whose widget ID has no dedicated
+		// formatter — exactly the unknown-pluggable-widget case the generic
+		// formatter is designed for. All built-in widget $Types are registered by
+		// the init() functions in widget_fmt_*.go.
+		d.fallback = GenericPluggableFactory
 		defaultDispatcherInst = d
 	})
 	return defaultDispatcherInst

@@ -117,19 +117,12 @@ func describePage(ctx *ExecContext, name ast.QualifiedName) error {
 		}
 	}
 
-	// Always use the legacy raw-BSON describe path. The IR path was removed
-	// because it produced lossy output (missing rendermode, contentparams,
-	// column captions, etc.). The legacy path handles all widget types correctly.
-	// Phase 1 bridge: route already-parsed widgets through the FormatterDispatcher.
-	// Registered formatters (added incrementally) handle their types; everything
-	// else falls back to the legacy outputWidgetMDLV3 path, so output is unchanged
-	// until a formatter is registered. In Phase 3 this becomes pure dispatcher.
+	// Route widgets through the FormatterDispatcher. Every built-in widget $Type
+	// has a registered formatter; unknown pluggable widgets fall through to the
+	// GenericPluggableFormatter (schema introspection). See widget_fmt_*.go.
 	rawWidgets := getPageWidgetsFromRaw(ctx, pageID)
 	if len(rawWidgets) > 0 {
 		d := DefaultDispatcher()
-		d.fallback = func(raw map[string]any) WidgetFormatter {
-			return &legacyWidgetFallback{raw: raw, ctx: ctx}
-		}
 		fmtCtx := &FormatContext{Output: ctx.Output, Indent: 1, Dispatcher: d}
 		formatWidgetProps(ctx.Output, "", header, props, " {\n")
 		for _, w := range rawWidgets {
@@ -179,18 +172,6 @@ func rawWidgetFromMap(raw map[string]any) rawWidget {
 		return rawWidget{Type: safeStr(raw, "$Type"), Name: safeStr(raw, "Name")}
 	}
 	return widgets[0]
-}
-
-// legacyWidgetFallback wraps the legacy outputWidgetMDLV3 pipeline as a
-// WidgetFormatter. Used during Phase 1/2 migration as the dispatcher fallback
-// for widget types that do not yet have a dedicated formatter. Removed in Phase 3.
-type legacyWidgetFallback struct {
-	raw map[string]any
-	ctx *ExecContext
-}
-
-func (f *legacyWidgetFallback) FormatMDL(ctx *FormatContext) {
-	outputWidgetMDLV3(f.ctx, rawWidgetFromMap(f.raw), ctx.Indent)
 }
 
 // formatParametersV3 formats parameter expressions for MDL V3 ContentParams clause.
