@@ -13,9 +13,8 @@ import (
 
 func buildCmd() *cobra.Command {
 	var (
-		projectPath       string
-		skipCheck         bool
-		skipUpdateWidgets bool
+		projectPath string
+		skipCheck   bool
 	)
 
 	cmd := &cobra.Command{
@@ -30,18 +29,16 @@ func buildCmd() *cobra.Command {
 				}
 			}
 			return docker.Build(docker.BuildOptions{
-				ProjectPath:       projectPath,
-				SkipCheck:         skipCheck,
-				SkipUpdateWidgets: skipUpdateWidgets,
-				UseDeployLayout:   true,
-				Stdout:            os.Stdout,
+				ProjectPath:     projectPath,
+				SkipCheck:       skipCheck,
+				UseDeployLayout: true,
+				Stdout:          os.Stdout,
 			})
 		},
 	}
 
 	cmd.Flags().StringVarP(&projectPath, "project", "p", "", "Path to .mpr file (required)")
 	cmd.Flags().BoolVar(&skipCheck, "skip-check", false, "Skip mx check before building")
-	cmd.Flags().BoolVar(&skipUpdateWidgets, "skip-update-widgets", false, "Skip widget update step")
 	_ = cmd.MarkFlagRequired("project")
 	return cmd
 }

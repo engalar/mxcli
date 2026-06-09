@@ -140,16 +140,13 @@ Examples:
 		outputDir, _ := cmd.Flags().GetString("output")
 		dryRun, _ := cmd.Flags().GetBool("dry-run")
 		skipCheck, _ := cmd.Flags().GetBool("skip-check")
-		noUpdateWidgets, _ := cmd.Flags().GetBool("no-update-widgets")
-
 		opts := docker.BuildOptions{
-			ProjectPath:       projectPath,
-			MxBuildPath:       mxbuildPath,
-			OutputDir:         outputDir,
-			DryRun:            dryRun,
-			SkipCheck:         skipCheck,
-			SkipUpdateWidgets: noUpdateWidgets,
-			Stdout:            os.Stdout,
+			ProjectPath: projectPath,
+			MxBuildPath: mxbuildPath,
+			OutputDir:   outputDir,
+			DryRun:      dryRun,
+			SkipCheck:   skipCheck,
+			Stdout:      os.Stdout,
 		}
 
 		if err := docker.Build(opts); err != nil {
@@ -504,7 +501,6 @@ func init() {
 	dockerBuildCmd.Flags().StringP("output", "o", "", "Output directory for PAD package")
 	dockerBuildCmd.Flags().Bool("dry-run", false, "Detect tools and show patch plan without building")
 	dockerBuildCmd.Flags().Bool("skip-check", false, "Skip 'mx check' pre-build validation")
-	dockerBuildCmd.Flags().Bool("no-update-widgets", false, "Skip 'mx update-widgets' before check")
 
 	// Check command flags
 	dockerCheckCmd.Flags().String("mxbuild-path", "", "Path to MxBuild/Mendix installation (used to find mx)")
