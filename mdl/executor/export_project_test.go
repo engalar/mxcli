@@ -62,7 +62,9 @@ func TestMarketplaceFileContent(t *testing.T) {
 
 func TestCaptureDescribeFunc_WritesToBuffer(t *testing.T) {
 	var buf bytes.Buffer
-	ctx := &ExecContext{Output: &buf}
+	ctx := &ExecContext{
+		ExecIO: ExecIO{Output: &buf},
+	}
 
 	result, err := captureDescribeFunc(ctx, func(c *ExecContext) error {
 		fmt.Fprintln(c.Output, "hello world")
@@ -228,7 +230,10 @@ func TestRoundTrip_ExportThenImport(t *testing.T) {
 		t.Fatalf("NewFromPath (orig): %v", err)
 	}
 	origMods, _ := origBe.ListModules()
-	origCtx := &ExecContext{Backend: origBe, Cache: &executorCache{}}
+	origCtx := &ExecContext{
+		Backend:     origBe,
+		ExecSession: ExecSession{Cache: &executorCache{}},
+	}
 	origEntityCount := 0
 	for _, m := range origMods {
 		if m.FromAppStore {
@@ -257,7 +262,10 @@ func TestRoundTrip_ExportThenImport(t *testing.T) {
 	}
 
 	importMods, _ := importBe.ListModules()
-	importCtx := &ExecContext{Backend: importBe, Cache: &executorCache{}}
+	importCtx := &ExecContext{
+		Backend:     importBe,
+		ExecSession: ExecSession{Cache: &executorCache{}},
+	}
 	importEntityCount := 0
 	for _, m := range importMods {
 		if m.FromAppStore {

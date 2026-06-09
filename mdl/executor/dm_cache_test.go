@@ -21,7 +21,10 @@ func (m *mockDMBackend) GetDomainModelGen(moduleID model.ID) (*genDm.DomainModel
 }
 
 func newDMCtx(mb *mockDMBackend) *ExecContext {
-	return &ExecContext{Backend: mb, Cache: &executorCache{}}
+	return &ExecContext{
+		Backend:     mb,
+		ExecSession: ExecSession{Cache: &executorCache{}},
+	}
 }
 
 func TestGetDomainModelGenCached_FirstCallHitsBackend(t *testing.T) {
@@ -84,7 +87,10 @@ func TestSetDomainModelGenCached_WriteThrough(t *testing.T) {
 func TestGetDomainModelGenCached_NilCacheInitializes(t *testing.T) {
 	dm := &genDm.DomainModel{}
 	mb := &mockDMBackend{dm: dm}
-	ctx := &ExecContext{Backend: mb, Cache: nil}
+	ctx := &ExecContext{
+		Backend:     mb,
+		ExecSession: ExecSession{Cache: nil},
+	}
 
 	result, err := getDomainModelGenCached(ctx, "mod-1")
 	if err != nil {

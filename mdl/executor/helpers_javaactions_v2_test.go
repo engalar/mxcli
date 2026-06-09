@@ -25,10 +25,9 @@ func newJavaActionsTestContext(t *testing.T) *ExecContext {
 	t.Cleanup(func() { _ = be.Disconnect() })
 
 	ctx := &ExecContext{
-		Backend:           be,
-		JavaActions:       mprrepos.NewJavaActionRepository(w),
-		JavaScriptActions: mprrepos.NewJavaScriptActionRepository(w),
-		Output:            io.Discard,
+		Backend:   be,
+		ExecRepos: ExecRepos{JavaActions: mprrepos.NewJavaActionRepository(w), JavaScriptActions: mprrepos.NewJavaScriptActionRepository(w)},
+		ExecIO:    ExecIO{Output: io.Discard},
 	}
 	ctx.ensureCache()
 	return ctx

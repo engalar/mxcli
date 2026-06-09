@@ -17,115 +17,73 @@ import (
 	sqllib "github.com/mendixlabs/mxcli/sql"
 )
 
+// ExecRepos holds Stage 3 modelsdk-native repositories.
+type ExecRepos struct {
+	Microflows        repos.MicroflowRepository
+	Nanoflows         repos.NanoflowRepository
+	Security          repos.SecurityRepository
+	JavaActions       repos.JavaActionRepository
+	JavaScriptActions repos.JavaScriptActionRepository
+	DomainModels      repos.DomainModelRepository
+	Workflows         repos.WorkflowRepository
+	Pages             repos.PageRepository
+	Layouts           repos.LayoutRepository
+	Snippets          repos.SnippetRepository
+}
+
+// ExecIO holds output writers and formatting settings.
+type ExecIO struct {
+	Output       io.Writer
+	StatusOutput io.Writer
+	Format       OutputFormat
+	Quiet        bool
+}
+
+// ExecSession holds per-session mutable state.
+type ExecSession struct {
+	Cache                             *executorCache
+	Fragments                         map[string]*ast.DefineFragmentStmt
+	Settings                          map[string]any
+	ScriptDepth                       int
+	DescribingMicroflowHasReturnValue bool
+}
+
+// ExecConnection holds project connection state and external services.
+type ExecConnection struct {
+	MprPath        string
+	BackendFactory BackendFactory
+	SqlMgr         *sqllib.Manager
+	ThemeRegistry  *ThemeRegistry
+	Catalog        *catalog.Catalog
+}
+
+// ExecCallbacks holds function references for recursive execution.
+type ExecCallbacks struct {
+	ExecuteFn        func(ast.Statement) error
+	ExecuteProgramFn func(*ast.Program) error
+	FinalizeFn       func() error
+	SyncCatalog      func(*catalog.Catalog)
+}
+
 // ExecContext carries all dependencies a statement handler needs.
 //
-// Design notes:
-//   - Embeds context.Context for cancellation and timeout propagation.
-//   - Holds a FullBackend for domain operations (handlers narrow to
-//     the sub-interface they need via type assertion or accessor).
-//   - Ancillary fields (output, format, cache, etc.) are lifted from
-//     the Executor struct so handlers don't depend on *Executor.
+// Fields are grouped into embedded sub-structs by responsibility.
+// All ctx.Xxx field accesses continue to work via Go field promotion;
+// only struct literal initializers need to use the sub-struct names.
 type ExecContext struct {
 	context.Context
 
-	// Backend provides all domain operations (read/write/connect).
-	// Nil when not connected.
+	// Backend provides all domain operations. Nil when not connected.
 	Backend backend.FullBackend
-
-	// Microflows / Nanoflows / Security are the Stage 3 modelsdk-native repos.
-	// Populated only when Backend implements the matching repo-provider
-	// duck type (currently MprBackend); nil for ad-hoc test contexts.
-	// Stage 3.1 cuts over the type-safe call surfaces (delete-by-ID,
-	// IsRule); list/get/create/update remain on Backend until handlers
-	// migrate from sdk types to gen types in Stage 3.2+.
-	Microflows repos.MicroflowRepository
-	Nanoflows  repos.NanoflowRepository
-	// Security is the Stage 3.3 modelsdk-native security repo.
-	Security repos.SecurityRepository
-	// JavaActions / JavaScriptActions are the Stage 3.3.2 modelsdk-native repos.
-	// Populated via the same provider duck-type pattern as Microflows/Security.
-	JavaActions       repos.JavaActionRepository
-	JavaScriptActions repos.JavaScriptActionRepository
-	// DomainModels is the Stage 3.3.4 modelsdk-native repo. Populated via
-	// the same provider duck-type pattern.
-	DomainModels repos.DomainModelRepository
-	// Workflows is the Stage 3.3.3 modelsdk-native repo. Populated via
-	// the same provider duck-type pattern.
-	Workflows repos.WorkflowRepository
-	// Pages / Layouts / Snippets are the Stage 3.3.5 modelsdk-native
-	// repos. Populated via the same provider duck-type pattern.
-	Pages    repos.PageRepository
-	Layouts  repos.LayoutRepository
-	Snippets repos.SnippetRepository
-
-	// Output is the writer for user-visible output (with line-limit guard).
-	Output io.Writer
-
-	// StatusOutput is the writer for status/informational messages (e.g.
-	// "Connected to:", warnings). Defaults to io.Discard when not set.
-	// Separate from Output so that MDL content on stdout is never polluted
-	// by status lines when the caller redirects stdout to a file.
-	StatusOutput io.Writer
-
-	// Format controls output formatting (table, json, etc.).
-	Format OutputFormat
-
-	// Quiet suppresses connection and status messages.
-	Quiet bool
 
 	// Logger is the session diagnostics logger (nil = no logging).
 	Logger *diaglog.Logger
 
-	// Fragments holds script-scoped fragment definitions.
-	Fragments map[string]*ast.DefineFragmentStmt
-
-	// Catalog provides MDL name resolution.
-	Catalog *catalog.Catalog
-
-	// Cache holds per-session cached data for performance.
-	Cache *executorCache
-
-	// MprPath is the filesystem path to the connected .mpr file.
-	// Empty when not connected.
-	MprPath string
-
-	// SqlMgr manages external SQL database connections (lazy init).
-	SqlMgr *sqllib.Manager
-
-	// ThemeRegistry holds cached theme design property definitions (lazy init).
-	ThemeRegistry *ThemeRegistry
-
-	// Settings holds session-scoped key-value settings (SET command).
-	Settings map[string]any
-
-	// BackendFactory creates new backend instances (used by connect/reconnect).
-	BackendFactory BackendFactory
-
-	// ExecuteFn dispatches a single statement through the Executor's full
-	// pipeline (line-limit reset, wall-clock timeout, logging). Set by
-	// newExecContext; used by script execution and generated-MDL dispatch.
-	ExecuteFn func(ast.Statement) error
-
-	// ExecuteProgramFn dispatches a full program (all statements + finalization).
-	ExecuteProgramFn func(*ast.Program) error
-
-	// FinalizeFn runs post-execution reconciliation (security rule sync).
-	FinalizeFn func() error
-
-	// SyncCatalog propagates an asynchronously built catalog back to the
-	// Executor. Used by REFRESH CATALOG BACKGROUND so the goroutine can
-	// deliver the result after syncBack has already run.
-	SyncCatalog func(*catalog.Catalog)
-
-	// DescribingMicroflowHasReturnValue is set while rendering a microflow body.
-	// It lets activity formatting distinguish a terminal void EndEvent from an
-	// empty EndEvent in a value-returning microflow, where bare `return;` is invalid.
-	DescribingMicroflowHasReturnValue bool
-
-	// ScriptDepth tracks the current EXECUTE SCRIPT nesting level.
-	// Incremented on each recursive call; execExecuteScript rejects calls
-	// that exceed maxScriptDepth to prevent infinite self-referencing scripts.
-	ScriptDepth int
+	ExecRepos
+	ExecIO
+	ExecSession
+	ExecConnection
+	ExecCallbacks
 }
 
 // Connected returns true if a project is connected via the Backend.

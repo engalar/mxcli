@@ -24,11 +24,9 @@ func newSecurityTestContext(t *testing.T) *ExecContext {
 	t.Cleanup(func() { _ = be.Disconnect() })
 
 	ctx := &ExecContext{
-		Backend:      be,
-		Security:     repoCtx.Security,
-		DomainModels: repoCtx.DomainModels,
-		Pages:        repoCtx.Pages,
-		Output:       io.Discard,
+		Backend:   be,
+		ExecRepos: ExecRepos{Security: repoCtx.Security, DomainModels: repoCtx.DomainModels, Pages: repoCtx.Pages},
+		ExecIO:    ExecIO{Output: io.Discard},
 	}
 	ctx.ensureCache()
 	return ctx

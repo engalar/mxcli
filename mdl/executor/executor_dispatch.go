@@ -68,51 +68,61 @@ func (e *Executor) newExecContext(ctx context.Context) *ExecContext {
 	gen := e.catalogGen
 	e.catalogMu.RUnlock()
 	return &ExecContext{
-		Context:           ctx,
-		Backend:           e.backend,
-		Microflows:        extractMicroflowsRepo(e.backend),
-		Nanoflows:         extractNanoflowsRepo(e.backend),
-		Security:          extractSecurityRepo(e.backend),
-		JavaActions:       extractJavaActionsRepo(e.backend),
-		JavaScriptActions: extractJavaScriptActionsRepo(e.backend),
-		DomainModels:      extractDomainModelsRepo(e.backend),
-		Workflows:         extractWorkflowsRepo(e.backend),
-		Pages:             extractPagesRepo(e.backend),
-		Layouts:           extractLayoutsRepo(e.backend),
-		Snippets:          extractSnippetsRepo(e.backend),
-		Output:            e.output,
-		StatusOutput:      e.statusOutput,
-		Format:            e.format,
-		Quiet:             e.quiet,
-		Logger:            e.logger,
-		Fragments:         e.fragments,
-		Catalog:           cat,
-		Cache:             e.cache,
-		MprPath:           e.mprPath,
-		SqlMgr:            e.sqlMgr,
-		ThemeRegistry:     e.themeRegistry,
-		Settings:          e.settings,
-		BackendFactory:    e.backendFactory,
-		ExecuteFn:         e.Execute,
-		ExecuteProgramFn:  e.ExecuteProgram,
-		FinalizeFn:        e.finalizeProgramExecution,
-		SyncCatalog: func(cat *catalog.Catalog) {
-			e.catalogMu.Lock()
-			defer e.catalogMu.Unlock()
-			// Only apply the background result if no newer catalog has been
-			// installed since the build started (generation check). This
-			// prevents an out-of-date background build from overwriting a
-			// fresher foreground refresh.
-			if e.catalogGen != gen {
-				cat.Close()
-				return
-			}
-			old := e.catalog
-			e.catalog = cat
-			e.catalogGen++
-			if old != nil && old != cat {
-				old.Close()
-			}
+		Context: ctx,
+		Backend: e.backend,
+		Logger:  e.logger,
+		ExecRepos: ExecRepos{
+			Microflows:        extractMicroflowsRepo(e.backend),
+			Nanoflows:         extractNanoflowsRepo(e.backend),
+			Security:          extractSecurityRepo(e.backend),
+			JavaActions:       extractJavaActionsRepo(e.backend),
+			JavaScriptActions: extractJavaScriptActionsRepo(e.backend),
+			DomainModels:      extractDomainModelsRepo(e.backend),
+			Workflows:         extractWorkflowsRepo(e.backend),
+			Pages:             extractPagesRepo(e.backend),
+			Layouts:           extractLayoutsRepo(e.backend),
+			Snippets:          extractSnippetsRepo(e.backend),
+		},
+		ExecIO: ExecIO{
+			Output:       e.output,
+			StatusOutput: e.statusOutput,
+			Format:       e.format,
+			Quiet:        e.quiet,
+		},
+		ExecSession: ExecSession{
+			Fragments: e.fragments,
+			Cache:     e.cache,
+			Settings:  e.settings,
+		},
+		ExecConnection: ExecConnection{
+			MprPath:        e.mprPath,
+			SqlMgr:         e.sqlMgr,
+			ThemeRegistry:  e.themeRegistry,
+			Catalog:        cat,
+			BackendFactory: e.backendFactory,
+		},
+		ExecCallbacks: ExecCallbacks{
+			ExecuteFn:        e.Execute,
+			ExecuteProgramFn: e.ExecuteProgram,
+			FinalizeFn:       e.finalizeProgramExecution,
+			SyncCatalog: func(cat *catalog.Catalog) {
+				e.catalogMu.Lock()
+				defer e.catalogMu.Unlock()
+				// Only apply the background result if no newer catalog has been
+				// installed since the build started (generation check). This
+				// prevents an out-of-date background build from overwriting a
+				// fresher foreground refresh.
+				if e.catalogGen != gen {
+					cat.Close()
+					return
+				}
+				old := e.catalog
+				e.catalog = cat
+				e.catalogGen++
+				if old != nil && old != cat {
+					old.Close()
+				}
+			},
 		},
 	}
 }

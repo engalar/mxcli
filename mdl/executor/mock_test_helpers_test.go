@@ -37,8 +37,7 @@ func newMockCtx(t *testing.T, opts ...mockCtxOption) (*ExecContext, *bytes.Buffe
 		Backend: &mock.MockBackend{
 			IsConnectedFunc: func() bool { return true },
 		},
-		Output: &buf,
-		Format: FormatTable,
+		ExecIO: ExecIO{Output: &buf, Format: FormatTable},
 	}
 	for _, opt := range opts {
 		opt(ctx)

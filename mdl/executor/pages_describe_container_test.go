@@ -118,7 +118,9 @@ func TestParseRawWidget_TabControlPreservesTabPages(t *testing.T) {
 
 func TestOutputWidgetMDLV3_TabControlEmitsTabPageStructure(t *testing.T) {
 	var buf bytes.Buffer
-	ctx := &ExecContext{Output: &buf}
+	ctx := &ExecContext{
+		ExecIO: ExecIO{Output: &buf},
+	}
 
 	tab := rawWidget{
 		Type: "Pages$TabControl",
@@ -150,7 +152,9 @@ func TestOutputWidgetMDLV3_TabControlEmitsTabPageStructure(t *testing.T) {
 
 func TestOutputWidgetMDLV3_ScrollContainerEmitsHeader(t *testing.T) {
 	var buf bytes.Buffer
-	ctx := &ExecContext{Output: &buf}
+	ctx := &ExecContext{
+		ExecIO: ExecIO{Output: &buf},
+	}
 
 	sc := rawWidget{
 		Type: "Pages$ScrollContainer",

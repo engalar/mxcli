@@ -23,7 +23,9 @@ func newWorkflowsCacheTestContext(t *testing.T, wfs []*genWf.Workflow, container
 			return model.ID(containerID), nil
 		},
 	}
-	ctx := &ExecContext{Workflows: repo}
+	ctx := &ExecContext{
+		ExecRepos: ExecRepos{Workflows: repo},
+	}
 	ctx.ensureCache()
 	return ctx
 }
@@ -103,7 +105,9 @@ func TestListWorkflowsWithContainerGen_PropagatesListError(t *testing.T) {
 	repo := &repostesting.RecordingWorkflowRepository{
 		ListAllFunc: func() ([]*genWf.Workflow, error) { return nil, wantErr },
 	}
-	ctx := &ExecContext{Workflows: repo}
+	ctx := &ExecContext{
+		ExecRepos: ExecRepos{Workflows: repo},
+	}
 	ctx.ensureCache()
 	_, err := listWorkflowsWithContainerGen(ctx)
 	if !errors.Is(err, wantErr) {

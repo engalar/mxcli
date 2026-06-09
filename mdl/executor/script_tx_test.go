@@ -57,11 +57,10 @@ func scriptCtx(t *testing.T, tx *mockScriptTx, execFn func(ast.Statement) error)
 		},
 	}
 	ctx := &ExecContext{
-		Context:   context.Background(),
-		Backend:   mb,
-		Output:    &buf,
-		Format:    FormatTable,
-		ExecuteFn: execFn,
+		Context:       context.Background(),
+		Backend:       mb,
+		ExecIO:        ExecIO{Output: &buf, Format: FormatTable},
+		ExecCallbacks: ExecCallbacks{ExecuteFn: execFn},
 	}
 	return ctx, &buf
 }
@@ -144,11 +143,10 @@ func TestExecuteScript_NotConnected_NoTransaction(t *testing.T) {
 		},
 	}
 	ctx := &ExecContext{
-		Context:   context.Background(),
-		Backend:   mb,
-		Output:    &buf,
-		Format:    FormatTable,
-		ExecuteFn: func(stmt ast.Statement) error { return nil },
+		Context:       context.Background(),
+		Backend:       mb,
+		ExecIO:        ExecIO{Output: &buf, Format: FormatTable},
+		ExecCallbacks: ExecCallbacks{ExecuteFn: func(stmt ast.Statement) error { return nil }},
 	}
 	if err := execExecuteScript(ctx, &ast.ExecuteScriptStmt{Path: path}); err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -179,8 +177,7 @@ func TestExecuteScript_Nested_ReusesOuterTransaction(t *testing.T) {
 	ctx := &ExecContext{
 		Context: context.Background(),
 		Backend: mb,
-		Output:  &buf,
-		Format:  FormatTable,
+		ExecIO:  ExecIO{Output: &buf, Format: FormatTable},
 	}
 	// ExecuteFn re-enters execExecuteScript for nested EXECUTE SCRIPT
 	// statements, otherwise it's a no-op.

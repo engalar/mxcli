@@ -113,8 +113,7 @@ func TestWriteResultJSONEmpty(t *testing.T) {
 func TestWriteDescribeJSON(t *testing.T) {
 	var buf bytes.Buffer
 	ctx := &ExecContext{
-		Output: &buf,
-		Format: FormatJSON,
+		ExecIO: ExecIO{Output: &buf, Format: FormatJSON},
 	}
 
 	err := writeDescribeJSON(ctx, "Sales.Customer", "entity", func() error {
@@ -144,8 +143,7 @@ func TestWriteDescribeJSON(t *testing.T) {
 func TestWriteDescribeJSONPassthrough(t *testing.T) {
 	var buf bytes.Buffer
 	ctx := &ExecContext{
-		Output: &buf,
-		Format: FormatTable,
+		ExecIO: ExecIO{Output: &buf, Format: FormatTable},
 	}
 
 	err := writeDescribeJSON(ctx, "Sales.Customer", "entity", func() error {

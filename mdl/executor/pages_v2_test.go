@@ -27,9 +27,8 @@ func newListPagesTestCtx(t *testing.T, pages []*genPg.Page) *ExecContext {
 	}
 	var buf bytes.Buffer
 	ctx := &ExecContext{
-		Pages:  repo,
-		Output: &buf,
-		Format: FormatTable,
+		ExecRepos: ExecRepos{Pages: repo},
+		ExecIO:    ExecIO{Output: &buf, Format: FormatTable},
 	}
 	ctx.ensureCache()
 	return ctx
@@ -101,7 +100,10 @@ func TestListLayoutsGen_OutputsHeaderAndSummary(t *testing.T) {
 		},
 	}
 	var buf bytes.Buffer
-	ctx := &ExecContext{Layouts: repo, Output: &buf, Format: FormatTable}
+	ctx := &ExecContext{
+		ExecRepos: ExecRepos{Layouts: repo},
+		ExecIO:    ExecIO{Output: &buf, Format: FormatTable},
+	}
 	ctx.ensureCache()
 
 	if err := listLayoutsGen(ctx, ""); err != nil {
@@ -133,7 +135,10 @@ func TestListSnippetsGen_OutputsHeaderAndSummary(t *testing.T) {
 		},
 	}
 	var buf bytes.Buffer
-	ctx := &ExecContext{Snippets: repo, Output: &buf, Format: FormatTable}
+	ctx := &ExecContext{
+		ExecRepos: ExecRepos{Snippets: repo},
+		ExecIO:    ExecIO{Output: &buf, Format: FormatTable},
+	}
 	ctx.ensureCache()
 
 	if err := listSnippetsGen(ctx, ""); err != nil {

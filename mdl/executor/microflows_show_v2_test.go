@@ -19,9 +19,9 @@ import (
 	mprbackend "github.com/mendixlabs/mxcli/mdl/backend/mpr"
 	mprrepos "github.com/mendixlabs/mxcli/mdl/backend/mpr/repos"
 	"github.com/mendixlabs/mxcli/mdl/visitor"
+	"github.com/mendixlabs/mxcli/modelsdk/element"
 	genDt "github.com/mendixlabs/mxcli/modelsdk/gen/datatypes"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
-	"github.com/mendixlabs/mxcli/modelsdk/element"
 	mmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
 )
 
@@ -73,10 +73,9 @@ func newGenDescribeContext(t *testing.T, w *mmpr.Writer) *ExecContext {
 	t.Cleanup(func() { _ = be.Disconnect() })
 
 	return &ExecContext{
-		Backend:    be,
-		Microflows: repoCtx.Microflows,
-		Nanoflows:  repoCtx.Nanoflows,
-		Output:     io.Discard,
+		Backend:   be,
+		ExecRepos: ExecRepos{Microflows: repoCtx.Microflows, Nanoflows: repoCtx.Nanoflows},
+		ExecIO:    ExecIO{Output: io.Discard},
 	}
 }
 
@@ -94,9 +93,9 @@ func TestDescribeMicroflowGenToString_StructuralSkeleton(t *testing.T) {
 
 	mustContain(t, out,
 		"create or modify microflow MyFirstModule.MyFirstLogic", // resolved module name
-		"\n{\n",  // body open
-		"\n}",    // body close
-		"\n/",    // statement terminator
+		"\n{\n", // body open
+		"\n}",   // body close
+		"\n/",   // statement terminator
 	)
 
 	// Stage 3.2.2.a: the SQL-backed module-name resolution should never
@@ -695,7 +694,9 @@ func TestDescribeMicroflowGenToString_NestedLoopBodyComplete(t *testing.T) {
 	// so the second body activity (sv2) is never visited.
 	mf.AddFlows(makeFlow(sv1ID, sv2ID))
 
-	ctx := &ExecContext{Output: io.Discard}
+	ctx := &ExecContext{
+		ExecIO: ExecIO{Output: io.Discard},
+	}
 	out, err := DescribeMicroflowGenToString(ctx, mf)
 	if err != nil {
 		t.Fatalf("DescribeMicroflowGenToString: %v", err)

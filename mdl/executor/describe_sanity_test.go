@@ -203,10 +203,9 @@ func newSanityContext(t *testing.T, w *mmpr.Writer) *ExecContext {
 	}
 	t.Cleanup(func() { _ = be.Disconnect() })
 	ctx := &ExecContext{
-		Backend:      be,
-		Microflows:   repoCtx.Microflows,
-		DomainModels: repoCtx.DomainModels,
-		Output:       io.Discard,
+		Backend:   be,
+		ExecRepos: ExecRepos{Microflows: repoCtx.Microflows, DomainModels: repoCtx.DomainModels},
+		ExecIO:    ExecIO{Output: io.Discard},
 	}
 	// Cache the listDomainModelsWithContainerGen result so the entity
 	// loop runs in O(N) instead of O(N * modules).

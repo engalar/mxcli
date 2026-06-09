@@ -36,10 +36,9 @@ func newGenVizContext(t *testing.T, out *bytes.Buffer) *ExecContext {
 	t.Cleanup(func() { _ = be.Disconnect() })
 
 	return &ExecContext{
-		Backend:    be,
-		Microflows: repoCtx.Microflows,
-		Nanoflows:  repoCtx.Nanoflows,
-		Output:     out,
+		Backend:   be,
+		ExecRepos: ExecRepos{Microflows: repoCtx.Microflows, Nanoflows: repoCtx.Nanoflows},
+		ExecIO:    ExecIO{Output: out},
 	}
 }
 

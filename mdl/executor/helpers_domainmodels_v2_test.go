@@ -24,9 +24,9 @@ func newDomainModelsTestContext(t *testing.T) *ExecContext {
 	t.Cleanup(func() { _ = be.Disconnect() })
 
 	ctx := &ExecContext{
-		Backend:      be,
-		DomainModels: mprrepos.NewDomainModelRepository(w),
-		Output:       io.Discard,
+		Backend:   be,
+		ExecRepos: ExecRepos{DomainModels: mprrepos.NewDomainModelRepository(w)},
+		ExecIO:    ExecIO{Output: io.Discard},
 	}
 	ctx.ensureCache()
 	return ctx
@@ -77,7 +77,9 @@ func TestListDomainModelsWithContainerGen_NilCtxReturnsNil(t *testing.T) {
 }
 
 func TestListDomainModelsWithContainerGen_NilRepoReturnsNil(t *testing.T) {
-	ctx := &ExecContext{Output: io.Discard}
+	ctx := &ExecContext{
+		ExecIO: ExecIO{Output: io.Discard},
+	}
 	ctx.ensureCache()
 	list, err := listDomainModelsWithContainerGen(ctx)
 	if err != nil {

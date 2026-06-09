@@ -25,10 +25,10 @@ func gitFailBackend(contentsDir string) *ExecContext {
 		ContentsDirFunc: func() string { return contentsDir },
 	}
 	return &ExecContext{
-		Context: context.Background(),
-		Backend: mb,
-		Output:  &bytes.Buffer{},
-		Cache:   &executorCache{},
+		Context:     context.Background(),
+		Backend:     mb,
+		ExecIO:      ExecIO{Output: &bytes.Buffer{}},
+		ExecSession: ExecSession{Cache: &executorCache{}},
 	}
 }
 

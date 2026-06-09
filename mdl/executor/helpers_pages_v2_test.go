@@ -26,7 +26,9 @@ func newPagesCacheTestContext(t *testing.T, pages []*genPg.Page, containerID str
 			return model.ID(containerID), nil
 		},
 	}
-	ctx := &ExecContext{Pages: repo}
+	ctx := &ExecContext{
+		ExecRepos: ExecRepos{Pages: repo},
+	}
 	ctx.ensureCache()
 	return ctx
 }
@@ -88,7 +90,9 @@ func TestListPagesWithContainerGen_PropagatesListError(t *testing.T) {
 	repo := &repostesting.RecordingPageRepository{
 		ListAllFunc: func() ([]*genPg.Page, error) { return nil, wantErr },
 	}
-	ctx := &ExecContext{Pages: repo}
+	ctx := &ExecContext{
+		ExecRepos: ExecRepos{Pages: repo},
+	}
 	ctx.ensureCache()
 	_, err := listPagesWithContainerGen(ctx)
 	if !errors.Is(err, wantErr) {
@@ -108,7 +112,9 @@ func TestListLayoutsWithContainerGen_CachesAcrossCalls(t *testing.T) {
 			return model.ID("MOD1"), nil
 		},
 	}
-	ctx := &ExecContext{Layouts: repo}
+	ctx := &ExecContext{
+		ExecRepos: ExecRepos{Layouts: repo},
+	}
 	ctx.ensureCache()
 
 	first, err := listLayoutsWithContainerGen(ctx)
@@ -140,7 +146,9 @@ func TestListSnippetsWithContainerGen_CachesAcrossCalls(t *testing.T) {
 			return model.ID("MOD1"), nil
 		},
 	}
-	ctx := &ExecContext{Snippets: repo}
+	ctx := &ExecContext{
+		ExecRepos: ExecRepos{Snippets: repo},
+	}
 	ctx.ensureCache()
 
 	first, err := listSnippetsWithContainerGen(ctx)

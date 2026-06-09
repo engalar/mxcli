@@ -43,8 +43,10 @@ func TestRoundTrip_DescribeProducesZeroHints(t *testing.T) {
 	ctx := &executor.ExecContext{
 		Context: context.Background(),
 		Backend: be,
-		Output:  io.Discard,
-		Quiet:   true,
+		ExecIO: executor.ExecIO{
+			Output: io.Discard,
+			Quiet:  true,
+		},
 	}
 	h, err := executor.GetHierarchyForMining(ctx)
 	if err != nil {

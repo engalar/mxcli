@@ -23,7 +23,9 @@ func newFixerCtx(t *testing.T, mfs []*genMf.Microflow, updateCalled *bool) *Exec
 			return nil
 		},
 	}
-	ctx := &ExecContext{Microflows: repo}
+	ctx := &ExecContext{
+		ExecRepos: ExecRepos{Microflows: repo},
+	}
 	return ctx
 }
 
@@ -149,7 +151,9 @@ func TestMFCallerRefFixer_MultipleCaller_FixesAll(t *testing.T) {
 		GetContainerUUIDFunc: func(_ model.ID) (model.ID, error) { return "", nil },
 		UpdateFunc:           func(_ *genMf.Microflow) error { updateCount++; return nil },
 	}
-	ctx := &ExecContext{Microflows: repo}
+	ctx := &ExecContext{
+		ExecRepos: ExecRepos{Microflows: repo},
+	}
 	fixer := NewMFCallerRefFixer(ctx)
 
 	report, err := fixer.RemoveStaleMappings("Common_Utils.GET_Message_ById", []string{"OldParam"})

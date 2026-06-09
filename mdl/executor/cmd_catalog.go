@@ -736,15 +736,23 @@ func captureDescribeParallel(ctx *ExecContext, objectType string, qualifiedName 
 	// Create a goroutine-local context: shared backend + cache, own output buffer.
 	var buf bytes.Buffer
 	localCtx := &ExecContext{
-		Context:   ctx.Context,
-		Output:    &buf,
-		Format:    ctx.Format,
-		Quiet:     ctx.Quiet,
-		Logger:    ctx.Logger,
-		Backend:   ctx.Backend,
-		Cache:     ctx.Cache,
-		MprPath:   ctx.MprPath,
-		Workflows: ctx.Workflows,
+		Context: ctx.Context,
+		Logger:  ctx.Logger,
+		Backend: ctx.Backend,
+		ExecIO: ExecIO{
+			Output: &buf,
+			Format: ctx.Format,
+			Quiet:  ctx.Quiet,
+		},
+		ExecSession: ExecSession{
+			Cache: ctx.Cache,
+		},
+		ExecConnection: ExecConnection{
+			MprPath: ctx.MprPath,
+		},
+		ExecRepos: ExecRepos{
+			Workflows: ctx.Workflows,
+		},
 	}
 
 	var err error
