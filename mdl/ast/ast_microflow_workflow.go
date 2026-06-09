@@ -138,3 +138,18 @@ type ApplyJumpToStmt struct {
 }
 
 func (*ApplyJumpToStmt) isMicroflowStatement() {}
+
+// GetAnnotations implements MicroflowStatement.
+func (s *CallWorkflowStmt) GetAnnotations() *ActivityAnnotations               { return s.Annotations }
+func (s *GetWorkflowDataStmt) GetAnnotations() *ActivityAnnotations            { return s.Annotations }
+func (s *GetWorkflowsStmt) GetAnnotations() *ActivityAnnotations               { return s.Annotations }
+func (s *GetWorkflowActivityRecordsStmt) GetAnnotations() *ActivityAnnotations { return s.Annotations }
+func (s *WorkflowOperationStmt) GetAnnotations() *ActivityAnnotations          { return s.Annotations }
+func (s *SetTaskOutcomeStmt) GetAnnotations() *ActivityAnnotations             { return s.Annotations }
+func (s *OpenUserTaskStmt) GetAnnotations() *ActivityAnnotations               { return s.Annotations }
+func (s *NotifyWorkflowStmt) GetAnnotations() *ActivityAnnotations             { return s.Annotations }
+func (s *OpenWorkflowStmt) GetAnnotations() *ActivityAnnotations               { return s.Annotations }
+func (s *LockWorkflowStmt) GetAnnotations() *ActivityAnnotations               { return s.Annotations }
+func (s *UnlockWorkflowStmt) GetAnnotations() *ActivityAnnotations             { return s.Annotations }
+func (s *GenerateJumpToStmt) GetAnnotations() *ActivityAnnotations             { return s.Annotations }
+func (s *ApplyJumpToStmt) GetAnnotations() *ActivityAnnotations                { return s.Annotations }

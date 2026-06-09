@@ -7,8 +7,12 @@ package ast
 // ============================================================================
 
 // MicroflowStatement represents a statement inside a microflow body.
+// Every concrete statement type carries an optional Annotations field;
+// GetAnnotations returns it (nil when the statement has no annotations or
+// the field was not set by the parser).
 type MicroflowStatement interface {
 	isMicroflowStatement()
+	GetAnnotations() *ActivityAnnotations
 }
 
 // ============================================================================
@@ -842,3 +846,51 @@ type TransformJsonStmt struct {
 }
 
 func (s *TransformJsonStmt) isMicroflowStatement() {}
+
+// GetAnnotations implements MicroflowStatement. One line per concrete type;
+// the compiler enforces that every isMicroflowStatement implementer also
+// provides this, so adding a new statement type can no longer silently fall
+// through to a default that drops its annotations.
+func (s *DeclareStmt) GetAnnotations() *ActivityAnnotations              { return s.Annotations }
+func (s *EnumSplitStmt) GetAnnotations() *ActivityAnnotations            { return s.Annotations }
+func (s *InheritanceSplitStmt) GetAnnotations() *ActivityAnnotations     { return s.Annotations }
+func (s *CastObjectStmt) GetAnnotations() *ActivityAnnotations           { return s.Annotations }
+func (s *MfSetStmt) GetAnnotations() *ActivityAnnotations                { return s.Annotations }
+func (s *ReturnStmt) GetAnnotations() *ActivityAnnotations               { return s.Annotations }
+func (s *RaiseErrorStmt) GetAnnotations() *ActivityAnnotations           { return s.Annotations }
+func (s *CreateObjectStmt) GetAnnotations() *ActivityAnnotations         { return s.Annotations }
+func (s *ChangeObjectStmt) GetAnnotations() *ActivityAnnotations         { return s.Annotations }
+func (s *MfCommitStmt) GetAnnotations() *ActivityAnnotations             { return s.Annotations }
+func (s *DeleteObjectStmt) GetAnnotations() *ActivityAnnotations         { return s.Annotations }
+func (s *RollbackStmt) GetAnnotations() *ActivityAnnotations             { return s.Annotations }
+func (s *RetrieveStmt) GetAnnotations() *ActivityAnnotations             { return s.Annotations }
+func (s *IfStmt) GetAnnotations() *ActivityAnnotations                   { return s.Annotations }
+func (s *LoopStmt) GetAnnotations() *ActivityAnnotations                 { return s.Annotations }
+func (s *WhileStmt) GetAnnotations() *ActivityAnnotations                { return s.Annotations }
+func (s *LogStmt) GetAnnotations() *ActivityAnnotations                  { return s.Annotations }
+func (s *CallMicroflowStmt) GetAnnotations() *ActivityAnnotations        { return s.Annotations }
+func (s *CallNanoflowStmt) GetAnnotations() *ActivityAnnotations         { return s.Annotations }
+func (s *CallJavaActionStmt) GetAnnotations() *ActivityAnnotations       { return s.Annotations }
+func (s *CallJavaScriptActionStmt) GetAnnotations() *ActivityAnnotations { return s.Annotations }
+func (s *CallWebServiceStmt) GetAnnotations() *ActivityAnnotations       { return s.Annotations }
+func (s *ExecuteDatabaseQueryStmt) GetAnnotations() *ActivityAnnotations { return s.Annotations }
+func (s *CallExternalActionStmt) GetAnnotations() *ActivityAnnotations   { return s.Annotations }
+func (s *BreakStmt) GetAnnotations() *ActivityAnnotations                { return s.Annotations }
+func (s *ContinueStmt) GetAnnotations() *ActivityAnnotations             { return s.Annotations }
+func (s *ListOperationStmt) GetAnnotations() *ActivityAnnotations        { return s.Annotations }
+func (s *AggregateListStmt) GetAnnotations() *ActivityAnnotations        { return s.Annotations }
+func (s *CreateListStmt) GetAnnotations() *ActivityAnnotations           { return s.Annotations }
+func (s *AddToListStmt) GetAnnotations() *ActivityAnnotations            { return s.Annotations }
+func (s *RemoveFromListStmt) GetAnnotations() *ActivityAnnotations       { return s.Annotations }
+func (s *ShowPageStmt) GetAnnotations() *ActivityAnnotations             { return s.Annotations }
+func (s *ClosePageStmt) GetAnnotations() *ActivityAnnotations            { return s.Annotations }
+func (s *ShowHomePageStmt) GetAnnotations() *ActivityAnnotations         { return s.Annotations }
+func (s *SynchronizeStmt) GetAnnotations() *ActivityAnnotations          { return s.Annotations }
+func (s *ShowMessageStmt) GetAnnotations() *ActivityAnnotations          { return s.Annotations }
+func (s *DownloadFileStmt) GetAnnotations() *ActivityAnnotations         { return s.Annotations }
+func (s *ValidationFeedbackStmt) GetAnnotations() *ActivityAnnotations   { return s.Annotations }
+func (s *RestCallStmt) GetAnnotations() *ActivityAnnotations             { return s.Annotations }
+func (s *SendRestRequestStmt) GetAnnotations() *ActivityAnnotations      { return s.Annotations }
+func (s *ImportFromMappingStmt) GetAnnotations() *ActivityAnnotations    { return s.Annotations }
+func (s *ExportToMappingStmt) GetAnnotations() *ActivityAnnotations      { return s.Annotations }
+func (s *TransformJsonStmt) GetAnnotations() *ActivityAnnotations        { return s.Annotations }

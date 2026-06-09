@@ -13,10 +13,10 @@
 //   - apply pending @caption / @color / @excluded annotations to the
 //     freshly-emitted activity.
 //
-// The pure-AST helpers `getStatementAnnotations` / `stmtOwnAnchor`
-// (legacy file) carry no SDK type references and are reused as-is.
-// They live in the legacy file because Stage 3.2.6 will move them out
-// once `cmd_microflows_builder_annotations.go` is deleted.
+// Annotations are read directly off the statement via the
+// MicroflowStatement.GetAnnotations() interface method; the pure-AST
+// helper `stmtOwnAnchor` (legacy file) carries no SDK type references
+// and is reused as-is.
 
 package executor
 
@@ -33,7 +33,7 @@ import (
 // merges them into pendingAnnotations. Identical algorithm to legacy
 // flowBuilder.mergeStatementAnnotations.
 func (fb *flowBuilderGen) mergeStatementAnnotations(stmt ast.MicroflowStatement) {
-	ann := getStatementAnnotations(stmt)
+	ann := stmt.GetAnnotations()
 	if ann == nil {
 		return
 	}
