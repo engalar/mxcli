@@ -280,7 +280,7 @@ func renderGenNanoflowBody(ctx *ExecContext, nf *genMf.Nanoflow) []string {
 
 	visited := make(map[element.ID]bool)
 	var lines []string
-	traverseFlowGen(ctx, startID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, &lines, 0)
+	traverseFlowGen(ctx, startID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, flowsByOrigin, visited, &lines, 0)
 	return lines
 }
 

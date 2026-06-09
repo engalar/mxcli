@@ -21,6 +21,7 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/visitor"
 	genDt "github.com/mendixlabs/mxcli/modelsdk/gen/datatypes"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
+	"github.com/mendixlabs/mxcli/modelsdk/element"
 	mmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
 )
 
@@ -597,5 +598,114 @@ func TestQuoteIfReserved_Plain(t *testing.T) {
 		if got != plain {
 			t.Errorf("quoteIfReserved(%q) = %q, want %q", plain, got, plain)
 		}
+	}
+}
+
+// TestDescribeMicroflowGenToString_NestedLoopBodyComplete is a regression
+// test for the nested-loop DESCRIBE truncation bug: when an inner
+// LoopedActivity contains more than one body activity, all activities
+// after the first were silently dropped because emitLoopedActivityGen
+// received the outer loop's filtered flow map (innerByOrigin) rather than
+// the root-level Microflow.FlowsItems() map. The inner-inner SequenceFlows
+// live at the microflow level, so filtering against the outer body's flows
+// always produced an empty edge set for the inner body.
+//
+// Structure (all SequenceFlows at top level, matching Mendix BSON layout):
+//
+//	StartEvent → outerLoop → EndEvent
+//	outerLoop.ObjectCollection = [ innerLoop ]
+//	innerLoop.ObjectCollection = [ sv1, sv2 ]
+//	Flows: S→OL, OL→E, sv1→sv2   ← sv1→sv2 is at top level
+func TestDescribeMicroflowGenToString_NestedLoopBodyComplete(t *testing.T) {
+	startID := element.ID("start-nested-1")
+	outerID := element.ID("outer-loop-nested-1")
+	endID := element.ID("end-nested-1")
+	innerID := element.ID("inner-loop-nested-1")
+	sv1ID := element.ID("set-var-nested-1")
+	sv2ID := element.ID("set-var-nested-2")
+
+	// Inner loop body: two ActionActivity nodes wrapping ChangeVariableAction.
+	// formatActivityGen requires an ActionActivity wrapper — bare actions are
+	// rendered as TODO placeholders.
+	makeSetVar := func(id element.ID, name, val string) *genMf.ActionActivity {
+		cva := genMf.NewChangeVariableAction()
+		cva.SetChangeVariableName(name)
+		cva.SetValue(val)
+		aa := genMf.NewActionActivity()
+		aa.SetID(id)
+		aa.SetAction(cva)
+		return aa
+	}
+
+	sv1 := makeSetVar(sv1ID, "shouldSkip", "true")
+	sv2 := makeSetVar(sv2ID, "line1", "''")
+
+	innerOC := genMf.NewMicroflowObjectCollection()
+	innerOC.AddObjects(sv1)
+	innerOC.AddObjects(sv2)
+
+	innerSrc := genMf.NewIterableList()
+	innerSrc.SetListVariableName("list2")
+	innerSrc.SetVariableName("b")
+
+	innerLoop := genMf.NewLoopedActivity()
+	innerLoop.SetID(innerID)
+	innerLoop.SetLoopSource(innerSrc)
+	innerLoop.SetObjectCollection(innerOC)
+
+	// Outer loop body: just the inner loop
+	outerOC := genMf.NewMicroflowObjectCollection()
+	outerOC.AddObjects(innerLoop)
+
+	outerSrc := genMf.NewIterableList()
+	outerSrc.SetListVariableName("list1")
+	outerSrc.SetVariableName("a")
+
+	outerLoop := genMf.NewLoopedActivity()
+	outerLoop.SetID(outerID)
+	outerLoop.SetLoopSource(outerSrc)
+	outerLoop.SetObjectCollection(outerOC)
+
+	// Top-level activities
+	start := genMf.NewStartEvent()
+	start.SetID(startID)
+	end := genMf.NewEndEvent()
+	end.SetID(endID)
+
+	topOC := genMf.NewMicroflowObjectCollection()
+	topOC.AddObjects(start)
+	topOC.AddObjects(outerLoop)
+	topOC.AddObjects(end)
+
+	makeFlow := func(from, to element.ID) *genMf.SequenceFlow {
+		sf := genMf.NewSequenceFlow()
+		sf.SetOriginID(from)
+		sf.SetDestinationID(to)
+		return sf
+	}
+
+	mf := genMf.NewMicroflow()
+	mf.SetName("NestedLoopBug")
+	mf.SetObjectCollection(topOC)
+	// Top-level flows: the microflow spine
+	mf.AddFlows(makeFlow(startID, outerID))
+	mf.AddFlows(makeFlow(outerID, endID))
+	// Inner loop body flows — at top level, as Mendix BSON layout requires.
+	// The bug: these flows are filtered out when building innerByOrigin,
+	// so the second body activity (sv2) is never visited.
+	mf.AddFlows(makeFlow(sv1ID, sv2ID))
+
+	ctx := &ExecContext{Output: io.Discard}
+	out, err := DescribeMicroflowGenToString(ctx, mf)
+	if err != nil {
+		t.Fatalf("DescribeMicroflowGenToString: %v", err)
+	}
+
+	// Both inner loop body statements must appear in the output.
+	if !strings.Contains(out, "$shouldSkip") {
+		t.Errorf("missing first inner loop body activity ($shouldSkip) in DESCRIBE output:\n%s", out)
+	}
+	if !strings.Contains(out, "$line1") {
+		t.Errorf("missing second inner loop body activity ($line1) in DESCRIBE output — nested loop truncation bug:\n%s", out)
 	}
 }

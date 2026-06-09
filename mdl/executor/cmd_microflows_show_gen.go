@@ -393,7 +393,7 @@ func renderGenMicroflowBody(ctx *ExecContext, mf *genMf.Microflow) []string {
 
 	visited := make(map[element.ID]bool)
 	var lines []string
-	traverseFlowGen(ctx, startID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, &lines, 0)
+	traverseFlowGen(ctx, startID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, flowsByOrigin, visited, &lines, 0)
 
 	// Emit free-floating Annotations that are not connected by SequenceFlows
 	// and were therefore never visited by traverseFlowGen. Collect and sort
@@ -585,6 +585,12 @@ func isSplitJoinCandidateGen(obj element.Element) bool {
 // traverseFlowGen — port of legacy traverseFlow, gen types
 // ────────────────────────────────────────────────────────
 
+// rootFlowsByOrigin is always the microflow-level flow map from
+// buildGenFlowMaps(mf). It is threaded through every recursive call so
+// that emitLoopedActivityGen can filter the full set of SequenceFlows when
+// building the inner body — Mendix stores ALL flows at the microflow level,
+// so a nested LoopedActivity's body flows are NOT present in any filtered
+// innerByOrigin map but ARE present in rootFlowsByOrigin.
 func traverseFlowGen(
 	ctx *ExecContext,
 	currentID element.ID,
@@ -592,6 +598,7 @@ func traverseFlowGen(
 	flowsByOrigin map[element.ID][]*genMf.SequenceFlow,
 	flowsByDest map[element.ID][]*genMf.SequenceFlow,
 	splitMergeMap map[element.ID]element.ID,
+	rootFlowsByOrigin map[element.ID][]*genMf.SequenceFlow,
 	visited map[element.ID]bool,
 	lines *[]string,
 	indent int,
@@ -612,7 +619,7 @@ func traverseFlowGen(
 		}
 		visited[currentID] = true
 		for _, f := range flowsByOrigin[currentID] {
-			traverseFlowGen(ctx, f.DestinationRefID(), activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, lines, indent)
+			traverseFlowGen(ctx, f.DestinationRefID(), activityMap, flowsByOrigin, flowsByDest, splitMergeMap, rootFlowsByOrigin, visited, lines, indent)
 		}
 		return
 	}
@@ -623,7 +630,7 @@ func traverseFlowGen(
 	// StartEvent: silent (no MDL emission); follow its outgoing flows.
 	if _, isStart := obj.(*genMf.StartEvent); isStart {
 		for _, f := range findNormalFlowsGen(flowsByOrigin[currentID]) {
-			traverseFlowGen(ctx, f.DestinationRefID(), activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, lines, indent)
+			traverseFlowGen(ctx, f.DestinationRefID(), activityMap, flowsByOrigin, flowsByDest, splitMergeMap, rootFlowsByOrigin, visited, lines, indent)
 		}
 		return
 	}
@@ -637,12 +644,12 @@ func traverseFlowGen(
 	// InheritanceSplit: case-on-inheritance framing.
 	if split, isInh := obj.(*genMf.InheritanceSplit); isInh && len(findNormalFlowsGen(flowsByOrigin[currentID])) > 1 {
 		mergeID := splitMergeMap[currentID]
-		emitInheritanceSplitGen(ctx, currentID, mergeID, split, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, lines, indent)
+		emitInheritanceSplitGen(ctx, currentID, mergeID, split, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, rootFlowsByOrigin, visited, lines, indent)
 		// Continue past the merge.
 		if mergeID != "" {
 			visited[mergeID] = true
 			for _, f := range flowsByOrigin[mergeID] {
-				traverseFlowGen(ctx, f.DestinationRefID(), activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, lines, indent)
+				traverseFlowGen(ctx, f.DestinationRefID(), activityMap, flowsByOrigin, flowsByDest, splitMergeMap, rootFlowsByOrigin, visited, lines, indent)
 			}
 		}
 		return
@@ -651,12 +658,12 @@ func traverseFlowGen(
 	// ExclusiveSplit: if/else or case-on-enum framing.
 	if split, isXSplit := obj.(*genMf.ExclusiveSplit); isXSplit {
 		mergeID := splitMergeMap[currentID]
-		emitExclusiveSplitGen(ctx, currentID, mergeID, split, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, lines, indent)
+		emitExclusiveSplitGen(ctx, currentID, mergeID, split, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, rootFlowsByOrigin, visited, lines, indent)
 		// Continue past the merge.
 		if mergeID != "" {
 			visited[mergeID] = true
 			for _, f := range flowsByOrigin[mergeID] {
-				traverseFlowGen(ctx, f.DestinationRefID(), activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, lines, indent)
+				traverseFlowGen(ctx, f.DestinationRefID(), activityMap, flowsByOrigin, flowsByDest, splitMergeMap, rootFlowsByOrigin, visited, lines, indent)
 			}
 		}
 		return
@@ -664,10 +671,10 @@ func traverseFlowGen(
 
 	// LoopedActivity: foreach / while framing with nested body.
 	if loop, isLoop := obj.(*genMf.LoopedActivity); isLoop {
-		emitLoopedActivityGen(ctx, loop, lines, indentStr, indent, flowsByOrigin)
+		emitLoopedActivityGen(ctx, loop, lines, indentStr, indent, rootFlowsByOrigin)
 		// Continue past the loop.
 		for _, f := range flowsByOrigin[currentID] {
-			traverseFlowGen(ctx, f.DestinationRefID(), activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, lines, indent)
+			traverseFlowGen(ctx, f.DestinationRefID(), activityMap, flowsByOrigin, flowsByDest, splitMergeMap, rootFlowsByOrigin, visited, lines, indent)
 		}
 		return
 	}
@@ -696,7 +703,7 @@ func traverseFlowGen(
 			*lines = append(*lines, indentStr+"-- @annotation "+mdlQuote(cap))
 		}
 		for _, f := range findNormalFlowsGen(flowsByOrigin[currentID]) {
-			traverseFlowGen(ctx, f.DestinationRefID(), activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, lines, indent)
+			traverseFlowGen(ctx, f.DestinationRefID(), activityMap, flowsByOrigin, flowsByDest, splitMergeMap, rootFlowsByOrigin, visited, lines, indent)
 		}
 		return
 	}
@@ -713,7 +720,7 @@ func traverseFlowGen(
 		*lines = append(*lines, indentStr+placeholderForGen(obj))
 	}
 	for _, f := range findNormalFlowsGen(flowsByOrigin[currentID]) {
-		traverseFlowGen(ctx, f.DestinationRefID(), activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, lines, indent)
+		traverseFlowGen(ctx, f.DestinationRefID(), activityMap, flowsByOrigin, flowsByDest, splitMergeMap, rootFlowsByOrigin, visited, lines, indent)
 	}
 }
 
@@ -739,6 +746,7 @@ func traverseFlowGenUntilMerge(
 	flowsByOrigin map[element.ID][]*genMf.SequenceFlow,
 	flowsByDest map[element.ID][]*genMf.SequenceFlow,
 	splitMergeMap map[element.ID]element.ID,
+	rootFlowsByOrigin map[element.ID][]*genMf.SequenceFlow,
 	visited map[element.ID]bool,
 	lines *[]string,
 	indent int,
@@ -746,7 +754,7 @@ func traverseFlowGenUntilMerge(
 	if currentID == "" || currentID == mergeID || visited[currentID] {
 		return
 	}
-	traverseFlowGen(ctx, currentID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, lines, indent)
+	traverseFlowGen(ctx, currentID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, rootFlowsByOrigin, visited, lines, indent)
 }
 
 // ────────────────────────────────────────────────────────
@@ -777,6 +785,7 @@ func emitExclusiveSplitGen(
 	flowsByOrigin map[element.ID][]*genMf.SequenceFlow,
 	flowsByDest map[element.ID][]*genMf.SequenceFlow,
 	splitMergeMap map[element.ID]element.ID,
+	rootFlowsByOrigin map[element.ID][]*genMf.SequenceFlow,
 	visited map[element.ID]bool,
 	lines *[]string,
 	indent int,
@@ -793,7 +802,7 @@ func emitExclusiveSplitGen(
 		for _, f := range flows {
 			label := caseValueLabelGen(f)
 			*lines = append(*lines, indentStr+"  when "+label+" then")
-			traverseFlowGenUntilMerge(ctx, f.DestinationRefID(), mergeID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, lines, indent+2)
+			traverseFlowGenUntilMerge(ctx, f.DestinationRefID(), mergeID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, rootFlowsByOrigin, visited, lines, indent+2)
 		}
 		*lines = append(*lines, indentStr+"end case;")
 		return
@@ -805,11 +814,11 @@ func emitExclusiveSplitGen(
 
 	trueFlow, falseFlow := pickBooleanBranchesGen(flows)
 	if trueFlow != nil {
-		traverseFlowGenUntilMerge(ctx, trueFlow.DestinationRefID(), mergeID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, lines, indent+1)
+		traverseFlowGenUntilMerge(ctx, trueFlow.DestinationRefID(), mergeID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, rootFlowsByOrigin, visited, lines, indent+1)
 	}
 	if falseFlow != nil && falseFlow.DestinationRefID() != mergeID {
 		*lines = append(*lines, indentStr+"} else {")
-		traverseFlowGenUntilMerge(ctx, falseFlow.DestinationRefID(), mergeID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, lines, indent+1)
+		traverseFlowGenUntilMerge(ctx, falseFlow.DestinationRefID(), mergeID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, rootFlowsByOrigin, visited, lines, indent+1)
 	}
 	*lines = append(*lines, indentStr+"}")
 }
@@ -823,6 +832,7 @@ func emitInheritanceSplitGen(
 	flowsByOrigin map[element.ID][]*genMf.SequenceFlow,
 	flowsByDest map[element.ID][]*genMf.SequenceFlow,
 	splitMergeMap map[element.ID]element.ID,
+	rootFlowsByOrigin map[element.ID][]*genMf.SequenceFlow,
 	visited map[element.ID]bool,
 	lines *[]string,
 	indent int,
@@ -848,10 +858,10 @@ func emitInheritanceSplitGen(
 	for i, f := range caseFlows {
 		label := inheritanceCaseLabelGen(f)
 		*lines = append(*lines, innerIndent+"case "+label+" {")
-		traverseFlowGenUntilMerge(ctx, f.DestinationRefID(), mergeID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, lines, indent+2)
+		traverseFlowGenUntilMerge(ctx, f.DestinationRefID(), mergeID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, rootFlowsByOrigin, visited, lines, indent+2)
 		if i == len(caseFlows)-1 && elseFlow != nil {
 			*lines = append(*lines, innerIndent+"} else {")
-			traverseFlowGenUntilMerge(ctx, elseFlow.DestinationRefID(), mergeID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, visited, lines, indent+2)
+			traverseFlowGenUntilMerge(ctx, elseFlow.DestinationRefID(), mergeID, activityMap, flowsByOrigin, flowsByDest, splitMergeMap, rootFlowsByOrigin, visited, lines, indent+2)
 			*lines = append(*lines, innerIndent+"}")
 		} else {
 			*lines = append(*lines, innerIndent+"}")
@@ -866,7 +876,7 @@ func emitLoopedActivityGen(
 	lines *[]string,
 	indentStr string,
 	indent int,
-	parentFlowsByOrigin map[element.ID][]*genMf.SequenceFlow,
+	rootFlowsByOrigin map[element.ID][]*genMf.SequenceFlow,
 ) {
 	// Header line: `loop $var in $list` / `while <cond>`.
 	header := "loop"
@@ -889,20 +899,21 @@ func emitLoopedActivityGen(
 		innerByDest := make(map[element.ID][]*genMf.SequenceFlow)
 		innerActivities, _ := buildGenActivityMap(inner)
 
-		// Mendix stores all SequenceFlows at the microflow level (parent),
-		// NOT inside the loop's MicroflowObjectCollection. Scanning only
-		// oc.ObjectsItems() for flows always yields zero results, so the
-		// traversal sees no edges and only emits one activity (whichever
-		// non-deterministic map iteration picks as startID).
+		// Mendix stores all SequenceFlows at the microflow level, NOT inside
+		// the loop's MicroflowObjectCollection. Scanning only oc.ObjectsItems()
+		// for flows always yields zero results. Fix: filter rootFlowsByOrigin
+		// (the full microflow-level map) to those whose origin AND destination
+		// are both loop body activity IDs.
 		//
-		// Fix: filter the parent-level flows to those whose origin AND
-		// destination are both loop body activity IDs.
+		// IMPORTANT: must use rootFlowsByOrigin (not any filtered parent map)
+		// because for a nested loop the body flows of the inner loop are at
+		// the microflow level and are absent from any intermediate filtered map.
 		innerIDs := make(map[element.ID]bool, len(innerActivities))
 		for id := range innerActivities {
 			innerIDs[id] = true
 		}
 		for originID := range innerIDs {
-			for _, sf := range parentFlowsByOrigin[originID] {
+			for _, sf := range rootFlowsByOrigin[originID] {
 				if innerIDs[sf.DestinationRefID()] {
 					innerByOrigin[sf.OriginRefID()] = append(innerByOrigin[sf.OriginRefID()], sf)
 					innerByDest[sf.DestinationRefID()] = append(innerByDest[sf.DestinationRefID()], sf)
@@ -944,7 +955,7 @@ func emitLoopedActivityGen(
 		}
 		visited := make(map[element.ID]bool)
 		var bodyLines []string
-		traverseFlowGen(ctx, startID, innerActivities, innerByOrigin, innerByDest, innerSplitMerge, visited, &bodyLines, indent+1)
+		traverseFlowGen(ctx, startID, innerActivities, innerByOrigin, innerByDest, innerSplitMerge, rootFlowsByOrigin, visited, &bodyLines, indent+1)
 		*lines = append(*lines, bodyLines...)
 	}
 	*lines = append(*lines, indentStr+"}")

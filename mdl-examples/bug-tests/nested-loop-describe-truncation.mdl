@@ -1,0 +1,68 @@
+-- Bug: DESCRIBE truncates inner loop body in nested `loop`
+--
+-- When a microflow contains a nested loop (`loop $a in $list1` containing
+-- `loop $b in $list2`), DESCRIBE MICROFLOW silently drops all inner loop
+-- body activities after the first one. The if-block and subsequent SET
+-- statements were missing from the output.
+--
+-- Root cause: emitLoopedActivityGen received the outer loop's *filtered*
+-- flow map (innerByOrigin) instead of the root microflow-level flow map.
+-- Mendix stores ALL SequenceFlows at the top-level Microflow.FlowsItems()
+-- list — inner loop body flows are absent from any filtered parent map.
+--
+-- Fixed in: cmd_microflows_show_gen.go — rootFlowsByOrigin parameter
+-- threaded through traverseFlowGen / emitLoopedActivityGen so the root
+-- flow map is always used when filtering body activities.
+--
+-- Reported by: GitHub issue, mxcli v0.22.0, Mendix 11.6.6, Windows 11
+
+-- Prerequisites: run against helpdesk-clean-11.6.6/minimal.mpr
+--   or any project that has FeedbackModule.Feedback and FeedbackModule.Rating
+
+create module BugTest;
+
+create microflow BugTest.ACT_NestedLoopBug ()
+{
+  declare $list1 list of FeedbackModule.Feedback = empty;
+  declare $list2 list of FeedbackModule.Rating = empty;
+  loop $a in $list1 {
+    loop $b in $list2 {
+      set $shouldSkip = true;
+      if $shouldSkip = true {
+        set $line1 = '';
+        set $line2 = '';
+        set $line3 = '';
+      }
+    }
+  }
+  return;
+}
+/
+
+-- Expected DESCRIBE output (all inner loop body statements present):
+--
+-- create or modify microflow BugTest.ACT_NestedLoopBug ()
+-- {
+--   declare $list1 List of FeedbackModule.Feedback = empty;
+--   declare $list2 List of FeedbackModule.Rating = empty;
+--   loop $a in $list1 {
+--     loop $b in $list2 {
+--       set $shouldSkip = true;
+--       if $shouldSkip = true {
+--         set $line1 = '';
+--         set $line2 = '';
+--         set $line3 = '';
+--       }
+--     }
+--   }
+--   return;
+-- }
+-- /
+--
+-- Before fix, output was truncated at `set $shouldSkip = true;` and the
+-- if-block + set $line1/$line2/$line3 were missing.
+
+describe microflow BugTest.ACT_NestedLoopBug;
+
+drop microflow BugTest.ACT_NestedLoopBug;
+drop module BugTest;
