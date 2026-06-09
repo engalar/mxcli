@@ -43,6 +43,13 @@ func (m *MockBackend) SerializeWorkflowActivityGen(a element.Element) (any, erro
 	return nil, fmt.Errorf("MockBackend.SerializeWorkflowActivityGen not configured")
 }
 
+func (m *MockBackend) SerializePageGenElement(elem element.Element) ([]byte, error) {
+	if m.SerializePageGenElementFunc != nil {
+		return m.SerializePageGenElementFunc(elem)
+	}
+	return nil, fmt.Errorf("MockBackend.SerializePageGenElement not configured")
+}
+
 // ---------------------------------------------------------------------------
 // WidgetBuilderBackend
 // ---------------------------------------------------------------------------

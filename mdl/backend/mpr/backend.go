@@ -1391,6 +1391,15 @@ func (b *MprBackend) SerializeWorkflowActivityGen(a element.Element) (any, error
 	return doc, nil
 }
 
+// SerializePageGenElement implements backend.WidgetSerializationBackend.
+func (b *MprBackend) SerializePageGenElement(elem element.Element) ([]byte, error) {
+	if elem == nil {
+		return nil, fmt.Errorf("SerializePageGenElement: nil element")
+	}
+	enc := b.newEncoder()
+	return enc.Encode(elem)
+}
+
 // newEncoder returns a codec.Encoder configured with the project's Mendix version
 // for property-level gating. Properties introduced after the project version
 // are skipped when serializing new elements.

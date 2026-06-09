@@ -16,7 +16,6 @@ import (
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
-	"github.com/mendixlabs/mxcli/modelsdk/codec"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
 	genCW "github.com/mendixlabs/mxcli/modelsdk/gen/customwidgets"
 	genDt "github.com/mendixlabs/mxcli/modelsdk/gen/datatypes"
@@ -55,11 +54,10 @@ func (pb *pageBuilder) buildNanoflowSourceGen(ds *ast.DataSourceV3) (*genPg.Nano
 	return ns, entityName, nil
 }
 
-// genElementToBSONDoc encodes a gen element to bson.D via the codec.
-// Used in BSON-builder functions that need raw bson.D rather than a gen element.
-func genElementToBSONDoc(elem element.Element) (bson.D, error) {
-	enc := codec.Encoder{}
-	raw, err := enc.Encode(elem)
+// genElementToBSONDoc encodes a gen element to bson.D via the backend serializer.
+// Routes through WidgetSerializationBackend so executor does not import modelsdk/codec directly.
+func (pb *pageBuilder) genElementToBSONDoc(elem element.Element) (bson.D, error) {
+	raw, err := pb.backend.SerializePageGenElement(elem)
 	if err != nil {
 		return nil, err
 	}
@@ -2126,7 +2124,7 @@ func (pb *pageBuilder) buildDataGridDataSourceBSON(ds *ast.DataSourceV3) (bson.D
 		if err != nil {
 			return nil, "", err
 		}
-		doc, err := genElementToBSONDoc(ns)
+		doc, err := pb.genElementToBSONDoc(ns)
 		if err != nil {
 			return nil, "", mdlerrors.NewBackend("encode nanoflow source", err)
 		}

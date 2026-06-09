@@ -262,6 +262,9 @@ type WidgetSerializationBackend interface {
 	// produced by CreateWorkflowGen / UpdateWorkflowGen — divergence
 	// here would also break the gen-typed CREATE WORKFLOW round-trip.
 	SerializeWorkflowActivityGen(a element.Element) (any, error)
+	// SerializePageGenElement encodes a gen-typed element to raw BSON bytes
+	// for page/widget builder paths that embed a pre-encoded sub-document.
+	SerializePageGenElement(elem element.Element) ([]byte, error)
 }
 
 // WidgetObjectBuilder provides storage-agnostic operations on a loaded pluggable widget template.
