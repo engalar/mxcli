@@ -11,8 +11,7 @@ import (
 	"sort"
 	"strings"
 
-	mprbackend "github.com/mendixlabs/mxcli/mdl/backend/mpr"
-	"github.com/mendixlabs/mxcli/mdl/backend/unitstore"
+	"github.com/mendixlabs/mxcli/mdl/backend"
 	"github.com/mendixlabs/mxcli/mdl/visitor"
 )
 
@@ -94,10 +93,10 @@ func (e *Executor) ImportProject(inputDir string, opts ImportOptions) error {
 	// Activate the import buffer: all updateUnit calls are buffered in memory
 	// and flushed to disk as a single SQLite transaction per .mdl file.
 	// This eliminates ~50 per-statement transactions per file (5-10x fewer I/O ops).
-	var importBuf *unitstore.BufferedUnitStore
-	if mprBE, ok := ctx.Backend.(*mprbackend.MprBackend); ok {
-		importBuf = mprBE.EnableImportBuffer()
-		defer mprBE.DisableImportBuffer()
+	var importBuf backend.ImportBuffer
+	if bufBE, ok := ctx.Backend.(backend.ImportBufferBackend); ok {
+		importBuf = bufBE.BeginImportBuffer()
+		defer bufBE.DisableImportBuffer()
 	}
 
 	var allFiles []string

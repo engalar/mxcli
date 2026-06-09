@@ -18,3 +18,20 @@ type noopScriptTx struct{}
 
 func (t *noopScriptTx) Commit() error   { return nil }
 func (t *noopScriptTx) Rollback() error { return nil }
+
+// BeginImportBuffer delegates to BeginImportBufferFunc if set; otherwise
+// returns nil (no buffering). Implements backend.ImportBufferBackend.
+func (m *MockBackend) BeginImportBuffer() backend.ImportBuffer {
+	if m.BeginImportBufferFunc != nil {
+		return m.BeginImportBufferFunc()
+	}
+	return nil
+}
+
+// DisableImportBuffer delegates to DisableImportBufferFunc if set; otherwise
+// no-op. Implements backend.ImportBufferBackend.
+func (m *MockBackend) DisableImportBuffer() {
+	if m.DisableImportBufferFunc != nil {
+		m.DisableImportBufferFunc()
+	}
+}

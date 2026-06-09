@@ -86,3 +86,18 @@ type ScriptTransaction interface {
 type ScriptTransactionBackend interface {
 	BeginScriptTransaction() (ScriptTransaction, error)
 }
+
+// ImportBuffer is a write-buffer handle returned by ImportBufferBackend.BeginImportBuffer.
+// Flush commits all buffered units in a single transaction; Discard drops them.
+type ImportBuffer interface {
+	Flush() error
+	Discard()
+}
+
+// ImportBufferBackend is optionally implemented by backends that support
+// buffered import sessions for bulk-write performance.
+// Executor code uses a type assertion: if bufBE, ok := ctx.Backend.(backend.ImportBufferBackend); ok { ... }
+type ImportBufferBackend interface {
+	BeginImportBuffer() ImportBuffer
+	DisableImportBuffer()
+}

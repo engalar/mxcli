@@ -43,6 +43,7 @@ import (
 
 var _ backend.FullBackend = (*MprBackend)(nil)
 var _ backend.PageModelBackend = (*MprBackend)(nil)
+var _ backend.ImportBufferBackend = (*MprBackend)(nil)
 var _ linter.LintReader = (*MprBackend)(nil)
 
 // MprBackend implements backend.FullBackend by delegating to a single
@@ -1543,6 +1544,11 @@ func (p *MprUnitPersistence) BatchHash(units map[model.ID][]byte) (map[model.ID]
 		out[id] = h
 	}
 	return out, nil
+}
+
+// BeginImportBuffer implements backend.ImportBufferBackend.
+func (b *MprBackend) BeginImportBuffer() backend.ImportBuffer {
+	return b.EnableImportBuffer()
 }
 
 // EnableImportBuffer activates the BufferedUnitStore for an import session.

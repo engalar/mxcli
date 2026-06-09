@@ -299,6 +299,7 @@ type MockBackend struct {
 
 	// WidgetSerializationBackend
 	SerializeWorkflowActivityGenFunc func(a element.Element) (any, error)
+	SerializePageGenElementFunc      func(elem element.Element) ([]byte, error)
 
 	// WidgetBuilderBackend
 	LoadWidgetTemplateFunc         func(widgetID string, projectPath string) (backend.WidgetObjectBuilder, error)
@@ -327,4 +328,8 @@ type MockBackend struct {
 
 	// ScriptTransactionBackend
 	BeginScriptTransactionFunc func() (backend.ScriptTransaction, error)
+
+	// ImportBufferBackend
+	BeginImportBufferFunc   func() backend.ImportBuffer
+	DisableImportBufferFunc func()
 }
