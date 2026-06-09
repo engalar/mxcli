@@ -33,8 +33,8 @@ func TestNoDirectBSONImportInExecutor(t *testing.T) {
 	// Batch 3 (cmd_diff_local.go, flowbuilder_raw_setter_gen.go): investigation
 	// pending — see docs/superpowers/specs/2026-05-27-executor-bson-cleanup-design.md
 	allowlist := map[string]bool{
-		"cmd_pages_builder_v3.go":      true, // Task 10 — see comment above
-		"cmd_diff_local.go":             true, // Batch 3, investigation pending
+		"pages_builder_v3.go":           true, // Task 10 — see comment above
+		"diff_local.go":                 true, // Batch 3, investigation pending
 		"flowbuilder_raw_setter_gen.go": true, // Batch 3, investigation pending
 	}
 
@@ -98,26 +98,26 @@ func TestNoRawBSONTypeStringsInExecutor(t *testing.T) {
 	// New files must NOT be added here without explanation.
 	// The purpose of this test is to prevent NEW violations, not to fix all existing ones at once.
 	allowlist := map[string]bool{
-		"cmd_pages_builder_v3.go":      true, // Task 10: buildDataGridDataSourceBSON still uses raw bson.D
-		"cmd_diff_local.go":             true, // Batch 3, investigation pending
+		"pages_builder_v3.go":           true, // Task 10: buildDataGridDataSourceBSON still uses raw bson.D
+		"diff_local.go":                 true, // Batch 3, investigation pending
 		"flowbuilder_raw_setter_gen.go": true, // Batch 3, investigation pending
 		"theme_reader.go":               true, // (b) reads/identifies existing widget types; no construction
 		"cmd_workflows_write_gen2.go":   true, // (b) type switch/comparisons for reading, not construction
 		"flowbuilder_calls_page_gen.go": true, // (c) SetTypeName override — gen element, not raw bson.D
-		"cmd_workflows_gen.go":          true, // (b) type switch/comparisons when reading workflow activities
-		"cmd_structure.go":              true, // (b) type switch/comparisons for structure display
+		"workflows_v2.go":               true, // (b) type switch/comparisons when reading workflow activities
+		"structure.go":                  true, // (b) type switch/comparisons for structure display
 		// (b) type strings used for reading/identifying existing BSON in describe/show commands:
 		"cmd_drop_entity_gen.go":           true,
-		"cmd_entities_gen.go":              true,
-		"cmd_microflows_show_gen.go":       true,
-		"cmd_microflows_show_list_gen.go":  true,
-		"cmd_nanoflow_elk_gen.go":          true,
-		"cmd_nanoflows_show_gen.go":        true,
-		"cmd_page_wireframe.go":            true,
-		"cmd_pages_describe.go":            true,
-		"cmd_pages_describe_output.go":     true,
-		"cmd_pages_describe_parse.go":      true,
-		"cmd_pages_describe_pluggable.go":  true,
+		"entities_v2.go":                   true,
+		"microflows_show_v2.go":            true,
+		"microflows_show_list_v2.go":       true,
+		"nanoflow_elk_v2.go":               true,
+		"nanoflows_show_v2.go":             true,
+		"page_wireframe.go":                true,
+		"pages_describe.go":                true,
+		"pages_describe_output.go":         true,
+		"pages_describe_parse.go":          true,
+		"pages_describe_pluggable.go":      true,
 		"cmd_security_write_entity_gen.go": true,
 		// (b) describe formatter-dispatch registration keys: type strings
 		// identify which BSON $Type each formatter reads; no BSON construction.
