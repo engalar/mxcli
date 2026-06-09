@@ -93,8 +93,8 @@ func TestAssocSpecFromAST(t *testing.T) {
 	if spec.owner != "Both" {
 		t.Errorf("owner = %q, want Both", spec.owner)
 	}
-	if spec.deleteBehavior != "DeleteMeAndReferences" {
-		t.Errorf("deleteBehavior = %q, want DeleteMeAndReferences", spec.deleteBehavior)
+	if spec.deleteBehavior != "DELETE_AND_REFERENCES" {
+		t.Errorf("deleteBehavior = %q, want DELETE_AND_REFERENCES", spec.deleteBehavior)
 	}
 	if spec.documentation != "doc text" {
 		t.Errorf("documentation = %q", spec.documentation)
@@ -106,12 +106,15 @@ func TestAstDeleteBehaviorStr(t *testing.T) {
 		in   ast.DeleteBehavior
 		want string
 	}{
-		{ast.DeleteCascade, "DeleteMeAndReferences"},
-		{ast.DeleteBoth, "DeleteBoth"},
-		{ast.DeleteKeepParentDeleteChild, "KeepParentDeleteChild"},
-		{ast.DeleteKeepChildDeleteParent, "KeepChildDeleteParent"},
-		{ast.DeleteIfNoReferences, "DeleteIfNoReferences"},
-		{ast.DeleteBehavior(-1), "DeleteMeButKeepReferences"},
+		// MDL grammar tokens: DELETE_AND_REFERENCES, DELETE_BUT_KEEP_REFERENCES,
+		// DELETE_IF_NO_REFERENCES, CASCADE, PREVENT.
+		// BSON values with no direct MDL equivalent fall back to DELETE_BUT_KEEP_REFERENCES.
+		{ast.DeleteCascade, "DELETE_AND_REFERENCES"},
+		{ast.DeleteBoth, "DELETE_BUT_KEEP_REFERENCES"},             // no MDL equivalent
+		{ast.DeleteKeepParentDeleteChild, "DELETE_BUT_KEEP_REFERENCES"}, // no MDL equivalent
+		{ast.DeleteKeepChildDeleteParent, "DELETE_BUT_KEEP_REFERENCES"}, // no MDL equivalent
+		{ast.DeleteIfNoReferences, "DELETE_IF_NO_REFERENCES"},
+		{ast.DeleteBehavior(-1), "DELETE_BUT_KEEP_REFERENCES"},
 	}
 	for _, c := range cases {
 		if got := astDeleteBehaviorStr(c.in); got != c.want {
@@ -140,13 +143,16 @@ func TestGenAssocDeleteBehaviorToMDL(t *testing.T) {
 		in   string
 		want string
 	}{
-		{"DeleteMeAndReferences", "DeleteMeAndReferences"},
-		{"DeleteBoth", "DeleteBoth"},
-		{"KeepParentDeleteChild", "KeepParentDeleteChild"},
-		{"KeepChildDeleteParent", "KeepChildDeleteParent"},
-		{"DeleteMeIfNoReferences", "DeleteIfNoReferences"},
-		{"DeleteMeButKeepReferences", "DeleteMeButKeepReferences"},
-		{"", "DeleteMeButKeepReferences"},
+		// MDL grammar tokens: DELETE_AND_REFERENCES, DELETE_BUT_KEEP_REFERENCES,
+		// DELETE_IF_NO_REFERENCES. BSON values without a direct MDL equivalent
+		// fall back to DELETE_BUT_KEEP_REFERENCES (lossy but grammar-valid).
+		{"DeleteMeAndReferences", "DELETE_AND_REFERENCES"},
+		{"DeleteBoth", "DELETE_BUT_KEEP_REFERENCES"},
+		{"KeepParentDeleteChild", "DELETE_BUT_KEEP_REFERENCES"},
+		{"KeepChildDeleteParent", "DELETE_BUT_KEEP_REFERENCES"},
+		{"DeleteMeIfNoReferences", "DELETE_IF_NO_REFERENCES"},
+		{"DeleteMeButKeepReferences", "DELETE_BUT_KEEP_REFERENCES"},
+		{"", "DELETE_BUT_KEEP_REFERENCES"},
 	}
 	for _, c := range cases {
 		if got := genAssocDeleteBehaviorToMDL(c.in); got != c.want {
@@ -198,8 +204,8 @@ func TestAssocSpecFromGen(t *testing.T) {
 	if spec.owner != "Both" {
 		t.Errorf("owner = %q, want Both", spec.owner)
 	}
-	if spec.deleteBehavior != "DeleteMeAndReferences" {
-		t.Errorf("deleteBehavior = %q, want DeleteMeAndReferences", spec.deleteBehavior)
+	if spec.deleteBehavior != "DELETE_AND_REFERENCES" {
+		t.Errorf("deleteBehavior = %q, want DELETE_AND_REFERENCES", spec.deleteBehavior)
 	}
 	if spec.documentation != "Links an order to its customer." {
 		t.Errorf("documentation = %q", spec.documentation)
@@ -212,7 +218,7 @@ func TestAssocSpecFromGen(t *testing.T) {
 		"from Sales.Order to Sales.Customer",
 		"type ReferenceSet",
 		"owner Both",
-		"delete_behavior DeleteMeAndReferences",
+		"delete_behavior DELETE_AND_REFERENCES",
 	} {
 		if !strings.Contains(out, want) {
 			t.Errorf("renderAssocMDL output missing %q\n--- got ---\n%s", want, out)
