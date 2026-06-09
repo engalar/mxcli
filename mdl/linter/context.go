@@ -6,11 +6,11 @@ import (
 	"database/sql"
 	"iter"
 
+	"github.com/mendixlabs/mxcli/mdl/backend"
 	"github.com/mendixlabs/mxcli/mdl/catalog"
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
-	genPg "github.com/mendixlabs/mxcli/modelsdk/gen/pages"
 	genSec "github.com/mendixlabs/mxcli/modelsdk/gen/security"
 )
 
@@ -24,15 +24,12 @@ type LintReader interface {
 	GetMicroflowGen(id model.ID) (*genMf.Microflow, error)
 	GetProjectSecurityGen() (*genSec.ProjectSecurity, error)
 	GetNavigation() (*types.NavigationDocument, error)
-	// ListPagesGen returns gen-typed Page units (Stage 3.3.5.C4 swap
-	// from the legacy sdk-typed ListPages). Container linkage is not
-	// carried by gen objects — callers needing it pair the result
-	// with GetPageContainerUUID below.
-	ListPagesGen() ([]*genPg.Page, error)
-	// GetPageContainerUUID resolves the parent container UUID (folder
-	// or module ID) of a Page unit. Used by lint rules that need to
-	// build qualified names from gen-typed Page listings.
-	GetPageContainerUUID(id model.ID) (model.ID, error)
+	// PageReader supplies the gen-typed Page/Layout/Snippet read surface
+	// (ListPagesGen, GetPageGen, GetPageContainerUUID, etc.). Embedded to
+	// avoid re-declaring page read methods already defined on the backend;
+	// lint rules pair ListPagesGen with GetPageContainerUUID to build
+	// qualified names from gen-typed Page listings.
+	backend.PageReader
 	ListModules() ([]*model.Module, error)
 	ListFolders() ([]*types.FolderInfo, error)
 	GetRawUnit(id model.ID) (map[string]any, error)

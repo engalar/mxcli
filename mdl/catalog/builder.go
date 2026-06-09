@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/mendixlabs/mxcli/mdl/backend"
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
 	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
@@ -47,13 +48,12 @@ type CatalogReader interface {
 	ListMicroflowsGen() ([]*genMf.Microflow, error)
 	ListNanoflowsGen() ([]*genMf.Nanoflow, error)
 
-	// Pages, layouts & snippets — gen-typed (Stage 3.3.5.C7e). Sibling
-	// methods serve catalog phases that don't need the legacy widget
-	// trees. Container linkage is resolved via b.hierarchy from the
-	// unit's own UUID, mirroring the workflow / microflow patterns.
-	ListPagesGen() ([]*genPg.Page, error)
-	ListLayoutsGen() ([]*genPg.Layout, error)
-	ListSnippetsGen() ([]*genPg.Snippet, error)
+	// Pages, layouts & snippets — gen-typed (Stage 3.3.5.C7e). Embedded
+	// via backend.PageReader (ISP split): supplies ListPagesGen /
+	// ListLayoutsGen / ListSnippetsGen plus the Get*Gen siblings and
+	// GetPageContainerUUID. Container linkage is resolved via b.hierarchy
+	// from the unit's own UUID, mirroring the workflow / microflow patterns.
+	backend.PageReader
 
 	// Workflows — gen-typed (Stage 3.3.3.C3). Container linkage resolved
 	// via b.hierarchy from the unit's own UUID, mirroring the microflow
