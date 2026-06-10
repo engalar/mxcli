@@ -56,3 +56,21 @@ func TestBuildDescribeCmd(t *testing.T) {
 		}
 	}
 }
+
+func TestExtractImagePaths_LowercaseKeywords(t *testing.T) {
+	// MDL output uses lowercase keywords since commit f70a74158
+	output := `create or modify image collection MyModule.Icons (
+    image logo from file '/tmp/mxcli-preview/MyModule.Icons/logo.png',
+    image banner from file '/tmp/mxcli-preview/MyModule.Icons/banner.svg'
+);`
+	paths := extractImagePaths(output)
+	if len(paths) != 2 {
+		t.Fatalf("expected 2 paths, got %d: %v", len(paths), paths)
+	}
+	if paths[0] != "/tmp/mxcli-preview/MyModule.Icons/logo.png" {
+		t.Errorf("paths[0] = %q, want /tmp/mxcli-preview/MyModule.Icons/logo.png", paths[0])
+	}
+	if paths[1] != "/tmp/mxcli-preview/MyModule.Icons/banner.svg" {
+		t.Errorf("paths[1] = %q, want /tmp/mxcli-preview/MyModule.Icons/banner.svg", paths[1])
+	}
+}

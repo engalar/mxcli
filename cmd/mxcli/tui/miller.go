@@ -918,11 +918,12 @@ func findImagePathAtClick(contentLines, imagePaths []string, clickedVLine, scrol
 				continue
 			}
 			plain := stripAnsi(contentLines[srcIdx])
-			i := strings.Index(plain, "FROM FILE '")
+			const markerFIC = "FROM FILE '"
+			i := strings.Index(strings.ToUpper(plain), markerFIC)
 			if i == -1 {
 				continue
 			}
-			rest := plain[i+len("FROM FILE '"):]
+			rest := plain[i+len(markerFIC):]
 			end := strings.Index(rest, "'")
 			if end == -1 {
 				continue

@@ -119,13 +119,14 @@ func renderImagesWithSize(paths []string, width, perImgHeight int) string {
 // file paths from lines matching: IMAGE "name" FROM FILE '/path/to/file'
 func extractImagePaths(output string) []string {
 	var paths []string
+	const marker = "FROM FILE '"
 	for _, line := range strings.Split(output, "\n") {
 		line = strings.TrimSpace(line)
-		idx := strings.Index(line, "FROM FILE '")
+		idx := strings.Index(strings.ToUpper(line), marker)
 		if idx == -1 {
 			continue
 		}
-		rest := line[idx+len("FROM FILE '"):]
+		rest := line[idx+len(marker):]
 		// Strip trailing quote and optional comma/semicolon
 		end := strings.Index(rest, "'")
 		if end == -1 {
