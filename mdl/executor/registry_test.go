@@ -200,6 +200,7 @@ func allKnownStatements() []ast.Statement {
 		&ast.CreateModuleStmt{},
 		&ast.CreateODataClientStmt{},
 		&ast.CreateODataServiceStmt{},
+		&ast.CreateLayoutStmt{},
 		&ast.CreatePageStmtV3{},
 		&ast.CreatePublishedRestServiceStmt{},
 		&ast.CreateRestClientStmt{},
