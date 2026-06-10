@@ -271,3 +271,22 @@ func TestStartLocal_AppPortInUse_ReturnsActionableError(t *testing.T) {
 		t.Errorf("error should contain --port flag, got: %v", err)
 	}
 }
+
+func TestWriteDeployHOCON_CustomPorts(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "test.conf")
+	err := docker.WriteDeployHOCON(path, map[string]string{}, map[string]string{}, "", "Admin123!", 8181, 8191)
+	if err != nil {
+		t.Fatalf("WriteDeployHOCON: %v", err)
+	}
+	data, _ := os.ReadFile(path)
+	content := string(data)
+	if !strings.Contains(content, "port = 8191") {
+		t.Errorf("expected admin port 8191 in HOCON, got:\n%s", content)
+	}
+	if !strings.Contains(content, "port = 8181") {
+		t.Errorf("expected app port 8181 in HOCON, got:\n%s", content)
+	}
+	if !strings.Contains(content, "localhost:8181") {
+		t.Errorf("expected ApplicationRootUrl with port 8181, got:\n%s", content)
+	}
+}

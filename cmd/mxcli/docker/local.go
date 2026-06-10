@@ -187,7 +187,7 @@ func startFromDeployLayout(opts LocalRunOptions, stdout, stderr io.Writer) error
 		adminPass = "Admin123!"
 	}
 	hoconPath := filepath.Join(tmpDir, "local.conf")
-	if err := writeDeployHOCON(hoconPath, dcfg, opts.DB, adminPass); err != nil {
+	if err := writeDeployHOCON(hoconPath, dcfg, opts.DB, adminPass, opts.appPort(), opts.adminPort()); err != nil {
 		return fmt.Errorf("generating config: %w", err)
 	}
 
@@ -222,7 +222,7 @@ func startFromDeployLayout(opts LocalRunOptions, stdout, stderr io.Writer) error
 }
 
 // writeDeployHOCON writes a HOCON config file for a deploy-layout startup.
-func writeDeployHOCON(path string, dcfg deployConfig, dbURL, adminPass string) error {
+func writeDeployHOCON(path string, dcfg deployConfig, dbURL, adminPass string, appPort, adminPort int) error {
 	cfg := dcfg.Configuration
 	dbType := cfg["DatabaseType"]
 	if dbType == "" {
@@ -234,7 +234,7 @@ func writeDeployHOCON(path string, dcfg deployConfig, dbURL, adminPass string) e
 	}
 	appURL := cfg["ApplicationRootUrl"]
 	if appURL == "" {
-		appURL = "http://localhost:8080/"
+		appURL = fmt.Sprintf("http://localhost:%d/", appPort)
 	}
 
 	var sb strings.Builder
@@ -278,7 +278,7 @@ func writeDeployHOCON(path string, dcfg deployConfig, dbURL, adminPass string) e
 
 	// Admin server.
 	sb.WriteString("admin {\n")
-	sb.WriteString("  port = 8090\n")
+	fmt.Fprintf(&sb, "  port = %d\n", adminPort)
 	sb.WriteString("  addresses = [ localhost ]\n")
 	sb.WriteString("  adminPassword = ${?ADMIN_ADMINPASSWORD}\n")
 	sb.WriteString("}\n\n")
@@ -286,7 +286,7 @@ func writeDeployHOCON(path string, dcfg deployConfig, dbURL, adminPass string) e
 	// Runtime HTTP + admin user.
 	sb.WriteString("runtime {\n")
 	sb.WriteString("  http {\n")
-	sb.WriteString("    port = 8080\n")
+	fmt.Fprintf(&sb, "    port = %d\n", appPort)
 	sb.WriteString("    addresses = [ \"*\" ]\n")
 	sb.WriteString("  }\n")
 	sb.WriteString("  adminUser.password = ${?RUNTIME_ADMINUSER_PASSWORD}\n")
@@ -305,6 +305,11 @@ func writeDeployHOCON(path string, dcfg deployConfig, dbURL, adminPass string) e
 	sb.WriteString("]\n")
 
 	return os.WriteFile(path, []byte(sb.String()), 0600)
+}
+
+// WriteDeployHOCON is the exported wrapper for tests.
+func WriteDeployHOCON(path string, dcfg map[string]string, constants map[string]string, dbURL, adminPass string, appPort, adminPort int) error {
+	return writeDeployHOCON(path, deployConfig{Configuration: dcfg, Constants: constants}, dbURL, adminPass, appPort, adminPort)
 }
 
 // resolveMxInstallPathForVersion finds the Mendix runtime installation directory
