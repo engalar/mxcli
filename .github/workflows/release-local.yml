@@ -42,10 +42,18 @@ jobs:
           sha256sum mxcli-local-* > SHA256SUMS
           cat SHA256SUMS
 
+      - name: Generate release notes
+        uses: orhun/git-cliff-action@v4
+        with:
+          config: cliff.toml
+          args: --tag-pattern '^local-v' --strip header --current
+        env:
+          OUTPUT: release-notes.md
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v3
         with:
-          generate_release_notes: true
+          body_path: release-notes.md
           prerelease: true   # keeps /releases/latest pointing to launcher v* releases
           files: |
             bin/mxcli-local-linux-amd64.tar.zst
