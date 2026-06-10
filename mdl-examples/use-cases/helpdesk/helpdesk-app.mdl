@@ -3104,4 +3104,5 @@ alter page HD.Ticket_Detail {
 };
 
 -- Verify image collection round-trip (bson.D fix: ALTER IMAGE COLLECTION ADD/RENAME/DROP).
+-- Golden rebuilt: fix findMxBinaryForVersion to use semver ordering (11.10.0 > 11.6.6).
 show image collection;
