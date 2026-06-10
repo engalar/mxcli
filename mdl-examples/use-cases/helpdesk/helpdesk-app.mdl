@@ -2426,7 +2426,7 @@ create or modify non-persistent entity FT.WorkOrderImport (
 
 -- SLA compliance per agent: total tickets and overdue count.
 -- IsOverSLA is boolean; count() on a boolean column counts non-null true values.
-create view entity FT.TicketSLAStats (
+create or modify view entity FT.TicketSLAStats (
   AgentName:    string(200),
   TotalTickets: integer,
   OverSLACount: integer
@@ -2445,7 +2445,7 @@ create view entity FT.TicketSLAStats (
 -- FT.DispatchSummary: simplified to avoid CE6770 (View Entity out of sync
 -- with OQL Query). The avg(datepart(HOUR, ...) - datepart(HOUR, ...)) arithmetic
 -- inside avg() is not supported. Simplified to count-only query.
-create view entity FT.DispatchSummary (
+create or modify view entity FT.DispatchSummary (
   TechName:   string(200),
   OrderCount: integer
 ) as (
@@ -2746,12 +2746,12 @@ create or modify nanoflow FT.NF_FT_LoadOrders
 
 -- JSON structure for the SMS gateway request body.
 -- 'snippet' provides a sample JSON document; executor infers the schema.
-create json structure FT.SMSPayload
+create or modify json structure FT.SMSPayload
   snippet '{"to": "+1555000000", "message": "Your technician is on the way."}';
 
 -- REST client: SMS gateway.
 -- Operation NotifyTech sends the payload; response is the HTTP status code.
-create rest client FT.SMSGateway (
+create or modify rest client FT.SMSGateway (
   BaseUrl:        'https://sms.example.com/api/v1',
   authentication: none
 )
@@ -2766,14 +2766,14 @@ create rest client FT.SMSGateway (
 };
 
 -- JSON structure for the external work-order webhook payload.
-create json structure FT.WorkOrderPayload
+create or modify json structure FT.WorkOrderPayload
   snippet '{"ticketRef": "HD-001", "techName": "Jane Smith", "scheduledAt": "2026-06-10T09:00:00Z"}';
 
 -- Import mapping: JSON webhook payload → FT.WorkOrderImport non-persistent entity.
 -- The JSON structure's parsed element tree binds the source; previously this
 -- produced CE0271 because mxcli stored only the raw JsonSnippet with no element
 -- tree. Now createJsonStructureGen serializes the full JsonElement tree.
-create import mapping FT.WorkOrderImport_Mapping
+create or modify import mapping FT.WorkOrderImport_Mapping
   with json structure FT.WorkOrderPayload
 {
   create FT.WorkOrderImport {
@@ -2784,7 +2784,7 @@ create import mapping FT.WorkOrderImport_Mapping
 };
 
 -- Export mapping: FT.DispatchOrder → JSON for outbound reporting.
-create export mapping FT.DispatchOrder_Export
+create or modify export mapping FT.DispatchOrder_Export
   with json structure FT.WorkOrderPayload
 {
   FT.DispatchOrder {
