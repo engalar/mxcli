@@ -53,3 +53,58 @@ func (b *Builder) ExitCreateImageCollectionStatement(ctx *parser.CreateImageColl
 
 	b.statements = append(b.statements, stmt)
 }
+
+// exitAlterImageCollectionStatement handles ALTER IMAGE COLLECTION statements,
+// dispatched from ExitAlterStatement when IMAGE and COLLECTION tokens are present.
+func (b *Builder) exitAlterImageCollectionStatement(ctx *parser.AlterStatementContext) {
+	qn := ctx.QualifiedName()
+	if qn == nil {
+		return
+	}
+	stmt := &ast.AlterImageCollectionStmt{
+		Name: buildQualifiedName(qn),
+	}
+	for _, rawAction := range ctx.AllAlterImageCollectionAction() {
+		action := rawAction.(*parser.AlterImageCollectionActionContext)
+		names := action.AllImageName()
+		switch {
+		case action.ADD() != nil:
+			stmt.Actions = append(stmt.Actions, &ast.AddImageAction{
+				ImageName: imageNameText(names[0]),
+				FilePath:  unquoteString(action.STRING_LITERAL().GetText()),
+			})
+		case action.DROP() != nil:
+			stmt.Actions = append(stmt.Actions, &ast.DropImageAction{
+				ImageName: imageNameText(names[0]),
+			})
+		case action.RENAME() != nil:
+			stmt.Actions = append(stmt.Actions, &ast.RenameImageAction{
+				From: imageNameText(names[0]),
+				To:   imageNameText(names[1]),
+			})
+		case action.SET() != nil:
+			stmt.Actions = append(stmt.Actions, &ast.SetImageAction{
+				ImageName: imageNameText(names[0]),
+				FilePath:  unquoteString(action.STRING_LITERAL().GetText()),
+			})
+		case action.MOVE() != nil:
+			stmt.Actions = append(stmt.Actions, &ast.MoveImageCollectionAction{
+				Target: buildQualifiedName(action.QualifiedName()),
+			})
+		case action.EXPORT() != nil:
+			stmt.Actions = append(stmt.Actions, &ast.ExportImageAction{
+				ImageName: imageNameText(names[0]),
+				FilePath:  unquoteString(action.STRING_LITERAL().GetText()),
+			})
+		}
+	}
+	b.statements = append(b.statements, stmt)
+}
+
+// imageNameText returns the text of an imageName rule, stripping optional quotes.
+func imageNameText(ctx parser.IImageNameContext) string {
+	if ctx == nil {
+		return ""
+	}
+	return unquoteIdentifier(ctx.GetText())
+}

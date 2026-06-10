@@ -35,6 +35,12 @@ func (b *Builder) ExitAlterStatement(ctx *parser.AlterStatementContext) {
 		return
 	}
 
+	// Handle ALTER IMAGE COLLECTION
+	if ctx.IMAGE() != nil && ctx.COLLECTION() != nil && len(ctx.AllAlterImageCollectionAction()) > 0 {
+		b.exitAlterImageCollectionStatement(ctx)
+		return
+	}
+
 	if ctx.ODATA() == nil {
 		return // Not an OData alter - handled elsewhere
 	}
