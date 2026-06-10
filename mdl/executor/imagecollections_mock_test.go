@@ -164,3 +164,18 @@ func TestCreateImageCollection_OrModify_PreservesIDAndUpdates(t *testing.T) {
 	}
 	assertContainsStr(t, buf.String(), "Modified image collection")
 }
+
+func TestAlterImageCollectionStmt_Compile(t *testing.T) {
+	stmt := &ast.AlterImageCollectionStmt{
+		Name: ast.QualifiedName{Module: "Mod", Name: "Icons"},
+		Actions: []ast.ImageCollectionAction{
+			&ast.AddImageAction{ImageName: "logo", FilePath: "./logo.png"},
+			&ast.DropImageAction{ImageName: "logo"},
+			&ast.RenameImageAction{From: "logo", To: "logo_v2"},
+			&ast.SetImageAction{ImageName: "logo", FilePath: "./logo_new.png"},
+			&ast.MoveImageCollectionAction{Target: ast.QualifiedName{Module: "Other", Name: "Icons"}},
+			&ast.ExportImageAction{ImageName: "logo", FilePath: "./out/logo.png"},
+		},
+	}
+	_ = stmt
+}

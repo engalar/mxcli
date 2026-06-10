@@ -27,3 +27,55 @@ type DropImageCollectionStmt struct {
 }
 
 func (s *DropImageCollectionStmt) isStatement() {}
+
+// AlterImageCollectionStmt represents ALTER IMAGE COLLECTION Module.Name action [, action...]
+type AlterImageCollectionStmt struct {
+	Name    QualifiedName
+	Actions []ImageCollectionAction
+}
+
+func (s *AlterImageCollectionStmt) isStatement() {}
+
+// ImageCollectionAction is the interface for all ALTER IMAGE COLLECTION sub-actions.
+type ImageCollectionAction interface{ isImageCollectionAction() }
+
+// AddImageAction: ADD IMAGE name FROM FILE 'path'
+type AddImageAction struct {
+	ImageName string
+	FilePath  string
+}
+
+// DropImageAction: DROP IMAGE name
+type DropImageAction struct {
+	ImageName string
+}
+
+// RenameImageAction: RENAME IMAGE oldName TO newName
+type RenameImageAction struct {
+	From string
+	To   string
+}
+
+// SetImageAction: SET IMAGE name FROM FILE 'path'
+type SetImageAction struct {
+	ImageName string
+	FilePath  string
+}
+
+// MoveImageCollectionAction: MOVE TO Module.Name
+type MoveImageCollectionAction struct {
+	Target QualifiedName
+}
+
+// ExportImageAction: EXPORT IMAGE name TO FILE 'path'
+type ExportImageAction struct {
+	ImageName string
+	FilePath  string
+}
+
+func (a *AddImageAction) isImageCollectionAction()            {}
+func (a *DropImageAction) isImageCollectionAction()           {}
+func (a *RenameImageAction) isImageCollectionAction()         {}
+func (a *SetImageAction) isImageCollectionAction()            {}
+func (a *MoveImageCollectionAction) isImageCollectionAction() {}
+func (a *ExportImageAction) isImageCollectionAction()         {}
