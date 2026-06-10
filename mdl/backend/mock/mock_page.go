@@ -138,6 +138,16 @@ func (m *MockBackend) MoveLayoutGen(id, containerID model.ID) error {
 	return fmt.Errorf("MockBackend.MoveLayoutGen not configured")
 }
 
+func (m *MockBackend) GetContainerID(moduleID model.ID, folder string) (model.ID, error) {
+	if m.GetContainerIDFunc != nil {
+		return m.GetContainerIDFunc(moduleID, folder)
+	}
+	if folder == "" {
+		return moduleID, nil
+	}
+	return "", fmt.Errorf("MockBackend.GetContainerID not configured")
+}
+
 func (m *MockBackend) DeleteSnippetGen(id model.ID) error {
 	if m.DeleteSnippetGenFunc != nil {
 		return m.DeleteSnippetGenFunc(id)

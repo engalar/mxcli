@@ -7,6 +7,7 @@ package mprbackend
 
 import (
 	"fmt"
+	"strings"
 
 	"go.mongodb.org/mongo-driver/v2/bson"
 
@@ -552,6 +553,60 @@ func (b *MprBackend) MoveLayoutGen(id, containerID model.ID) error {
 		return fmt.Errorf("MoveLayoutGen: no modelsdk writer")
 	}
 	return b.msdkWriter.UpdateUnitContainer(string(id), string(containerID))
+}
+
+// GetContainerID resolves moduleID + optional folder path to a container UUID.
+// If folder is empty, returns moduleID directly (root of module). Path segments
+// are separated by "/"; folders that do not yet exist are created.
+func (b *MprBackend) GetContainerID(moduleID model.ID, folder string) (model.ID, error) {
+	if folder == "" {
+		return moduleID, nil
+	}
+
+	folders, err := b.ListFolders()
+	if err != nil {
+		return "", err
+	}
+
+	current := moduleID
+	for _, part := range strings.Split(folder, "/") {
+		if part == "" {
+			continue
+		}
+
+		var found *types.FolderInfo
+		for _, f := range folders {
+			if f.ContainerID == current && f.Name == part {
+				found = f
+				break
+			}
+		}
+
+		if found != nil {
+			current = found.ID
+			continue
+		}
+
+		newFolder := &model.Folder{
+			BaseElement: model.BaseElement{
+				ID:       model.ID(types.GenerateID()),
+				TypeName: "Projects$Folder",
+			},
+			ContainerID: current,
+			Name:        part,
+		}
+		if err := b.CreateFolder(newFolder); err != nil {
+			return "", fmt.Errorf("create folder %q: %w", part, err)
+		}
+		folders = append(folders, &types.FolderInfo{
+			ID:          newFolder.ID,
+			ContainerID: current,
+			Name:        part,
+		})
+		current = newFolder.ID
+	}
+
+	return current, nil
 }
 
 func (b *MprBackend) DeleteSnippetGen(id model.ID) error {

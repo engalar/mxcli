@@ -45,6 +45,11 @@ type PageWriter interface {
 	DeleteLayoutGen(id model.ID) error
 	MoveLayoutGen(id, containerID model.ID) error
 
+	// GetContainerID resolves a module ID and optional folder path to a BSON
+	// container UUID. When folder is empty, moduleID itself is returned.
+	// Folder path segments are separated by "/"; missing folders are created.
+	GetContainerID(moduleID model.ID, folder string) (model.ID, error)
+
 	CreateSnippetGen(parentUUID, containmentName string, snippet *genPg.Snippet) error
 	UpdateSnippetGen(snippet *genPg.Snippet) error
 	DeleteSnippetGen(id model.ID) error

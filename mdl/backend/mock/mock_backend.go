@@ -117,6 +117,7 @@ type MockBackend struct {
 	MovePageGenFunc      func(id, containerID model.ID) error
 	DeleteLayoutGenFunc  func(id model.ID) error
 	MoveLayoutGenFunc    func(id, containerID model.ID) error
+	GetContainerIDFunc   func(moduleID model.ID, folder string) (model.ID, error)
 	DeleteSnippetGenFunc func(id model.ID) error
 	MoveSnippetGenFunc   func(id, containerID model.ID) error
 
