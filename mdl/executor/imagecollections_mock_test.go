@@ -177,6 +177,16 @@ func mkImageCollectionWithImages(mod *model.Module, name string, images ...types
 	}
 }
 
+func TestAlterImageCollection_NotConnected(t *testing.T) {
+	mb := &mock.MockBackend{IsConnectedFunc: func() bool { return false }}
+	ctx, _ := newMockCtx(t, withBackend(mb))
+	err := execAlterImageCollection(ctx, &ast.AlterImageCollectionStmt{
+		Name:    ast.QualifiedName{Module: "Mod", Name: "Icons"},
+		Actions: []ast.ImageCollectionAction{&ast.DropImageAction{ImageName: "logo"}},
+	})
+	assertError(t, err)
+}
+
 func TestAlterImageCollection_NotFound(t *testing.T) {
 	mod := mkModule("Mod")
 	h := mkHierarchy(mod)
