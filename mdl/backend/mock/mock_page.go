@@ -117,6 +117,13 @@ func (m *MockBackend) DeletePageGen(id model.ID) error {
 	return fmt.Errorf("MockBackend.DeletePageGen not configured")
 }
 
+func (m *MockBackend) MoveDocumentGen(id, containerID model.ID) error {
+	if m.MoveDocumentGenFunc != nil {
+		return m.MoveDocumentGenFunc(id, containerID)
+	}
+	return fmt.Errorf("MockBackend.MoveDocumentGen not configured")
+}
+
 func (m *MockBackend) MovePageGen(id, containerID model.ID) error {
 	if m.MovePageGenFunc != nil {
 		return m.MovePageGenFunc(id, containerID)

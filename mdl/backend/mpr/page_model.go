@@ -30,7 +30,6 @@ func (b *MprBackend) GetLayoutModel(id model.ID) (*types.PageModel, error) {
 }
 
 func (b *MprBackend) loadPageModel(id model.ID, kind string) (*types.PageModel, error) {
-	_ = kind
 	raw, err := b.msdkReader.GetRawUnitBytes(string(id))
 	if err != nil {
 		return nil, fmt.Errorf("load unit bytes: %w", err)
@@ -39,7 +38,31 @@ func (b *MprBackend) loadPageModel(id model.ID, kind string) (*types.PageModel, 
 	if err := bson.Unmarshal(raw, &doc); err != nil {
 		return nil, fmt.Errorf("unmarshal BSON: %w", err)
 	}
+	if kind == "layout" {
+		return layoutDocToModel(doc), nil
+	}
 	return pageDocToModel(doc), nil
+}
+
+// layoutDocToModel converts a Forms$Layout BSON document to a PageModel.
+// Layout widgets live in Content.Widgets (Forms$WebLayoutContent or
+// Forms$NativeLayoutContent), unlike pages which use LayoutCall.Arguments.
+func layoutDocToModel(doc bson.D) *types.PageModel {
+	pm := &types.PageModel{}
+	contentDoc := dGetDoc(doc, "Content")
+	if contentDoc == nil {
+		return pm
+	}
+	for _, w := range dGetArrayElements(dGet(contentDoc, "Widgets")) {
+		wd, ok := w.(bson.D)
+		if !ok {
+			continue
+		}
+		if node := widgetNodeFromBSON(wd); node != nil {
+			pm.Widgets = append(pm.Widgets, node)
+		}
+	}
+	return pm
 }
 
 // ---------------------------------------------------------------------------
@@ -115,6 +138,7 @@ func widgetsFromDivContainer(doc bson.D) []*types.WidgetNode {
 // ---------------------------------------------------------------------------
 
 var bsonTypeToKind = map[string]types.WidgetKind{
+	"Forms$Placeholder":          types.WidgetPlaceholder,
 	"Forms$DivContainer":         types.WidgetContainer,
 	"Pages$DivContainer":         types.WidgetContainer,
 	"Forms$ScrollContainer":      types.WidgetScrollView,
@@ -191,8 +215,17 @@ func widgetNodeFromBSON(doc bson.D) *types.WidgetNode {
 	}
 
 	switch kind {
-	case types.WidgetContainer, types.WidgetScrollView:
+	case types.WidgetContainer:
 		node.Children = extractChildWidgets(doc, "Widgets")
+	case types.WidgetScrollView:
+		// Pages: children are in Widgets; Layout scroll containers: children
+		// are in CenterRegion.Widgets (plus optional Top/Bottom regions).
+		node.Children = extractChildWidgets(doc, "Widgets")
+		if len(node.Children) == 0 {
+			if center := dGetDoc(doc, "CenterRegion"); center != nil {
+				node.Children = extractChildWidgets(center, "Widgets")
+			}
+		}
 	case types.WidgetLayoutGrid:
 		node.Children = extractLayoutGridRows(doc)
 	case types.WidgetLayoutRow:

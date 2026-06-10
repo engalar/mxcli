@@ -35,6 +35,9 @@ type PageReader interface {
 // Page/Layout/Snippet structs entirely. The Move* signatures take unit ID +
 // new container ID directly; the caller resolves the new container first.
 type PageWriter interface {
+	// MoveDocumentGen moves any gen-typed document unit to a new container.
+	MoveDocumentGen(id, containerID model.ID) error
+
 	CreatePageGen(parentUUID, containmentName string, page *genPg.Page) error
 	UpdatePageGen(page *genPg.Page) error
 	DeletePageGen(id model.ID) error

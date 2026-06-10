@@ -115,6 +115,7 @@ type MockBackend struct {
 	// Stage 3.3.5.D5.c gen-typed delete + move Func fields.
 	DeletePageGenFunc    func(id model.ID) error
 	MovePageGenFunc      func(id, containerID model.ID) error
+	MoveDocumentGenFunc  func(id, containerID model.ID) error
 	DeleteLayoutGenFunc  func(id model.ID) error
 	MoveLayoutGenFunc    func(id, containerID model.ID) error
 	GetContainerIDFunc   func(moduleID model.ID, folder string) (model.ID, error)

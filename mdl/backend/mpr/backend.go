@@ -534,6 +534,13 @@ func (b *MprBackend) DeletePageGen(id model.ID) error {
 	return b.msdkWriter.DeleteUnit(string(id))
 }
 
+func (b *MprBackend) MoveDocumentGen(id, containerID model.ID) error {
+	if b.msdkWriter == nil {
+		return fmt.Errorf("MoveDocumentGen: no modelsdk writer")
+	}
+	return b.msdkWriter.UpdateUnitContainer(string(id), string(containerID))
+}
+
 func (b *MprBackend) MovePageGen(id, containerID model.ID) error {
 	if b.msdkWriter == nil {
 		return fmt.Errorf("MovePageGen: no modelsdk writer")

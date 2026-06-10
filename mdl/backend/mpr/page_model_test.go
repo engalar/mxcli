@@ -10,6 +10,93 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/types"
 )
 
+// TestLayoutDocToModel_WebLayout verifies that layoutDocToModel correctly
+// extracts a ScrollContainer with a Placeholder from a Forms$WebLayoutContent
+// document — the structure used by Responsive/Phone/Tablet layouts.
+func TestLayoutDocToModel_WebLayout(t *testing.T) {
+	placeholderDoc := bson.D{
+		{Key: "$Type", Value: "Forms$Placeholder"},
+		{Key: "Name", Value: "Main"},
+	}
+	regionDoc := bson.D{
+		{Key: "$Type", Value: "Forms$ScrollContainerRegion"},
+		{Key: "Widgets", Value: bson.A{int32(2), placeholderDoc}},
+	}
+	scrollDoc := bson.D{
+		{Key: "$Type", Value: "Forms$ScrollContainer"},
+		{Key: "Name", Value: "scrollContainer1"},
+		{Key: "CenterRegion", Value: regionDoc},
+		{Key: "Widgets", Value: bson.A{int32(2)}}, // empty in layout context
+	}
+	contentDoc := bson.D{
+		{Key: "$Type", Value: "Forms$WebLayoutContent"},
+		{Key: "LayoutType", Value: "Responsive"},
+		{Key: "Widgets", Value: bson.A{int32(2), scrollDoc}},
+	}
+	doc := bson.D{
+		{Key: "$Type", Value: "Forms$Layout"},
+		{Key: "Content", Value: contentDoc},
+	}
+
+	pm := layoutDocToModel(doc)
+	if pm == nil {
+		t.Fatal("layoutDocToModel returned nil")
+	}
+	if len(pm.Widgets) == 0 {
+		t.Fatal("expected at least 1 top-level widget from Content.Widgets, got 0")
+	}
+	scrollNode := pm.Widgets[0]
+	if scrollNode.Kind != types.WidgetScrollView {
+		t.Errorf("top widget Kind = %q, want %q", scrollNode.Kind, types.WidgetScrollView)
+	}
+	// Placeholder should appear as a child via CenterRegion
+	if len(scrollNode.Children) == 0 {
+		t.Fatal("ScrollContainer should have at least 1 child (Placeholder from CenterRegion)")
+	}
+	phNode := scrollNode.Children[0]
+	if phNode.Kind != types.WidgetPlaceholder {
+		t.Errorf("child Kind = %q, want %q", phNode.Kind, types.WidgetPlaceholder)
+	}
+	if phNode.Name != "Main" {
+		t.Errorf("placeholder Name = %q, want %q", phNode.Name, "Main")
+	}
+}
+
+// TestLayoutDocToModel_NativeLayout verifies that layoutDocToModel handles the
+// Forms$NativeLayoutContent BSON structure used by native mobile layouts.
+func TestLayoutDocToModel_NativeLayout(t *testing.T) {
+	contentDoc := bson.D{
+		{Key: "$Type", Value: "Forms$NativeLayoutContent"},
+		{Key: "LayoutType", Value: "Default"},
+		{Key: "Widgets", Value: bson.A{
+			int32(2),
+			bson.D{
+				{Key: "$Type", Value: "Forms$Placeholder"},
+				{Key: "Name", Value: "Content"},
+			},
+		}},
+	}
+	doc := bson.D{
+		{Key: "$Type", Value: "Forms$Layout"},
+		{Key: "Content", Value: contentDoc},
+	}
+
+	pm := layoutDocToModel(doc)
+	if pm == nil {
+		t.Fatal("layoutDocToModel returned nil")
+	}
+	if len(pm.Widgets) == 0 {
+		t.Fatal("expected at least 1 widget from native layout Content.Widgets")
+	}
+	phNode := pm.Widgets[0]
+	if phNode.Kind != types.WidgetPlaceholder {
+		t.Errorf("widget Kind = %q, want %q", phNode.Kind, types.WidgetPlaceholder)
+	}
+	if phNode.Name != "Content" {
+		t.Errorf("placeholder Name = %q, want %q", phNode.Name, "Content")
+	}
+}
+
 // TestPageDocToModel_Container builds a minimal BSON page document that wraps
 // a single Forms$DivContainer named "mainBox" and verifies pageDocToModel
 // extracts the container as a WidgetNode with Kind=container.
