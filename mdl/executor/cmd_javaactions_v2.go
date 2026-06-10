@@ -481,6 +481,24 @@ func javaActionReturnTypeElement(ja *genJA.JavaAction) element.Element {
 	return ja.ActionReturnType()
 }
 
+// javaScriptActionReturnTypeElement mirrors javaActionReturnTypeElement for
+// JavaScript actions. Studio Pro stores the return type under the legacy
+// "JavaReturnType" BSON key (same as Java actions), but genJSA.JavaScriptAction
+// only exposes "ActionReturnType" via its typed getter — which is absent in
+// Studio-Pro-emitted BSON and therefore always nil. We raw-read the legacy key
+// via genJA.DecodeChildElement so that void/Nothing and typed returns are not lost.
+func javaScriptActionReturnTypeElement(jsa *genJSA.JavaScriptAction) element.Element {
+	if jsa == nil {
+		return nil
+	}
+	// Prefer the legacy JavaReturnType field written by Studio Pro.
+	if rt := genJA.DecodeChildElement(jsa, "JavaReturnType"); rt != nil {
+		return rt
+	}
+	// Fall back to ActionReturnType set by our own write path.
+	return jsa.ActionReturnType()
+}
+
 // javaActionParameterParameterType returns the parameter's type sub-
 // element, preferring ParameterType (legacy "ParameterType" BSON key —
 // often a BasicParameterType wrapper) over JavaType / ActionParameterType
@@ -855,10 +873,8 @@ func describeJavaScriptActionGen(ctx *ExecContext, name ast.QualifiedName) error
 	}
 	sb.WriteString(")")
 
-	if rt := jsa.ActionReturnType(); rt != nil {
-		sb.WriteString("\n  returns ")
-		sb.WriteString(formatJavaActionReturnTypeGen(rt, typeParams))
-	}
+	sb.WriteString("\n  returns ")
+	sb.WriteString(formatJavaActionReturnTypeGen(javaScriptActionReturnTypeElement(jsa), typeParams))
 
 	platform := jsa.Platform()
 	if platform == "" {
