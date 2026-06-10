@@ -4,6 +4,7 @@ package executor
 
 import (
 	"fmt"
+	"io"
 	"strconv"
 	"strings"
 
@@ -323,39 +324,63 @@ func describeLayout(ctx *ExecContext, name ast.QualifiedName) error {
 		fmt.Fprint(ctx.Output, " */\n")
 	}
 
-	// Output layout type comment
+	// Resolve layout type and folder for the header.
 	layoutTypeStr := foundLayout.LayoutType()
 	if layoutTypeStr == "" {
 		layoutTypeStr = "Responsive"
 	}
 
-	fmt.Fprintf(ctx.Output, "-- Layout Type: %s\n", layoutTypeStr)
-	fmt.Fprintf(ctx.Output, "-- This is a layout document. Layouts define the structure that pages are built upon.\n")
-	fmt.Fprintf(ctx.Output, "-- Layouts cannot be created via MDL; they must be created in Studio Pro.\n\n")
-
-	// Output as a comment showing the layout name
-	fmt.Fprintf(ctx.Output, "-- layout %s.%s\n", modName, foundLayout.Name())
-
-	// Output widgets via the new PageModel IR path (Task 6 wire-up).
-	// Layouts are read-only in MDL — the widget tree is rendered for
-	// inspection; whole output stays comment-prefixed because layouts
-	// cannot be (re)created via MDL.
-	pm, pmErr := ctx.Backend.GetLayoutModel(layoutID)
-	if pmErr == nil && pm != nil && len(pm.Widgets) > 0 {
-		fmt.Fprint(ctx.Output, "-- Widget structure:\n")
-		var buf strings.Builder
-		for _, n := range pm.Widgets {
-			renderWidget(&buf, n, 0)
-		}
-		// Prefix every rendered line with `-- ` so the layout output stays
-		// a pure comment block (layouts are non-creatable in MDL).
-		for _, line := range strings.Split(strings.TrimRight(buf.String(), "\n"), "\n") {
-			fmt.Fprintf(ctx.Output, "-- %s\n", line)
-		}
+	props := []string{fmt.Sprintf("type: %s", layoutTypeStr)}
+	if folderPath := resolvePageFolder(ctx, foundContainerID); folderPath != "" {
+		props = append(props, fmt.Sprintf("folder: %s", mdlQuote(folderPath)))
 	}
 
+	// Header: create or modify layout Module.Name ( ... )
+	fmt.Fprintf(ctx.Output, "create or modify layout %s.%s (\n", modName, foundLayout.Name())
+	for i, p := range props {
+		if i < len(props)-1 {
+			fmt.Fprintf(ctx.Output, "  %s,\n", p)
+		} else {
+			fmt.Fprintf(ctx.Output, "  %s\n", p)
+		}
+	}
+	fmt.Fprint(ctx.Output, ")")
+
+	// Body: only emit braces when there are renderable widgets.
+	pm, pmErr := ctx.Backend.GetLayoutModel(layoutID)
+	if pmErr == nil && pm != nil && len(pm.Widgets) > 0 {
+		fmt.Fprint(ctx.Output, " {\n")
+		for _, n := range pm.Widgets {
+			renderLayoutWidget(ctx.Output, n, 1)
+		}
+		fmt.Fprint(ctx.Output, "}")
+	}
 	fmt.Fprint(ctx.Output, "\n")
+
 	return nil
+}
+
+// renderLayoutWidget renders a layout widget subtree as executable MDL.
+// Scroll containers wrap their children in a single `center` region; native
+// placeholders render as standalone `placeholder` statements.
+func renderLayoutWidget(w io.Writer, node *types.WidgetNode, depth int) {
+	indent := strings.Repeat("  ", depth)
+	switch node.Kind {
+	case types.WidgetScrollView:
+		fmt.Fprintf(w, "%sscrollcontainer %s {\n", indent, node.Name)
+		if len(node.Children) > 0 {
+			fmt.Fprintf(w, "%s  center {\n", indent)
+			for _, c := range node.Children {
+				renderLayoutWidget(w, c, depth+2)
+			}
+			fmt.Fprintf(w, "%s  }\n", indent)
+		}
+		fmt.Fprintf(w, "%s}\n", indent)
+	case types.WidgetPlaceholder:
+		fmt.Fprintf(w, "%splaceholder %s\n", indent, node.Name)
+	default:
+		fmt.Fprintf(w, "%s-- %s %s\n", indent, node.Kind, node.Name)
+	}
 }
 
 // getLayoutWidgetsFromRaw extracts widgets from raw layout BSON.
