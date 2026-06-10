@@ -4,6 +4,8 @@
 package docker_test
 
 import (
+	"fmt"
+	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -165,5 +167,35 @@ func TestResolveMxInstallPath_MxBuildCacheNewest(t *testing.T) {
 	want := filepath.Join(home, ".mxcli", "mxbuild", "11.0.0")
 	if got != want {
 		t.Errorf("got %q, want %q", got, want)
+	}
+}
+
+func TestFindAvailablePorts_ReturnsBindablePair(t *testing.T) {
+	// Occupy a pair of ports so FindAvailablePorts must skip them.
+	ln1, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer ln1.Close()
+	ln2, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer ln2.Close()
+
+	ap, adm := docker.FindAvailablePorts(8080, 8090)
+
+	// Returned ports must actually be bindable.
+	lnA, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", ap))
+	if err != nil {
+		t.Errorf("app port %d not bindable: %v", ap, err)
+	} else {
+		lnA.Close()
+	}
+	lnB, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", adm))
+	if err != nil {
+		t.Errorf("admin port %d not bindable: %v", adm, err)
+	} else {
+		lnB.Close()
 	}
 }

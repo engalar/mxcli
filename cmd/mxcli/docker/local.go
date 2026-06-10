@@ -541,3 +541,26 @@ func parseDBURL(rawURL string) ([]string, error) {
 		"RUNTIME_PARAMS_DATABASEPASSWORD=" + password,
 	}, nil
 }
+
+// canBind reports whether the given TCP port is available on localhost.
+func canBind(port int) bool {
+	ln, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", port))
+	if err != nil {
+		return false
+	}
+	ln.Close()
+	return true
+}
+
+// FindAvailablePorts returns the first (appPort, adminPort) pair above
+// (startApp, startAdmin) where both ports are simultaneously bindable.
+// Exported for testing.
+func FindAvailablePorts(startApp, startAdmin int) (int, int) {
+	for offset := 1; offset < 100; offset++ {
+		ap, adm := startApp+offset, startAdmin+offset
+		if canBind(ap) && canBind(adm) {
+			return ap, adm
+		}
+	}
+	return startApp + 1, startAdmin + 1 // extreme fallback
+}
