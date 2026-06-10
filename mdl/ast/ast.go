@@ -54,6 +54,10 @@ const (
 	DocumentTypeEnumeration        DocumentType = "ENUMERATION"
 	DocumentTypeConstant           DocumentType = "CONSTANT"
 	DocumentTypeDatabaseConnection DocumentType = "DATABASE CONNECTION"
+	DocumentTypeJavaAction         DocumentType = "JAVA ACTION"
+	DocumentTypeJavaScriptAction   DocumentType = "JAVASCRIPT ACTION"
+	DocumentTypeLayout             DocumentType = "LAYOUT"
+	DocumentTypeWorkflow           DocumentType = "WORKFLOW"
 )
 
 // MoveStmt represents: MOVE PAGE/MICROFLOW/SNIPPET/NANOFLOW/ENTITY/ENUMERATION Module.Name TO FOLDER 'path' IN Module
