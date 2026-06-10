@@ -81,7 +81,7 @@ func StartLocal(opts LocalRunOptions) error {
 
 	// Deploy layout: Studio Pro --target=deploy output (no ZIP, no start.bat).
 	if isDeployLayout(opts.PadDir) {
-		if err := preflightLocal(opts.PadDir, stderr, true); err != nil {
+		if err := preflightLocal(opts.PadDir, stderr, true, opts.appPort(), opts.adminPort(), opts.CmdHint); err != nil {
 			return err
 		}
 		return startFromDeployLayout(opts, stdout, stderr)
@@ -91,7 +91,7 @@ func StartLocal(opts LocalRunOptions) error {
 	if !hasExtractedPADLayout(opts.PadDir) {
 		return fmt.Errorf("no PAD found at %s — run 'mxcli local build -p app.mpr' first", opts.PadDir)
 	}
-	if err := preflightLocal(opts.PadDir, stderr, false); err != nil {
+	if err := preflightLocal(opts.PadDir, stderr, false, opts.appPort(), opts.adminPort(), opts.CmdHint); err != nil {
 		return err
 	}
 	return startFromPADLayout(opts, stdout, stderr)
@@ -467,21 +467,32 @@ func buildLocalEnv(dbURL, adminPassword string) []string {
 	return env
 }
 
-// preflightLocal detects a running Mendix instance before starting a new one.
+// preflightLocal detects port conflicts before starting a new runtime instance.
 //
-//  1. Port check: tries to bind the admin port (8090). If already taken, another
-//     runtime is running — return a clear error instead of a confusing startup crash.
+//  1. Port checks: tries to bind adminPort (default 8090) then appPort (default 8080).
+//     If either is taken, returns an actionable error with a ready-to-run command
+//     using the next simultaneously-available port pair.
 //
-//  2. HSQLDB stale lock cleanup: when the previous runtime was killed the JVM may
-//     leave a .lck file. On most OSes the file is not kept open after JVM exit, so
-//     we simply remove it. If removal fails (process still alive), we surface the error.
-func preflightLocal(dir string, stderr io.Writer, isDeployDir bool) error {
-	// 1. Admin port check (default 8090).
-	if ln, err := net.Listen("tcp", "127.0.0.1:8090"); err != nil {
-		return fmt.Errorf("Mendix runtime already running on port 8090.\n" +
-			"Stop the existing instance (kill the Java process) before starting a new one.")
-	} else {
-		ln.Close()
+//  2. HSQLDB stale lock cleanup: removes .lck files left by a killed JVM.
+func preflightLocal(dir string, stderr io.Writer, isDeployDir bool, appPort, adminPort int, cmdHint string) error {
+	// 1a. Admin port check.
+	if !canBind(adminPort) {
+		suggestApp, suggestAdm := FindAvailablePorts(appPort, adminPort)
+		return fmt.Errorf(
+			"port %d (admin API) is already in use.\n\n"+
+				"Stop the existing Mendix runtime, or use available ports:\n\n"+
+				"  mxcli local run %s --port %d --admin-port %d",
+			adminPort, cmdHint, suggestApp, suggestAdm)
+	}
+
+	// 1b. App port check.
+	if !canBind(appPort) {
+		suggestApp, suggestAdm := FindAvailablePorts(appPort, adminPort)
+		return fmt.Errorf(
+			"port %d (app HTTP) is already in use.\n\n"+
+				"Stop the process using the port, or use available ports:\n\n"+
+				"  mxcli local run %s --port %d --admin-port %d",
+			appPort, cmdHint, suggestApp, suggestAdm)
 	}
 
 	// 2. HSQLDB stale lock cleanup — path differs by layout.

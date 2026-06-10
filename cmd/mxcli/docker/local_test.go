@@ -199,3 +199,75 @@ func TestFindAvailablePorts_ReturnsBindablePair(t *testing.T) {
 		lnB.Close()
 	}
 }
+
+func TestStartLocal_AdminPortInUse_ReturnsActionableError(t *testing.T) {
+	pad := testfixtures.NewFakePAD(t)
+
+	// Occupy a port pair.
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer ln.Close()
+	adminPort := ln.Addr().(*net.TCPAddr).Port
+	// Pick an app port that is also the admin port + delta so FindAvailablePorts
+	// can find a free pair.
+	appPort := adminPort - 10
+	if appPort < 1024 {
+		appPort = adminPort + 10
+	}
+
+	err = docker.StartLocal(docker.LocalRunOptions{
+		PadDir:    pad.Dir,
+		AdminPort: adminPort,
+		AppPort:   appPort,
+		CmdHint:   "-p /tmp/app.mpr",
+		Starter:   &CaptureStarter{},
+	})
+	if err == nil {
+		t.Fatal("expected error when admin port is in use")
+	}
+	if !strings.Contains(err.Error(), "admin API") {
+		t.Errorf("error should mention 'admin API', got: %v", err)
+	}
+	if !strings.Contains(err.Error(), "/tmp/app.mpr") {
+		t.Errorf("error should contain project path, got: %v", err)
+	}
+	if !strings.Contains(err.Error(), "--admin-port") {
+		t.Errorf("error should contain --admin-port flag, got: %v", err)
+	}
+}
+
+func TestStartLocal_AppPortInUse_ReturnsActionableError(t *testing.T) {
+	pad := testfixtures.NewFakePAD(t)
+
+	// Occupy the app port but leave admin free.
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer ln.Close()
+	appPort := ln.Addr().(*net.TCPAddr).Port
+	// adminPort is offset by 100 — unlikely to be occupied in CI.
+	adminPort := appPort + 100
+
+	err = docker.StartLocal(docker.LocalRunOptions{
+		PadDir:    pad.Dir,
+		AppPort:   appPort,
+		AdminPort: adminPort,
+		CmdHint:   "--pad-dir /tmp/mypad",
+		Starter:   &CaptureStarter{},
+	})
+	if err == nil {
+		t.Fatal("expected error when app port is in use")
+	}
+	if !strings.Contains(err.Error(), "app HTTP") {
+		t.Errorf("error should mention 'app HTTP', got: %v", err)
+	}
+	if !strings.Contains(err.Error(), "--pad-dir /tmp/mypad") {
+		t.Errorf("error should contain pad-dir hint, got: %v", err)
+	}
+	if !strings.Contains(err.Error(), "--port") {
+		t.Errorf("error should contain --port flag, got: %v", err)
+	}
+}
