@@ -507,6 +507,7 @@
   },
   "part_list_version2_fields": [
     "JavaAction.parameters",
-    "JavaAction.typeParameters"
+    "JavaAction.typeParameters",
+    "ProjectSecurity.demoUsers"
   ]
 }

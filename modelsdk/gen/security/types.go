@@ -878,7 +878,7 @@ func initProjectSecurity() *ProjectSecurity {
 	o.adminUserRoleName.Bind(&o.Base, 6)
 	o.enableDemoUsers = property.NewPrimitive[bool]("EnableDemoUsers", property.DecodeBool)
 	o.enableDemoUsers.Bind(&o.Base, 7)
-	o.demoUsers = property.NewPartList[element.Element]("DemoUsers")
+	o.demoUsers = property.NewPartListV2[element.Element]("DemoUsers")
 	o.demoUsers.Bind(&o.Base, 8)
 	o.enableGuestAccess = property.NewPrimitive[bool]("EnableGuestAccess", property.DecodeBool)
 	o.enableGuestAccess.Bind(&o.Base, 9)

@@ -107,6 +107,11 @@
 --           MovePageGen/MoveSnippetGen/MoveLayoutGen); layoutDocToModel added for layout BSON
 --           parsing and WidgetPlaceholder added to widget kind map.
 -- Note    : UpdateJavaScriptActionGen added (JS action Platform write path); WidgetPlaceholder rendered in layout describe
+-- Note    : DemoUsers BSON array version prefix fixed 3→2: supplements.json now lists
+--           ProjectSecurity.demoUsers in part_list_version2_fields so codegen emits
+--           NewPartListV2; Mendix runtime requires prefix=2 to create demo user accounts
+--           on startup — prefix=3 silently skipped all demo users ("unknown user" at login).
+--           Regression guard: TestAddDemoUser_PreservesVersionPrefix2.
 --
 -- Edge cases covered:
 --   Domain    : self-ref association, cross-module association,
