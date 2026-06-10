@@ -1,0 +1,35 @@
+-- Image Collection Maintenance Examples
+-- Run with: mxcli -p app.mpr -c "$(cat image_collection_alter.mdl)"
+
+-- Create a collection (with images)
+create or modify image collection MyFirstModule.Icons (
+    image logo from file './assets/logo.png',
+    image banner from file './assets/banner.svg'
+);
+
+-- Add a new image to an existing collection
+alter image collection MyFirstModule.Icons
+    add image spinner from file './assets/spinner.gif';
+
+-- Drop an image
+alter image collection MyFirstModule.Icons drop image banner;
+
+-- Rename an image
+alter image collection MyFirstModule.Icons rename image logo to logo_v2;
+
+-- Replace an image's content (keep name)
+alter image collection MyFirstModule.Icons set image logo_v2 from file './assets/logo_new.png';
+
+-- Multiple actions in one statement
+alter image collection MyFirstModule.Icons
+    add image bg from file './assets/bg.png',
+    drop image spinner;
+
+-- Move the collection to another module
+alter image collection MyFirstModule.Icons move to SharedModule.Icons;
+
+-- Export a single image to a local file
+alter image collection SharedModule.Icons export image logo_v2 to file './exports/logo_v2.png';
+
+-- Drop the entire collection
+-- drop image collection SharedModule.Icons;
