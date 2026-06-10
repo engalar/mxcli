@@ -41,6 +41,11 @@ func TestBuildDescribeCmd(t *testing.T) {
 		{"entity", "MyModule.Customer", "DESCRIBE ENTITY MyModule.Customer"},
 		{"microflow", "MyModule.DoSomething", "DESCRIBE MICROFLOW MyModule.DoSomething"},
 		{"page", "MyModule.Home_Overview", "DESCRIBE PAGE MyModule.Home_Overview"},
+
+		// Layout types fall through to default (case-insensitive)
+		{"layout", "Atlas_Core.Atlas_Default", "DESCRIBE LAYOUT Atlas_Core.Atlas_Default"},
+		{"layout", "MyModule.MyLayout", "DESCRIBE LAYOUT MyModule.MyLayout"},
+		{"Layout", "MyModule.MyLayout", "DESCRIBE LAYOUT MyModule.MyLayout"},
 	}
 
 	for _, tc := range tests {
