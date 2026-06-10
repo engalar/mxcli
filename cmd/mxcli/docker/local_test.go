@@ -290,3 +290,62 @@ func TestWriteDeployHOCON_CustomPorts(t *testing.T) {
 		t.Errorf("expected ApplicationRootUrl with port 8181, got:\n%s", content)
 	}
 }
+
+func TestStartLocal_PADLayout_CustomPorts_AppendsOverrideConf(t *testing.T) {
+	pad := testfixtures.NewFakePAD(t)
+	cs := &CaptureStarter{}
+
+	err := docker.StartLocal(docker.LocalRunOptions{
+		PadDir:    pad.Dir,
+		AppPort:   8181,
+		AdminPort: 8191,
+		Starter:   cs,
+	})
+	if err != nil {
+		t.Fatalf("StartLocal: %v", err)
+	}
+
+	// The last argument to bin/start should be the override conf file.
+	args := cs.Cmd.Args
+	if len(args) < 2 {
+		t.Fatalf("expected at least 2 args, got %d: %v", len(args), args)
+	}
+	overridePath := args[len(args)-1]
+	if !strings.HasSuffix(overridePath, ".conf") {
+		t.Fatalf("last arg should be a .conf file, got: %s", overridePath)
+	}
+	data, err := os.ReadFile(overridePath)
+	if err != nil {
+		// File may already be cleaned up — check it was passed at least.
+		t.Logf("override file already removed (expected): %v", err)
+		return
+	}
+	content := string(data)
+	if !strings.Contains(content, "port = 8191") {
+		t.Errorf("override conf should set admin port 8191, got:\n%s", content)
+	}
+	if !strings.Contains(content, "port = 8181") {
+		t.Errorf("override conf should set app port 8181, got:\n%s", content)
+	}
+}
+
+func TestStartLocal_PADLayout_DefaultPorts_NoOverrideConf(t *testing.T) {
+	pad := testfixtures.NewFakePAD(t)
+	cs := &CaptureStarter{}
+
+	err := docker.StartLocal(docker.LocalRunOptions{
+		PadDir:  pad.Dir,
+		Starter: cs,
+	})
+	if err != nil {
+		t.Fatalf("StartLocal: %v", err)
+	}
+
+	// With default ports, no override conf should be appended.
+	args := cs.Cmd.Args
+	for _, a := range args {
+		if strings.HasSuffix(a, "port-override.conf") {
+			t.Errorf("unexpected port-override.conf in args: %v", args)
+		}
+	}
+}

@@ -406,6 +406,27 @@ func startFromPADLayout(opts LocalRunOptions, stdout, stderr io.Writer) error {
 	if err != nil {
 		return err
 	}
+
+	// Inject custom ports via a supplemental HOCON override file.
+	// bin/start passes all positional args as extra config files to runtimelauncher;
+	// later files override earlier ones, so this cleanly overrides the shipped defaults.
+	if opts.AppPort != 0 || opts.AdminPort != 0 {
+		tmpDir, err := os.MkdirTemp("", "mxcli-local-*")
+		if err != nil {
+			return fmt.Errorf("creating temp dir for port override: %w", err)
+		}
+		defer os.RemoveAll(tmpDir) // cleaned up after runtime exits
+		overridePath := filepath.Join(tmpDir, "port-override.conf")
+		overrideContent := fmt.Sprintf(
+			"admin { port = %d }\nruntime.http { port = %d }\n",
+			opts.adminPort(), opts.appPort(),
+		)
+		if err := os.WriteFile(overridePath, []byte(overrideContent), 0600); err != nil {
+			return fmt.Errorf("writing port override conf: %w", err)
+		}
+		cmdArgs = append(cmdArgs, overridePath)
+	}
+
 	cmd := exec.Command(cmdArgs[0], cmdArgs[1:]...)
 	cmd.Dir = opts.PadDir
 	cmd.Env = append(os.Environ(), buildLocalEnv(opts.DB, opts.AdminPassword)...)
