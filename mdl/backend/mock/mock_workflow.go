@@ -124,6 +124,13 @@ func (m *MockBackend) DeleteImageCollection(id string) error {
 	return nil
 }
 
+func (m *MockBackend) MoveImageCollection(ic *types.ImageCollection) error {
+	if m.MoveImageCollectionFunc != nil {
+		return m.MoveImageCollectionFunc(ic)
+	}
+	return fmt.Errorf("MockBackend.MoveImageCollection not configured")
+}
+
 // ---------------------------------------------------------------------------
 // ScheduledEventBackend
 // ---------------------------------------------------------------------------

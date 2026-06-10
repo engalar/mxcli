@@ -262,6 +262,7 @@ type MockBackend struct {
 	CreateImageCollectionFunc func(ic *types.ImageCollection) error
 	UpdateImageCollectionFunc func(ic *types.ImageCollection) error
 	DeleteImageCollectionFunc func(id string) error
+	MoveImageCollectionFunc   func(ic *types.ImageCollection) error
 
 	// ScheduledEventBackend
 	ListScheduledEventsFunc func() ([]*model.ScheduledEvent, error)

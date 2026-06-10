@@ -1264,6 +1264,9 @@ func (b *MprBackend) UpdateImageCollection(ic *types.ImageCollection) error {
 func (b *MprBackend) DeleteImageCollection(id string) error {
 	return b.deleteImageCollectionViaModelsdk(id)
 }
+func (b *MprBackend) MoveImageCollection(ic *types.ImageCollection) error {
+	return b.moveImageCollectionViaModelsdk(ic)
+}
 
 // ---------------------------------------------------------------------------
 // ScheduledEventBackend

@@ -10,6 +10,8 @@
 -- Note    : Golden rebuilt after mongo-driver v1→v2 migration (nav_compat bsonD fix)
 -- Note    : codec.Encoder.Version field added for property-level version gating (new elements only)
 -- Note    : gen init() VersionRegistry removed; PropertyVersioner interface dispatch replaces global map
+-- Note    : GetContainerID added to backend; layoutDocToModel + WidgetPlaceholder fix describe layout output
+-- Note    : MoveImageCollection added to ImageBackend (UpdateUnitContainer wrapper) for ALTER IMAGE COLLECTION ... MOVE TO
 -- Note    : notifyTarget (11.7.0+) replaces activity ByNameRef in notify workflow action
 -- Note    : visitor keyword arg parsing fixed (Search keyword → arg.Name now captured)
 -- Note    : testdata reorganised: helpdesk-{clean,golden}-{11.6.6,11.10.0}/ naming scheme
@@ -101,6 +103,10 @@
 --           wrong type family caused "cannot be converted to type AttributeTypeBase" crash.
 --           Fix uses genDM.New*AttributeType() for all BE message attribute types.
 --           Regression tests: WritesDefinition + AttributeTypeUsesDomainModels + OperationEntityIsWritten.
+-- Note    : MoveDocumentGen added as generic UpdateUnitContainer wrapper (OCP: replaces identical
+--           MovePageGen/MoveSnippetGen/MoveLayoutGen); layoutDocToModel added for layout BSON
+--           parsing and WidgetPlaceholder added to widget kind map.
+-- Note    : UpdateJavaScriptActionGen added (JS action Platform write path); WidgetPlaceholder rendered in layout describe
 --
 -- Edge cases covered:
 --   Domain    : self-ref association, cross-module association,

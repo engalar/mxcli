@@ -95,6 +95,7 @@ type ImageBackend interface {
 	CreateImageCollection(ic *types.ImageCollection) error
 	UpdateImageCollection(ic *types.ImageCollection) error
 	DeleteImageCollection(id string) error
+	MoveImageCollection(ic *types.ImageCollection) error
 }
 
 // ScheduledEventBackend provides scheduled event operations.

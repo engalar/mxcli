@@ -256,3 +256,10 @@ func (b *MprBackend) updateImageCollectionViaModelsdk(ic *types.ImageCollection)
 	}
 	return b.writeUnitContents(ic.ID, contents)
 }
+
+func (b *MprBackend) moveImageCollectionViaModelsdk(ic *types.ImageCollection) error {
+	if b.msdkWriter == nil {
+		return fmt.Errorf("modelsdk writer not initialized")
+	}
+	return b.msdkWriter.UpdateUnitContainer(string(ic.ID), string(ic.ContainerID))
+}
