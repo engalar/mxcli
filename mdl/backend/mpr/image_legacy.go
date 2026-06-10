@@ -73,8 +73,8 @@ func parseImageCollectionRaw(unitID, containerID string, contents []byte) (*type
 		return ic, nil
 	}
 	for _, item := range images {
-		imgMap, ok := item.(map[string]any)
-		if !ok {
+		imgMap := bsonItemToMap(item)
+		if imgMap == nil {
 			continue
 		}
 		image := types.Image{}
@@ -96,4 +96,24 @@ func parseImageCollectionRaw(unitID, containerID string, contents []byte) (*type
 		ic.Images = append(ic.Images, image)
 	}
 	return ic, nil
+}
+
+// bsonItemToMap normalizes a decoded BSON array element into a keyed map.
+// Under mongo-driver v2, nested documents inside an array decode as bson.D
+// (not map[string]any), so a plain map type assertion silently drops them.
+func bsonItemToMap(item any) map[string]any {
+	switch v := item.(type) {
+	case map[string]any:
+		return v
+	case bson.M:
+		return v
+	case bson.D:
+		m := make(map[string]any, len(v))
+		for _, e := range v {
+			m[e.Key] = e.Value
+		}
+		return m
+	default:
+		return nil
+	}
 }
