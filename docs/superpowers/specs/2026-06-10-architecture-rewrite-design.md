@@ -121,7 +121,7 @@ Hard rules enforced by tests or CI. No exceptions.
 | Invariant | Why | How enforced |
 |-----------|-----|--------------|
 | Executor must not import `sdk/mpr` or `modelsdk/codec` | Breaks dependency inversion; makes unit tests require real `.mpr` | `TestNoDirectBSONImportInExecutor` |
-| Executor must not contain radget"`) | Bypasses type system; silently fails on version upgrades | `TestNoRawBSONTypeStringsInExecutor` |
+| Executor must not contain raw BSON type strings (e.g. `"Forms$..."`, `"CustomWidgets$..."`) | Bypasses type system; silently fails on version upgrades | `TestNoRawBSONTypeStringsInExecutor` |
 | Every new backend method needs a Func-field stub in `mock/` | Without stub, mock returns `nil, nil` silently; tests miss error paths | Compile-time `var _ backend.X = (*impl)(nil)` |
 | Map iteration for serialised output must sort keys first | Non-deterministic output → flaky BSON diffs → flaky golden tests | Golden regression suite |
 | Errors must route through `cmd.ErrOrStderr()` to the socket | Bare `os.Stderr` is invisible to AI agents in daemon mode | Code review |
