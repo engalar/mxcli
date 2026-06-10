@@ -31,6 +31,7 @@ mxcli (launcher)  →  Unix socket  →  mxcli-daemon (cmd/mxcli/)
 | `internal/expr/daemon/` expr daemon | `go test ./internal/expr/daemon/...` | **不需要** |
 | `cmd/mxcli/cmd_git.go` git 子命令针对外部项目 | `GIT_DIR=$PROJECT/.git GIT_WORK_TREE=$PROJECT go run ./cmd/mxcli git doctor -p $PROJECT/app.mpr` | **不需要** |
 | `cmd/mxcli/tui/` TUI 代码 | `go run ./cmd/mxcli tui -p app.mpr` | **不需要** |
+| `cmd/mxcli-local/`、`cmd/mxcli/docker/local.go` local run/build 逻辑 | `go test ./cmd/mxcli/docker/...` 或 `go run ./cmd/mxcli-local run -p app.mpr` | **不需要** |
 | 任意改动，需要完整 mxcli 路径端到端确认 | `make install-daemon && mxcli -p app.mpr -c "..."` | **需要** |
 | 跨 section BSON 状态传播（回归风险高） | `make test-section-check` | **需要** |
 
@@ -276,6 +277,33 @@ go run ./cmd/mxcli tui -p /path/to/app.mpr
 - `MXCLI_LAUNCHER_PATH` 未设置，TUI 内部的 `resolveMxcliPath()` fallback 到 `os.Executable()`（go run 的临时二进制）。TUI 发起的子命令（project-tree、describe 等）每次都是新进程 + 新 SQLite 连接，没有 per-MPR daemon 缓存，但功能正确
 - 修改 TUI 源码后直接重跑即可，无需 `make build`
 - 需要验证 TUI ↔ per-MPR daemon 交互（持久连接、unit cache）时，才需要 `make install-daemon`
+
+---
+
+### 场景 J：修改 `mxcli local` 命令（`cmd/mxcli-local/`、`cmd/mxcli/docker/local.go`）
+
+**改了：** `cmd/mxcli-local/cmd_run.go`、`cmd/mxcli-local/cmd_build.go`、`cmd/mxcli/docker/local.go`（StartLocal、preflightLocal、writeDeployHOCON 等）
+
+**最快路径（单元测试，无需真实 PAD 或 Mendix 安装）：**
+```bash
+go test ./cmd/mxcli/docker/... -v
+```
+
+**验证 CLI 标志变更：**
+```bash
+go build -o /tmp/mxcli-local-dev ./cmd/mxcli-local && /tmp/mxcli-local-dev run --help
+```
+
+**端到端冒烟（需要真实 .mpr + 已构建的 PAD）：**
+```bash
+go run ./cmd/mxcli-local run -p /path/to/app.mpr --port 8081 --admin-port 8091
+```
+
+**注意事项：**
+- `cmd/mxcli-local` 是独立二进制，不经过 daemon/socket，直接 `go run` 即可
+- launcher（`cmd/mxcli-launcher`）会下载已发布的 `mxcli-local` 二进制，不用本地源码；测试本地修改必须直接 `go run ./cmd/mxcli-local`
+- `docker/local.go` 里的 `preflightLocal` 会实际尝试 bind 端口，CI 里若 8080/8090 被占会影响集成测试——单元测试用 `net.Listen("tcp", "127.0.0.1:0")` 获取随机空闲端口规避此问题
+- 不需要 `make install-daemon`
 
 ---
 
