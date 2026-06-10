@@ -45,7 +45,7 @@ func TestMove_Page_ToFolder(t *testing.T) {
 		IsConnectedFunc: func() bool { return true },
 		ListModulesFunc: func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
 		ListFoldersFunc: func() ([]*types.FolderInfo, error) { return folders, nil },
-		MovePageGenFunc: func(id, containerID model.ID) error {
+		MoveDocumentGenFunc: func(id, containerID model.ID) error {
 			movedID = id
 			movedContainerID = containerID
 			return nil
@@ -105,7 +105,7 @@ func TestMove_Page_CrossModule(t *testing.T) {
 		IsConnectedFunc: func() bool { return true },
 		ListModulesFunc: func() ([]*model.Module, error) { return []*model.Module{srcMod, dstMod}, nil },
 		ListFoldersFunc: func() ([]*types.FolderInfo, error) { return nil, nil },
-		MovePageGenFunc: func(id, containerID model.ID) error { moved = true; return nil },
+		MoveDocumentGenFunc: func(id, containerID model.ID) error { moved = true; return nil },
 		UpdateQualifiedNameInAllUnitsFunc: func(old, new string) (int, error) {
 			refUpdated = true
 			return 3, nil
@@ -161,7 +161,7 @@ func TestMove_Page_BackendError(t *testing.T) {
 		IsConnectedFunc: func() bool { return true },
 		ListModulesFunc: func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
 		ListFoldersFunc: func() ([]*types.FolderInfo, error) { return nil, nil },
-		MovePageGenFunc: func(id, containerID model.ID) error { return fmt.Errorf("disk full") },
+		MoveDocumentGenFunc: func(id, containerID model.ID) error { return fmt.Errorf("disk full") },
 	}
 	h := mkHierarchy(mod)
 	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
