@@ -19,6 +19,70 @@ func (b *Builder) ExitCreatePageStatement(ctx *parser.CreatePageStatementContext
 	b.statements = append(b.statements, stmt)
 }
 
+// ExitCreateLayoutStatement is called when exiting the createLayoutStatement production.
+func (b *Builder) ExitCreateLayoutStatement(ctx *parser.CreateLayoutStatementContext) {
+	s := &ast.CreateLayoutStmt{}
+
+	if qn := ctx.QualifiedName(); qn != nil {
+		s.Name = buildQualifiedName(qn)
+	}
+
+	if createStmt := findParentCreateStatement(ctx); createStmt != nil {
+		if createStmt.OR() != nil {
+			if createStmt.REPLACE() != nil {
+				s.IsReplace = true
+			}
+			if createStmt.MODIFY() != nil {
+				s.IsModify = true
+			}
+		}
+		s.Documentation = findDocCommentText(ctx)
+	}
+
+	for _, prop := range ctx.AllLayoutHeaderProperty() {
+		propCtx := prop.(*parser.LayoutHeaderPropertyContext)
+		switch {
+		case propCtx.TYPE() != nil:
+			if str := propCtx.STRING_LITERAL(); str != nil {
+				s.LayoutType = unquoteString(str.GetText())
+			} else if iok := propCtx.IdentifierOrKeyword(); iok != nil {
+				s.LayoutType = identifierOrKeywordText(iok)
+			}
+		case propCtx.FOLDER() != nil:
+			if str := propCtx.STRING_LITERAL(); str != nil {
+				s.Folder = unquoteString(str.GetText())
+			}
+		}
+	}
+
+	for _, wctx := range ctx.AllLayoutWidget() {
+		widgetCtx := wctx.(*parser.LayoutWidgetContext)
+		var w ast.LayoutWidgetV3
+		if widgetCtx.SCROLLCONTAINER() != nil {
+			w.Kind = ast.LayoutWidgetScrollContainer
+			w.Name = identifierOrKeywordText(widgetCtx.IdentifierOrKeyword())
+			for _, rctx := range widgetCtx.AllLayoutRegion() {
+				regionCtx := rctx.(*parser.LayoutRegionContext)
+				region := &ast.LayoutRegionV3{
+					Name: strings.ToLower(regionCtx.LayoutRegionName().GetText()),
+				}
+				for _, pcctx := range regionCtx.AllLayoutRegionContent() {
+					contentCtx := pcctx.(*parser.LayoutRegionContentContext)
+					region.Placeholders = append(region.Placeholders,
+						&ast.LayoutPlaceholderV3{Name: identifierOrKeywordText(contentCtx.IdentifierOrKeyword())})
+				}
+				w.Regions = append(w.Regions, region)
+			}
+		} else if widgetCtx.PLACEHOLDER() != nil {
+			w.Kind = ast.LayoutWidgetPlaceholder
+			w.PlaceholderName = identifierOrKeywordText(widgetCtx.IdentifierOrKeyword())
+		}
+		s.Widgets = append(s.Widgets, &w)
+	}
+
+	b.statements = append(b.statements, s)
+}
+
 // ExitCreateSnippetStatement is called when exiting the createSnippetStatement production.
 func (b *Builder) ExitCreateSnippetStatement(ctx *parser.CreateSnippetStatementContext) {
 	stmt := b.buildSnippetV3(ctx)
