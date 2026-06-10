@@ -3,6 +3,8 @@
 package executor
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
@@ -165,17 +167,209 @@ func TestCreateImageCollection_OrModify_PreservesIDAndUpdates(t *testing.T) {
 	assertContainsStr(t, buf.String(), "Modified image collection")
 }
 
-func TestAlterImageCollectionStmt_Compile(t *testing.T) {
-	stmt := &ast.AlterImageCollectionStmt{
+func mkImageCollectionWithImages(mod *model.Module, name string, images ...types.Image) *types.ImageCollection {
+	return &types.ImageCollection{
+		BaseElement: model.BaseElement{ID: nextID("ic")},
+		ContainerID: mod.ID,
+		Name:        name,
+		ExportLevel: "Hidden",
+		Images:      images,
+	}
+}
+
+func TestAlterImageCollection_NotFound(t *testing.T) {
+	mod := mkModule("Mod")
+	h := mkHierarchy(mod)
+	mb := &mock.MockBackend{
+		IsConnectedFunc:          func() bool { return true },
+		ListImageCollectionsFunc: func() ([]*types.ImageCollection, error) { return nil, nil },
+	}
+	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
+	err := execAlterImageCollection(ctx, &ast.AlterImageCollectionStmt{
+		Name:    ast.QualifiedName{Module: "Mod", Name: "NoSuch"},
+		Actions: []ast.ImageCollectionAction{&ast.DropImageAction{ImageName: "x"}},
+	})
+	assertError(t, err)
+}
+
+func TestAlterImageCollection_Drop(t *testing.T) {
+	mod := mkModule("Mod")
+	ic := mkImageCollectionWithImages(mod, "Icons",
+		types.Image{Name: "logo", Data: []byte{1}, Format: "Png"},
+		types.Image{Name: "banner", Data: []byte{2}, Format: "Png"},
+	)
+	h := mkHierarchy(mod)
+	withContainer(h, ic.ContainerID, mod.ID)
+
+	var saved *types.ImageCollection
+	mb := &mock.MockBackend{
+		IsConnectedFunc:           func() bool { return true },
+		ListImageCollectionsFunc:  func() ([]*types.ImageCollection, error) { return []*types.ImageCollection{ic}, nil },
+		UpdateImageCollectionFunc: func(c *types.ImageCollection) error { saved = c; return nil },
+	}
+	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
+
+	err := execAlterImageCollection(ctx, &ast.AlterImageCollectionStmt{
+		Name:    ast.QualifiedName{Module: "Mod", Name: "Icons"},
+		Actions: []ast.ImageCollectionAction{&ast.DropImageAction{ImageName: "logo"}},
+	})
+	assertNoError(t, err)
+	if saved == nil {
+		t.Fatal("expected UpdateImageCollection to be called")
+	}
+	if len(saved.Images) != 1 || saved.Images[0].Name != "banner" {
+		t.Errorf("expected only banner remaining, got %+v", saved.Images)
+	}
+}
+
+func TestAlterImageCollection_DropMissingImage(t *testing.T) {
+	mod := mkModule("Mod")
+	ic := mkImageCollectionWithImages(mod, "Icons", types.Image{Name: "logo"})
+	h := mkHierarchy(mod)
+	withContainer(h, ic.ContainerID, mod.ID)
+	mb := &mock.MockBackend{
+		IsConnectedFunc:          func() bool { return true },
+		ListImageCollectionsFunc: func() ([]*types.ImageCollection, error) { return []*types.ImageCollection{ic}, nil },
+	}
+	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
+	err := execAlterImageCollection(ctx, &ast.AlterImageCollectionStmt{
+		Name:    ast.QualifiedName{Module: "Mod", Name: "Icons"},
+		Actions: []ast.ImageCollectionAction{&ast.DropImageAction{ImageName: "ghost"}},
+	})
+	assertError(t, err)
+}
+
+func TestAlterImageCollection_Rename(t *testing.T) {
+	mod := mkModule("Mod")
+	ic := mkImageCollectionWithImages(mod, "Icons", types.Image{Name: "old", Data: []byte{1}})
+	h := mkHierarchy(mod)
+	withContainer(h, ic.ContainerID, mod.ID)
+
+	var saved *types.ImageCollection
+	mb := &mock.MockBackend{
+		IsConnectedFunc:           func() bool { return true },
+		ListImageCollectionsFunc:  func() ([]*types.ImageCollection, error) { return []*types.ImageCollection{ic}, nil },
+		UpdateImageCollectionFunc: func(c *types.ImageCollection) error { saved = c; return nil },
+	}
+	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
+	err := execAlterImageCollection(ctx, &ast.AlterImageCollectionStmt{
+		Name:    ast.QualifiedName{Module: "Mod", Name: "Icons"},
+		Actions: []ast.ImageCollectionAction{&ast.RenameImageAction{From: "old", To: "new"}},
+	})
+	assertNoError(t, err)
+	if saved == nil || len(saved.Images) != 1 || saved.Images[0].Name != "new" {
+		t.Errorf("expected image renamed to new, got %+v", saved)
+	}
+}
+
+func TestAlterImageCollection_RenameToExisting(t *testing.T) {
+	mod := mkModule("Mod")
+	ic := mkImageCollectionWithImages(mod, "Icons",
+		types.Image{Name: "a"}, types.Image{Name: "b"})
+	h := mkHierarchy(mod)
+	withContainer(h, ic.ContainerID, mod.ID)
+	mb := &mock.MockBackend{
+		IsConnectedFunc:          func() bool { return true },
+		ListImageCollectionsFunc: func() ([]*types.ImageCollection, error) { return []*types.ImageCollection{ic}, nil },
+	}
+	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
+	err := execAlterImageCollection(ctx, &ast.AlterImageCollectionStmt{
+		Name:    ast.QualifiedName{Module: "Mod", Name: "Icons"},
+		Actions: []ast.ImageCollectionAction{&ast.RenameImageAction{From: "a", To: "b"}},
+	})
+	assertError(t, err)
+}
+
+func TestAlterImageCollection_AddAndSetFromFile(t *testing.T) {
+	dir := t.TempDir()
+	logoPath := filepath.Join(dir, "logo.png")
+	if err := os.WriteFile(logoPath, []byte("PNGDATA"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	mod := mkModule("Mod")
+	ic := mkImageCollectionWithImages(mod, "Icons", types.Image{Name: "existing", Data: []byte("old")})
+	h := mkHierarchy(mod)
+	withContainer(h, ic.ContainerID, mod.ID)
+
+	var saved *types.ImageCollection
+	mb := &mock.MockBackend{
+		IsConnectedFunc:           func() bool { return true },
+		ListImageCollectionsFunc:  func() ([]*types.ImageCollection, error) { return []*types.ImageCollection{ic}, nil },
+		UpdateImageCollectionFunc: func(c *types.ImageCollection) error { saved = c; return nil },
+	}
+	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
+
+	err := execAlterImageCollection(ctx, &ast.AlterImageCollectionStmt{
 		Name: ast.QualifiedName{Module: "Mod", Name: "Icons"},
 		Actions: []ast.ImageCollectionAction{
-			&ast.AddImageAction{ImageName: "logo", FilePath: "./logo.png"},
-			&ast.DropImageAction{ImageName: "logo"},
-			&ast.RenameImageAction{From: "logo", To: "logo_v2"},
-			&ast.SetImageAction{ImageName: "logo", FilePath: "./logo_new.png"},
-			&ast.MoveImageCollectionAction{Target: ast.QualifiedName{Module: "Other", Name: "Icons"}},
-			&ast.ExportImageAction{ImageName: "logo", FilePath: "./out/logo.png"},
+			&ast.AddImageAction{ImageName: "logo", FilePath: logoPath},
+			&ast.SetImageAction{ImageName: "existing", FilePath: logoPath},
 		},
+	})
+	assertNoError(t, err)
+	if saved == nil {
+		t.Fatal("expected update")
 	}
-	_ = stmt
+	idx := -1
+	for i, img := range saved.Images {
+		if img.Name == "logo" {
+			idx = i
+		}
+	}
+	if idx < 0 || string(saved.Images[idx].Data) != "PNGDATA" || saved.Images[idx].Format != "Png" {
+		t.Errorf("logo not added correctly: %+v", saved.Images)
+	}
+}
+
+func TestAlterImageCollection_Move(t *testing.T) {
+	src := mkModule("Mod")
+	dst := mkModule("Other")
+	ic := mkImageCollectionWithImages(src, "Icons", types.Image{Name: "logo"})
+	h := mkHierarchy(src, dst)
+	withContainer(h, ic.ContainerID, src.ID)
+
+	var moved *types.ImageCollection
+	mb := &mock.MockBackend{
+		IsConnectedFunc:          func() bool { return true },
+		ListModulesFunc:          func() ([]*model.Module, error) { return []*model.Module{src, dst}, nil },
+		ListImageCollectionsFunc: func() ([]*types.ImageCollection, error) { return []*types.ImageCollection{ic}, nil },
+		MoveImageCollectionFunc:  func(c *types.ImageCollection) error { moved = c; return nil },
+	}
+	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
+	err := execAlterImageCollection(ctx, &ast.AlterImageCollectionStmt{
+		Name:    ast.QualifiedName{Module: "Mod", Name: "Icons"},
+		Actions: []ast.ImageCollectionAction{&ast.MoveImageCollectionAction{Target: ast.QualifiedName{Module: "Other", Name: "Icons"}}},
+	})
+	assertNoError(t, err)
+	if moved == nil || moved.ContainerID != dst.ID {
+		t.Errorf("expected move to Other module (%s), got %+v", dst.ID, moved)
+	}
+}
+
+func TestAlterImageCollection_Export(t *testing.T) {
+	dir := t.TempDir()
+	outPath := filepath.Join(dir, "sub", "out.png")
+
+	mod := mkModule("Mod")
+	ic := mkImageCollectionWithImages(mod, "Icons", types.Image{Name: "logo", Data: []byte("EXPORTED"), Format: "Png"})
+	h := mkHierarchy(mod)
+	withContainer(h, ic.ContainerID, mod.ID)
+	mb := &mock.MockBackend{
+		IsConnectedFunc:          func() bool { return true },
+		ListImageCollectionsFunc: func() ([]*types.ImageCollection, error) { return []*types.ImageCollection{ic}, nil },
+	}
+	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
+	err := execAlterImageCollection(ctx, &ast.AlterImageCollectionStmt{
+		Name:    ast.QualifiedName{Module: "Mod", Name: "Icons"},
+		Actions: []ast.ImageCollectionAction{&ast.ExportImageAction{ImageName: "logo", FilePath: outPath}},
+	})
+	assertNoError(t, err)
+	data, readErr := os.ReadFile(outPath)
+	if readErr != nil {
+		t.Fatalf("expected exported file: %v", readErr)
+	}
+	if string(data) != "EXPORTED" {
+		t.Errorf("exported data = %q, want EXPORTED", data)
+	}
 }

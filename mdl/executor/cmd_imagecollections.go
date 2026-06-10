@@ -266,3 +266,143 @@ func findImageCollection(ctx *ExecContext, moduleName, collectionName string) *t
 	}
 	return nil
 }
+
+// execAlterImageCollection handles ALTER IMAGE COLLECTION statements.
+func execAlterImageCollection(ctx *ExecContext, s *ast.AlterImageCollectionStmt) error {
+	if !ctx.ConnectedForWrite() {
+		return mdlerrors.NewNotConnected()
+	}
+
+	ic := findImageCollection(ctx, s.Name.Module, s.Name.Name)
+	if ic == nil {
+		return mdlerrors.NewNotFound("image collection", s.Name.String())
+	}
+
+	dirty := false
+
+	for _, rawAction := range s.Actions {
+		switch action := rawAction.(type) {
+
+		case *ast.AddImageAction:
+			data, format, err := readImageFile(action.FilePath)
+			if err != nil {
+				return err
+			}
+			ic.Images = append(ic.Images, types.Image{
+				Name:   action.ImageName,
+				Data:   data,
+				Format: format,
+			})
+			dirty = true
+			fmt.Fprintf(ctx.Output, "Added image %q to %s\n", action.ImageName, s.Name)
+
+		case *ast.DropImageAction:
+			idx := findImageIndex(ic, action.ImageName)
+			if idx < 0 {
+				return mdlerrors.NewNotFound("image", action.ImageName)
+			}
+			ic.Images = append(ic.Images[:idx], ic.Images[idx+1:]...)
+			dirty = true
+			fmt.Fprintf(ctx.Output, "Dropped image %q from %s\n", action.ImageName, s.Name)
+
+		case *ast.RenameImageAction:
+			idx := findImageIndex(ic, action.From)
+			if idx < 0 {
+				return mdlerrors.NewNotFound("image", action.From)
+			}
+			if findImageIndex(ic, action.To) >= 0 {
+				return mdlerrors.NewAlreadyExists("image", action.To)
+			}
+			ic.Images[idx].Name = action.To
+			dirty = true
+			fmt.Fprintf(ctx.Output, "Renamed image %q to %q in %s\n", action.From, action.To, s.Name)
+
+		case *ast.SetImageAction:
+			idx := findImageIndex(ic, action.ImageName)
+			if idx < 0 {
+				return mdlerrors.NewNotFound("image", action.ImageName)
+			}
+			data, format, err := readImageFile(action.FilePath)
+			if err != nil {
+				return err
+			}
+			ic.Images[idx].Data = data
+			ic.Images[idx].Format = format
+			dirty = true
+			fmt.Fprintf(ctx.Output, "Updated image %q in %s\n", action.ImageName, s.Name)
+
+		case *ast.MoveImageCollectionAction:
+			if dirty {
+				if err := ctx.Backend.UpdateImageCollection(ic); err != nil {
+					return mdlerrors.NewBackend("update image collection before move", err)
+				}
+				dirty = false
+			}
+			targetMod, err := findModule(ctx, action.Target.Module)
+			if err != nil {
+				return mdlerrors.NewNotFound("module", action.Target.Module)
+			}
+			ic.ContainerID = targetMod.ID
+			if err := ctx.Backend.MoveImageCollection(ic); err != nil {
+				return mdlerrors.NewBackend("move image collection", err)
+			}
+			invalidateHierarchy(ctx)
+			fmt.Fprintf(ctx.Output, "Moved image collection %s to module %s\n", s.Name, action.Target.Module)
+
+		case *ast.ExportImageAction:
+			idx := findImageIndex(ic, action.ImageName)
+			if idx < 0 {
+				return mdlerrors.NewNotFound("image", action.ImageName)
+			}
+			filePath := action.FilePath
+			if !filepath.IsAbs(filePath) {
+				cwd, err := os.Getwd()
+				if err != nil {
+					return mdlerrors.NewBackend("get working directory", err)
+				}
+				filePath = filepath.Join(cwd, filePath)
+			}
+			if err := os.MkdirAll(filepath.Dir(filePath), 0o755); err != nil {
+				return mdlerrors.NewBackend("create output directory", err)
+			}
+			if err := os.WriteFile(filePath, ic.Images[idx].Data, 0o644); err != nil {
+				return mdlerrors.NewBackend(fmt.Sprintf("write image file %q", filePath), err)
+			}
+			fmt.Fprintf(ctx.Output, "Exported image %q to %s\n", action.ImageName, filePath)
+		}
+	}
+
+	if dirty {
+		if err := ctx.Backend.UpdateImageCollection(ic); err != nil {
+			return mdlerrors.NewBackend("update image collection", err)
+		}
+	}
+
+	return nil
+}
+
+// readImageFile reads an image file and returns (data, format, error).
+func readImageFile(filePath string) ([]byte, string, error) {
+	if !filepath.IsAbs(filePath) {
+		cwd, err := os.Getwd()
+		if err != nil {
+			return nil, "", mdlerrors.NewBackend("get working directory", err)
+		}
+		filePath = filepath.Join(cwd, filePath)
+	}
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		return nil, "", mdlerrors.NewBackend(fmt.Sprintf("read image file %q", filePath), err)
+	}
+	return data, extToImageFormat(filepath.Ext(filePath)), nil
+}
+
+// findImageIndex returns the index of the image with the given name, or -1.
+func findImageIndex(ic *types.ImageCollection, name string) int {
+	for i, img := range ic.Images {
+		if img.Name == name {
+			return i
+		}
+	}
+	return -1
+}
