@@ -18,6 +18,8 @@ func runCmd() *cobra.Command {
 		dbURL         string
 		padDir        string
 		adminPassword string
+		appPort       int
+		adminPort     int
 	)
 
 	cmd := &cobra.Command{
@@ -55,10 +57,20 @@ Override with --db for PostgreSQL.`,
 					dir = filepath.Join(filepath.Dir(projectPath), ".docker", "build")
 				}
 			}
+			// Build the hint for port-conflict error messages.
+			var cmdHint string
+			if projectPath != "" {
+				cmdHint = "-p " + projectPath
+			} else if padDir != "" {
+				cmdHint = "--pad-dir " + padDir
+			}
 			return docker.StartLocal(docker.LocalRunOptions{
 				PadDir:        dir,
 				DB:            dbURL,
 				AdminPassword: adminPassword,
+				AppPort:       appPort,
+				AdminPort:     adminPort,
+				CmdHint:       cmdHint,
 				Stdout:        os.Stdout,
 				Stderr:        os.Stderr,
 			})
@@ -69,5 +81,7 @@ Override with --db for PostgreSQL.`,
 	cmd.Flags().StringVar(&dbURL, "db", "", "Database URL (postgres://user:pass@host/db). Default: HSQLDB (embedded)")
 	cmd.Flags().StringVar(&padDir, "pad-dir", "", "Explicit PAD directory (overrides -p)")
 	cmd.Flags().StringVar(&adminPassword, "admin-password", "", "MxAdmin login password (default: Admin123!)")
+	cmd.Flags().IntVar(&appPort, "port", 0, "App HTTP port (default 8080)")
+	cmd.Flags().IntVar(&adminPort, "admin-port", 0, "Admin API port (default 8090)")
 	return cmd
 }
