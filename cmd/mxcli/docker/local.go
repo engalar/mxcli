@@ -40,8 +40,29 @@ type LocalRunOptions struct {
 	Stdout io.Writer
 	// Stderr for runtime error output (defaults to os.Stderr).
 	Stderr io.Writer
+	// AppPort is the app HTTP port. 0 = default 8080.
+	AppPort int
+	// AdminPort is the admin API port. 0 = default 8090.
+	AdminPort int
+	// CmdHint is the -p / --pad-dir fragment used in error messages.
+	// Example: "-p /path/to/app.mpr" or "--pad-dir /path/to/pad".
+	CmdHint string
 	// Starter is the process runner. Nil = RealStarter (exec.Cmd.Run).
 	Starter ProcessStarter
+}
+
+func (o *LocalRunOptions) appPort() int {
+	if o.AppPort == 0 {
+		return 8080
+	}
+	return o.AppPort
+}
+
+func (o *LocalRunOptions) adminPort() int {
+	if o.AdminPort == 0 {
+		return 8090
+	}
+	return o.AdminPort
 }
 
 // StartLocal starts the Mendix runtime from a pre-built directory without Docker.
