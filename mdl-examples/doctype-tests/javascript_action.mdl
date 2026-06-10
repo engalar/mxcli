@@ -1,0 +1,7 @@
+-- DESCRIBE JAVASCRIPT ACTION
+-- Verifies the describe output format (read-only, no write applied).
+--
+-- A `create or modify javascript action` example can't run standalone here:
+-- the action must already exist in BSON (Mendix Studio Pro creates the unit
+-- and its parameter/return BSON; mxcli updates Platform + the JS source file).
+describe javascript action FeedbackModule.JS_isStrictMode;
