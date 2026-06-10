@@ -122,6 +122,80 @@ func (b *Builder) ExitCreateJavaActionStatement(ctx *parser.CreateJavaActionStat
 	b.statements = append(b.statements, stmt)
 }
 
+// ExitCreateJavaScriptActionStatement handles CREATE [OR MODIFY] JAVASCRIPT ACTION statements.
+func (b *Builder) ExitCreateJavaScriptActionStatement(ctx *parser.CreateJavaScriptActionStatementContext) {
+	stmt := &ast.CreateJavaScriptActionStmt{}
+
+	if qn := ctx.QualifiedName(); qn != nil {
+		stmt.Name = buildQualifiedName(qn)
+	}
+
+	if paramList := ctx.JavaActionParameterList(); paramList != nil {
+		for _, paramCtx := range paramList.AllJavaActionParameter() {
+			param := ast.JavaActionParam{}
+			if pn := paramCtx.ParameterName(); pn != nil {
+				param.Name = parameterNameText(pn)
+			}
+			if dt := paramCtx.DataType(); dt != nil {
+				param.Type = buildDataType(dt)
+			}
+			if paramCtx.NOT_NULL() != nil {
+				param.IsRequired = true
+			}
+			stmt.Parameters = append(stmt.Parameters, param)
+		}
+	}
+
+	if retType := ctx.JavaActionReturnType(); retType != nil {
+		if dt := retType.DataType(); dt != nil {
+			stmt.ReturnType = buildJavaActionReturnType(dt)
+		}
+	}
+
+	// PLATFORM 'value' then FOLDER 'value' — order matches grammar rule
+	allStrings := ctx.AllSTRING_LITERAL()
+	strIdx := 0
+	if ctx.PLATFORM() != nil && strIdx < len(allStrings) {
+		stmt.Platform = unquoteString(allStrings[strIdx].GetText())
+		strIdx++
+	}
+	if ctx.FOLDER() != nil && strIdx < len(allStrings) {
+		stmt.Folder = unquoteString(allStrings[strIdx].GetText())
+		strIdx++
+	}
+
+	for _, block := range ctx.AllJsActionBodyBlock() {
+		raw := block.DOLLAR_STRING().GetText()
+		content := strings.TrimSpace(raw[2 : len(raw)-2])
+		switch strings.ToLower(block.IDENTIFIER().GetText()) {
+		case "imports":
+			stmt.Imports = content
+		case "extra":
+			stmt.ExtraCode = content
+		case "code":
+			stmt.UserCode = content
+		}
+	}
+
+	if parent, ok := ctx.GetParent().(*parser.CreateStatementContext); ok {
+		if docComment := parent.DocComment(); docComment != nil {
+			stmt.Documentation = extractDocComment(docComment.GetText())
+		}
+		if parent.OR() != nil && (parent.MODIFY() != nil || parent.REPLACE() != nil) {
+			stmt.CreateOrModify = true
+		}
+	}
+	if stmt.Documentation == "" {
+		if stmtCtx := findParentStatement(ctx); stmtCtx != nil {
+			if docCtx := stmtCtx.DocComment(); docCtx != nil {
+				stmt.Documentation = extractDocComment(docCtx.GetText())
+			}
+		}
+	}
+
+	b.statements = append(b.statements, stmt)
+}
+
 func buildJavaActionReturnType(ctx parser.IDataTypeContext) ast.DataType {
 	dt := buildDataType(ctx)
 	if isVoidReturnType(dt) {

@@ -3,6 +3,7 @@
 package visitor
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
@@ -720,5 +721,58 @@ func TestJavaAction_AnonymousTypeParam(t *testing.T) {
 
 	if stmt.ReturnType.Kind != ast.TypeInteger {
 		t.Errorf("ReturnType = %v, want TypeInteger", stmt.ReturnType.Kind)
+	}
+}
+
+func TestParse_CreateJavaScriptActionStatement(t *testing.T) {
+	src := `create or modify javascript action mymod.MyAction(
+        p1: String not null
+    )
+      returns Nothing
+      PLATFORM 'All'
+      folder 'MyMod/Actions'
+    {
+    imports $$
+    import { Big } from "big.js";
+    $$
+    extra $$
+    function helper() {}
+    $$
+    code $$
+    return true;
+    $$
+    };`
+
+	prog, errs := Build(src)
+	if len(errs) > 0 {
+		t.Fatalf("parse errors: %v", errs)
+	}
+	if len(prog.Statements) != 1 {
+		t.Fatalf("expected 1 stmt, got %d", len(prog.Statements))
+	}
+	stmt, ok := prog.Statements[0].(*ast.CreateJavaScriptActionStmt)
+	if !ok {
+		t.Fatalf("expected *CreateJavaScriptActionStmt, got %T", prog.Statements[0])
+	}
+	if stmt.Name.Module != "mymod" || stmt.Name.Name != "MyAction" {
+		t.Errorf("Name = %+v", stmt.Name)
+	}
+	if stmt.Platform != "All" {
+		t.Errorf("Platform = %q", stmt.Platform)
+	}
+	if stmt.Folder != "MyMod/Actions" {
+		t.Errorf("Folder = %q", stmt.Folder)
+	}
+	if !strings.Contains(stmt.Imports, "import { Big }") {
+		t.Errorf("Imports = %q", stmt.Imports)
+	}
+	if !strings.Contains(stmt.ExtraCode, "helper") {
+		t.Errorf("ExtraCode = %q", stmt.ExtraCode)
+	}
+	if !strings.Contains(stmt.UserCode, "return true") {
+		t.Errorf("UserCode = %q", stmt.UserCode)
+	}
+	if !stmt.CreateOrModify {
+		t.Error("CreateOrModify should be true")
 	}
 }

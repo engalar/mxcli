@@ -43,3 +43,19 @@ type DropJavaActionStmt struct {
 }
 
 func (s *DropJavaActionStmt) isStatement() {}
+
+// CreateJavaScriptActionStmt represents CREATE [OR MODIFY] JAVASCRIPT ACTION statements.
+type CreateJavaScriptActionStmt struct {
+	Name           QualifiedName
+	Parameters     []JavaActionParam
+	ReturnType     DataType
+	Platform       string
+	Folder         string
+	Imports        string
+	ExtraCode      string
+	UserCode       string
+	Documentation  string
+	CreateOrModify bool
+}
+
+func (s *CreateJavaScriptActionStmt) isStatement() {}
