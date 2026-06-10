@@ -340,131 +340,60 @@ func (pb *pageBuilder) buildSnippetV3(s *ast.CreateSnippetStmtV3) (*genPg.Snippe
 // The dispatch table is consumed by inspection commands and DESCRIBE-side
 // keyword resolution rather than overriding write-side routing here.
 func (pb *pageBuilder) buildWidgetV3(w *ast.WidgetV3) (element.Element, error) {
-	var widget element.Element
-	var err error
+	typeLower := strings.ToLower(w.Type)
 
-	switch strings.ToLower(w.Type) {
-	case "dataview":
-		widget, err = pb.buildDataViewV3(w)
-	case "datagrid":
-		widget, err = pb.buildDataGridV3(w)
+	// Explicit error cases: not valid as standalone widgets.
+	switch typeLower {
 	case "legacydatagrid":
 		return nil, mdlerrors.NewUnsupported(
 			"LEGACYDATAGRID (native Forms$DataGrid) is not yet implemented. " +
 				"Use DATAGRID for the pluggable equivalent on Mendix 11+, " +
 				"or open the project in Studio Pro to add native datagrids manually.")
-	case "listview":
-		widget, err = pb.buildListViewV3(w)
-	case "layoutgrid":
-		widget, err = pb.buildLayoutGridV3(w)
-	case "row":
-		widget, err = pb.buildContainerWithRowV3(w)
-	case "column":
-		widget, err = pb.buildContainerWithColumnV3(w)
-	case "container", "customcontainer":
-		widget, err = pb.buildContainerV3(w)
-	case "textbox":
-		widget, err = pb.buildTextBoxV3(w)
-	case "textarea":
-		widget, err = pb.buildTextAreaV3(w)
-	case "datepicker":
-		widget, err = pb.buildDatePickerV3(w)
-	case "dropdown":
-		widget, err = pb.buildDropdownV3(w)
-	case "checkbox":
-		widget, err = pb.buildCheckBoxV3(w)
-	case "fileinput":
-		widget, err = pb.buildFileManagerV3(w)
-	case "text", "statictext":
-		widget, err = pb.buildTextWidgetV3(w)
-	case "dynamictext":
-		widget, err = pb.buildDynamicTextV3(w)
-	case "title":
-		widget, err = pb.buildTitleV3(w)
-	case "button", "actionbutton":
-		widget, err = pb.buildButtonV3(w)
-	case "tabcontainer":
-		widget, err = pb.buildTabContainerV3(w)
 	case "tabpage":
 		return nil, mdlerrors.NewValidation("tabpage must be a direct child of tabcontainer")
-	case "groupbox":
-		widget, err = pb.buildGroupBoxV3(w)
-	case "radiobuttons":
-		widget, err = pb.buildRadioButtonsV3(w)
-	case "navigationlist":
-		widget, err = pb.buildNavigationListV3(w)
 	case "item":
 		return nil, mdlerrors.NewValidation("item must be a direct child of navigationlist")
-	case "snippetcall":
-		widget, err = pb.buildSnippetCallV3(w)
-	case "footer":
-		widget, err = pb.buildFooterV3(w)
-	case "header":
-		widget, err = pb.buildHeaderV3(w)
-	case "controlbar":
-		widget, err = pb.buildControlBarV3(w)
-	case "template":
-		widget, err = pb.buildTemplateV3(w)
-	case "filter":
-		widget, err = pb.buildFilterV3(w)
-	case "staticimage":
-		widget, err = pb.buildStaticImageV3(w)
-	case "dynamicimage":
-		widget, err = pb.buildDynamicImageV3(w)
-	case "image":
-		// IMAGE routes to the pluggable React widget (com.mendix.widget.web.image.Image)
-		pb.initPluggableEngine()
-		if pb.widgetRegistry != nil {
-			if def, ok := pb.widgetRegistry.Get("image"); ok {
-				cw, buildErr := pb.pluggableEngine.Build(def, w)
-				if buildErr != nil {
-					return nil, buildErr
-				}
-				return pb.customWidgetToElement(cw)
-			}
+	}
+
+	// Registered built-in widget types.
+	if fn, ok := widgetBuilders[typeLower]; ok {
+		widget, err := fn(pb, w)
+		if err != nil {
+			return nil, err
 		}
-		// Fallback to static image if pluggable engine unavailable
-		widget, err = pb.buildStaticImageV3(w)
-	default:
-		pb.initPluggableEngine()
-		if pb.widgetRegistry != nil {
-			if def, ok := pb.widgetRegistry.Get(strings.ToUpper(w.Type)); ok {
-				cw, buildErr := pb.pluggableEngine.Build(def, w)
-				if buildErr != nil {
-					return nil, buildErr
-				}
-				return pb.customWidgetToElement(cw)
+		applyWidgetAppearanceGen(widget, w, pb.themeRegistry)
+		applyConditionalSettingsGen(widget, w)
+		return widget, nil
+	}
+
+	// Pluggable widget fallback: look up by type ID in the registry.
+	pb.initPluggableEngine()
+	if pb.widgetRegistry != nil {
+		if def, ok := pb.widgetRegistry.Get(strings.ToUpper(w.Type)); ok {
+			cw, err := pb.pluggableEngine.Build(def, w)
+			if err != nil {
+				return nil, err
 			}
-			if w.Type == "pluggablewidget" || w.Type == "customwidget" {
-				if widgetType, ok := w.Properties["WidgetType"].(string); ok {
-					if def, ok := pb.widgetRegistry.GetByWidgetID(widgetType); ok {
-						cw, buildErr := pb.pluggableEngine.Build(def, w)
-						if buildErr != nil {
-							return nil, buildErr
-						}
-						return pb.customWidgetToElement(cw)
+			return pb.customWidgetToElement(cw)
+		}
+		if w.Type == "pluggablewidget" || w.Type == "customwidget" {
+			if widgetType, ok := w.Properties["WidgetType"].(string); ok { // nolint:describe-raw-bson // migrated verbatim from former default switch case; AST property map, not BSON
+				if def, ok := pb.widgetRegistry.GetByWidgetID(widgetType); ok {
+					cw, err := pb.pluggableEngine.Build(def, w)
+					if err != nil {
+						return nil, err
 					}
-					return nil, mdlerrors.NewNotFoundMsg("widget", widgetType, "no definition for widget "+widgetType+" (run 'mxcli widget init -p app.mpr')")
+					return pb.customWidgetToElement(cw)
 				}
+				return nil, mdlerrors.NewNotFoundMsg("widget", widgetType,
+					"no definition for widget "+widgetType+" (run 'mxcli widget init -p app.mpr')")
 			}
 		}
-		if pb.pluggableEngineErr != nil {
-			return nil, mdlerrors.NewUnsupported(fmt.Sprintf("unsupported widget type: %s (%v)", w.Type, pb.pluggableEngineErr))
-		}
-		return nil, mdlerrors.NewUnsupported("unsupported widget type: " + w.Type)
 	}
-
-	if err != nil {
-		return nil, err
+	if pb.pluggableEngineErr != nil {
+		return nil, mdlerrors.NewUnsupported(fmt.Sprintf("unsupported widget type: %s (%v)", w.Type, pb.pluggableEngineErr))
 	}
-
-	// Apply Class/Style and design properties via gen Appearance
-	applyWidgetAppearanceGen(widget, w, pb.themeRegistry)
-
-	// Apply conditional visibility/editability
-	applyConditionalSettingsGen(widget, w)
-
-	return widget, nil
+	return nil, mdlerrors.NewUnsupported("unsupported widget type: " + w.Type)
 }
 
 // customWidgetToElement returns the element.Element from a *backend.GenCustomWidgetElem.
