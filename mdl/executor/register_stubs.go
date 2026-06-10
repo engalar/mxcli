@@ -233,6 +233,9 @@ func registerImageHandlers(r *Registry) {
 	r.Register(&ast.DropImageCollectionStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
 		return execDropImageCollection(ctx, stmt.(*ast.DropImageCollectionStmt))
 	})
+	r.Register(&ast.AlterImageCollectionStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
+		return execAlterImageCollection(ctx, stmt.(*ast.AlterImageCollectionStmt))
+	})
 }
 
 func registerWorkflowHandlers(r *Registry) {

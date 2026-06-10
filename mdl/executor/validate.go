@@ -271,6 +271,12 @@ func validateWithContext(ctx *ExecContext, stmt ast.Statement, sc *scriptContext
 				return mdlerrors.NewNotFound("module", s.Name.Module)
 			}
 		}
+	case *ast.AlterImageCollectionStmt:
+		if s.Name.Module != "" && !sc.modules[s.Name.Module] {
+			if _, err := findModule(ctx, s.Name.Module); err != nil {
+				return mdlerrors.NewNotFound("module", s.Name.Module)
+			}
+		}
 	case *ast.CreateEnumerationStmt:
 		if s.Name.Module != "" && !sc.modules[s.Name.Module] {
 			if _, err := findModule(ctx, s.Name.Module); err != nil {

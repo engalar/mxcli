@@ -230,6 +230,7 @@ func allKnownStatements() []ast.Statement {
 		&ast.DropExportMappingStmt{},
 		&ast.DropFolderStmt{},
 		&ast.DropImageCollectionStmt{},
+		&ast.AlterImageCollectionStmt{},
 		&ast.DropImportMappingStmt{},
 		&ast.DropJavaActionStmt{},
 		&ast.DropJsonStructureStmt{},

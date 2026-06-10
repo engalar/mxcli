@@ -139,6 +139,8 @@ func stmtSummary(stmt ast.Statement) string {
 		return fmt.Sprintf("create image collection %s", s.Name)
 	case *ast.DropImageCollectionStmt:
 		return fmt.Sprintf("drop image collection %s", s.Name)
+	case *ast.AlterImageCollectionStmt:
+		return fmt.Sprintf("alter image collection %s", s.Name)
 
 	// Database Connection
 	case *ast.CreateDatabaseConnectionStmt:
