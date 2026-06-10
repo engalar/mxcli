@@ -105,6 +105,7 @@
 -- Note    : MoveDocumentGen added as generic UpdateUnitContainer wrapper (OCP: replaces identical
 --           MovePageGen/MoveSnippetGen/MoveLayoutGen); layoutDocToModel added for layout BSON
 --           parsing and WidgetPlaceholder added to widget kind map.
+-- Note    : UpdateJavaScriptActionGen added (JS action Platform write path); WidgetPlaceholder rendered in layout describe
 --
 -- Edge cases covered:
 --   Domain    : self-ref association, cross-module association,

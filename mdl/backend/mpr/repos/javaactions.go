@@ -222,18 +222,33 @@ var _ repos.JavaActionRepository = (*javaActionRepo)(nil)
 // javaScriptActionRepo is the direct-mode read-only JavaScriptActionRepository.
 // JavaScript actions have no MDL `create` surface, so there is no writer half.
 type javaScriptActionRepo struct {
-	w   *mmpr.Writer
-	r   *mmpr.Reader
-	dec *decoder
+	w    *mmpr.Writer
+	r    *mmpr.Reader
+	dec  *decoder
+	enc  *encoder
+	sink writeSink
 }
 
 // NewJavaScriptActionRepository constructs the direct-mode repository.
 func NewJavaScriptActionRepository(w *mmpr.Writer) repos.JavaScriptActionRepository {
 	return &javaScriptActionRepo{
-		w:   w,
-		r:   w.ConcreteReader(),
-		dec: newDecoder(),
+		w:    w,
+		r:    w.ConcreteReader(),
+		dec:  newDecoder(),
+		enc:  newEncoder(),
+		sink: newWriterSink(w),
 	}
+}
+
+func (r *javaScriptActionRepo) Update(jsa *genJSA.JavaScriptAction) error {
+	if jsa == nil {
+		return fmt.Errorf("javaScriptActionRepo.Update: nil JavaScriptAction")
+	}
+	contents, err := r.enc.Encode(jsa)
+	if err != nil {
+		return err
+	}
+	return r.sink.UpdateRawUnit(string(jsa.ID()), contents)
 }
 
 func (r *javaScriptActionRepo) Get(id model.ID) (*genJSA.JavaScriptAction, error) {

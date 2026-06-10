@@ -1165,6 +1165,17 @@ func (b *MprBackend) ReadJavaScriptActionByNameGen(qualifiedName string) (*genJS
 	return mprrepos.NewJavaScriptActionRepository(w).FindByQualifiedName(qualifiedName)
 }
 
+func (b *MprBackend) UpdateJavaScriptActionGen(jsa *genJSA.JavaScriptAction) error {
+	if jsa == nil {
+		return fmt.Errorf("UpdateJavaScriptActionGen: nil JavaScriptAction")
+	}
+	w, ok := b.concreteWriter()
+	if !ok {
+		return fmt.Errorf("UpdateJavaScriptActionGen: no modelsdk writer")
+	}
+	return mprrepos.NewJavaScriptActionRepository(w).Update(jsa)
+}
+
 func (b *MprBackend) ReadJavaSourceFile(moduleName, actionName string) (string, error) {
 	return b.readJavaSourceFileViaPath(moduleName, actionName)
 }

@@ -50,4 +50,5 @@ type JavaScriptActionReader interface {
 
 type JavaScriptActionRepository interface {
 	JavaScriptActionReader
+	Update(jsa *genJSA.JavaScriptAction) error
 }

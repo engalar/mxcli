@@ -91,3 +91,10 @@ func (m *MockBackend) ReadJavaScriptActionByNameGen(qualifiedName string) (*genJ
 	}
 	return nil, fmt.Errorf("MockBackend.ReadJavaScriptActionByNameGen not configured")
 }
+
+func (m *MockBackend) UpdateJavaScriptActionGen(jsa *genJSA.JavaScriptAction) error {
+	if m.UpdateJavaScriptActionGenFunc != nil {
+		return m.UpdateJavaScriptActionGenFunc(jsa)
+	}
+	return fmt.Errorf("MockBackend.UpdateJavaScriptActionGen not configured")
+}

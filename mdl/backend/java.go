@@ -30,4 +30,5 @@ type JavaBackend interface {
 	WriteJavaSourceFileGen(moduleName, actionName string, javaCode string, params []*genJA.JavaActionParameter, returnType element.Element, extraImports []string, extraCode string) error
 	ListJavaScriptActionsGen() ([]*genJSA.JavaScriptAction, error)
 	ReadJavaScriptActionByNameGen(qualifiedName string) (*genJSA.JavaScriptAction, error)
+	UpdateJavaScriptActionGen(jsa *genJSA.JavaScriptAction) error
 }
