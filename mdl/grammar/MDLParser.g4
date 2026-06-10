@@ -97,6 +97,7 @@ createStatement
       | createModuleStatement
       | createMicroflowStatement
       | createJavaActionStatement
+      | createJavaScriptActionStatement
       | createPageStatement
       | createSnippetStatement
       | createLayoutStatement

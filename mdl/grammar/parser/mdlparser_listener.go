@@ -310,6 +310,12 @@ type MDLParserListener interface {
 	// EnterCreateJavaActionStatement is called when entering the createJavaActionStatement production.
 	EnterCreateJavaActionStatement(c *CreateJavaActionStatementContext)
 
+	// EnterCreateJavaScriptActionStatement is called when entering the createJavaScriptActionStatement production.
+	EnterCreateJavaScriptActionStatement(c *CreateJavaScriptActionStatementContext)
+
+	// EnterJsActionBodyBlock is called when entering the jsActionBodyBlock production.
+	EnterJsActionBodyBlock(c *JsActionBodyBlockContext)
+
 	// EnterJavaActionSourceClause is called when entering the javaActionSourceClause production.
 	EnterJavaActionSourceClause(c *JavaActionSourceClauseContext)
 
@@ -1761,6 +1767,12 @@ type MDLParserListener interface {
 
 	// ExitCreateJavaActionStatement is called when exiting the createJavaActionStatement production.
 	ExitCreateJavaActionStatement(c *CreateJavaActionStatementContext)
+
+	// ExitCreateJavaScriptActionStatement is called when exiting the createJavaScriptActionStatement production.
+	ExitCreateJavaScriptActionStatement(c *CreateJavaScriptActionStatementContext)
+
+	// ExitJsActionBodyBlock is called when exiting the jsActionBodyBlock production.
+	ExitJsActionBodyBlock(c *JsActionBodyBlockContext)
 
 	// ExitJavaActionSourceClause is called when exiting the javaActionSourceClause production.
 	ExitJavaActionSourceClause(c *JavaActionSourceClauseContext)

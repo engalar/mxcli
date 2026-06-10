@@ -48,6 +48,20 @@ createJavaActionStatement
       SEMICOLON?
     ;
 
+createJavaScriptActionStatement
+    : JAVASCRIPT ACTION qualifiedName
+      LPAREN javaActionParameterList? RPAREN
+      javaActionReturnType?
+      (PLATFORM STRING_LITERAL)?
+      (FOLDER STRING_LITERAL)?
+      (LBRACE jsActionBodyBlock* RBRACE)?
+      SEMICOLON?
+    ;
+
+jsActionBodyBlock
+    : IDENTIFIER DOLLAR_STRING
+    ;
+
 javaActionSourceClause
     : javaActionSourceBlock+
     ;

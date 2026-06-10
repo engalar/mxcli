@@ -654,6 +654,20 @@ func (s *BaseMDLParserListener) EnterCreateJavaActionStatement(ctx *CreateJavaAc
 func (s *BaseMDLParserListener) ExitCreateJavaActionStatement(ctx *CreateJavaActionStatementContext) {
 }
 
+// EnterCreateJavaScriptActionStatement is called when production createJavaScriptActionStatement is entered.
+func (s *BaseMDLParserListener) EnterCreateJavaScriptActionStatement(ctx *CreateJavaScriptActionStatementContext) {
+}
+
+// ExitCreateJavaScriptActionStatement is called when production createJavaScriptActionStatement is exited.
+func (s *BaseMDLParserListener) ExitCreateJavaScriptActionStatement(ctx *CreateJavaScriptActionStatementContext) {
+}
+
+// EnterJsActionBodyBlock is called when production jsActionBodyBlock is entered.
+func (s *BaseMDLParserListener) EnterJsActionBodyBlock(ctx *JsActionBodyBlockContext) {}
+
+// ExitJsActionBodyBlock is called when production jsActionBodyBlock is exited.
+func (s *BaseMDLParserListener) ExitJsActionBodyBlock(ctx *JsActionBodyBlockContext) {}
+
 // EnterJavaActionSourceClause is called when production javaActionSourceClause is entered.
 func (s *BaseMDLParserListener) EnterJavaActionSourceClause(ctx *JavaActionSourceClauseContext) {}
 
