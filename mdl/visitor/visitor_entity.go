@@ -912,7 +912,8 @@ func (b *Builder) ExitMoveStatement(ctx *parser.MoveStatementContext) {
 	// MOVE FOLDER is identified by having FOLDER as the first token after MOVE (no document type keyword)
 	if len(ctx.AllFOLDER()) > 0 && ctx.PAGE() == nil && ctx.MICROFLOW() == nil &&
 		ctx.SNIPPET() == nil && ctx.NANOFLOW() == nil && ctx.ENTITY() == nil &&
-		ctx.ENUMERATION() == nil && ctx.CONSTANT() == nil && ctx.DATABASE() == nil {
+		ctx.ENUMERATION() == nil && ctx.CONSTANT() == nil && ctx.DATABASE() == nil &&
+		ctx.LAYOUT() == nil && ctx.WORKFLOW() == nil && ctx.JAVA() == nil && ctx.JAVASCRIPT() == nil {
 		b.exitMoveFolderStatement(ctx, names)
 		return
 	}
@@ -938,6 +939,14 @@ func (b *Builder) ExitMoveStatement(ctx *parser.MoveStatementContext) {
 		stmt.DocumentType = ast.DocumentTypeConstant
 	} else if ctx.DATABASE() != nil {
 		stmt.DocumentType = ast.DocumentTypeDatabaseConnection
+	} else if ctx.LAYOUT() != nil {
+		stmt.DocumentType = ast.DocumentTypeLayout
+	} else if ctx.WORKFLOW() != nil {
+		stmt.DocumentType = ast.DocumentTypeWorkflow
+	} else if ctx.JAVASCRIPT() != nil {
+		stmt.DocumentType = ast.DocumentTypeJavaScriptAction
+	} else if ctx.JAVA() != nil {
+		stmt.DocumentType = ast.DocumentTypeJavaAction
 	}
 
 	// Parse folder path if specified

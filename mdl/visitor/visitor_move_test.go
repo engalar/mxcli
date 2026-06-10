@@ -49,3 +49,50 @@ func TestMoveEntity_ToModule(t *testing.T) {
 		t.Errorf("Got TargetModule %q", stmt.TargetModule)
 	}
 }
+
+func TestParse_MoveJavaAction(t *testing.T) {
+	prog, errs := Build("MOVE JAVA ACTION MyModule.MyAction TO FOLDER 'actions' IN MyModule;")
+	if len(errs) > 0 {
+		t.Fatalf("parse errors: %v", errs)
+	}
+	s, ok := prog.Statements[0].(*ast.MoveStmt)
+	if !ok || s.DocumentType != ast.DocumentTypeJavaAction {
+		t.Fatalf("expected JAVA ACTION, got %T/%q", prog.Statements[0], s.DocumentType)
+	}
+	if s.Folder != "actions" {
+		t.Errorf("Folder=%q", s.Folder)
+	}
+}
+
+func TestParse_MoveJavaScriptAction(t *testing.T) {
+	prog, errs := Build("MOVE JAVASCRIPT ACTION MyModule.MyJSAction TO MyModule;")
+	if len(errs) > 0 {
+		t.Fatalf("parse errors: %v", errs)
+	}
+	s, ok := prog.Statements[0].(*ast.MoveStmt)
+	if !ok || s.DocumentType != ast.DocumentTypeJavaScriptAction {
+		t.Fatalf("expected JAVASCRIPT ACTION, got %T/%q", prog.Statements[0], s.DocumentType)
+	}
+}
+
+func TestParse_MoveLayout(t *testing.T) {
+	prog, errs := Build("MOVE LAYOUT MyModule.MyLayout TO FOLDER 'layouts' IN MyModule;")
+	if len(errs) > 0 {
+		t.Fatalf("parse errors: %v", errs)
+	}
+	s, ok := prog.Statements[0].(*ast.MoveStmt)
+	if !ok || s.DocumentType != ast.DocumentTypeLayout {
+		t.Fatalf("expected LAYOUT, got %T/%q", prog.Statements[0], s.DocumentType)
+	}
+}
+
+func TestParse_MoveWorkflow(t *testing.T) {
+	prog, errs := Build("MOVE WORKFLOW MyModule.MyWorkflow TO MyModule;")
+	if len(errs) > 0 {
+		t.Fatalf("parse errors: %v", errs)
+	}
+	s, ok := prog.Statements[0].(*ast.MoveStmt)
+	if !ok || s.DocumentType != ast.DocumentTypeWorkflow {
+		t.Fatalf("expected WORKFLOW, got %T/%q", prog.Statements[0], s.DocumentType)
+	}
+}
