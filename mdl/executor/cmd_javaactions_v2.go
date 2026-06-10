@@ -745,8 +745,31 @@ func describeJavaScriptActionGen(ctx *ExecContext, name ast.QualifiedName) error
 		return mdlerrors.NewNotFound("javascript action", name.Module+"."+name.Name)
 	}
 	qn := name.Module + "." + name.Name
-	jsa, err := ctx.JavaScriptActions.FindByQualifiedName(qn)
-	if err != nil || jsa == nil {
+
+	// Container-aware lookup yields both the element and its folder path.
+	pairs, err := listJavaScriptActionsWithContainerGen(ctx)
+	if err != nil {
+		return mdlerrors.NewBackend("list javascript actions", err)
+	}
+	h, err := getHierarchy(ctx)
+	if err != nil {
+		return mdlerrors.NewBackend("build hierarchy", err)
+	}
+	var jsa *genJSA.JavaScriptAction
+	var folderPath string
+	for _, p := range pairs {
+		if p.Elem == nil {
+			continue
+		}
+		modID := h.FindModuleID(modelIDFromElementID(p.ContainerID))
+		modName := h.GetModuleName(modID)
+		if modName+"."+p.Elem.Name() == qn {
+			jsa = p.Elem
+			folderPath = h.BuildFolderPath(modelIDFromElementID(p.ContainerID))
+			break
+		}
+	}
+	if jsa == nil {
 		return mdlerrors.NewNotFound("javascript action", qn)
 	}
 
@@ -765,7 +788,7 @@ func describeJavaScriptActionGen(ctx *ExecContext, name ast.QualifiedName) error
 		sb.WriteString(" */\n")
 	}
 
-	sb.WriteString("create javascript action ")
+	sb.WriteString("create or modify javascript action ")
 	sb.WriteString(qn)
 
 	// Type parameters list (generics).
@@ -832,23 +855,22 @@ func describeJavaScriptActionGen(ctx *ExecContext, name ast.QualifiedName) error
 	}
 	sb.WriteString(")")
 
-	platform := jsa.Platform()
-	if platform == "" {
-		platform = "All"
-	}
-	if platform != "All" {
-		sb.WriteString("\n  PLATFORM ")
-		sb.WriteString(platform)
-	}
-
 	if rt := jsa.ActionReturnType(); rt != nil {
 		sb.WriteString("\n  returns ")
 		sb.WriteString(formatJavaActionReturnTypeGen(rt, typeParams))
 	}
 
-	if rn := jsa.ActionDefaultReturnName(); rn != "" {
-		sb.WriteString("\n-- return NAME: '")
-		sb.WriteString(rn)
+	platform := jsa.Platform()
+	if platform == "" {
+		platform = "All"
+	}
+	sb.WriteString("\n  PLATFORM '")
+	sb.WriteString(platform)
+	sb.WriteString("'")
+
+	if folderPath != "" {
+		sb.WriteString("\n  folder '")
+		sb.WriteString(folderPath)
 		sb.WriteString("'")
 	}
 
@@ -863,28 +885,30 @@ func describeJavaScriptActionGen(ctx *ExecContext, name ast.QualifiedName) error
 			sb.WriteString("' in '")
 			sb.WriteString(category)
 			sb.WriteString("'")
-			icon := ""
-			if typed, ok := mai.(*genJA.MicroflowActionInfo); ok {
-				icon = typed.IconQualifiedName()
-			}
-			if icon == "" {
-				icon = genJA.ReadBSONString(mai, "Icon")
-			}
-			if icon != "" {
-				sb.WriteString("\n-- icon: ")
-				sb.WriteString(icon)
-			}
 		}
 	}
 
-	userCode, extraCode, sourcePath := readJavaScriptActionSource(ctx.MprPath, name.Module, name.Name)
-	sb.WriteString("\n-- source: ")
-	sb.WriteString(filepath.ToSlash(sourcePath))
+	// Code body block: { imports $$ $$ extra $$ $$ code $$ $$ }
+	userCode, extraCode, _ := readJavaScriptActionSource(ctx.MprPath, name.Module, name.Name)
+	importsStr := readJavaScriptActionImports(ctx.MprPath, name.Module, name.Name)
+
+	sb.WriteString("\n{")
+	if importsStr != "" {
+		sb.WriteString("\nimports $$\n")
+		sb.WriteString(importsStr)
+		sb.WriteString("\n$$")
+	}
+	if extraCode != "" {
+		sb.WriteString("\nextra $$\n")
+		sb.WriteString(extraCode)
+		sb.WriteString("\n$$")
+	}
 	if userCode != "" {
-		sb.WriteString("\nas $$\n")
+		sb.WriteString("\ncode $$\n")
 		sb.WriteString(userCode)
 		sb.WriteString("\n$$")
 	}
+	sb.WriteString("\n}")
 
 	sb.WriteString(";")
 	fmt.Fprintln(ctx.Output, sb.String())
@@ -895,16 +919,39 @@ func describeJavaScriptActionGen(ctx *ExecContext, name ast.QualifiedName) error
 	if jsa.Excluded() {
 		fmt.Fprintln(ctx.Output, "-- EXCLUDED: true")
 	}
-	if platform == "All" {
-		fmt.Fprintln(ctx.Output, "-- PLATFORM: All")
-	}
-	if extraCode != "" {
-		fmt.Fprintln(ctx.Output, "-- EXTRA CODE:")
-		for _, line := range strings.Split(extraCode, "\n") {
-			fmt.Fprintf(ctx.Output, "-- %s\n", line)
-		}
+	if rn := jsa.ActionDefaultReturnName(); rn != "" {
+		fmt.Fprintf(ctx.Output, "-- return NAME: '%s'\n", rn)
 	}
 	return nil
+}
+
+// readJavaScriptActionImports reads all `import ...` lines from the JS
+// action source file, joined by newline. Returns "" when the file is
+// absent. Used by describe to populate the `imports $$ $$` block.
+func readJavaScriptActionImports(mprPath, moduleName, actionName string) string {
+	if mprPath == "" {
+		return ""
+	}
+	projectRoot := filepath.Dir(mprPath)
+	candidates := []string{
+		filepath.Join(projectRoot, "javascriptsource", moduleName, "actions", actionName+".js"),
+		filepath.Join(projectRoot, "javascriptsource", strings.ToLower(moduleName), "actions", actionName+".js"),
+	}
+	for _, jsPath := range candidates {
+		content, err := os.ReadFile(jsPath)
+		if err != nil {
+			continue
+		}
+		var importLines []string
+		for _, line := range strings.Split(string(content), "\n") {
+			t := strings.TrimSpace(line)
+			if strings.HasPrefix(t, "import ") {
+				importLines = append(importLines, t)
+			}
+		}
+		return strings.Join(importLines, "\n")
+	}
+	return ""
 }
 
 // ─────────────────────────────────────────────────────────────────────

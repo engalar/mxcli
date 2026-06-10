@@ -629,7 +629,7 @@ func copyRoundtripProject(t *testing.T) string {
 	if err := copyFile(src, destMPR); err != nil {
 		t.Fatalf("copy roundtrip MPR: %v", err)
 	}
-	for _, sub := range []string{"mprcontents", "widgets"} {
+	for _, sub := range []string{"mprcontents", "widgets", "javascriptsource"} {
 		srcSub := filepath.Join(roundtripProjectDir, sub)
 		if _, err := os.Stat(srcSub); err == nil {
 			if err := copyDir(srcSub, filepath.Join(destDir, sub)); err != nil {

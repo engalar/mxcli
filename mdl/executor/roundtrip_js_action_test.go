@@ -33,11 +33,17 @@ func TestRoundtrip_JavaScriptAction_Describe(t *testing.T) {
 	if strings.TrimSpace(mdl) == "" {
 		t.Fatal("expected non-empty output from describe javascript action")
 	}
-	if !strings.Contains(mdl, "create javascript action ") {
-		t.Errorf("expected 'create javascript action' keyword in output, got:\n%s", mdl)
+	if !strings.Contains(mdl, "create or modify javascript action ") {
+		t.Errorf("expected 'create or modify javascript action' in output, got:\n%s", mdl)
 	}
 	if !strings.Contains(mdl, "JS_isStrictMode") {
 		t.Errorf("expected action name 'JS_isStrictMode' in output, got:\n%s", mdl)
+	}
+	if !strings.Contains(mdl, "PLATFORM") {
+		t.Errorf("expected PLATFORM clause in output, got:\n%s", mdl)
+	}
+	if !strings.Contains(mdl, "{") || !strings.Contains(mdl, "}") {
+		t.Errorf("expected { } body block in output, got:\n%s", mdl)
 	}
 }
 

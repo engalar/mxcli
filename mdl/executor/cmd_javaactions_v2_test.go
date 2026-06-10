@@ -271,7 +271,7 @@ func TestDescribeJavaScriptActionGen_OutputsCreateStatement(t *testing.T) {
 		t.Fatalf("describeJavaScriptActionGen: %v", err)
 	}
 	out := buf.String()
-	if !strings.Contains(out, "create javascript action ") {
+	if !strings.Contains(out, "create or modify javascript action ") {
 		t.Errorf("missing create statement: %q", out)
 	}
 	if !strings.Contains(out, "."+first.Name()+"(") {
