@@ -82,7 +82,7 @@ Each principle is stated as a rule, followed by a counter-example (the failure m
 └──────────┬──────────┘              └────────────────────────┘
            │ modelsdk reader/writer
 ┌──────────▼──────────────────────────────────────────────────┐
-│  File Layer  modelsdk/mpr · sdk/widgets                      │
+│  File Layer  modelsdk/mpr · modelsdk/widgets                 │
 │  MPR v1 (SQLite) / v2 (mprcontents/) transparent read/write. │
 │  BSON ↔ Go struct; widget template clone + augment.          │
 └──────────┬──────────────────────────────────────────────────┘
@@ -106,7 +106,7 @@ Organized by "what do I want to do", not by package.
 |------|-------------|
 | Add a new MDL command (e.g. `alter image collection`) | `MDLParser.g4` → `make grammar` → `mdl/ast/` → `mdl/visitor/` → `mdl/executor/cmd_*.go` → `mdl/backend/` interface → `mdl/backend/mpr/` impl → `mdl/backend/mock/` stub → tests |
 | Fix a BSON write bug | `mdl/backend/mpr/` locate write path → compare against fixture BSON (`internal/goldenfs/`) → write failing test → implement fix → `mx check` validation |
-| Add pluggable widget support | `sdk/widgets/definitions/*.def.json` → `mdl/executor/widget_engine.go` operation registry → `sdk/widgets/templates/` template → `sdk/widgets/augment.go` |
+| Add pluggable widget support | `modelsdk/widgets/definitions/*.def.json` → `mdl/executor/widget_engine.go` operation registry → `modelsdk/widgets/templates/` template → `modelsdk/widgets/augment.go` |
 | Change MDL syntax | `.g4` file → `make grammar` (commit generated `mdl/grammar/parser/` files alongside `.g4`) → visitor → ast |
 | Write executor unit test | `mdl/backend/mock/` injection → `mdl/executor/*_test.go` |
 | Write BSON correctness test | `internal/goldenfs/` golden snapshot → helpdesk regression test |
