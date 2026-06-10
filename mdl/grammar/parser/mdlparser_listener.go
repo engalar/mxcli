@@ -25,6 +25,9 @@ type MDLParserListener interface {
 	// EnterAlterStatement is called when entering the alterStatement production.
 	EnterAlterStatement(c *AlterStatementContext)
 
+	// EnterAlterImageCollectionAction is called when entering the alterImageCollectionAction production.
+	EnterAlterImageCollectionAction(c *AlterImageCollectionActionContext)
+
 	// EnterAlterPublishedRestServiceAction is called when entering the alterPublishedRestServiceAction production.
 	EnterAlterPublishedRestServiceAction(c *AlterPublishedRestServiceActionContext)
 
@@ -1482,6 +1485,9 @@ type MDLParserListener interface {
 
 	// ExitAlterStatement is called when exiting the alterStatement production.
 	ExitAlterStatement(c *AlterStatementContext)
+
+	// ExitAlterImageCollectionAction is called when exiting the alterImageCollectionAction production.
+	ExitAlterImageCollectionAction(c *AlterImageCollectionActionContext)
 
 	// ExitAlterPublishedRestServiceAction is called when exiting the alterPublishedRestServiceAction production.
 	ExitAlterPublishedRestServiceAction(c *AlterPublishedRestServiceActionContext)

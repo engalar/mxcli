@@ -145,7 +145,17 @@ alterStatement
     | ALTER SNIPPET qualifiedName LBRACE alterPageOperation+ RBRACE
     | ALTER WORKFLOW qualifiedName alterWorkflowAction+ SEMICOLON?
     | ALTER PUBLISHED REST SERVICE qualifiedName alterPublishedRestServiceAction (COMMA? alterPublishedRestServiceAction)*
+    | ALTER IMAGE COLLECTION qualifiedName alterImageCollectionAction (COMMA alterImageCollectionAction)* SEMICOLON?
     | alterModuleJarDepStatement
+    ;
+
+alterImageCollectionAction
+    : ADD IMAGE imageName FROM FILE_KW STRING_LITERAL
+    | DROP IMAGE imageName
+    | RENAME IMAGE imageName TO imageName
+    | SET IMAGE imageName FROM FILE_KW STRING_LITERAL
+    | MOVE TO qualifiedName
+    | EXPORT IMAGE imageName TO FILE_KW STRING_LITERAL
     ;
 
 alterPublishedRestServiceAction

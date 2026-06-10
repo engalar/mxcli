@@ -56,6 +56,14 @@ func (s *BaseMDLParserListener) EnterAlterStatement(ctx *AlterStatementContext) 
 // ExitAlterStatement is called when production alterStatement is exited.
 func (s *BaseMDLParserListener) ExitAlterStatement(ctx *AlterStatementContext) {}
 
+// EnterAlterImageCollectionAction is called when production alterImageCollectionAction is entered.
+func (s *BaseMDLParserListener) EnterAlterImageCollectionAction(ctx *AlterImageCollectionActionContext) {
+}
+
+// ExitAlterImageCollectionAction is called when production alterImageCollectionAction is exited.
+func (s *BaseMDLParserListener) ExitAlterImageCollectionAction(ctx *AlterImageCollectionActionContext) {
+}
+
 // EnterAlterPublishedRestServiceAction is called when production alterPublishedRestServiceAction is entered.
 func (s *BaseMDLParserListener) EnterAlterPublishedRestServiceAction(ctx *AlterPublishedRestServiceActionContext) {
 }
