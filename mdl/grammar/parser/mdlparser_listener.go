@@ -652,6 +652,27 @@ type MDLParserListener interface {
 	// EnterSnippetOption is called when entering the snippetOption production.
 	EnterSnippetOption(c *SnippetOptionContext)
 
+	// EnterCreateLayoutStatement is called when entering the createLayoutStatement production.
+	EnterCreateLayoutStatement(c *CreateLayoutStatementContext)
+
+	// EnterLayoutHeaderProperty is called when entering the layoutHeaderProperty production.
+	EnterLayoutHeaderProperty(c *LayoutHeaderPropertyContext)
+
+	// EnterLayoutWidget is called when entering the layoutWidget production.
+	EnterLayoutWidget(c *LayoutWidgetContext)
+
+	// EnterLayoutScrollContainerProp is called when entering the layoutScrollContainerProp production.
+	EnterLayoutScrollContainerProp(c *LayoutScrollContainerPropContext)
+
+	// EnterLayoutRegion is called when entering the layoutRegion production.
+	EnterLayoutRegion(c *LayoutRegionContext)
+
+	// EnterLayoutRegionName is called when entering the layoutRegionName production.
+	EnterLayoutRegionName(c *LayoutRegionNameContext)
+
+	// EnterLayoutRegionContent is called when entering the layoutRegionContent production.
+	EnterLayoutRegionContent(c *LayoutRegionContentContext)
+
 	// EnterPageParameterList is called when entering the pageParameterList production.
 	EnterPageParameterList(c *PageParameterListContext)
 
@@ -2082,6 +2103,27 @@ type MDLParserListener interface {
 
 	// ExitSnippetOption is called when exiting the snippetOption production.
 	ExitSnippetOption(c *SnippetOptionContext)
+
+	// ExitCreateLayoutStatement is called when exiting the createLayoutStatement production.
+	ExitCreateLayoutStatement(c *CreateLayoutStatementContext)
+
+	// ExitLayoutHeaderProperty is called when exiting the layoutHeaderProperty production.
+	ExitLayoutHeaderProperty(c *LayoutHeaderPropertyContext)
+
+	// ExitLayoutWidget is called when exiting the layoutWidget production.
+	ExitLayoutWidget(c *LayoutWidgetContext)
+
+	// ExitLayoutScrollContainerProp is called when exiting the layoutScrollContainerProp production.
+	ExitLayoutScrollContainerProp(c *LayoutScrollContainerPropContext)
+
+	// ExitLayoutRegion is called when exiting the layoutRegion production.
+	ExitLayoutRegion(c *LayoutRegionContext)
+
+	// ExitLayoutRegionName is called when exiting the layoutRegionName production.
+	ExitLayoutRegionName(c *LayoutRegionNameContext)
+
+	// ExitLayoutRegionContent is called when exiting the layoutRegionContent production.
+	ExitLayoutRegionContent(c *LayoutRegionContentContext)
 
 	// ExitPageParameterList is called when exiting the pageParameterList production.
 	ExitPageParameterList(c *PageParameterListContext)

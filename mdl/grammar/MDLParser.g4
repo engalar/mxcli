@@ -99,6 +99,7 @@ createStatement
       | createJavaActionStatement
       | createPageStatement
       | createSnippetStatement
+      | createLayoutStatement
       | createEnumerationStatement
       | createValidationRuleStatement
       | createNotebookStatement

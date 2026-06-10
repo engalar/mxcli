@@ -1360,6 +1360,50 @@ func (s *BaseMDLParserListener) EnterSnippetOption(ctx *SnippetOptionContext) {}
 // ExitSnippetOption is called when production snippetOption is exited.
 func (s *BaseMDLParserListener) ExitSnippetOption(ctx *SnippetOptionContext) {}
 
+// EnterCreateLayoutStatement is called when production createLayoutStatement is entered.
+func (s *BaseMDLParserListener) EnterCreateLayoutStatement(ctx *CreateLayoutStatementContext) {}
+
+// ExitCreateLayoutStatement is called when production createLayoutStatement is exited.
+func (s *BaseMDLParserListener) ExitCreateLayoutStatement(ctx *CreateLayoutStatementContext) {}
+
+// EnterLayoutHeaderProperty is called when production layoutHeaderProperty is entered.
+func (s *BaseMDLParserListener) EnterLayoutHeaderProperty(ctx *LayoutHeaderPropertyContext) {}
+
+// ExitLayoutHeaderProperty is called when production layoutHeaderProperty is exited.
+func (s *BaseMDLParserListener) ExitLayoutHeaderProperty(ctx *LayoutHeaderPropertyContext) {}
+
+// EnterLayoutWidget is called when production layoutWidget is entered.
+func (s *BaseMDLParserListener) EnterLayoutWidget(ctx *LayoutWidgetContext) {}
+
+// ExitLayoutWidget is called when production layoutWidget is exited.
+func (s *BaseMDLParserListener) ExitLayoutWidget(ctx *LayoutWidgetContext) {}
+
+// EnterLayoutScrollContainerProp is called when production layoutScrollContainerProp is entered.
+func (s *BaseMDLParserListener) EnterLayoutScrollContainerProp(ctx *LayoutScrollContainerPropContext) {
+}
+
+// ExitLayoutScrollContainerProp is called when production layoutScrollContainerProp is exited.
+func (s *BaseMDLParserListener) ExitLayoutScrollContainerProp(ctx *LayoutScrollContainerPropContext) {
+}
+
+// EnterLayoutRegion is called when production layoutRegion is entered.
+func (s *BaseMDLParserListener) EnterLayoutRegion(ctx *LayoutRegionContext) {}
+
+// ExitLayoutRegion is called when production layoutRegion is exited.
+func (s *BaseMDLParserListener) ExitLayoutRegion(ctx *LayoutRegionContext) {}
+
+// EnterLayoutRegionName is called when production layoutRegionName is entered.
+func (s *BaseMDLParserListener) EnterLayoutRegionName(ctx *LayoutRegionNameContext) {}
+
+// ExitLayoutRegionName is called when production layoutRegionName is exited.
+func (s *BaseMDLParserListener) ExitLayoutRegionName(ctx *LayoutRegionNameContext) {}
+
+// EnterLayoutRegionContent is called when production layoutRegionContent is entered.
+func (s *BaseMDLParserListener) EnterLayoutRegionContent(ctx *LayoutRegionContentContext) {}
+
+// ExitLayoutRegionContent is called when production layoutRegionContent is exited.
+func (s *BaseMDLParserListener) ExitLayoutRegionContent(ctx *LayoutRegionContentContext) {}
+
 // EnterPageParameterList is called when production pageParameterList is entered.
 func (s *BaseMDLParserListener) EnterPageParameterList(ctx *PageParameterListContext) {}
 

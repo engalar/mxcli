@@ -34,6 +34,45 @@ snippetOptions: snippetOption+ ;
 snippetOption: FOLDER STRING_LITERAL ;
 
 // =============================================================================
+// LAYOUT CREATION / MODIFICATION
+// =============================================================================
+
+createLayoutStatement
+    : LAYOUT qualifiedName
+      (LPAREN layoutHeaderProperty (COMMA layoutHeaderProperty)* RPAREN)?
+      (LBRACE layoutWidget* RBRACE)?
+    ;
+
+layoutHeaderProperty
+    : TYPE COLON STRING_LITERAL
+    | TYPE COLON identifierOrKeyword
+    | FOLDER COLON STRING_LITERAL
+    ;
+
+layoutWidget
+    : SCROLLCONTAINER identifierOrKeyword
+      (LPAREN layoutScrollContainerProp (COMMA layoutScrollContainerProp)* RPAREN)?
+      LBRACE layoutRegion* RBRACE
+    | PLACEHOLDER identifierOrKeyword
+    ;
+
+layoutScrollContainerProp
+    : identifierOrKeyword COLON identifierOrKeyword
+    ;
+
+layoutRegion
+    : layoutRegionName LBRACE layoutRegionContent* RBRACE
+    ;
+
+layoutRegionName
+    : CENTER | TOP | BOTTOM | LEFT | RIGHT
+    ;
+
+layoutRegionContent
+    : PLACEHOLDER identifierOrKeyword
+    ;
+
+// =============================================================================
 // SHARED PAGE/SNIPPET RULES
 // =============================================================================
 
