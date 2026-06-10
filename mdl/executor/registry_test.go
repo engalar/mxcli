@@ -191,6 +191,7 @@ func allKnownStatements() []ast.Statement {
 		&ast.CreateImageCollectionStmt{},
 		&ast.CreateImportMappingStmt{},
 		&ast.CreateJavaActionStmt{},
+		&ast.CreateJavaScriptActionStmt{},
 		&ast.CreateJsonStructureStmt{},
 		&ast.CreateKnowledgeBaseStmt{},
 		&ast.CreateMicroflowStmt{},

@@ -143,6 +143,9 @@ func registerPageHandlers(r *Registry) {
 	r.Register(&ast.CreateJavaActionStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
 		return execCreateJavaActionGen(ctx, stmt.(*ast.CreateJavaActionStmt))
 	})
+	r.Register(&ast.CreateJavaScriptActionStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
+		return execCreateJavaScriptAction(ctx, stmt.(*ast.CreateJavaScriptActionStmt))
+	})
 	r.Register(&ast.DropFolderStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
 		return execDropFolder(ctx, stmt.(*ast.DropFolderStmt))
 	})

@@ -953,6 +953,61 @@ func execDropJavaActionGen(ctx *ExecContext, s *ast.DropJavaActionStmt) error {
 	return mdlerrors.NewNotFound("java action", s.Name.Module+"."+s.Name.Name)
 }
 
+// ─────────────────────────────────────────────────────────────────────
+// A6 — execCreateJavaScriptAction
+// ─────────────────────────────────────────────────────────────────────
+
+// execCreateJavaScriptAction handles CREATE [OR MODIFY] JAVASCRIPT ACTION.
+// Phase 1: the action must already exist in BSON (Studio Pro creates the
+// unit + its parameter/return BSON); this handler updates the Platform
+// field and (re)writes the javascriptsource/<module>/actions/<Name>.js
+// source file from the supplied imports/extra/code blocks.
+func execCreateJavaScriptAction(ctx *ExecContext, s *ast.CreateJavaScriptActionStmt) error {
+	if !ctx.ConnectedForWrite() {
+		return mdlerrors.NewNotConnectedWrite()
+	}
+	h, err := getHierarchy(ctx)
+	if err != nil {
+		return mdlerrors.NewBackend("build hierarchy", err)
+	}
+	pairs, err := listJavaScriptActionsWithContainerGen(ctx)
+	if err != nil {
+		return mdlerrors.NewBackend("list javascript actions", err)
+	}
+	var existingJSA *genJSA.JavaScriptAction
+	for _, p := range pairs {
+		if p.Elem == nil {
+			continue
+		}
+		modID := h.FindModuleID(modelIDFromElementID(p.ContainerID))
+		modName := h.GetModuleName(modID)
+		if modName == s.Name.Module && p.Elem.Name() == s.Name.Name {
+			existingJSA = p.Elem
+			break
+		}
+	}
+	if existingJSA == nil {
+		qn := s.Name.Module + "." + s.Name.Name
+		return mdlerrors.NewNotFoundMsg("javascript action", qn,
+			fmt.Sprintf("javascript action %s not found in project — create it in Mendix Studio Pro first", qn))
+	}
+	if s.Platform != "" {
+		existingJSA.SetPlatform(s.Platform)
+		if err := ctx.Backend.UpdateJavaScriptActionGen(existingJSA); err != nil {
+			return mdlerrors.NewBackend("update javascript action platform", err)
+		}
+	}
+	if s.Imports != "" || s.ExtraCode != "" || s.UserCode != "" {
+		if err := writeJavaScriptActionSource(ctx.MprPath, s.Name.Module, s.Name.Name,
+			s.Imports, s.ExtraCode, s.UserCode); err != nil {
+			return mdlerrors.NewBackend("write javascript source file", err)
+		}
+		invalidateJavaScriptActionsCache(ctx)
+	}
+	fmt.Fprintf(ctx.Output, "updated javascript action %s.%s\n", s.Name.Module, s.Name.Name)
+	return nil
+}
+
 // newGenElementByType allocates a bare *element.Base with the given
 // storage TypeName. Used as a stub for gen schema gaps (LongType,
 // VoidType, etc.) until codegen ships dedicated constructors. The
