@@ -7,28 +7,98 @@ package goldenfs
 import (
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 )
 
-// findMxBinaryForTest returns the path to an mx binary, or "" if unavailable.
-// Prefers MX_BINARY env; falls back to highest lexicographic version under
-// ~/.mxcli/mxbuild/*/modeler/mx.
-func findMxBinaryForTest() string {
+// parseSemver splits a "MAJOR.MINOR.PATCH" string into three ints.
+// Returns false if the string cannot be parsed.
+func parseSemver(v string) (major, minor, patch int, ok bool) {
+	parts := strings.SplitN(v, ".", 3)
+	if len(parts) != 3 {
+		return 0, 0, 0, false
+	}
+	var err error
+	if major, err = strconv.Atoi(parts[0]); err != nil {
+		return 0, 0, 0, false
+	}
+	if minor, err = strconv.Atoi(parts[1]); err != nil {
+		return 0, 0, 0, false
+	}
+	if patch, err = strconv.Atoi(parts[2]); err != nil {
+		return 0, 0, 0, false
+	}
+	return major, minor, patch, true
+}
+
+// semverGT returns true when a > b in semver order.
+func semverGT(aMaj, aMin, aPatch, bMaj, bMin, bPatch int) bool {
+	if aMaj != bMaj {
+		return aMaj > bMaj
+	}
+	if aMin != bMin {
+		return aMin > bMin
+	}
+	return aPatch > bPatch
+}
+
+// findMxBinaryForVersion returns the mx binary for a specific Mendix version.
+// It checks MX_BINARY env first (exact binary path), then looks for an exact
+// version-specific binary under ~/.mxcli/mxbuild/{version}/modeler/mx, then
+// falls back to the highest semver version available.
+//
+// Using lexicographic ordering is incorrect: "11.10.0" < "11.6.6" lex-wise,
+// so earlier code using the lex-last entry would pick 11.6.6 even when 11.10.0
+// is installed. Semver ordering is the correct fallback.
+func findMxBinaryForVersion(projectVersion string) string {
 	if p := os.Getenv("MX_BINARY"); p != "" {
 		if _, err := os.Stat(p); err == nil {
 			return p
 		}
 	}
-	if home, err := os.UserHomeDir(); err == nil {
-		pattern := filepath.Join(home, ".mxcli", "mxbuild", "*", "modeler", "mx")
-		if matches, _ := filepath.Glob(pattern); len(matches) > 0 {
-			// Last in lexicographic order — set MX_BINARY to override when version
-			// layout causes incorrect selection (e.g. 11.10.x < 11.9.x lexicographically).
-			return matches[len(matches)-1]
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return ""
+	}
+	// Exact version match first.
+	if projectVersion != "" {
+		exact := filepath.Join(home, ".mxcli", "mxbuild", projectVersion, "modeler", "mx")
+		if _, err := os.Stat(exact); err == nil {
+			return exact
 		}
 	}
-	return ""
+	// Fall back: pick the highest semver version installed.
+	pattern := filepath.Join(home, ".mxcli", "mxbuild", "*", "modeler", "mx")
+	matches, _ := filepath.Glob(pattern)
+	if len(matches) == 0 {
+		return ""
+	}
+	best := ""
+	var bestMaj, bestMin, bestPatch int
+	for _, m := range matches {
+		// Extract version from path: ~/.mxcli/mxbuild/<version>/modeler/mx
+		versionDir := filepath.Base(filepath.Dir(filepath.Dir(m)))
+		maj, min, patch, ok := parseSemver(versionDir)
+		if !ok {
+			continue
+		}
+		if best == "" || semverGT(maj, min, patch, bestMaj, bestMin, bestPatch) {
+			best = m
+			bestMaj, bestMin, bestPatch = maj, min, patch
+		}
+	}
+	if best != "" {
+		return best
+	}
+	return matches[0]
+}
+
+// findMxBinaryForTest returns the path to an mx binary, or "" if unavailable.
+// Prefers MX_BINARY env; falls back to the highest semver version under
+// ~/.mxcli/mxbuild/*/modeler/mx.
+func findMxBinaryForTest() string {
+	return findMxBinaryForVersion("")
 }
 
 // assertNoFUSECorruption fails the test if mx check output contains any

@@ -3102,3 +3102,6 @@ alter page HD.Ticket_Detail {
     dynamictext txtDispatchNote (content: 'Dispatch history visible in FT.DispatchQueue page.')
   }
 };
+
+-- Verify image collection round-trip (bson.D fix: ALTER IMAGE COLLECTION ADD/RENAME/DROP).
+show image collection;

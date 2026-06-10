@@ -243,8 +243,11 @@ func TestHelpdeskGolden_Regression_BSON(t *testing.T) {
 		bsoncompare.ExpectNoOtherChanges(),
 	)
 
-	// mx check: verify B2 BSON is valid to Studio Pro
-	mxBin := findMxBinaryForTest()
+	// mx check: verify B2 BSON is valid to Studio Pro.
+	// Use the binary matching helpdeskVersion() — not lex-last — because
+	// "11.10.0" < "11.6.6" lexicographically, so the lex-last binary would
+	// be 11.6.6 which cannot open an 11.10.0 project (InvalidOperationException).
+	mxBin := findMxBinaryForVersion(helpdeskVersion())
 	if mxBin == "" {
 		t.Log("mx binary not available — skipping mx check (set MX_BINARY or install mxbuild)")
 	} else {
