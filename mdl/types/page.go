@@ -56,10 +56,11 @@ const (
 	WidgetTitle        WidgetKind = "title"
 	WidgetNavList      WidgetKind = "navigationlist"
 	WidgetSnippet      WidgetKind = "snippet"
-	WidgetDataGrid     WidgetKind = "datagrid" // CustomWidget type=datagrid2
-	WidgetComboBox     WidgetKind = "combobox" // CustomWidget type=combobox
-	WidgetImage        WidgetKind = "image"    // CustomWidget type=image
-	WidgetUnknown      WidgetKind = "unknown"  // unrecognised pluggable widget
+	WidgetDataGrid     WidgetKind = "datagrid"     // CustomWidget type=datagrid2
+	WidgetComboBox     WidgetKind = "combobox"     // CustomWidget type=combobox
+	WidgetImage        WidgetKind = "image"        // CustomWidget type=image
+	WidgetUnknown      WidgetKind = "unknown"      // unrecognised pluggable widget
+	WidgetPlaceholder  WidgetKind = "placeholder"  // Forms$Placeholder — layout only
 )
 
 // WidgetNode is a single node in the page widget tree.

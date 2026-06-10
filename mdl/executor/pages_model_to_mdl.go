@@ -241,6 +241,10 @@ func renderWidget(w io.Writer, node *types.WidgetNode, depth int) {
 		}
 		fmt.Fprintf(w, "%s}\n", indent)
 
+	case types.WidgetPlaceholder:
+		// Layout-only: shows the slot name where page content is injected.
+		fmt.Fprintf(w, "%splaceholder %s\n", indent, node.Name)
+
 	case types.WidgetUnknown:
 		widgetID := ""
 		if node.Unknown != nil {
