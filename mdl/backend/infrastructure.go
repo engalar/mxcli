@@ -87,6 +87,10 @@ type SettingsBackend interface {
 	// "Microflows$ShowMessageAction") and the 0-based ordinal index among
 	// same-typed actions.
 	SetMicroflowActionTranslation(docQN, actionType string, index int, property, langCode, text string) error
+	// SetNavigationCaptionTranslation sets the langCode translation on a
+	// navigation menu item caption identified by its caption path (hierarchy of
+	// en_US menu item captions, e.g. ["Ticket Management", "All Tickets"]).
+	SetNavigationCaptionTranslation(profileName string, menuPath []string, langCode, text string) error
 }
 
 // ImageBackend provides image collection operations.

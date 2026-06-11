@@ -40,6 +40,8 @@ func translateDocument(ctx *ExecContext, stmt *ast.TranslateStmt) error {
 			"TRANSLATE WORKFLOW is not supported: workflow activity text (TaskName/TaskDescription) " +
 				"uses Microflows$StringTemplate in Mendix 11.x, which does not support multilingual translation. " +
 				"Use page or enumeration translation instead.")
+	case "NAVIGATION":
+		return translateNavigation(ctx, stmt)
 	case "MICROFLOW":
 		return mdlerrors.NewUnsupported("TRANSLATE MICROFLOW not yet implemented")
 	default:
@@ -168,4 +170,36 @@ func applyTranslateOp(mutator backend.PageMutator, op ast.TranslateSetOp, langCo
 		return fmt.Errorf("unsupported translate path %q (expected Widget.property or title)", op.Path)
 	}
 	return mutator.SetWidgetTranslation(widget, prop, langCode, op.Text)
+}
+
+// translateNavigation applies translation SET operations to navigation menu
+// captions. The SET path is the hierarchy of STRING_LITERAL captions joined by
+// dots, ending with ".caption" (the property name), e.g.:
+//
+//	translate navigation Responsive in zh_CN
+//	  set 'My Tickets'.caption = '我的工单',
+//	      'Ticket Management'.'All Tickets'.caption = '所有工单';
+func translateNavigation(ctx *ExecContext, stmt *ast.TranslateStmt) error {
+	profileName := stmt.QName.String()
+	for _, op := range stmt.Ops {
+		// Path format: "MenuHierarchy.caption". The last dot-separated segment
+		// is the property ("caption"), everything before is the menu hierarchy.
+		lastDot := strings.LastIndex(op.Path, ".")
+		if lastDot < 0 {
+			return mdlerrors.NewValidationf(
+				"invalid navigation translate path %q: expected 'Menu.Caption' or 'Parent.Child.Caption'", op.Path)
+		}
+		property := op.Path[lastDot+1:]
+		if !strings.EqualFold(property, "caption") {
+			return mdlerrors.NewValidationf(
+				"invalid navigation property %q: only 'caption' is supported", property)
+		}
+		menuPath := strings.Split(op.Path[:lastDot], ".")
+		if err := ctx.Backend.SetNavigationCaptionTranslation(profileName, menuPath, stmt.Lang, op.Text); err != nil {
+			return mdlerrors.NewBackend("translate navigation", err)
+		}
+	}
+	fmt.Fprintf(ctx.Output, "Translated navigation %s in %s (%d fields)\n",
+		profileName, stmt.Lang, len(stmt.Ops))
+	return nil
 }

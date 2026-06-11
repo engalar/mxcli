@@ -69,6 +69,7 @@ translateDocType
     | SNIPPET
     | ENUMERATION
     | WORKFLOW
+    | NAVIGATION
     ;
 
 translateSetOp
@@ -76,7 +77,8 @@ translateSetOp
     ;
 
 translatePath
-    : identifierOrKeyword (DOT identifierOrKeyword)?
+    : STRING_LITERAL (DOT STRING_LITERAL)* DOT identifierOrKeyword
+    | identifierOrKeyword (DOT identifierOrKeyword)?
     ;
 
 // TRANSLATE MICROFLOW uses Type-Index addressing because microflow activities

@@ -2356,6 +2356,19 @@ translate page KB.Article_Overview in zh_CN
 translate page HD.Account_Overview in zh_CN
   set title = '账户管理';
 
+translate navigation Responsive in zh_CN
+  set 'My Tickets'.caption            = '我的工单',
+      'Knowledge Base'.caption        = '知识库',
+      'Ticket Management'.caption     = '工单管理',
+      'Ticket Management'.'All Tickets'.caption    = '所有工单',
+      'Ticket Management'.'Escalations'.caption     = '升级审批',
+      'Ticket Management'.'Workflow Admin'.caption  = '工作流管理',
+      'Account Management'.caption     = '账户管理',
+      'Account Management'.'Accounts'.caption       = '账户总览',
+      'Account Management'.'My Account'.caption     = '我的账户',
+      'Account Management'.'Change Password'.caption = '修改密码',
+      'Admin'.caption                  = '系统管理';
+
 -- Step 4: Apply nl_NL translations (partial — checkCompleteness will flag the rest).
 translate enumeration HD.TicketStatus in nl_NL
   set Draft.caption = 'Concept',

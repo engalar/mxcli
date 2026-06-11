@@ -256,7 +256,8 @@ type MockBackend struct {
 	UpdateProjectSettingsFunc         func(ps *model.ProjectSettings) error
 	ListTranslationNodesFunc          func(docQN, docType string) ([]model.TranslationNode, error)
 	SetEnumerationTranslationFunc     func(enumQN, valueName, langCode, text string) error
-	SetMicroflowActionTranslationFunc func(docQN, actionType string, index int, property, langCode, text string) error
+	SetMicroflowActionTranslationFunc         func(docQN, actionType string, index int, property, langCode, text string) error
+	SetNavigationCaptionTranslationFunc       func(profileName string, menuPath []string, langCode, text string) error
 
 	// ImageBackend
 	ListImageCollectionsFunc  func() ([]*types.ImageCollection, error)

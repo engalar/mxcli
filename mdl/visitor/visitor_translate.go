@@ -32,11 +32,25 @@ func (b *Builder) ExitTranslateStatement(ctx *parser.TranslateStatementContext) 
 		}
 		var path string
 		if p, ok := op.TranslatePath().(*parser.TranslatePathContext); ok {
-			parts := make([]string, 0, 2)
-			for _, ik := range p.AllIdentifierOrKeyword() {
-				parts = append(parts, ik.GetText())
+			if strs := p.AllSTRING_LITERAL(); len(strs) > 0 {
+				// STRING_LITERAL path: 'Menu'.'SubItem'.caption
+				// STRING_LITERALs are the menu hierarchy; the last
+				// identifierOrKeyword is the property (always "caption").
+				var segs []string
+				for _, s := range strs {
+					segs = append(segs, unquoteString(s.GetText()))
+				}
+				menuPath := strings.Join(segs, ".")
+				if idents := p.AllIdentifierOrKeyword(); len(idents) > 0 {
+					path = menuPath + "." + idents[0].GetText()
+				}
+			} else {
+				parts := make([]string, 0, 2)
+				for _, ik := range p.AllIdentifierOrKeyword() {
+					parts = append(parts, ik.GetText())
+				}
+				path = strings.Join(parts, ".")
 			}
-			path = strings.Join(parts, ".")
 		}
 		text := unquoteString(op.STRING_LITERAL().GetText())
 		stmt.Ops = append(stmt.Ops, ast.TranslateSetOp{Path: path, Text: text})

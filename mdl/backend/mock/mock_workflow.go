@@ -92,6 +92,13 @@ func (m *MockBackend) SetMicroflowActionTranslation(docQN, actionType string, in
 	return fmt.Errorf("MockBackend.SetMicroflowActionTranslation not configured")
 }
 
+func (m *MockBackend) SetNavigationCaptionTranslation(profileName string, menuPath []string, langCode, text string) error {
+	if m.SetNavigationCaptionTranslationFunc != nil {
+		return m.SetNavigationCaptionTranslationFunc(profileName, menuPath, langCode, text)
+	}
+	return fmt.Errorf("MockBackend.SetNavigationCaptionTranslation not configured")
+}
+
 // ---------------------------------------------------------------------------
 // ImageBackend
 // ---------------------------------------------------------------------------
