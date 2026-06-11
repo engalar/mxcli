@@ -1,0 +1,211 @@
+-- ============================================================================
+-- HelpDesk Seed Data
+-- ============================================================================
+--
+-- Purpose : Populate the helpdesk app with realistic demo data for all roles.
+-- Requires: helpdesk-app.mdl executed first (entities, roles, navigation).
+-- Trigger : Manager menu item "Initialize Demo Data" (HD.ACT_SeedDemoData).
+-- Idempotent: returns immediately if HD.Ticket rows already exist.
+--
+-- Usage:
+--   ./bin/mxcli exec mdl-examples/use-cases/helpdesk/helpdesk-app.mdl -p app.mpr
+--   ./bin/mxcli exec mdl-examples/use-cases/helpdesk/helpdesk-seed.mdl -p app.mpr
+--   # Start runtime, login as demo_manager, click "Initialize Demo Data"
+-- ============================================================================
+
+create or modify microflow HD.ACT_SeedDemoData ()
+  returns boolean as $OK
+  folder 'System'
+{
+  -- Idempotent guard: skip if data already exists.
+  retrieve $existing from HD.Ticket limit 1;
+  if $existing != empty {
+    return true;
+  }
+
+  -- KB Categories
+  $Cat1 = create KB.Category (Name = 'Getting Started',  Description = 'Guides and tutorials for new users.');
+  $Cat2 = create KB.Category (Name = 'Troubleshooting',  Description = 'Common issues and step-by-step fixes.');
+  commit $Cat1;
+  commit $Cat2;
+
+  -- KB Tags
+  $Tag1 = create KB.Tag (Name = 'howto');
+  $Tag2 = create KB.Tag (Name = 'faq');
+  commit $Tag1;
+  commit $Tag2;
+
+  -- KB Articles (1 Draft + 3 Published)
+  $Art1 = create KB.Article (
+    Title       = 'How to submit a support ticket',
+    Content     = 'Navigate to Ticket Management > All Tickets, then click New Ticket. Fill in Subject, Description, and Priority, then click Submit.',
+    Status      = KB.ArticleStatus.Published,
+    PublishedAt = '[%CurrentDateTime%]',
+    KB.Article_Category = $Cat1
+  );
+  $Art2 = create KB.Article (
+    Title       = 'Resetting your password',
+    Content     = 'Go to Account Management > Change Password. Enter your new password twice and click Change Password.',
+    Status      = KB.ArticleStatus.Published,
+    PublishedAt = '[%CurrentDateTime%]',
+    KB.Article_Category = $Cat1
+  );
+  $Art3 = create KB.Article (
+    Title       = 'Common login errors and fixes',
+    Content     = 'Clear browser cache, disable extensions, and try incognito mode. If the problem persists, contact support.',
+    Status      = KB.ArticleStatus.Published,
+    PublishedAt = '[%CurrentDateTime%]',
+    KB.Article_Category = $Cat2
+  );
+  $Art4 = create KB.Article (
+    Title       = 'SLA policy overview',
+    Content     = 'Draft — under review by the support team.',
+    Status      = KB.ArticleStatus.Draft,
+    KB.Article_Category = $Cat2
+  );
+  commit $Art1;
+  commit $Art2;
+  commit $Art3;
+  commit $Art4;
+
+  -- ArticleTag junction records (many-to-many)
+  $AT1 = create KB.ArticleTag (KB.ArticleTag_Article = $Art1, KB.ArticleTag_Tag = $Tag1);
+  $AT2 = create KB.ArticleTag (KB.ArticleTag_Article = $Art2, KB.ArticleTag_Tag = $Tag2);
+  $AT3 = create KB.ArticleTag (KB.ArticleTag_Article = $Art3, KB.ArticleTag_Tag = $Tag2);
+  $AT4 = create KB.ArticleTag (KB.ArticleTag_Article = $Art3, KB.ArticleTag_Tag = $Tag1);
+  commit $AT1;
+  commit $AT2;
+  commit $AT3;
+  commit $AT4;
+
+  -- HD Customers
+  $Cust1 = create HD.Customer (Name = 'Alice Tan',  Email = 'alice@acme.com',    Company = 'Acme Corp');
+  $Cust2 = create HD.Customer (Name = 'Bob Lee',    Email = 'bob@globex.com',    Company = 'Globex Inc');
+  $Cust3 = create HD.Customer (Name = 'Carol Wu',   Email = 'carol@initech.com', Company = 'Initech Ltd');
+  commit $Cust1;
+  commit $Cust2;
+  commit $Cust3;
+
+  -- HD Agents
+  $Agent1 = create HD.Agent (Name = 'Alice Smith', Email = 'alice.smith@helpdesk.internal', IsActive = true);
+  $Agent2 = create HD.Agent (Name = 'Bob Jones',   Email = 'bob.jones@helpdesk.internal',  IsActive = true);
+  commit $Agent1;
+  commit $Agent2;
+
+  -- HD Tickets — one per status, covering all five states
+  $T1 = create HD.Ticket (
+    Subject     = 'Cannot login to portal',
+    Description = 'Getting 403 error on the login page after recent password change.',
+    Status      = HD.TicketStatus.Draft,
+    Priority    = HD.TicketPriority.Low,
+    HD.Ticket_Customer = $Cust1
+  );
+  $T2 = create HD.Ticket (
+    Subject     = 'Dashboard loads slowly',
+    Description = 'Main dashboard takes 30 seconds to render. Happens on all browsers.',
+    Status      = HD.TicketStatus.Open,
+    Priority    = HD.TicketPriority.Normal,
+    SLADueAt    = addHours('[%CurrentDateTime%]', 24),
+    HD.Ticket_Customer = $Cust2
+  );
+  $T3 = create HD.Ticket (
+    Subject     = 'Payment error on checkout',
+    Description = 'Card declined for a valid Visa card. Error code: PAY_003.',
+    Status      = HD.TicketStatus.InProgress,
+    Priority    = HD.TicketPriority.High,
+    SLADueAt    = addHours('[%CurrentDateTime%]', 8),
+    HD.Ticket_Customer  = $Cust1,
+    HD.Ticket_Agent     = $Agent1
+  );
+  $T4 = create HD.Ticket (
+    Subject     = 'Data export returns empty file',
+    Description = 'CSV export from the report page downloads a 0-byte file.',
+    Status      = HD.TicketStatus.Resolved,
+    Priority    = HD.TicketPriority.Critical,
+    SLADueAt    = '[%CurrentDateTime%]',
+    ResolvedAt  = '[%CurrentDateTime%]',
+    IsOverSLA   = true,
+    HD.Ticket_Customer  = $Cust3,
+    HD.Ticket_Agent     = $Agent2
+  );
+  $T5 = create HD.Ticket (
+    Subject     = 'Table columns misaligned in Firefox',
+    Description = 'The ticket list table header does not align with rows in Firefox 124.',
+    Status      = HD.TicketStatus.Closed,
+    Priority    = HD.TicketPriority.Normal,
+    HD.Ticket_Customer = $Cust2
+  );
+  commit $T1;
+  commit $T2;
+  commit $T3;
+  commit $T4;
+  commit $T5;
+
+  -- Add one TicketComment per Ticket via loop (avoids repeating 5 identical create+commit blocks)
+  retrieve $AllTickets from HD.Ticket limit 10;
+  loop $T in $AllTickets {
+    $C = create HD.TicketComment (
+      Content    = 'Demo comment — please review this ticket: ' + $T/Subject,
+      IsInternal = false,
+      HD.TicketComment_Ticket = $T
+    );
+    commit $C;
+  }
+
+  -- EscalationRequest for T3 (InProgress / High — realistic escalation scenario)
+  $ER = create HD.EscalationRequest (
+    Reason          = 'Customer threatening chargeback. Payment team cannot reproduce locally. Manager review required.',
+    RequestedAt     = '[%CurrentDateTime%]',
+    HD.EscalationRequest_Ticket = $T3
+  );
+  commit $ER;
+
+  -- FT FieldTech records
+  $FT1 = create FT.FieldTech (Name = 'Carlos Rivera', Phone = '+1-555-0101', Region = 'West', IsAvailable = true);
+  $FT2 = create FT.FieldTech (Name = 'Dana Park',     Phone = '+1-555-0202', Region = 'East', IsAvailable = false);
+  commit $FT1;
+  commit $FT2;
+
+  -- DispatchOrder: FT1 currently on-site for T3's physical investigation
+  $DO1 = create FT.DispatchOrder (
+    Status       = FT.DispatchStatus.OnSite,
+    DispatchedAt = '[%CurrentDateTime%]',
+    SiteNotes    = 'On-site payment terminal inspection in progress.',
+    FT.DispatchOrder_Ticket    = $T3,
+    FT.DispatchOrder_FieldTech = $FT1
+  );
+  commit $DO1;
+
+  return true;
+}
+/
+
+grant execute on microflow HD.ACT_SeedDemoData to HD.ManagerRole;
+
+-- Rebuild Responsive navigation with English base captions + seed menu item.
+-- This replaces the navigation set by helpdesk-app.mdl; the only change is
+-- converting '系统管理' to a submenu 'Admin' with a second item.
+create or replace navigation Responsive
+  home page HD.Ticket_Overview for Customer
+  home page HD.Ticket_Overview for Agent
+  home page HD.EscalationWorkflow_Overview for Manager
+  home page MyFirstModule.Home_Web
+  login page Administration.login
+  menu (
+    menu item 'My Tickets'     page HD.MyTickets_Overview;
+    menu item 'Knowledge Base' page KB.Article_Overview;
+    menu 'Ticket Management' (
+      menu item 'All Tickets'    page HD.Ticket_Overview;
+      menu item 'Escalations'    page HD.EscalationWorkflow_Overview;
+      menu item 'Workflow Admin' page HD.EscalationWorkflow_Overview;
+    );
+    menu 'Account Management' (
+      menu item 'Accounts'        page HD.Account_Overview;
+      menu item 'My Account'      page HD.ManageMyAccount;
+      menu item 'Change Password' microflow HD.Nav_ChangePassword;
+    );
+    menu 'Admin' (
+      menu item 'User Management'      page Administration.Account_Overview;
+      menu item 'Initialize Demo Data' microflow HD.ACT_SeedDemoData;
+    );
+  );
