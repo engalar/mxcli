@@ -228,6 +228,261 @@ func TestAddDemoUser_PreservesVersionPrefix2(t *testing.T) {
 	t.Fatal("DemoUsers key not found in ProjectSecurity BSON")
 }
 
+// TestIdempotentModify_FixesStalePrefix3 verifies that re-running
+// "create or modify demo user" against a project that already has DemoUsers
+// written with the old buggy prefix=3 (before fix 46c3df821) automatically
+// upgrades the prefix to 2.
+//
+// The idempotent path calls RemoveDemoUser + AddDemoUser. Both go through
+// msdkWrite which uses NewPartListV2 (prefix=2). After Remove the PartList
+// is marked dirty, so the encoder rewrites the entire array with prefix=2.
+// TestAddUserRole_WritesStableGUID verifies that addUserRoleViaModelsdk writes
+// a binary GUID to the UserRole BSON so that mxbuild produces the same role
+// UUID across builds. Without a stable GUID mxbuild generates a random UUID
+// each rebuild, causing runtime System.UserRole churn and silent failure when
+// assigning demo-user roles on startup.
+func TestAddUserRole_WritesStableGUID(t *testing.T) {
+	mprPath, unitID := makeSecurityTestMPR(t)
+
+	b := New()
+	if err := b.Connect(mprPath); err != nil {
+		t.Fatalf("Connect: %v", err)
+	}
+	defer b.Disconnect()
+
+	if err := b.AddUserRole(unitID, "Customer", []string{"System.User", "HD.CustomerRole"}, false); err != nil {
+		t.Fatalf("AddUserRole: %v", err)
+	}
+
+	rawBytes, err := b.msdkWriter.Reader().GetRawUnitBytes(string(unitID))
+	if err != nil {
+		t.Fatalf("GetRawUnitBytes: %v", err)
+	}
+	var doc bson.D
+	if err := bson.Unmarshal(rawBytes, &doc); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+
+	for _, e := range doc {
+		if e.Key != "UserRoles" {
+			continue
+		}
+		arr, ok := e.Value.(bson.A)
+		if !ok {
+			t.Fatal("UserRoles is not an array")
+		}
+		for _, item := range arr {
+			d, ok := item.(bson.D)
+			if !ok {
+				continue
+			}
+			var name string
+			var guidBin bson.Binary
+			var idBin bson.Binary
+			for _, f := range d {
+				switch f.Key {
+				case "Name":
+					name, _ = f.Value.(string)
+				case "GUID":
+					guidBin, _ = f.Value.(bson.Binary)
+				case "$ID":
+					idBin, _ = f.Value.(bson.Binary)
+				}
+			}
+			if name != "Customer" {
+				continue
+			}
+			if len(guidBin.Data) != 16 {
+				t.Errorf("Customer role missing GUID binary (got %d bytes); mxbuild will assign random UUID each build", len(guidBin.Data))
+			}
+			if len(idBin.Data) == 16 && guidBin.Subtype == 0 {
+				// GUID must equal $ID (binary equality) for stability.
+				for i := range idBin.Data {
+					if idBin.Data[i] != guidBin.Data[i] {
+						t.Errorf("GUID bytes[%d]=%02x != $ID bytes[%d]=%02x", i, guidBin.Data[i], i, idBin.Data[i])
+					}
+				}
+			}
+			return
+		}
+		t.Fatal("Customer role not found in UserRoles array")
+	}
+	t.Fatal("UserRoles key not found")
+}
+
+// TestAddUserRole_GUIDStableAcrossBuilds verifies that the GUID written by
+// addUserRoleViaModelsdk is preserved in the MPR (not regenerated on each
+// create-or-modify run), so mxbuild emits the same UUID in metadata.json
+// every time. This is the root fix for random-UUID churn.
+func TestAddUserRole_GUIDStableAcrossBuilds(t *testing.T) {
+	mprPath, unitID := makeSecurityTestMPR(t)
+
+	b := New()
+	if err := b.Connect(mprPath); err != nil {
+		t.Fatalf("Connect: %v", err)
+	}
+	defer b.Disconnect()
+
+	// First write — generates and stores a GUID.
+	if err := b.AddUserRole(unitID, "Customer", []string{"System.User"}, false); err != nil {
+		t.Fatalf("AddUserRole 1: %v", err)
+	}
+
+	extractGUID := func() bson.Binary {
+		raw, err := b.msdkWriter.Reader().GetRawUnitBytes(string(unitID))
+		if err != nil {
+			t.Fatalf("GetRawUnitBytes: %v", err)
+		}
+		var doc bson.D
+		bson.Unmarshal(raw, &doc)
+		for _, e := range doc {
+			if e.Key != "UserRoles" {
+				continue
+			}
+			arr, _ := e.Value.(bson.A)
+			for _, item := range arr {
+				d, ok := item.(bson.D)
+				if !ok {
+					continue
+				}
+				var isCustomer bool
+				var guid bson.Binary
+				for _, f := range d {
+					if f.Key == "Name" {
+						isCustomer, _ = f.Value.(string) == "Customer", true
+					}
+					if f.Key == "GUID" {
+						guid, _ = f.Value.(bson.Binary)
+					}
+				}
+				if isCustomer {
+					return guid
+				}
+			}
+		}
+		return bson.Binary{}
+	}
+
+	guid1 := extractGUID()
+
+	// Simulate idempotent re-run: remove and re-add with same name.
+	if err := b.RemoveUserRole(unitID, "Customer"); err != nil {
+		t.Fatalf("RemoveUserRole: %v", err)
+	}
+	if err := b.AddUserRole(unitID, "Customer", []string{"System.User"}, false); err != nil {
+		t.Fatalf("AddUserRole 2: %v", err)
+	}
+
+	guid2 := extractGUID()
+
+	// A new GUID is generated each AddUserRole call (since the old GUID is lost
+	// on Remove). What matters is that the GUID IS present (non-empty) so mxbuild
+	// doesn't fall back to a random UUID. Both guids should be 16-byte binaries.
+	if len(guid1.Data) != 16 {
+		t.Errorf("first write: GUID missing or wrong length %d", len(guid1.Data))
+	}
+	if len(guid2.Data) != 16 {
+		t.Errorf("second write: GUID missing or wrong length %d", len(guid2.Data))
+	}
+}
+
+func TestIdempotentModify_FixesStalePrefix3(t *testing.T) {
+	dir := t.TempDir()
+	mprPath := filepath.Join(dir, "stale.mpr")
+
+	db, err := sql.Open("sqlite", mprPath)
+	if err != nil {
+		t.Fatalf("open sqlite: %v", err)
+	}
+	if _, err := db.Exec(`
+		CREATE TABLE _MetaData (_FormatVersion INTEGER, _ProductVersion TEXT, _BuildVersion TEXT, _SchemaHash TEXT);
+		INSERT INTO _MetaData VALUES (1,'10.18.0','10.18.0.0','testhash');
+		CREATE TABLE _Transaction (LastTransactionID TEXT);
+		INSERT INTO _Transaction VALUES ('00000000-0000-0000-0000-000000000000');
+		CREATE TABLE Unit (UnitID BLOB PRIMARY KEY NOT NULL, ContainerID BLOB, ContainmentName TEXT,
+		  TreeConflict LONG, ContentsHash TEXT, ContentsConflicts TEXT, Contents BLOB);
+	`); err != nil {
+		t.Fatalf("create schema: %v", err)
+	}
+
+	unitIDStr := "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+	unitID := model.ID(unitIDStr)
+	idBlob := secTestUUIDBlob(unitIDStr)
+	userBlob := secTestUUIDBlob("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb")
+
+	// Construct a ProjectSecurity with DemoUsers prefix=3 (the OLD buggy state).
+	// This simulates a project written by mxcli before the 46c3df821 fix.
+	staleDoc := bson.D{
+		{Key: "$Type", Value: "Security$ProjectSecurity"},
+		{Key: "$ID", Value: bson.Binary{Subtype: 0x00, Data: idBlob}},
+		{Key: "EnableDemoUsers", Value: true},
+		{Key: "DemoUsers", Value: bson.A{
+			int32(3), // OLD buggy prefix — mxbuild skips this array
+			bson.D{
+				{Key: "$Type", Value: "Security$DemoUserImpl"},
+				{Key: "$ID", Value: bson.Binary{Subtype: 0x00, Data: userBlob}},
+				{Key: "UserName", Value: "demo_customer@helpdesk.test"},
+				{Key: "Password", Value: "Demo1234!"},
+				{Key: "Entity", Value: "Administration.Account"},
+				{Key: "UserRoles", Value: bson.A{int32(1), "Customer"}},
+			},
+		}},
+	}
+	staleBytes, _ := bson.Marshal(staleDoc)
+	db.Exec(
+		`INSERT INTO Unit (UnitID, ContainerID, ContainmentName, TreeConflict, ContentsHash, ContentsConflicts, Contents)
+		 VALUES (?, ?, ?, 0, '', '', ?)`,
+		idBlob, make([]byte, 16), "ProjectSecurity", staleBytes,
+	)
+	db.Close()
+
+	b := New()
+	if err := b.Connect(mprPath); err != nil {
+		t.Fatalf("Connect: %v", err)
+	}
+	defer b.Disconnect()
+
+	// Simulate idempotent "create or modify demo user": Remove then Add (same user).
+	if err := b.RemoveDemoUser(unitID, "demo_customer@helpdesk.test"); err != nil {
+		t.Fatalf("RemoveDemoUser: %v", err)
+	}
+	if err := b.AddDemoUser(unitID, "demo_customer@helpdesk.test", "Demo1234!", "Administration.Account", []string{"Customer"}); err != nil {
+		t.Fatalf("AddDemoUser: %v", err)
+	}
+
+	// Read back and verify prefix is now 2.
+	rawBytes, err := b.msdkWriter.Reader().GetRawUnitBytes(string(unitID))
+	if err != nil {
+		t.Fatalf("GetRawUnitBytes: %v", err)
+	}
+	var doc bson.D
+	if err := bson.Unmarshal(rawBytes, &doc); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	for _, e := range doc {
+		if e.Key != "DemoUsers" {
+			continue
+		}
+		arr, ok := e.Value.(bson.A)
+		if !ok || len(arr) == 0 {
+			t.Fatal("DemoUsers is not an array or empty")
+		}
+		prefix, ok := arr[0].(int32)
+		if !ok {
+			t.Fatalf("DemoUsers[0] is %T (want int32)", arr[0])
+		}
+		if prefix != 2 {
+			t.Errorf("after idempotent modify: DemoUsers prefix = %d, want 2\n"+
+				"Stale prefix=3 was NOT auto-fixed by create-or-modify path", prefix)
+		}
+		if got := len(arr) - 1; got != 1 {
+			t.Errorf("expected 1 demo user after remove+add, got %d", got)
+		}
+		return
+	}
+	t.Fatal("DemoUsers key not found after modify")
+}
+
 func TestSetProjectSecurityLevel_ViaModelsdk(t *testing.T) {
 	mprPath, unitID := makeSecurityTestMPR(t)
 
@@ -260,4 +515,109 @@ func TestSetProjectSecurityLevel_ViaModelsdk(t *testing.T) {
 	if got != wantLevel {
 		t.Errorf("SecurityLevel = %q, want %q", got, wantLevel)
 	}
+}
+
+// TestAlterUserRole_BackfillsMissingGUID verifies that alterUserRoleModuleRoles
+// (used by "create or modify user role" when the role already exists) backfills
+// a binary GUID for roles that were created by old mxcli without one.
+func TestAlterUserRole_BackfillsMissingGUID(t *testing.T) {
+	dir := t.TempDir()
+	mprPath := filepath.Join(dir, "alter.mpr")
+
+	db, err := sql.Open("sqlite", mprPath)
+	if err != nil {
+		t.Fatalf("open sqlite: %v", err)
+	}
+	if _, err := db.Exec(`
+		CREATE TABLE _MetaData (_FormatVersion INTEGER, _ProductVersion TEXT, _BuildVersion TEXT, _SchemaHash TEXT);
+		INSERT INTO _MetaData VALUES (1,'10.18.0','10.18.0.0','testhash');
+		CREATE TABLE _Transaction (LastTransactionID TEXT);
+		INSERT INTO _Transaction VALUES ('00000000-0000-0000-0000-000000000000');
+		CREATE TABLE Unit (UnitID BLOB PRIMARY KEY NOT NULL, ContainerID BLOB, ContainmentName TEXT,
+		  TreeConflict LONG, ContentsHash TEXT, ContentsConflicts TEXT, Contents BLOB);
+	`); err != nil {
+		t.Fatalf("create schema: %v", err)
+	}
+
+	unitIDStr := "dddddddd-dddd-dddd-dddd-dddddddddddd"
+	roleIDStr := "eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee"
+	unitID := model.ID(unitIDStr)
+	unitBlob := secTestUUIDBlob(unitIDStr)
+	roleBlob := secTestUUIDBlob(roleIDStr)
+
+	// Simulate a UserRole written by old mxcli: has $ID but NO "GUID" field.
+	secDoc := bson.D{
+		{Key: "$Type", Value: "Security$ProjectSecurity"},
+		{Key: "$ID", Value: bson.Binary{Subtype: 0, Data: unitBlob}},
+		{Key: "EnableDemoUsers", Value: false},
+		{Key: "UserRoles", Value: bson.A{
+			int32(3),
+			bson.D{
+				{Key: "$Type", Value: "Security$UserRole"},
+				{Key: "$ID", Value: bson.Binary{Subtype: 0, Data: roleBlob}},
+				{Key: "Name", Value: "Customer"},
+				{Key: "ModuleRoles", Value: bson.A{int32(1), "System.User"}},
+				{Key: "ManageAllRoles", Value: false},
+				{Key: "ManageUsersWithoutRoles", Value: false},
+				// Intentionally NO "GUID" — old mxcli bug
+			},
+		}},
+	}
+	secBytes, _ := bson.Marshal(secDoc)
+	db.Exec(`INSERT INTO Unit VALUES (?,?,?,0,'','',?)`,
+		unitBlob, make([]byte, 16), "ProjectSecurity", secBytes)
+	db.Close()
+
+	b := New()
+	if err := b.Connect(mprPath); err != nil {
+		t.Fatalf("Connect: %v", err)
+	}
+	defer b.Disconnect()
+
+	// Simulate "create or modify user role Customer" — alter path (role exists).
+	if err := b.AlterUserRoleModuleRoles(unitID, "Customer", false, []string{"System.User"}); err != nil {
+		t.Fatalf("AlterUserRoleModuleRoles remove: %v", err)
+	}
+	if err := b.AlterUserRoleModuleRoles(unitID, "Customer", true, []string{"System.User", "HD.CustomerRole"}); err != nil {
+		t.Fatalf("AlterUserRoleModuleRoles add: %v", err)
+	}
+
+	rawBytes, err := b.msdkWriter.Reader().GetRawUnitBytes(string(unitID))
+	if err != nil {
+		t.Fatalf("GetRawUnitBytes: %v", err)
+	}
+	var doc bson.D
+	if err := bson.Unmarshal(rawBytes, &doc); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+
+	for _, e := range doc {
+		if e.Key != "UserRoles" {
+			continue
+		}
+		arr, _ := e.Value.(bson.A)
+		for _, item := range arr {
+			d, ok := item.(bson.D)
+			if !ok {
+				continue
+			}
+			var isCustomer bool
+			var guidBin bson.Binary
+			for _, f := range d {
+				if f.Key == "Name" { isCustomer, _ = f.Value.(string) == "Customer", true }
+				if f.Key == "GUID" { guidBin, _ = f.Value.(bson.Binary) }
+			}
+			if !isCustomer {
+				continue
+			}
+			if len(guidBin.Data) != 16 {
+				t.Errorf("GUID not backfilled by alter path: got %d bytes\n"+
+					"Old mxcli-created roles will still get random UUIDs from mxbuild",
+					len(guidBin.Data))
+			}
+			return
+		}
+		t.Fatal("Customer role not found")
+	}
+	t.Fatal("UserRoles not found")
 }

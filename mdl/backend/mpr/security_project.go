@@ -73,7 +73,14 @@ func (b *MprBackend) addUserRoleViaModelsdk(unitID model.ID, name string, module
 			return fmt.Errorf("unexpected type %T (want *ProjectSecurity)", elem)
 		}
 		ur := msdksecurity.NewUserRole()
-		ur.SetID(element.ID(modelsdkmpr.GenerateID()))
+		id := element.ID(modelsdkmpr.GenerateID())
+		ur.SetID(id)
+		// GUID must be a stable binary UUID so mxbuild emits a consistent
+		// role UUID in metadata.json across builds. Without it mxbuild
+		// generates a random UUID each build, causing the runtime's
+		// System.UserRole table to diverge from the model on each rebuild
+		// and silently preventing demo-user role assignment at startup.
+		ur.SetGuid(string(id))
 		ur.SetName(name)
 		ur.SetManageAllRoles(manageAllRoles)
 		ur.SetManageUsersWithoutRoles(false)
@@ -112,6 +119,12 @@ func (b *MprBackend) alterUserRoleModuleRolesViaModelsdk(unitID model.ID, userRo
 			typed, ok := ur.(*msdksecurity.UserRole)
 			if !ok || typed.Name() != userRoleName {
 				continue
+			}
+			// Backfill missing GUID: roles created by old mxcli lack a binary
+			// "GUID" field, causing mxbuild to assign a random UUID each build.
+			// On any alter operation, write a stable GUID (= $ID) if absent.
+			if typed.Guid() == "" {
+				typed.SetGuid(string(typed.ID()))
 			}
 			if add {
 				for _, mr := range moduleRoles {

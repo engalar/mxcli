@@ -1,7 +1,8 @@
 {
   "_doc": "Supplements for codegen: types, properties, aliases, and overrides not in TypeScript SDK but needed for BSON fidelity.",
   "binary_uuid_properties": [
-    "*.persistentId"
+    "*.persistentId",
+    "UserRole.guid"
   ],
   "storage_aliases": {
     "_doc": "SDK structureTypeName → BSON storage $Type. Codegen generates dual registration for each.",
@@ -60,6 +61,7 @@
   },
   "property_key_overrides": {
     "_doc": "ClassName.propertyName → BSON key where it differs from PascalCase(JS name). Wildcard *.prop matches any class.",
+    "UserRole.guid": "GUID",
     "NavigationProfile.menuItemCollection": "Menu",
     "NavigationProfile.roleBasedHomePages": "HomeItems",
     "AccessRule.moduleRoles": "AllowedModuleRoles",

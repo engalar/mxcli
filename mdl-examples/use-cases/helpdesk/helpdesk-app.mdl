@@ -112,6 +112,16 @@
 --           NewPartListV2; Mendix runtime requires prefix=2 to create demo user accounts
 --           on startup — prefix=3 silently skipped all demo users ("unknown user" at login).
 --           Regression guard: TestAddDemoUser_PreservesVersionPrefix2.
+-- Note    : UserRole.guid GUID field added: supplements.json binary_uuid_properties now
+--           includes "UserRole.guid" with key override "GUID". mxcli-created roles without
+--           a binary GUID caused mxbuild to assign a random UUID per build, creating
+--           System.UserRole churn that made DemoUserSynchronizer.fetchUserRoleId() fail
+--           silently — demo-user role assignment threw IndexOutOfBoundsException on empty
+--           list, so Customer/Agent/Manager demo users were never created at runtime.
+--           Fix: addUserRoleViaModelsdk writes GUID==$ID; alterUserRoleModuleRoles
+--           backfills missing GUIDs on existing roles. mxbuild now emits stable UUIDs
+--           across builds. Regression guards: TestAddUserRole_WritesStableGUID,
+--           TestAlterUserRole_BackfillsMissingGUID.
 --
 -- Edge cases covered:
 --   Domain    : self-ref association, cross-module association,

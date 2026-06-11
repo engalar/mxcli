@@ -577,7 +577,7 @@ func (o *ProjectSecurity) InitFromRaw(raw bson.Raw) {
 
 type UserRole struct {
 	element.Base
-	guid                    *property.Primitive[string]
+	guid                    *property.BinaryUUIDPrimitive
 	name                    *property.Primitive[string]
 	description             *property.Primitive[string]
 	moduleRoles             *property.ByNameRefList[element.Element]
@@ -913,7 +913,7 @@ func NewProjectSecurity() *ProjectSecurity {
 func initUserRole() *UserRole {
 	o := &UserRole{}
 	o.SetTypeName("Security$UserRole")
-	o.guid = property.NewPrimitive[string]("Guid", property.DecodeString)
+	o.guid = property.NewBinaryUUIDPrimitive("GUID")
 	o.guid.Bind(&o.Base, 0)
 	o.name = property.NewPrimitive[string]("Name", property.DecodeString)
 	o.name.Bind(&o.Base, 1)
