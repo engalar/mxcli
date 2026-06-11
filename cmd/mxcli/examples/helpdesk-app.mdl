@@ -2347,13 +2347,6 @@ translate enumeration KB.ArticleStatus in zh_CN
       Published.caption = '已发布',
       Archived.caption  = '已归档';
 
-translate enumeration FT.DispatchStatus in zh_CN
-  set Pending.caption   = '待派遣',
-      EnRoute.caption   = '前往中',
-      OnSite.caption    = '到场',
-      Completed.caption = '已完成',
-      Cancelled.caption = '已取消';
-
 translate page HD.Ticket_Overview in zh_CN
   set title = '工单列表';
 
@@ -2362,9 +2355,6 @@ translate page KB.Article_Overview in zh_CN
 
 translate page HD.Account_Overview in zh_CN
   set title = '账户管理';
-
-translate page FT.SLADashboard in zh_CN
-  set title = 'SLA 仪表盘';
 
 -- Step 4: Apply nl_NL translations (partial — checkCompleteness will flag the rest).
 translate enumeration HD.TicketStatus in nl_NL
@@ -2463,6 +2453,15 @@ create or modify non-persistent entity FT.WorkOrderImport (
   TechName:     string(200),
   ScheduledAt:  datetime
 );
+
+-- FT.DispatchStatus and FT.SLADashboard zh_CN translations:
+-- (placed after FT entities so enumeration and page exist)
+translate enumeration FT.DispatchStatus in zh_CN
+  set Pending.caption   = '待派遣',
+      EnRoute.caption   = '前往中',
+      OnSite.caption    = '到场',
+      Completed.caption = '已完成',
+      Cancelled.caption = '已取消';
 
 -- ============================================================================
 -- MARK: FieldTech — OQL Analytics
@@ -3002,6 +3001,9 @@ create or replace page FT.SLADashboard (
     }
   }
 };
+
+translate page FT.SLADashboard in zh_CN
+  set title = 'SLA 仪表盘';
 
 -- ============================================================================
 -- MARK: FieldTech — Security
