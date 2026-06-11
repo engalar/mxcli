@@ -2297,8 +2297,10 @@ move page      HD.Customer_Edit         to folder 'Account';
 --   1. alter settings language add 'code'               plain add
 --   2. alter settings language add 'code' (checkCompleteness: true)
 --   3. show languages                                   inspect all registered
---   4. translate enumeration … in lang set …            enum caption translation
---   5. translate page … in lang set …                   page widget translation
+--   4. translate enumeration … in lang set …            4 enumerations (zh_CN):
+--                                                        TicketStatus, TicketPriority,
+--                                                        ArticleStatus, DispatchStatus
+--   5. translate page … in lang set …                   5 page titles (zh_CN)
 --   6. alter settings language drop 'code'              单个语言的删除 (no translations)
 --   7. alter settings language drop 'code'              整个语言的删除 (with translations)
 --   8. describe settings                                 re-executable language state
@@ -2339,6 +2341,30 @@ translate enumeration HD.TicketPriority in zh_CN
 -- SET statements; the output includes a ready-to-paste TRANSLATE template.
 translate page HD.Ticket_NewEdit in zh_CN
   set title = '新建/编辑工单';
+
+translate enumeration KB.ArticleStatus in zh_CN
+  set Draft.caption     = '草稿',
+      Published.caption = '已发布',
+      Archived.caption  = '已归档';
+
+translate enumeration FT.DispatchStatus in zh_CN
+  set Pending.caption   = '待派遣',
+      EnRoute.caption   = '前往中',
+      OnSite.caption    = '到场',
+      Completed.caption = '已完成',
+      Cancelled.caption = '已取消';
+
+translate page HD.Ticket_Overview in zh_CN
+  set title = '工单列表';
+
+translate page KB.Article_Overview in zh_CN
+  set title = '知识库';
+
+translate page HD.Account_Overview in zh_CN
+  set title = '账户管理';
+
+translate page FT.SLADashboard in zh_CN
+  set title = 'SLA 仪表盘';
 
 -- Step 4: Apply nl_NL translations (partial — checkCompleteness will flag the rest).
 translate enumeration HD.TicketStatus in nl_NL
