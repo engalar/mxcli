@@ -67,6 +67,13 @@ func (m *MockBackend) RemoveDemoUser(unitID model.ID, userName string) error {
 	return nil
 }
 
+func (m *MockBackend) SetPasswordPolicy(unitID model.ID, minLength *int32, requireDigit, requireMixedCase, requireSymbol *bool) error {
+	if m.SetPasswordPolicyFunc != nil {
+		return m.SetPasswordPolicyFunc(unitID, minLength, requireDigit, requireMixedCase, requireSymbol)
+	}
+	return nil
+}
+
 func (m *MockBackend) GetModuleSecurityGen(moduleID model.ID) (*genSec.ModuleSecurity, error) {
 	if m.GetModuleSecurityGenFunc != nil {
 		return m.GetModuleSecurityGenFunc(moduleID)

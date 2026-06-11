@@ -20,6 +20,7 @@ package executor
 
 import (
 	"fmt"
+	"unicode"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
@@ -27,6 +28,86 @@ import (
 	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 	genSec "github.com/mendixlabs/mxcli/modelsdk/gen/security"
 )
+
+// validatePasswordPolicy checks the password against all configured rules.
+// Returns a validation error with an actionable fix hint if any rule is violated.
+func validatePasswordPolicy(userName, password string, pp *genSec.PasswordPolicySettings) error {
+	if pp == nil {
+		return nil
+	}
+	if min := int(pp.MinimumLength()); min > 0 && len(password) < min {
+		return mdlerrors.NewValidationf(
+			"demo user '%s': password is %d characters, policy requires at least %d\n"+
+				"hint: either use a longer password, or relax the policy first:\n"+
+				"  alter project security password policy (min_length: %d, require_digit: %v, require_mixed_case: %v, require_symbol: %v);\n"+
+				"  create or modify demo user '%s' password '<new-password>' ...;",
+			userName, len(password), min,
+			len(password), pp.RequireDigit(), pp.RequireMixedCase(), pp.RequireSymbol(),
+			userName,
+		)
+	}
+	if pp.RequireDigit() && !passwordContainsDigit(password) {
+		return mdlerrors.NewValidationf(
+			"demo user '%s': password must contain at least one digit (policy: require_digit: true)\n"+
+				"hint: add a digit to the password, or disable the requirement:\n"+
+				"  alter project security password policy (require_digit: false);",
+			userName,
+		)
+	}
+	if pp.RequireMixedCase() && (!passwordContainsUpper(password) || !passwordContainsLower(password)) {
+		return mdlerrors.NewValidationf(
+			"demo user '%s': password must contain both uppercase and lowercase letters (policy: require_mixed_case: true)\n"+
+				"hint: add mixed-case letters, or disable the requirement:\n"+
+				"  alter project security password policy (require_mixed_case: false);",
+			userName,
+		)
+	}
+	if pp.RequireSymbol() && !passwordContainsSymbol(password) {
+		return mdlerrors.NewValidationf(
+			"demo user '%s': password must contain at least one symbol (policy: require_symbol: true)\n"+
+				"hint: add a symbol such as '!' or '@', or disable the requirement:\n"+
+				"  alter project security password policy (require_symbol: false);",
+			userName,
+		)
+	}
+	return nil
+}
+
+func passwordContainsDigit(s string) bool {
+	for _, r := range s {
+		if unicode.IsDigit(r) {
+			return true
+		}
+	}
+	return false
+}
+
+func passwordContainsUpper(s string) bool {
+	for _, r := range s {
+		if unicode.IsUpper(r) {
+			return true
+		}
+	}
+	return false
+}
+
+func passwordContainsLower(s string) bool {
+	for _, r := range s {
+		if unicode.IsLower(r) {
+			return true
+		}
+	}
+	return false
+}
+
+func passwordContainsSymbol(s string) bool {
+	for _, r := range s {
+		if !unicode.IsLetter(r) && !unicode.IsDigit(r) {
+			return true
+		}
+	}
+	return false
+}
 
 // execCreateDemoUserGen handles CREATE [OR MODIFY] DEMO USER 'name' PASSWORD 'pw'
 // [ENTITY Module.Entity] (Roles) using the gen-typed ProjectSecurity path.
@@ -43,13 +124,12 @@ func execCreateDemoUserGen(ctx *ExecContext, s *ast.CreateDemoUserStmt) error {
 		return mdlerrors.NewBackend("read project security", fmt.Errorf("ProjectSecurity not found"))
 	}
 
-	// Validate password against project password policy using gen accessor.
+	// Validate password against all project password policy rules.
 	// PasswordPolicySettings() returns element.Element; type-assert to access typed fields.
 	if raw := ps.PasswordPolicySettings(); raw != nil {
 		if pp, ok := raw.(*genSec.PasswordPolicySettings); ok && pp != nil {
-			minLen := int(pp.MinimumLength())
-			if minLen > 0 && len(s.Password) < minLen {
-				return mdlerrors.NewValidationf("password policy violation for demo user '%s': password must be at least %d characters (got %d)\nhint: check your project's password policy with show project security", s.UserName, minLen, len(s.Password))
+			if err := validatePasswordPolicy(s.UserName, s.Password, pp); err != nil {
+				return err
 			}
 		}
 	}

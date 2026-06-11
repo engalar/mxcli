@@ -733,6 +733,9 @@ func (b *MprBackend) AddDemoUser(unitID model.ID, userName, password, entity str
 func (b *MprBackend) RemoveDemoUser(unitID model.ID, userName string) error {
 	return b.removeDemoUserViaModelsdk(unitID, userName)
 }
+func (b *MprBackend) SetPasswordPolicy(unitID model.ID, minLength *int32, requireDigit, requireMixedCase, requireSymbol *bool) error {
+	return b.setPasswordPolicyViaModelsdk(unitID, minLength, requireDigit, requireMixedCase, requireSymbol)
+}
 
 func (b *MprBackend) GetModuleSecurityGen(moduleID model.ID) (*genSec.ModuleSecurity, error) {
 	return b.Security().GetModuleSecurity(moduleID)

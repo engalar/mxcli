@@ -193,6 +193,38 @@ func (b *MprBackend) addDemoUserViaModelsdk(unitID model.ID, userName, password,
 	})
 }
 
+func (b *MprBackend) setPasswordPolicyViaModelsdk(unitID model.ID, minLength *int32, requireDigit, requireMixedCase, requireSymbol *bool) error {
+	return b.msdkWrite(unitID, func(elem element.Element) error {
+		ps, ok := elem.(*msdksecurity.ProjectSecurity)
+		if !ok {
+			return fmt.Errorf("unexpected type %T (want *ProjectSecurity)", elem)
+		}
+		// Get or create PasswordPolicySettings part.
+		raw := ps.PasswordPolicySettings()
+		var pp *msdksecurity.PasswordPolicySettings
+		if raw != nil {
+			pp, _ = raw.(*msdksecurity.PasswordPolicySettings)
+		}
+		if pp == nil {
+			pp = msdksecurity.NewPasswordPolicySettings()
+			ps.SetPasswordPolicySettings(pp)
+		}
+		if minLength != nil {
+			pp.SetMinimumLength(*minLength)
+		}
+		if requireDigit != nil {
+			pp.SetRequireDigit(*requireDigit)
+		}
+		if requireMixedCase != nil {
+			pp.SetRequireMixedCase(*requireMixedCase)
+		}
+		if requireSymbol != nil {
+			pp.SetRequireSymbol(*requireSymbol)
+		}
+		return nil
+	})
+}
+
 func (b *MprBackend) removeDemoUserViaModelsdk(unitID model.ID, userName string) error {
 	return b.msdkWrite(unitID, func(elem element.Element) error {
 		ps, ok := elem.(*msdksecurity.ProjectSecurity)

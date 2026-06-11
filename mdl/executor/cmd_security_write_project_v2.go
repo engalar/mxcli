@@ -53,5 +53,10 @@ func execAlterProjectSecurityGen(ctx *ExecContext, s *ast.AlterProjectSecuritySt
 		}
 		fmt.Fprintf(ctx.Output, "Demo users %s\n", state)
 	}
+
+	if s.PasswordPolicy != nil {
+		return execAlterPasswordPolicy(ctx, s)
+	}
+
 	return nil
 }

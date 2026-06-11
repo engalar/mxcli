@@ -95,6 +95,17 @@ revokePublishedRestServiceAccessStatement
 alterProjectSecurityStatement
     : ALTER PROJECT SECURITY LEVEL (PRODUCTION | PROTOTYPE | OFF)
     | ALTER PROJECT SECURITY DEMO USERS (ON | OFF)
+    | ALTER PROJECT SECURITY PASSWORD POLICY LPAREN passwordPolicyOptionList RPAREN
+    ;
+
+passwordPolicyOptionList
+    : passwordPolicyOption (COMMA passwordPolicyOption)*
+    ;
+
+// Options use identifierOrKeyword keys so no new reserved tokens are needed.
+// Accepted keys: min_length, require_digit, require_mixed_case, require_symbol
+passwordPolicyOption
+    : identifierOrKeyword COLON (NUMBER_LITERAL | TRUE | FALSE)
     ;
 
 createDemoUserStatement

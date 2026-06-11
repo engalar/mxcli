@@ -118,6 +118,9 @@ func stmtSummary(stmt ast.Statement) string {
 	case *ast.RevokeEntityAccessStmt:
 		return fmt.Sprintf("revoke on entity %s", s.Entity)
 	case *ast.AlterProjectSecurityStmt:
+		if s.PasswordPolicy != nil {
+			return "alter project security password policy"
+		}
 		return "alter project security"
 	case *ast.CreateDemoUserStmt:
 		return fmt.Sprintf("create demo user %s", s.UserName)

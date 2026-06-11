@@ -156,6 +156,7 @@ type MockBackend struct {
 	RemoveUserRoleFunc                   func(unitID model.ID, name string) error
 	AddDemoUserFunc                      func(unitID model.ID, userName, password, entity string, userRoles []string) error
 	RemoveDemoUserFunc                   func(unitID model.ID, userName string) error
+	SetPasswordPolicyFunc                func(unitID model.ID, minLength *int32, requireDigit, requireMixedCase, requireSymbol *bool) error
 	GetModuleSecurityGenFunc             func(moduleID model.ID) (*genSec.ModuleSecurity, error)
 	ListModuleSecurityGenFunc            func() ([]*genSec.ModuleSecurity, error)
 	AddModuleRoleFunc                    func(unitID model.ID, roleName, description string) error

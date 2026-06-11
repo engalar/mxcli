@@ -32,6 +32,7 @@ type ProjectSecurityBackend interface {
 	RemoveUserRole(unitID model.ID, name string) error
 	AddDemoUser(unitID model.ID, userName, password, entity string, userRoles []string) error
 	RemoveDemoUser(unitID model.ID, userName string) error
+	SetPasswordPolicy(unitID model.ID, minLength *int32, requireDigit, requireMixedCase, requireSymbol *bool) error
 }
 
 // ModuleSecurityBackend manages module-level security.

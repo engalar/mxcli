@@ -910,6 +910,12 @@ type MDLParserListener interface {
 	// EnterAlterProjectSecurityStatement is called when entering the alterProjectSecurityStatement production.
 	EnterAlterProjectSecurityStatement(c *AlterProjectSecurityStatementContext)
 
+	// EnterPasswordPolicyOptionList is called when entering the passwordPolicyOptionList production.
+	EnterPasswordPolicyOptionList(c *PasswordPolicyOptionListContext)
+
+	// EnterPasswordPolicyOption is called when entering the passwordPolicyOption production.
+	EnterPasswordPolicyOption(c *PasswordPolicyOptionContext)
+
 	// EnterCreateDemoUserStatement is called when entering the createDemoUserStatement production.
 	EnterCreateDemoUserStatement(c *CreateDemoUserStatementContext)
 
@@ -2370,6 +2376,12 @@ type MDLParserListener interface {
 
 	// ExitAlterProjectSecurityStatement is called when exiting the alterProjectSecurityStatement production.
 	ExitAlterProjectSecurityStatement(c *AlterProjectSecurityStatementContext)
+
+	// ExitPasswordPolicyOptionList is called when exiting the passwordPolicyOptionList production.
+	ExitPasswordPolicyOptionList(c *PasswordPolicyOptionListContext)
+
+	// ExitPasswordPolicyOption is called when exiting the passwordPolicyOption production.
+	ExitPasswordPolicyOption(c *PasswordPolicyOptionContext)
 
 	// ExitCreateDemoUserStatement is called when exiting the createDemoUserStatement production.
 	ExitCreateDemoUserStatement(c *CreateDemoUserStatementContext)

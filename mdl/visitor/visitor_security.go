@@ -3,6 +3,9 @@
 package visitor
 
 import (
+	"strconv"
+	"strings"
+
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	"github.com/mendixlabs/mxcli/mdl/grammar/parser"
 )
@@ -409,6 +412,31 @@ func (b *Builder) ExitAlterProjectSecurityStatement(ctx *parser.AlterProjectSecu
 	} else if ctx.DEMO() != nil {
 		enabled := ctx.ON() != nil
 		stmt.DemoUsersEnabled = &enabled
+	} else if ctx.POLICY() != nil {
+		opts := &ast.AlterPasswordPolicyOptions{}
+		if optList := ctx.PasswordPolicyOptionList(); optList != nil {
+		for _, optCtx := range optList.AllPasswordPolicyOption() {
+			key := strings.ToLower(identifierOrKeywordText(optCtx.IdentifierOrKeyword()))
+			val := optCtx.GetStop().GetText()
+			switch key {
+			case "min_length":
+				if n, err := strconv.ParseInt(val, 10, 32); err == nil {
+					v := int32(n)
+					opts.MinLength = &v
+				}
+			case "require_digit":
+				b := val == "true"
+				opts.RequireDigit = &b
+			case "require_mixed_case":
+				b := val == "true"
+				opts.RequireMixedCase = &b
+			case "require_symbol":
+				b := val == "true"
+				opts.RequireSymbol = &b
+			}
+		} // end optList loop
+		} // end if optList != nil
+		stmt.PasswordPolicy = opts
 	}
 
 	b.statements = append(b.statements, stmt)

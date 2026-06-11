@@ -188,9 +188,21 @@ type AlterProjectSecurityStmt struct {
 	SecurityLevel string
 	// DemoUsersEnabled is set for ALTER PROJECT SECURITY DEMO USERS ON/OFF
 	DemoUsersEnabled *bool
+	// PasswordPolicy is set for ALTER PROJECT SECURITY PASSWORD POLICY (...)
+	PasswordPolicy *AlterPasswordPolicyOptions
 }
 
 func (s *AlterProjectSecurityStmt) isStatement() {}
+
+// AlterPasswordPolicyOptions holds the parsed options from
+// ALTER PROJECT SECURITY PASSWORD POLICY (min_length: N, ...).
+// Nil pointer fields mean "not specified, keep existing value".
+type AlterPasswordPolicyOptions struct {
+	MinLength        *int32
+	RequireDigit     *bool
+	RequireMixedCase *bool
+	RequireSymbol    *bool
+}
 
 // CreateDemoUserStmt represents: CREATE [OR MODIFY] DEMO USER 'name' PASSWORD 'pw' [ENTITY Module.Entity] (Role1, Role2)
 type CreateDemoUserStmt struct {

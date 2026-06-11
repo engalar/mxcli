@@ -2158,12 +2158,25 @@ create or modify user role Manager (System.User, HD.ManagerRole, KB.Contributor)
 
 alter project security demo users on;
 
+-- Set password policy before creating demo users.
+-- Mendix runtime validates passwords at startup (PasswordStrengthVerifier);
+-- if validation fails while the language subsystem is uninitialized, a
+-- NullPointerException silently skips all remaining demo users.
+-- Explicitly declaring policy lets mxcli check catch violations at exec time
+-- with actionable fix hints, rather than failing silently at runtime.
+alter project security password policy (
+  min_length: 8,
+  require_digit: true,
+  require_mixed_case: true,
+  require_symbol: false
+);
+
 -- entity clause required: HD.UserProfile (Account Management section) is a second
 -- entity that generalizes System.User, so demo-user creation must disambiguate
 -- which user entity to instantiate. Administration.Account is the account entity.
-create or modify demo user 'demo_customer@helpdesk.test' password 'Demo1234!' entity Administration.Account (Customer);
-create or modify demo user 'demo_agent@helpdesk.test'    password 'Demo1234!' entity Administration.Account (Agent);
-create or modify demo user 'demo_manager@helpdesk.test'  password 'Demo1234!' entity Administration.Account (Manager);
+create or modify demo user 'demo_customer@helpdesk.test' password 'Demo12345678' entity Administration.Account (Customer);
+create or modify demo user 'demo_agent@helpdesk.test'    password 'Demo12345678' entity Administration.Account (Agent);
+create or modify demo user 'demo_manager@helpdesk.test'  password 'Demo12345678' entity Administration.Account (Manager);
 
 -- MARK: Navigation
 

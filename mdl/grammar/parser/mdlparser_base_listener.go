@@ -1914,6 +1914,18 @@ func (s *BaseMDLParserListener) EnterAlterProjectSecurityStatement(ctx *AlterPro
 func (s *BaseMDLParserListener) ExitAlterProjectSecurityStatement(ctx *AlterProjectSecurityStatementContext) {
 }
 
+// EnterPasswordPolicyOptionList is called when production passwordPolicyOptionList is entered.
+func (s *BaseMDLParserListener) EnterPasswordPolicyOptionList(ctx *PasswordPolicyOptionListContext) {}
+
+// ExitPasswordPolicyOptionList is called when production passwordPolicyOptionList is exited.
+func (s *BaseMDLParserListener) ExitPasswordPolicyOptionList(ctx *PasswordPolicyOptionListContext) {}
+
+// EnterPasswordPolicyOption is called when production passwordPolicyOption is entered.
+func (s *BaseMDLParserListener) EnterPasswordPolicyOption(ctx *PasswordPolicyOptionContext) {}
+
+// ExitPasswordPolicyOption is called when production passwordPolicyOption is exited.
+func (s *BaseMDLParserListener) ExitPasswordPolicyOption(ctx *PasswordPolicyOptionContext) {}
+
 // EnterCreateDemoUserStatement is called when production createDemoUserStatement is entered.
 func (s *BaseMDLParserListener) EnterCreateDemoUserStatement(ctx *CreateDemoUserStatementContext) {}
 
