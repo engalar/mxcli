@@ -11,6 +11,137 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/grammar/parser"
 )
 
+// dropEntry maps a DROP statement token pattern to an AST node builder.
+type dropEntry struct {
+	match func(*parser.DropStatementContext) bool
+	build func(*parser.DropStatementContext, []parser.IQualifiedNameContext) ast.Statement
+}
+
+var dropDispatch = []dropEntry{
+	{match: func(ctx *parser.DropStatementContext) bool { return ctx.ENTITY() != nil },
+		build: func(ctx *parser.DropStatementContext, names []parser.IQualifiedNameContext) ast.Statement {
+			return &ast.DropEntityStmt{Name: buildQualifiedName(names[0])}
+		}},
+	{match: func(ctx *parser.DropStatementContext) bool { return ctx.ASSOCIATION() != nil },
+		build: func(ctx *parser.DropStatementContext, names []parser.IQualifiedNameContext) ast.Statement {
+			return &ast.DropAssociationStmt{Name: buildQualifiedName(names[0])}
+		}},
+	{match: func(ctx *parser.DropStatementContext) bool { return ctx.ENUMERATION() != nil },
+		build: func(ctx *parser.DropStatementContext, names []parser.IQualifiedNameContext) ast.Statement {
+			return &ast.DropEnumerationStmt{Name: buildQualifiedName(names[0])}
+		}},
+	{match: func(ctx *parser.DropStatementContext) bool { return ctx.CONSTANT() != nil },
+		build: func(ctx *parser.DropStatementContext, names []parser.IQualifiedNameContext) ast.Statement {
+			return &ast.DropConstantStmt{Name: buildQualifiedName(names[0])}
+		}},
+	{match: func(ctx *parser.DropStatementContext) bool { return ctx.MODULE() != nil },
+		build: func(ctx *parser.DropStatementContext, names []parser.IQualifiedNameContext) ast.Statement {
+			return &ast.DropModuleStmt{Name: getQualifiedNameText(names[0])}
+		}},
+	{match: func(ctx *parser.DropStatementContext) bool { return ctx.MICROFLOW() != nil },
+		build: func(ctx *parser.DropStatementContext, names []parser.IQualifiedNameContext) ast.Statement {
+			return &ast.DropMicroflowStmt{Name: buildQualifiedName(names[0])}
+		}},
+	{match: func(ctx *parser.DropStatementContext) bool { return ctx.NANOFLOW() != nil },
+		build: func(ctx *parser.DropStatementContext, names []parser.IQualifiedNameContext) ast.Statement {
+			return &ast.DropNanoflowStmt{Name: buildQualifiedName(names[0])}
+		}},
+	{match: func(ctx *parser.DropStatementContext) bool { return ctx.PAGE() != nil },
+		build: func(ctx *parser.DropStatementContext, names []parser.IQualifiedNameContext) ast.Statement {
+			return &ast.DropPageStmt{Name: buildQualifiedName(names[0])}
+		}},
+	{match: func(ctx *parser.DropStatementContext) bool { return ctx.SNIPPET() != nil },
+		build: func(ctx *parser.DropStatementContext, names []parser.IQualifiedNameContext) ast.Statement {
+			return &ast.DropSnippetStmt{Name: buildQualifiedName(names[0])}
+		}},
+	{match: func(ctx *parser.DropStatementContext) bool { return ctx.JAVA() != nil && ctx.ACTION() != nil },
+		build: func(ctx *parser.DropStatementContext, names []parser.IQualifiedNameContext) ast.Statement {
+			return &ast.DropJavaActionStmt{Name: buildQualifiedName(names[0])}
+		}},
+	{match: func(ctx *parser.DropStatementContext) bool { return ctx.ODATA() != nil && ctx.CLIENT() != nil },
+		build: func(ctx *parser.DropStatementContext, names []parser.IQualifiedNameContext) ast.Statement {
+			return &ast.DropODataClientStmt{Name: buildQualifiedName(names[0])}
+		}},
+	{match: func(ctx *parser.DropStatementContext) bool { return ctx.ODATA() != nil && ctx.SERVICE() != nil },
+		build: func(ctx *parser.DropStatementContext, names []parser.IQualifiedNameContext) ast.Statement {
+			return &ast.DropODataServiceStmt{Name: buildQualifiedName(names[0])}
+		}},
+	{match: func(ctx *parser.DropStatementContext) bool { return ctx.BUSINESS() != nil && ctx.EVENT() != nil && ctx.SERVICE() != nil },
+		build: func(ctx *parser.DropStatementContext, names []parser.IQualifiedNameContext) ast.Statement {
+			return &ast.DropBusinessEventServiceStmt{Name: buildQualifiedName(names[0])}
+		}},
+	{match: func(ctx *parser.DropStatementContext) bool { return ctx.WORKFLOW() != nil },
+		build: func(ctx *parser.DropStatementContext, names []parser.IQualifiedNameContext) ast.Statement {
+			return &ast.DropWorkflowStmt{Name: buildQualifiedName(names[0])}
+		}},
+	{match: func(ctx *parser.DropStatementContext) bool { return ctx.IMAGE() != nil && ctx.COLLECTION() != nil },
+		build: func(ctx *parser.DropStatementContext, names []parser.IQualifiedNameContext) ast.Statement {
+			return &ast.DropImageCollectionStmt{Name: buildQualifiedName(names[0])}
+		}},
+	{match: func(ctx *parser.DropStatementContext) bool { return ctx.MODEL() != nil },
+		build: func(ctx *parser.DropStatementContext, names []parser.IQualifiedNameContext) ast.Statement {
+			return &ast.DropModelStmt{Name: buildQualifiedName(names[0])}
+		}},
+	{match: func(ctx *parser.DropStatementContext) bool { return ctx.CONSUMED() != nil && ctx.MCP() != nil && ctx.SERVICE() != nil },
+		build: func(ctx *parser.DropStatementContext, names []parser.IQualifiedNameContext) ast.Statement {
+			return &ast.DropConsumedMCPServiceStmt{Name: buildQualifiedName(names[0])}
+		}},
+	{match: func(ctx *parser.DropStatementContext) bool { return ctx.KNOWLEDGE() != nil && ctx.BASE() != nil },
+		build: func(ctx *parser.DropStatementContext, names []parser.IQualifiedNameContext) ast.Statement {
+			return &ast.DropKnowledgeBaseStmt{Name: buildQualifiedName(names[0])}
+		}},
+	{match: func(ctx *parser.DropStatementContext) bool { return ctx.AGENT() != nil },
+		build: func(ctx *parser.DropStatementContext, names []parser.IQualifiedNameContext) ast.Statement {
+			return &ast.DropAgentStmt{Name: buildQualifiedName(names[0])}
+		}},
+	{match: func(ctx *parser.DropStatementContext) bool { return ctx.PUBLISHED() != nil && ctx.REST() != nil && ctx.SERVICE() != nil },
+		build: func(ctx *parser.DropStatementContext, names []parser.IQualifiedNameContext) ast.Statement {
+			return &ast.DropPublishedRestServiceStmt{Name: buildQualifiedName(names[0])}
+		}},
+	{match: func(ctx *parser.DropStatementContext) bool { return ctx.REST() != nil && ctx.CLIENT() != nil },
+		build: func(ctx *parser.DropStatementContext, names []parser.IQualifiedNameContext) ast.Statement {
+			return &ast.DropRestClientStmt{Name: buildQualifiedName(names[0])}
+		}},
+	{match: func(ctx *parser.DropStatementContext) bool { return ctx.JSON() != nil && ctx.STRUCTURE() != nil },
+		build: func(ctx *parser.DropStatementContext, names []parser.IQualifiedNameContext) ast.Statement {
+			return &ast.DropJsonStructureStmt{Name: buildQualifiedName(names[0])}
+		}},
+	{match: func(ctx *parser.DropStatementContext) bool { return ctx.IMPORT() != nil && ctx.MAPPING() != nil },
+		build: func(ctx *parser.DropStatementContext, names []parser.IQualifiedNameContext) ast.Statement {
+			return &ast.DropImportMappingStmt{Name: buildQualifiedName(names[0])}
+		}},
+	{match: func(ctx *parser.DropStatementContext) bool { return ctx.EXPORT() != nil && ctx.MAPPING() != nil },
+		build: func(ctx *parser.DropStatementContext, names []parser.IQualifiedNameContext) ast.Statement {
+			return &ast.DropExportMappingStmt{Name: buildQualifiedName(names[0])}
+		}},
+	{match: func(ctx *parser.DropStatementContext) bool { return ctx.DATA() != nil && ctx.TRANSFORMER() != nil },
+		build: func(ctx *parser.DropStatementContext, names []parser.IQualifiedNameContext) ast.Statement {
+			return &ast.DropDataTransformerStmt{Name: buildQualifiedName(names[0])}
+		}},
+	{match: func(ctx *parser.DropStatementContext) bool { return ctx.FOLDER() != nil },
+		build: func(ctx *parser.DropStatementContext, names []parser.IQualifiedNameContext) ast.Statement {
+			folderPath := unquoteString(ctx.STRING_LITERAL().GetText())
+			var moduleName string
+			if len(names) > 0 {
+				moduleName = getQualifiedNameText(names[0])
+			} else if ctx.IDENTIFIER() != nil {
+				moduleName = ctx.IDENTIFIER().GetText()
+			}
+			return &ast.DropFolderStmt{FolderPath: folderPath, Module: moduleName}
+		}},
+}
+// dropConfigHandlers covers DROP CONFIGURATION which uses STRING_LITERAL not qualified names.
+func isDropConfiguration(ctx *parser.DropStatementContext) bool {
+	return ctx.CONFIGURATION() != nil
+}
+func buildDropConfiguration(ctx *parser.DropStatementContext, _ []parser.IQualifiedNameContext) ast.Statement {
+	sl := ctx.STRING_LITERAL()
+	if sl == nil {
+		return nil
+	}
+	return &ast.DropConfigurationStmt{Name: unquoteString(sl.GetText())}
+}
+
 func (b *Builder) ExitCreateEntityStatement(ctx *parser.CreateEntityStatementContext) {
 	// Handle VIEW entities separately
 	if ctx.VIEW() != nil {
@@ -725,136 +856,21 @@ func (b *Builder) ExitAlterEntityAction(ctx *parser.AlterEntityActionContext) {
 
 // ExitDropStatement handles DROP ENTITY/ASSOCIATION/ENUMERATION/MODULE/MICROFLOW/PAGE/SNIPPET
 func (b *Builder) ExitDropStatement(ctx *parser.DropStatementContext) {
-	// DROP CONFIGURATION uses STRING_LITERAL, not qualifiedName — handle first
-	if ctx.CONFIGURATION() != nil {
-		if sl := ctx.STRING_LITERAL(); sl != nil {
-			b.statements = append(b.statements, &ast.DropConfigurationStmt{
-				Name: unquoteString(sl.GetText()),
-			})
+	if isDropConfiguration(ctx) {
+		if stmt := buildDropConfiguration(ctx, nil); stmt != nil {
+			b.statements = append(b.statements, stmt)
 		}
 		return
 	}
-
-	// Get the first qualified name (most DROP statements have at least one)
 	names := ctx.AllQualifiedName()
 	if len(names) == 0 {
 		return
 	}
-
-	if ctx.ENTITY() != nil {
-		b.statements = append(b.statements, &ast.DropEntityStmt{
-			Name: buildQualifiedName(names[0]),
-		})
-	} else if ctx.ASSOCIATION() != nil {
-		b.statements = append(b.statements, &ast.DropAssociationStmt{
-			Name: buildQualifiedName(names[0]),
-		})
-	} else if ctx.ENUMERATION() != nil {
-		b.statements = append(b.statements, &ast.DropEnumerationStmt{
-			Name: buildQualifiedName(names[0]),
-		})
-	} else if ctx.CONSTANT() != nil {
-		b.statements = append(b.statements, &ast.DropConstantStmt{
-			Name: buildQualifiedName(names[0]),
-		})
-	} else if ctx.MODULE() != nil {
-		name := getQualifiedNameText(names[0])
-		b.statements = append(b.statements, &ast.DropModuleStmt{
-			Name: name,
-		})
-	} else if ctx.MICROFLOW() != nil {
-		b.statements = append(b.statements, &ast.DropMicroflowStmt{
-			Name: buildQualifiedName(names[0]),
-		})
-	} else if ctx.NANOFLOW() != nil {
-		b.statements = append(b.statements, &ast.DropNanoflowStmt{
-			Name: buildQualifiedName(names[0]),
-		})
-	} else if ctx.PAGE() != nil {
-		b.statements = append(b.statements, &ast.DropPageStmt{
-			Name: buildQualifiedName(names[0]),
-		})
-	} else if ctx.SNIPPET() != nil {
-		b.statements = append(b.statements, &ast.DropSnippetStmt{
-			Name: buildQualifiedName(names[0]),
-		})
-	} else if ctx.JAVA() != nil && ctx.ACTION() != nil {
-		b.statements = append(b.statements, &ast.DropJavaActionStmt{
-			Name: buildQualifiedName(names[0]),
-		})
-	} else if ctx.ODATA() != nil && ctx.CLIENT() != nil {
-		b.statements = append(b.statements, &ast.DropODataClientStmt{
-			Name: buildQualifiedName(names[0]),
-		})
-	} else if ctx.ODATA() != nil && ctx.SERVICE() != nil {
-		b.statements = append(b.statements, &ast.DropODataServiceStmt{
-			Name: buildQualifiedName(names[0]),
-		})
-	} else if ctx.BUSINESS() != nil && ctx.EVENT() != nil && ctx.SERVICE() != nil {
-		b.statements = append(b.statements, &ast.DropBusinessEventServiceStmt{
-			Name: buildQualifiedName(names[0]),
-		})
-	} else if ctx.WORKFLOW() != nil {
-		b.statements = append(b.statements, &ast.DropWorkflowStmt{
-			Name: buildQualifiedName(names[0]),
-		})
-	} else if ctx.IMAGE() != nil && ctx.COLLECTION() != nil {
-		b.statements = append(b.statements, &ast.DropImageCollectionStmt{
-			Name: buildQualifiedName(names[0]),
-		})
-	} else if ctx.MODEL() != nil {
-		b.statements = append(b.statements, &ast.DropModelStmt{
-			Name: buildQualifiedName(names[0]),
-		})
-	} else if ctx.CONSUMED() != nil && ctx.MCP() != nil && ctx.SERVICE() != nil {
-		b.statements = append(b.statements, &ast.DropConsumedMCPServiceStmt{
-			Name: buildQualifiedName(names[0]),
-		})
-	} else if ctx.KNOWLEDGE() != nil && ctx.BASE() != nil {
-		b.statements = append(b.statements, &ast.DropKnowledgeBaseStmt{
-			Name: buildQualifiedName(names[0]),
-		})
-	} else if ctx.AGENT() != nil {
-		b.statements = append(b.statements, &ast.DropAgentStmt{
-			Name: buildQualifiedName(names[0]),
-		})
-	} else if ctx.PUBLISHED() != nil && ctx.REST() != nil && ctx.SERVICE() != nil {
-		b.statements = append(b.statements, &ast.DropPublishedRestServiceStmt{
-			Name: buildQualifiedName(names[0]),
-		})
-	} else if ctx.REST() != nil && ctx.CLIENT() != nil {
-		b.statements = append(b.statements, &ast.DropRestClientStmt{
-			Name: buildQualifiedName(names[0]),
-		})
-	} else if ctx.JSON() != nil && ctx.STRUCTURE() != nil {
-		b.statements = append(b.statements, &ast.DropJsonStructureStmt{
-			Name: buildQualifiedName(names[0]),
-		})
-	} else if ctx.IMPORT() != nil && ctx.MAPPING() != nil {
-		b.statements = append(b.statements, &ast.DropImportMappingStmt{
-			Name: buildQualifiedName(names[0]),
-		})
-	} else if ctx.EXPORT() != nil && ctx.MAPPING() != nil {
-		b.statements = append(b.statements, &ast.DropExportMappingStmt{
-			Name: buildQualifiedName(names[0]),
-		})
-	} else if ctx.DATA() != nil && ctx.TRANSFORMER() != nil {
-		b.statements = append(b.statements, &ast.DropDataTransformerStmt{
-			Name: buildQualifiedName(names[0]),
-		})
-	} else if ctx.FOLDER() != nil {
-		folderPath := unquoteString(ctx.STRING_LITERAL().GetText())
-		// Module can be a qualifiedName or IDENTIFIER
-		var moduleName string
-		if len(names) > 0 {
-			moduleName = getQualifiedNameText(names[0])
-		} else if ctx.IDENTIFIER() != nil {
-			moduleName = ctx.IDENTIFIER().GetText()
+	for _, entry := range dropDispatch {
+		if entry.match(ctx) {
+			b.statements = append(b.statements, entry.build(ctx, names))
+			return
 		}
-		b.statements = append(b.statements, &ast.DropFolderStmt{
-			FolderPath: folderPath,
-			Module:     moduleName,
-		})
 	}
 }
 
@@ -901,6 +917,35 @@ func (b *Builder) ExitRenameStatement(ctx *parser.RenameStatementContext) {
 	})
 }
 
+// moveEntry maps a MOVE statement token pattern to a DocumentType.
+type moveEntry struct {
+	match   func(*parser.MoveStatementContext) bool
+	docType ast.DocumentType
+}
+
+var moveDispatch = []moveEntry{
+	{match: func(ctx *parser.MoveStatementContext) bool { return ctx.PAGE() != nil }, docType: ast.DocumentTypePage},
+	{match: func(ctx *parser.MoveStatementContext) bool { return ctx.MICROFLOW() != nil }, docType: ast.DocumentTypeMicroflow},
+	{match: func(ctx *parser.MoveStatementContext) bool { return ctx.SNIPPET() != nil }, docType: ast.DocumentTypeSnippet},
+	{match: func(ctx *parser.MoveStatementContext) bool { return ctx.NANOFLOW() != nil }, docType: ast.DocumentTypeNanoflow},
+	{match: func(ctx *parser.MoveStatementContext) bool { return ctx.ENTITY() != nil }, docType: ast.DocumentTypeEntity},
+	{match: func(ctx *parser.MoveStatementContext) bool { return ctx.ENUMERATION() != nil }, docType: ast.DocumentTypeEnumeration},
+	{match: func(ctx *parser.MoveStatementContext) bool { return ctx.CONSTANT() != nil }, docType: ast.DocumentTypeConstant},
+	{match: func(ctx *parser.MoveStatementContext) bool { return ctx.DATABASE() != nil }, docType: ast.DocumentTypeDatabaseConnection},
+	{match: func(ctx *parser.MoveStatementContext) bool { return ctx.LAYOUT() != nil }, docType: ast.DocumentTypeLayout},
+	{match: func(ctx *parser.MoveStatementContext) bool { return ctx.WORKFLOW() != nil }, docType: ast.DocumentTypeWorkflow},
+	{match: func(ctx *parser.MoveStatementContext) bool { return ctx.JAVASCRIPT() != nil }, docType: ast.DocumentTypeJavaScriptAction},
+	{match: func(ctx *parser.MoveStatementContext) bool { return ctx.JAVA() != nil }, docType: ast.DocumentTypeJavaAction},
+}
+
+// isMoveFolder checks whether the context is a MOVE FOLDER (no document type keyword, just FOLDER).
+func isMoveFolder(ctx *parser.MoveStatementContext) bool {
+	return len(ctx.AllFOLDER()) > 0 && ctx.PAGE() == nil && ctx.MICROFLOW() == nil &&
+		ctx.SNIPPET() == nil && ctx.NANOFLOW() == nil && ctx.ENTITY() == nil &&
+		ctx.ENUMERATION() == nil && ctx.CONSTANT() == nil && ctx.DATABASE() == nil &&
+		ctx.LAYOUT() == nil && ctx.WORKFLOW() == nil && ctx.JAVA() == nil && ctx.JAVASCRIPT() == nil
+}
+
 // ExitMoveStatement handles MOVE PAGE/MICROFLOW/SNIPPET/NANOFLOW/ENTITY/ENUMERATION to folder/module
 func (b *Builder) ExitMoveStatement(ctx *parser.MoveStatementContext) {
 	names := ctx.AllQualifiedName()
@@ -908,12 +953,7 @@ func (b *Builder) ExitMoveStatement(ctx *parser.MoveStatementContext) {
 		return
 	}
 
-	// Handle MOVE FOLDER separately — different AST type
-	// MOVE FOLDER is identified by having FOLDER as the first token after MOVE (no document type keyword)
-	if len(ctx.AllFOLDER()) > 0 && ctx.PAGE() == nil && ctx.MICROFLOW() == nil &&
-		ctx.SNIPPET() == nil && ctx.NANOFLOW() == nil && ctx.ENTITY() == nil &&
-		ctx.ENUMERATION() == nil && ctx.CONSTANT() == nil && ctx.DATABASE() == nil &&
-		ctx.LAYOUT() == nil && ctx.WORKFLOW() == nil && ctx.JAVA() == nil && ctx.JAVASCRIPT() == nil {
+	if isMoveFolder(ctx) {
 		b.exitMoveFolderStatement(ctx, names)
 		return
 	}
@@ -922,31 +962,11 @@ func (b *Builder) ExitMoveStatement(ctx *parser.MoveStatementContext) {
 		Name: buildQualifiedName(names[0]),
 	}
 
-	// Determine document type
-	if ctx.PAGE() != nil {
-		stmt.DocumentType = ast.DocumentTypePage
-	} else if ctx.MICROFLOW() != nil {
-		stmt.DocumentType = ast.DocumentTypeMicroflow
-	} else if ctx.SNIPPET() != nil {
-		stmt.DocumentType = ast.DocumentTypeSnippet
-	} else if ctx.NANOFLOW() != nil {
-		stmt.DocumentType = ast.DocumentTypeNanoflow
-	} else if ctx.ENTITY() != nil {
-		stmt.DocumentType = ast.DocumentTypeEntity
-	} else if ctx.ENUMERATION() != nil {
-		stmt.DocumentType = ast.DocumentTypeEnumeration
-	} else if ctx.CONSTANT() != nil {
-		stmt.DocumentType = ast.DocumentTypeConstant
-	} else if ctx.DATABASE() != nil {
-		stmt.DocumentType = ast.DocumentTypeDatabaseConnection
-	} else if ctx.LAYOUT() != nil {
-		stmt.DocumentType = ast.DocumentTypeLayout
-	} else if ctx.WORKFLOW() != nil {
-		stmt.DocumentType = ast.DocumentTypeWorkflow
-	} else if ctx.JAVASCRIPT() != nil {
-		stmt.DocumentType = ast.DocumentTypeJavaScriptAction
-	} else if ctx.JAVA() != nil {
-		stmt.DocumentType = ast.DocumentTypeJavaAction
+	for _, entry := range moveDispatch {
+		if entry.match(ctx) {
+			stmt.DocumentType = entry.docType
+			break
+		}
 	}
 
 	// Parse folder path if specified
@@ -956,13 +976,10 @@ func (b *Builder) ExitMoveStatement(ctx *parser.MoveStatementContext) {
 
 	// Parse target module if specified (IN Module or just Module)
 	if ctx.IN() != nil && len(names) > 1 {
-		// MOVE ... TO FOLDER 'path' IN Module
 		stmt.TargetModule = getQualifiedNameText(names[1])
 	} else if ctx.IDENTIFIER() != nil {
-		// MOVE ... TO FOLDER 'path' IN ModuleName (identifier)
 		stmt.TargetModule = ctx.IDENTIFIER().GetText()
 	} else if len(ctx.AllFOLDER()) == 0 && len(names) > 1 {
-		// MOVE ... TO Module (no folder, just target module)
 		stmt.TargetModule = getQualifiedNameText(names[1])
 	}
 

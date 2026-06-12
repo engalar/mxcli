@@ -27,6 +27,7 @@ package executor
 
 import (
 	"fmt"
+	"reflect"
 	"strings"
 	"unicode"
 
@@ -73,31 +74,32 @@ func buildWorkflowActivitiesGen(wbc *wfBuildCtx, nodes []ast.WorkflowActivityNod
 	return out
 }
 
+// wfActivityHandler is a gen-typed builder for a specific WorkflowActivityNode type.
+type wfActivityHandler func(wbc *wfBuildCtx, node ast.WorkflowActivityNode) element.Element
+
+var wfActivityDispatch map[reflect.Type]wfActivityHandler
+
+func init() {
+	wfActivityDispatch = map[reflect.Type]wfActivityHandler{
+		reflect.TypeOf(&ast.WorkflowJumpToNode{}):             func(wbc *wfBuildCtx, node ast.WorkflowActivityNode) element.Element { return buildJumpToGenActivity(node.(*ast.WorkflowJumpToNode)) },
+		reflect.TypeOf(&ast.WorkflowWaitForTimerNode{}):       func(wbc *wfBuildCtx, node ast.WorkflowActivityNode) element.Element { return buildWaitForTimerGenActivity(node.(*ast.WorkflowWaitForTimerNode)) },
+		reflect.TypeOf(&ast.WorkflowWaitForNotificationNode{}): func(wbc *wfBuildCtx, node ast.WorkflowActivityNode) element.Element { return buildWaitForNotificationGenActivity(wbc, node.(*ast.WorkflowWaitForNotificationNode)) },
+		reflect.TypeOf(&ast.WorkflowEndNode{}):                func(wbc *wfBuildCtx, node ast.WorkflowActivityNode) element.Element { return buildEndWorkflowGenActivity(node.(*ast.WorkflowEndNode)) },
+		reflect.TypeOf(&ast.WorkflowAnnotationActivityNode{}): func(wbc *wfBuildCtx, node ast.WorkflowActivityNode) element.Element { return buildAnnotationActivityGen(node.(*ast.WorkflowAnnotationActivityNode)) },
+		reflect.TypeOf(&ast.WorkflowUserTaskNode{}):           func(wbc *wfBuildCtx, node ast.WorkflowActivityNode) element.Element { return buildUserTaskGenActivity(wbc, node.(*ast.WorkflowUserTaskNode)) },
+		reflect.TypeOf(&ast.WorkflowCallMicroflowNode{}):      func(wbc *wfBuildCtx, node ast.WorkflowActivityNode) element.Element { return buildCallMicroflowGenActivity(wbc, node.(*ast.WorkflowCallMicroflowNode)) },
+		reflect.TypeOf(&ast.WorkflowCallWorkflowNode{}):       func(wbc *wfBuildCtx, node ast.WorkflowActivityNode) element.Element { return buildCallWorkflowGenActivity(wbc, node.(*ast.WorkflowCallWorkflowNode)) },
+		reflect.TypeOf(&ast.WorkflowDecisionNode{}):           func(wbc *wfBuildCtx, node ast.WorkflowActivityNode) element.Element { return buildExclusiveSplitGenActivity(wbc, node.(*ast.WorkflowDecisionNode)) },
+		reflect.TypeOf(&ast.WorkflowParallelSplitNode{}):      func(wbc *wfBuildCtx, node ast.WorkflowActivityNode) element.Element { return buildParallelSplitGenActivity(wbc, node.(*ast.WorkflowParallelSplitNode)) },
+	}
+}
+
 // buildWorkflowActivityGen dispatches a single AST node to its concrete
 // gen-typed builder. Composite builders (UserTask, CallMicroflow, …)
 // land in D1.b/c/d sub-commits; leaf cases are wired here in D1.a.
 func buildWorkflowActivityGen(wbc *wfBuildCtx, node ast.WorkflowActivityNode) element.Element {
-	switch n := node.(type) {
-	case *ast.WorkflowJumpToNode:
-		return buildJumpToGenActivity(n)
-	case *ast.WorkflowWaitForTimerNode:
-		return buildWaitForTimerGenActivity(n)
-	case *ast.WorkflowWaitForNotificationNode:
-		return buildWaitForNotificationGenActivity(wbc, n)
-	case *ast.WorkflowEndNode:
-		return buildEndWorkflowGenActivity(n)
-	case *ast.WorkflowAnnotationActivityNode:
-		return buildAnnotationActivityGen(n)
-	case *ast.WorkflowUserTaskNode:
-		return buildUserTaskGenActivity(wbc, n)
-	case *ast.WorkflowCallMicroflowNode:
-		return buildCallMicroflowGenActivity(wbc, n)
-	case *ast.WorkflowCallWorkflowNode:
-		return buildCallWorkflowGenActivity(wbc, n)
-	case *ast.WorkflowDecisionNode:
-		return buildExclusiveSplitGenActivity(wbc, n)
-	case *ast.WorkflowParallelSplitNode:
-		return buildParallelSplitGenActivity(wbc, n)
+	if h, ok := wfActivityDispatch[reflect.TypeOf(node)]; ok {
+		return h(wbc, node)
 	}
 	return nil
 }

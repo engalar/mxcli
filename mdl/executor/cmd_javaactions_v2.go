@@ -259,120 +259,145 @@ func modelIDFromElementID(id element.ID) model.ID {
 // Accepts both "CodeActions$X" (Studio-Pro-emitted; primary) and
 // "JavaActions$X" (gen-emitted; for elements created in this session)
 // storage namespaces. See the schema-gap note at the top of this file.
+
+// jaTypeNames maps SDK TypeName() values to their MDL string representations.
+// Key is the TypeName() value; entries with multiple aliases share a handler.
+type jaTypeHandler func(elem element.Element, typeParams []element.Element) string
+
+var jaTypeDispatch map[string]jaTypeHandler
+
+func init() {
+	jaTypeDispatch = map[string]jaTypeHandler{
+		"CodeActions$VoidType": func(elem element.Element, typeParams []element.Element) string { return "Void" },
+	"CodeActions$BooleanType":   func(elem element.Element, typeParams []element.Element) string { return "Boolean" },
+	"JavaActions$BooleanType":   func(elem element.Element, typeParams []element.Element) string { return "Boolean" },
+	"CodeActions$IntegerType":   func(elem element.Element, typeParams []element.Element) string { return "Integer" },
+	"JavaActions$IntegerType":   func(elem element.Element, typeParams []element.Element) string { return "Integer" },
+	"CodeActions$LongType":      func(elem element.Element, typeParams []element.Element) string { return "Long" },
+	"CodeActions$DecimalType":   func(elem element.Element, typeParams []element.Element) string { return "Decimal" },
+	"JavaActions$DecimalType":   func(elem element.Element, typeParams []element.Element) string { return "Decimal" },
+	"CodeActions$StringType":    func(elem element.Element, typeParams []element.Element) string { return "String" },
+	"JavaActions$StringType":    func(elem element.Element, typeParams []element.Element) string { return "String" },
+	"CodeActions$DateTimeType":  func(elem element.Element, typeParams []element.Element) string { return "DateTime" },
+	"JavaActions$DateTimeType":  func(elem element.Element, typeParams []element.Element) string { return "DateTime" },
+	"CodeActions$FileDocumentType": func(elem element.Element, typeParams []element.Element) string { return "FileDocument" },
+
+	"CodeActions$ConcreteEntityType": formatJAConcreteEntityType,
+	"JavaActions$ConcreteEntityType": formatJAConcreteEntityType,
+	"CodeActions$EntityType":         formatJAConcreteEntityType,
+
+	"CodeActions$ListType": formatJAListType,
+	"JavaActions$ListType": formatJAListType,
+
+	"CodeActions$EnumerationType":       formatJAEnumerationType,
+	"JavaActions$EnumerationType":       formatJAEnumerationType,
+	"CodeActions$EntityTypeParameterType":  func(elem element.Element, typeParams []element.Element) string { return formatJATypeParamEntity(elem, typeParams) },
+	"JavaActions$EntityTypeParameterType":  func(elem element.Element, typeParams []element.Element) string { return formatJATypeParamEntity(elem, typeParams) },
+	"CodeActions$ParameterizedEntityType": formatJAParameterizedEntityType,
+	"JavaActions$ParameterizedEntityType": formatJAParameterizedEntityType,
+	"CodeActions$TypeParameter":            formatJATypeParameter,
+	"JavaActions$TypeParameter":            formatJATypeParameter,
+	"CodeActions$MicroflowType":           func(elem element.Element, typeParams []element.Element) string { return "Microflow" },
+	"JavaActions$MicroflowJavaActionParameterType": func(elem element.Element, typeParams []element.Element) string { return "Microflow" },
+	"JavaActions$MicroflowParameterType":            func(elem element.Element, typeParams []element.Element) string { return "Microflow" },
+	"CodeActions$NanoflowType":            func(elem element.Element, typeParams []element.Element) string { return "Nanoflow" },
+	"JavaScriptActions$NanoflowJavaScriptActionParameterType": func(elem element.Element, typeParams []element.Element) string { return "Nanoflow" },
+	"JavaScriptActions$MicroflowJavaScriptActionParameterType": func(elem element.Element, typeParams []element.Element) string { return "Microflow" },
+	"CodeActions$StringTemplateParameterType": formatJAStringTemplate,
+	"CodeActions$BasicParameterType":           formatJABasicParameterType,
+	"JavaActions$BasicParameterType":           formatJABasicParameterType,
+	}
+}
+
+func formatJAConcreteEntityType(elem element.Element, typeParams []element.Element) string {
+	if name := genJA.ReadBSONString(elem, "Entity"); name != "" {
+		return name
+	}
+	if et, ok := elem.(*genJA.ConcreteEntityType); ok && et.EntityQualifiedName() != "" {
+		return et.EntityQualifiedName()
+	}
+	return "Object"
+}
+
+func formatJAListType(elem element.Element, typeParams []element.Element) string {
+	if lt, ok := elem.(*genJA.ListType); ok {
+		if inner := lt.Parameter(); inner != nil {
+			return "List of " + formatJavaActionTypeGen(inner, typeParams)
+		}
+	}
+	if entity := genJA.ReadBSONString(elem, "Entity"); entity != "" {
+		return "List of " + entity
+	}
+	if inner := genJA.DecodeChildElement(elem, "Parameter"); inner != nil {
+		return "List of " + formatJavaActionTypeGen(inner, typeParams)
+	}
+	return "List"
+}
+
+func formatJAEnumerationType(elem element.Element, typeParams []element.Element) string {
+	if et, ok := elem.(*genJA.EnumerationType); ok && et.EnumerationQualifiedName() != "" {
+		return "Enum " + et.EnumerationQualifiedName()
+	}
+	if name := genJA.ReadBSONString(elem, "Enumeration"); name != "" {
+		return "Enum " + name
+	}
+	return "Enumeration"
+}
+
+func formatJATypeParamEntity(elem element.Element, typeParams []element.Element) string {
+	if name := resolveTypeParamNameFromEntityTypeParameterType(elem, typeParams); name != "" {
+		return "entity <" + name + ">"
+	}
+	return "entity <>"
+}
+
+func formatJAParameterizedEntityType(elem element.Element, typeParams []element.Element) string {
+	if name := resolveTypeParamNameFromParameterizedEntityType(elem, typeParams); name != "" {
+		return name
+	}
+	return "T"
+}
+
+func formatJATypeParameter(elem element.Element, typeParams []element.Element) string {
+	if tp, ok := elem.(*genJA.TypeParameter); ok && tp.Name() != "" {
+		return tp.Name()
+	}
+	if name := genJA.ReadBSONString(elem, "TypeParameter"); name != "" {
+		return name
+	}
+	return "T"
+}
+
+func formatJAStringTemplate(elem element.Element, typeParams []element.Element) string {
+	if grammar := genJA.ReadBSONString(elem, "Grammar"); grammar != "" {
+		return "StringTemplate(" + grammar + ")"
+	}
+	return "StringTemplate"
+}
+
+func formatJABasicParameterType(elem element.Element, typeParams []element.Element) string {
+	if inner := genJA.DecodeChildElement(elem, "Type"); inner != nil {
+		return formatJavaActionTypeGen(inner, typeParams)
+	}
+	return "Object"
+}
+
 func formatJavaActionTypeGen(elem element.Element, typeParams []element.Element) string {
 	if elem == nil {
 		return "Object"
 	}
-	switch elem.TypeName() {
-	case "CodeActions$VoidType":
-		return "Void"
-	case "CodeActions$BooleanType", "JavaActions$BooleanType":
-		return "Boolean"
-	case "CodeActions$IntegerType", "JavaActions$IntegerType":
-		return "Integer"
-	case "CodeActions$LongType":
-		return "Long"
-	case "CodeActions$DecimalType", "JavaActions$DecimalType":
-		return "Decimal"
-	case "CodeActions$StringType", "JavaActions$StringType":
-		return "String"
-	case "CodeActions$DateTimeType", "JavaActions$DateTimeType":
-		return "DateTime"
-	case "CodeActions$FileDocumentType":
-		return "FileDocument"
-	case "CodeActions$ConcreteEntityType", "CodeActions$EntityType",
-		"JavaActions$ConcreteEntityType":
-		// Both legacy ("Entity") and gen ("Entity" via ByNameRef on
-		// ConcreteEntityType.entity) read the same BSON key.
-		if name := genJA.ReadBSONString(elem, "Entity"); name != "" {
-			return name
-		}
-		// Gen-typed ConcreteEntityType exposes the qualified name
-		// directly when populated through normal accessors.
-		if et, ok := elem.(*genJA.ConcreteEntityType); ok && et.EntityQualifiedName() != "" {
-			return et.EntityQualifiedName()
-		}
-		return "Object"
-	case "CodeActions$ListType", "JavaActions$ListType":
-		// Gen ListType wraps inner Parameter (sub-Element); legacy
-		// ListType has flat "Entity" key. Try both.
-		if lt, ok := elem.(*genJA.ListType); ok {
-			if inner := lt.Parameter(); inner != nil {
-				return "List of " + formatJavaActionTypeGen(inner, typeParams)
-			}
-		}
-		// Raw fallback: try direct "Entity" (Studio-Pro-flat form),
-		// then nested "Parameter.Entity".
-		if entity := genJA.ReadBSONString(elem, "Entity"); entity != "" {
-			return "List of " + entity
-		}
-		if inner := genJA.DecodeChildElement(elem, "Parameter"); inner != nil {
-			return "List of " + formatJavaActionTypeGen(inner, typeParams)
-		}
-		return "List"
-	case "CodeActions$EnumerationType", "JavaActions$EnumerationType":
-		if et, ok := elem.(*genJA.EnumerationType); ok && et.EnumerationQualifiedName() != "" {
-			return "Enum " + et.EnumerationQualifiedName()
-		}
-		if name := genJA.ReadBSONString(elem, "Enumeration"); name != "" {
-			return "Enum " + name
-		}
-		return "Enumeration"
-	case "CodeActions$EntityTypeParameterType", "JavaActions$EntityTypeParameterType":
-		if name := resolveTypeParamNameFromEntityTypeParameterType(elem, typeParams); name != "" {
-			return "entity <" + name + ">"
-		}
-		return "entity <>"
-	case "CodeActions$ParameterizedEntityType", "JavaActions$ParameterizedEntityType":
-		if name := resolveTypeParamNameFromParameterizedEntityType(elem, typeParams); name != "" {
-			return name
-		}
-		return "T"
-	case "CodeActions$TypeParameter", "JavaActions$TypeParameter":
-		// Legacy "TypeParameter" used as a use-site has the name in
-		// the "TypeParameter" string field; gen TypeParameter is a
-		// def (Name() accessor). Try gen first, then raw.
-		if tp, ok := elem.(*genJA.TypeParameter); ok && tp.Name() != "" {
-			return tp.Name()
-		}
-		if name := genJA.ReadBSONString(elem, "TypeParameter"); name != "" {
-			return name
-		}
-		return "T"
-	case "CodeActions$MicroflowType", "JavaActions$MicroflowJavaActionParameterType",
-		"JavaActions$MicroflowParameterType":
-		return "Microflow"
-	case "CodeActions$NanoflowType",
-		"JavaScriptActions$NanoflowJavaScriptActionParameterType":
-		return "Nanoflow"
-	case "JavaScriptActions$MicroflowJavaScriptActionParameterType":
-		return "Microflow"
-	case "CodeActions$StringTemplateParameterType":
-		if grammar := genJA.ReadBSONString(elem, "Grammar"); grammar != "" {
-			return "StringTemplate(" + grammar + ")"
-		}
-		return "StringTemplate"
-	case "CodeActions$BasicParameterType", "JavaActions$BasicParameterType":
-		// BasicParameterType wraps the actual type in a "Type" child.
-		// Decode the child and dispatch recursively.
-		if inner := genJA.DecodeChildElement(elem, "Type"); inner != nil {
-			return formatJavaActionTypeGen(inner, typeParams)
-		}
-		return "Object"
-	default:
-		// Unknown type — strip the namespace + "Type" suffix as a
-		// best-effort display so we never panic on encountering a
-		// new schema variant.
-		n := elem.TypeName()
-		if i := strings.Index(n, "$"); i >= 0 {
-			n = n[i+1:]
-		}
-		n = strings.TrimSuffix(n, "Type")
-		if n == "" {
-			return "Object"
-		}
-		return n
+	if h, ok := jaTypeDispatch[elem.TypeName()]; ok {
+		return h(elem, typeParams)
 	}
+	n := elem.TypeName()
+	if i := strings.Index(n, "$"); i >= 0 {
+		n = n[i+1:]
+	}
+	n = strings.TrimSuffix(n, "Type")
+	if n == "" {
+		return "Object"
+	}
+	return n
 }
 
 // formatJavaActionReturnTypeGen renders a return-type element. Identical
