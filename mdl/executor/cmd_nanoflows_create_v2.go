@@ -298,8 +298,10 @@ func execCreateNanoflowGen(ctx *ExecContext, s *ast.CreateNanoflowStmt) error {
 	// Track for dispatch-layer tests + invalidate caches so subsequent
 	// reads see the new unit.
 	returnEntityName := ""
-	if s.ReturnType != nil && s.ReturnType.Type.EntityRef != nil {
-		returnEntityName = s.ReturnType.Type.EntityRef.Module + "." + s.ReturnType.Type.EntityRef.Name
+	if s.ReturnType != nil {
+		if ref := paramEntityRef(s.ReturnType.Type); ref != nil && ref.Module != "" {
+			returnEntityName = ref.Module + "." + ref.Name
+		}
 	}
 	ctx.trackCreatedNanoflow(s.Name.Module, s.Name.Name, model.ID(nf.ID()), containerID, returnEntityName)
 
@@ -385,6 +387,14 @@ func paramASTToShortType(t ast.DataType) string {
 	case ast.TypeEntity:
 		if t.EntityRef != nil {
 			return t.EntityRef.Module + "." + t.EntityRef.Name
+		}
+	case ast.TypeEnumeration:
+		// Bare qualified names parse as TypeEnumeration but may be entity
+		// types (CLAUDE.md — TypeEnumeration vs TypeEntity Ambiguity).
+		// Return the qualified name so extractEntityFromGenReturnType
+		// can parse it downstream.
+		if t.EnumRef != nil {
+			return t.EnumRef.Module + "." + t.EnumRef.Name
 		}
 	case ast.TypeListOf:
 		// Format matches extractEntityFromGenReturnType's expected prefix.

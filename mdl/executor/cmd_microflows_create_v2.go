@@ -294,8 +294,15 @@ func execCreateMicroflowGen(ctx *ExecContext, s *ast.CreateMicroflowStmt) error 
 	// Track for downstream lookups + invalidate caches so subsequent
 	// reads see the new unit.
 	returnEntityName := ""
-	if s.ReturnType != nil && s.ReturnType.Type.EntityRef != nil {
-		returnEntityName = s.ReturnType.Type.EntityRef.Module + "." + s.ReturnType.Type.EntityRef.Name
+	if s.ReturnType != nil {
+		// Use paramEntityRef to handle the TypeEnumeration vs TypeEntity
+		// ambiguity: buildDataType stores bare qualified names (e.g.
+		// "Test.Order") as TypeEnumeration+EnumRef rather than
+		// TypeEntity+EntityRef because the MDL grammar cannot distinguish
+		// entity types from enumeration types at parse time.
+		if ref := paramEntityRef(s.ReturnType.Type); ref != nil && ref.Module != "" {
+			returnEntityName = ref.Module + "." + ref.Name
+		}
 	}
 	ctx.trackCreatedMicroflow(s.Name.Module, s.Name.Name, model.ID(mf.ID()), containerID, returnEntityName)
 

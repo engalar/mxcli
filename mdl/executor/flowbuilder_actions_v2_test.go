@@ -470,6 +470,58 @@ func TestConvertASTToGenDataTypeEntityListEnum(t *testing.T) {
 	})
 }
 
+func TestParamEntityRef_HandlesTypeEnumerationAmbiguity(t *testing.T) {
+	tests := []struct {
+		name   string
+		dt     ast.DataType
+		wantQN string // "Module.Name" or "" for nil
+	}{
+		{
+			name:   "TypeListOf with EntityRef",
+			dt:     ast.DataType{Kind: ast.TypeListOf, EntityRef: &ast.QualifiedName{Module: "Sales", Name: "Order"}},
+			wantQN: "Sales.Order",
+		},
+		{
+			name:   "TypeEntity with EntityRef",
+			dt:     ast.DataType{Kind: ast.TypeEntity, EntityRef: &ast.QualifiedName{Module: "Sales", Name: "Order"}},
+			wantQN: "Sales.Order",
+		},
+		{
+			name:   "TypeEnumeration with EnumRef (bare QN parsed as enum)",
+			dt:     ast.DataType{Kind: ast.TypeEnumeration, EnumRef: &ast.QualifiedName{Module: "Sales", Name: "Order"}},
+			wantQN: "Sales.Order",
+		},
+		{
+			name:   "TypeEnumeration with nil ref",
+			dt:     ast.DataType{Kind: ast.TypeEnumeration},
+			wantQN: "",
+		},
+		{
+			name:   "Primitive type returns nil",
+			dt:     ast.DataType{Kind: ast.TypeBoolean},
+			wantQN: "",
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			ref := paramEntityRef(tc.dt)
+			if tc.wantQN == "" {
+				if ref != nil {
+					t.Fatalf("paramEntityRef = %v, want nil", ref)
+				}
+				return
+			}
+			if ref == nil {
+				t.Fatal("paramEntityRef = nil, want non-nil")
+			}
+			gotQN := ref.Module + "." + ref.Name
+			if gotQN != tc.wantQN {
+				t.Fatalf("paramEntityRef = %q, want %q", gotQN, tc.wantQN)
+			}
+		})
+	}
+}
+
 func TestConvertASTToGenDataTypeMissingRefReturnsNil(t *testing.T) {
 	if got := convertASTToGenDataType(ast.DataType{Kind: ast.TypeEntity}); got != nil {
 		t.Fatalf("nil EntityRef should produce nil, got %T", got)
