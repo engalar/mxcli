@@ -32,6 +32,7 @@ const (
 	VerticalSpacing   = 90  // Space between branches for error-handler flows
 	BranchGap         = 40  // Minimum edge-to-edge gap between parallel branches
 	LoopPadding       = 50  // Padding inside loop boxes
+	IteratorSpace     = 100 // Space reserved for loop variable label on the left side of a loop box
 	MinLoopWidth      = 200
 	MinLoopHeight     = 100
 
@@ -202,8 +203,8 @@ func (m *layoutMeasurer) measureLoopStatement(s *ast.LoopStmt) Bounds {
 	// Measure loop body
 	bodyBounds := m.measureStatements(s.Body)
 
-	// Loop box size: body + padding on all sides
-	width := max(bodyBounds.Width+2*LoopPadding, MinLoopWidth)
+	// Loop box size: body + padding on all sides + iterator space on left
+	width := max(bodyBounds.Width+2*LoopPadding+IteratorSpace, MinLoopWidth)
 	height := max(bodyBounds.Height+2*LoopPadding, MinLoopHeight)
 
 	return Bounds{Width: width, Height: height}
@@ -212,7 +213,7 @@ func (m *layoutMeasurer) measureLoopStatement(s *ast.LoopStmt) Bounds {
 // measureWhileStatement calculates bounds for WHILE
 func (m *layoutMeasurer) measureWhileStatement(s *ast.WhileStmt) Bounds {
 	bodyBounds := m.measureStatements(s.Body)
-	width := max(bodyBounds.Width+2*LoopPadding, MinLoopWidth)
+	width := max(bodyBounds.Width+2*LoopPadding+IteratorSpace, MinLoopWidth)
 	height := max(bodyBounds.Height+2*LoopPadding, MinLoopHeight)
 	return Bounds{Width: width, Height: height}
 }

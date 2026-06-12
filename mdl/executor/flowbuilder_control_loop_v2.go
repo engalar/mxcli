@@ -91,8 +91,7 @@ func (fb *flowBuilderGen) addWhileStatementGen(s *ast.WhileStmt) element.ID {
 func (fb *flowBuilderGen) emitLoopedActivityGen(body []ast.MicroflowStatement, src element.Element) element.ID {
 	bodyBounds := fb.measurer.measureStatements(body)
 
-	iteratorSpace := 100
-	loopWidth := bodyBounds.Width + 2*LoopPadding + iteratorSpace
+	loopWidth := bodyBounds.Width + 2*LoopPadding + IteratorSpace
 	if loopWidth < MinLoopWidth {
 		loopWidth = MinLoopWidth
 	}
@@ -101,7 +100,7 @@ func (fb *flowBuilderGen) emitLoopedActivityGen(body []ast.MicroflowStatement, s
 		loopHeight = MinLoopHeight
 	}
 
-	innerStartX := LoopPadding + iteratorSpace
+	innerStartX := LoopPadding + IteratorSpace
 	innerStartY := loopHeight / 2
 
 	loopLeftX := fb.posX

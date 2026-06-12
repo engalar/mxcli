@@ -72,6 +72,36 @@ func TestAddCreateVariableActionGenSetsFieldsAndRegistersDeclared(t *testing.T) 
 	}
 }
 
+func TestAddCreateVariableActionGen_ListTypeEmitsCreateListAction(t *testing.T) {
+	fb := newActionTestFb()
+	stmt := &ast.DeclareStmt{
+		Variable: "Orders",
+		Type: ast.DataType{
+			Kind:      ast.TypeListOf,
+			EntityRef: &ast.QualifiedName{Module: "Sales", Name: "Order"},
+		},
+	}
+	id := fb.addCreateVariableActionGen(stmt)
+	if id == "" {
+		t.Fatal("expected non-empty ID")
+	}
+	// Must emit a CreateListAction, NOT a CreateVariableAction
+	listAct, ok := actionFromObjects(t, fb).(*genMf.CreateListAction)
+	if !ok {
+		t.Fatalf("action = %T, want *CreateListAction", actionFromObjects(t, fb))
+	}
+	if listAct.OutputVariableName() != "Orders" {
+		t.Fatalf("output variable name = %q, want Orders", listAct.OutputVariableName())
+	}
+	if listAct.EntityQualifiedName() != "Sales.Order" {
+		t.Fatalf("entity qualified name = %q, want Sales.Order", listAct.EntityQualifiedName())
+	}
+	// varTypes must register with "List of" prefix so loop iteration resolves correctly
+	if fb.varTypes["Orders"] != "List of Sales.Order" {
+		t.Fatalf("varTypes[Orders] = %q, want List of Sales.Order", fb.varTypes["Orders"])
+	}
+}
+
 func TestAddChangeVariableActionGenReportsUndeclaredError(t *testing.T) {
 	fb := newActionTestFb()
 	stmt := &ast.MfSetStmt{

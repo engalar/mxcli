@@ -604,6 +604,12 @@ func (c *flowRefCollector) collectFromStatements(stmts []ast.MicroflowStatement)
 			if s.EntityType.Module != "" {
 				c.entities = append(c.entities, entityRef{name: s.EntityType.String(), source: "create list of"})
 			}
+		case *ast.DeclareStmt:
+			if s.Type.EntityRef != nil {
+				c.entities = append(c.entities, entityRef{name: s.Type.EntityRef.String(), source: "declare"})
+			} else if s.Type.EnumRef != nil && s.Type.Kind == ast.TypeEnumeration {
+				c.entities = append(c.entities, entityRef{name: s.Type.EnumRef.String(), source: "declare"})
+			}
 		case *ast.IfStmt:
 			c.collectFromStatements(s.ThenBody)
 			c.collectFromStatements(s.ElseBody)
