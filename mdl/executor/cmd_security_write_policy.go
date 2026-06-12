@@ -30,7 +30,7 @@ func execAlterPasswordPolicy(ctx *ExecContext, s *ast.AlterProjectSecurityStmt) 
 		return mdlerrors.NewBackend("read project security", fmt.Errorf("ProjectSecurity not found"))
 	}
 
-	if err := ctx.Backend.SetPasswordPolicy(
+	if err := ctx.SecurityProjectManager.SetPasswordPolicy(
 		model.ID(ps.ID()),
 		opts.MinLength,
 		opts.RequireDigit,

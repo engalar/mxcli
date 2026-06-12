@@ -797,7 +797,7 @@ func extractSnippetRef(ctx *ExecContext, w map[string]any) string {
 					s := pair.Elem
 					if string(s.ID()) == formID {
 						moduleName := ""
-						if modules, err := ctx.Backend.ListModules(); err == nil {
+						if modules, err := ctx.ModuleLister.ListModules(); err == nil {
 							for _, m := range modules {
 								if m.ID == model.ID(pair.ContainerID) {
 									moduleName = m.Name

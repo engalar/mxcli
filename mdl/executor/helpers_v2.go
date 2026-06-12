@@ -51,7 +51,7 @@ func paramEntityRef(dt ast.DataType) *ast.QualifiedName {
 //
 //  1. ctx.Microflows.ListAll() — the modelsdk-native repo, populated by
 //     MprBackend in production and by tests via withMicroflowsRepo.
-//  2. ctx.Backend.ListMicroflowsGen() — the gen-typed surface added in
+//  2. ctx.MicroflowReader.ListMicroflowsGen() — the gen-typed surface added in
 //     Followup C; mock-only test contexts that have not wired a
 //     ctx.Microflows repo can still seed data here.
 //  3. (nil, nil) when neither path is available — callers treat this as
@@ -64,7 +64,7 @@ func listMicroflowsGen(ctx *ExecContext) ([]*genMf.Microflow, error) {
 		return ctx.Microflows.ListAll()
 	}
 	if ctx.Backend != nil {
-		return ctx.Backend.ListMicroflowsGen()
+		return ctx.MicroflowReader.ListMicroflowsGen()
 	}
 	return nil, nil
 }
@@ -73,7 +73,7 @@ func listMicroflowsGen(ctx *ExecContext) ([]*genMf.Microflow, error) {
 // Resolution order mirrors listMicroflowsGen:
 //
 //  1. ctx.Nanoflows.List("") — repo path.
-//  2. ctx.Backend.ListNanoflowsGen() — backend surface.
+//  2. ctx.MicroflowReader.ListNanoflowsGen() — backend surface.
 //  3. (nil, nil) — no nanoflows.
 func listNanoflowsGen(ctx *ExecContext) ([]*genMf.Nanoflow, error) {
 	if ctx == nil {
@@ -83,7 +83,7 @@ func listNanoflowsGen(ctx *ExecContext) ([]*genMf.Nanoflow, error) {
 		return ctx.Nanoflows.List("")
 	}
 	if ctx.Backend != nil {
-		return ctx.Backend.ListNanoflowsGen()
+		return ctx.MicroflowReader.ListNanoflowsGen()
 	}
 	return nil, nil
 }

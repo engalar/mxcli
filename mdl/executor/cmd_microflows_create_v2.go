@@ -170,7 +170,7 @@ func execCreateMicroflowGen(ctx *ExecContext, s *ast.CreateMicroflowStmt) error 
 	restServices, _ := loadRestServices(ctx)
 
 	var mendixVer version.Version
-	if rpv := ctx.Backend.ProjectVersion(); rpv != nil {
+	if rpv := ctx.ConnectionManager.ProjectVersion(); rpv != nil {
 		mendixVer = version.Parse(rpv.ProductVersion)
 	}
 	fb := &flowBuilderGen{

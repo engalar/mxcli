@@ -51,7 +51,7 @@ func TestDescribeAssociationGen_FixtureAssoc(t *testing.T) {
 	if err != nil || len(pairs) == 0 {
 		t.Skip("fixture has no domain models")
 	}
-	mods, _ := ctx.Backend.ListModules()
+	mods, _ := ctx.ModuleLister.ListModules()
 	moduleNames := map[string]string{}
 	for _, m := range mods {
 		moduleNames[string(m.ID)] = m.Name

@@ -10,7 +10,7 @@ import (
 
 func TestListEntitiesForModuleGen_FindsEntities(t *testing.T) {
 	ctx := newDomainModelsTestContext(t)
-	mods, err := ctx.Backend.ListModules()
+	mods, err := ctx.ModuleLister.ListModules()
 	if err != nil || len(mods) == 0 {
 		t.Skip("fixture has no modules")
 	}
@@ -58,7 +58,7 @@ func TestSortEntitiesByGeneralizationGen_EmptyAndSingleton(t *testing.T) {
 
 func TestListAssociationsForModuleGen_RunsAcrossFixture(t *testing.T) {
 	ctx := newDomainModelsTestContext(t)
-	mods, _ := ctx.Backend.ListModules()
+	mods, _ := ctx.ModuleLister.ListModules()
 	for _, m := range mods {
 		if _, err := listAssociationsForModuleGen(ctx, m.Name); err != nil {
 			t.Errorf("listAssociationsForModuleGen(%q): %v", m.Name, err)

@@ -140,7 +140,7 @@ func listSecurityMatrixGen(ctx *ExecContext, moduleName string) error {
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}
 
-	modules, err := ctx.Backend.ListModules()
+	modules, err := ctx.ModuleLister.ListModules()
 	if err != nil {
 		return mdlerrors.NewBackend("list modules", err)
 	}
@@ -155,7 +155,7 @@ func listSecurityMatrixGen(ctx *ExecContext, moduleName string) error {
 		if moduleName != "" && mod.Name != moduleName {
 			continue
 		}
-		ms, err := ctx.Backend.GetModuleSecurityGen(mod.ID)
+		ms, err := ctx.SecurityModuleManager.GetModuleSecurityGen(mod.ID)
 		if err != nil || ms == nil {
 			continue
 		}

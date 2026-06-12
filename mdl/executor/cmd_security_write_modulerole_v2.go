@@ -35,7 +35,7 @@ func execCreateModuleRoleGen(ctx *ExecContext, s *ast.CreateModuleRoleStmt) erro
 		return err
 	}
 
-	ms, err := ctx.Backend.GetModuleSecurityGen(module.ID)
+	ms, err := ctx.SecurityModuleManager.GetModuleSecurityGen(module.ID)
 	if err != nil {
 		return mdlerrors.NewBackend(fmt.Sprintf("read module security for %s", s.Name.Module), err)
 	}
@@ -55,17 +55,17 @@ func execCreateModuleRoleGen(ctx *ExecContext, s *ast.CreateModuleRoleStmt) erro
 			newQualified := s.Name.Module + "." + s.Name.Name
 			// Remove first: AddModuleRole is a plain append with no dedup.
 			// Without this, two roles with the same name cause Mendix CE1613.
-			if err := ctx.Backend.RemoveModuleRole(model.ID(ms.ID()), typed.Name()); err != nil {
+			if err := ctx.SecurityModuleManager.RemoveModuleRole(model.ID(ms.ID()), typed.Name()); err != nil {
 				return mdlerrors.NewBackend("remove auto-provisioned role", err)
 			}
-			if err := ctx.Backend.AddModuleRole(model.ID(ms.ID()), s.Name.Name, s.Description); err != nil {
+			if err := ctx.SecurityModuleManager.AddModuleRole(model.ID(ms.ID()), s.Name.Name, s.Description); err != nil {
 				return mdlerrors.NewBackend("create module role", err)
 			}
 			// Propagate a casing rename across every unit that referenced the
 			// old name (AllowedModuleRoles on microflows, pages, REST services,
 			// etc.). Without this, mx check fails with CE1613.
 			if oldQualified != newQualified {
-				if _, err := ctx.Backend.UpdateQualifiedNameInAllUnits(oldQualified, newQualified); err != nil {
+				if _, err := ctx.RenameManager.UpdateQualifiedNameInAllUnits(oldQualified, newQualified); err != nil {
 					return mdlerrors.NewBackend(
 						fmt.Sprintf("rename references %s -> %s", oldQualified, newQualified), err)
 				}
@@ -86,7 +86,7 @@ func execCreateModuleRoleGen(ctx *ExecContext, s *ast.CreateModuleRoleStmt) erro
 		return nil
 	}
 
-	if err := ctx.Backend.AddModuleRole(model.ID(ms.ID()), s.Name.Name, s.Description); err != nil {
+	if err := ctx.SecurityModuleManager.AddModuleRole(model.ID(ms.ID()), s.Name.Name, s.Description); err != nil {
 		return mdlerrors.NewBackend("create module role", err)
 	}
 
@@ -109,7 +109,7 @@ func execDropModuleRoleGen(ctx *ExecContext, s *ast.DropModuleRoleStmt) error {
 		return err
 	}
 
-	ms, err := ctx.Backend.GetModuleSecurityGen(module.ID)
+	ms, err := ctx.SecurityModuleManager.GetModuleSecurityGen(module.ID)
 	if err != nil {
 		return mdlerrors.NewBackend(fmt.Sprintf("read module security for %s", s.Name.Module), err)
 	}
@@ -135,7 +135,7 @@ func execDropModuleRoleGen(ctx *ExecContext, s *ast.DropModuleRoleStmt) error {
 	// Cascade: remove role from entity access rules.
 	dm, err := getDomainModelGenCached(ctx, module.ID)
 	if err == nil && dm != nil {
-		if n, err := ctx.Backend.RemoveRoleFromAllEntities(model.ID(dm.ID()), qualifiedRole); err != nil {
+		if n, err := ctx.SecurityEntityAccessManager.RemoveRoleFromAllEntities(model.ID(dm.ID()), qualifiedRole); err != nil {
 			return mdlerrors.NewBackend("cascade-remove entity access rules", err)
 		} else if n > 0 {
 			fmt.Fprintf(ctx.Output, "Removed %s from %d entity access rule(s)\n", qualifiedRole, n)
@@ -161,7 +161,7 @@ func execDropModuleRoleGen(ctx *ExecContext, s *ast.DropModuleRoleStmt) error {
 				if modID != module.ID {
 					continue
 				}
-				if removed, err := ctx.Backend.RemoveFromAllowedRoles(model.ID(pg.ID()), qualifiedRole); err == nil && removed {
+				if removed, err := ctx.SecurityEntityAccessManager.RemoveFromAllowedRoles(model.ID(pg.ID()), qualifiedRole); err == nil && removed {
 					fmt.Fprintf(ctx.Output, "Removed %s from page %s allowed roles\n", qualifiedRole, pg.Name())
 				}
 			}
@@ -174,7 +174,7 @@ func execDropModuleRoleGen(ctx *ExecContext, s *ast.DropModuleRoleStmt) error {
 				if modID != module.ID {
 					continue
 				}
-				if removed, err := ctx.Backend.RemoveFromAllowedRoles(svc.ID, qualifiedRole); err == nil && removed {
+				if removed, err := ctx.SecurityEntityAccessManager.RemoveFromAllowedRoles(svc.ID, qualifiedRole); err == nil && removed {
 					fmt.Fprintf(ctx.Output, "Removed %s from OData service %s allowed roles\n", qualifiedRole, svc.Name)
 				}
 			}
@@ -182,8 +182,8 @@ func execDropModuleRoleGen(ctx *ExecContext, s *ast.DropModuleRoleStmt) error {
 	}
 
 	// Cascade: remove role from user roles in ProjectSecurity.
-	if ps, err := ctx.Backend.GetProjectSecurityGen(); err == nil && ps != nil {
-		if n, err := ctx.Backend.RemoveModuleRoleFromAllUserRoles(model.ID(ps.ID()), qualifiedRole); err == nil && n > 0 {
+	if ps, err := ctx.SecurityProjectManager.GetProjectSecurityGen(); err == nil && ps != nil {
+		if n, err := ctx.SecurityModuleManager.RemoveModuleRoleFromAllUserRoles(model.ID(ps.ID()), qualifiedRole); err == nil && n > 0 {
 			fmt.Fprintf(ctx.Output, "Removed %s from %d user role(s)\n", qualifiedRole, n)
 		}
 		if err := pruneInvalidUserRoles(ctx, nil); err != nil {
@@ -192,7 +192,7 @@ func execDropModuleRoleGen(ctx *ExecContext, s *ast.DropModuleRoleStmt) error {
 	}
 
 	// Finally, remove the role itself.
-	if err := ctx.Backend.RemoveModuleRole(model.ID(ms.ID()), s.Name.Name); err != nil {
+	if err := ctx.SecurityModuleManager.RemoveModuleRole(model.ID(ms.ID()), s.Name.Name); err != nil {
 		return mdlerrors.NewBackend("drop module role", err)
 	}
 

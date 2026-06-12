@@ -23,7 +23,7 @@ func checkFeature(ctx *ExecContext, area, name, statement, hint string) error {
 	if err != nil {
 		return nil // Registry unavailable; don't block execution
 	}
-	rpv := ctx.Backend.ProjectVersion()
+	rpv := ctx.ConnectionManager.ProjectVersion()
 	pv := versions.SemVer{Major: rpv.MajorVersion, Minor: rpv.MinorVersion, Patch: rpv.PatchVersion}
 	if reg.IsAvailable(area, name, pv) {
 		return nil
@@ -79,7 +79,7 @@ func execShowFeatures(ctx *ExecContext, s *ast.ShowFeaturesStmt) error {
 		if !ctx.Connected() {
 			return mdlerrors.NewNotConnectedMsg("not connected to a project\n  hint: use show features for version x.y without a project connection")
 		}
-		rpv := ctx.Backend.ProjectVersion()
+		rpv := ctx.ConnectionManager.ProjectVersion()
 		pv = versions.SemVer{Major: rpv.MajorVersion, Minor: rpv.MinorVersion, Patch: rpv.PatchVersion}
 	}
 

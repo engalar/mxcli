@@ -35,7 +35,7 @@ func execAlterProjectSecurityGen(ctx *ExecContext, s *ast.AlterProjectSecuritySt
 		default:
 			return mdlerrors.NewUnsupported(fmt.Sprintf("unknown security level: %s", s.SecurityLevel))
 		}
-		if err := ctx.Backend.SetProjectSecurityLevel(model.ID(ps.ID()), bsonLevel); err != nil {
+		if err := ctx.SecurityProjectManager.SetProjectSecurityLevel(model.ID(ps.ID()), bsonLevel); err != nil {
 			return mdlerrors.NewBackend("set security level", err)
 		}
 		invalidateProjectSecurityCache(ctx)
@@ -43,7 +43,7 @@ func execAlterProjectSecurityGen(ctx *ExecContext, s *ast.AlterProjectSecuritySt
 	}
 
 	if s.DemoUsersEnabled != nil {
-		if err := ctx.Backend.SetProjectDemoUsersEnabled(model.ID(ps.ID()), *s.DemoUsersEnabled); err != nil {
+		if err := ctx.SecurityProjectManager.SetProjectDemoUsersEnabled(model.ID(ps.ID()), *s.DemoUsersEnabled); err != nil {
 			return mdlerrors.NewBackend("set demo users", err)
 		}
 		invalidateProjectSecurityCache(ctx)

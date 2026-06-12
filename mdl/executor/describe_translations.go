@@ -14,7 +14,7 @@ import (
 )
 
 func describeTranslations(ctx *ExecContext, stmt *ast.DescribeTranslationsStmt) error {
-	ps, err := ctx.Backend.GetProjectSettings()
+	ps, err := ctx.SettingsReader.GetProjectSettings()
 	if err != nil {
 		return mdlerrors.NewBackend("read project settings", err)
 	}
@@ -33,7 +33,7 @@ func describeTranslations(ctx *ExecContext, stmt *ast.DescribeTranslationsStmt) 
 	sort.Strings(langs)
 
 	docQN := stmt.QName.String()
-	nodes, err := ctx.Backend.ListTranslationNodes(docQN, "")
+	nodes, err := ctx.SettingsWriter.ListTranslationNodes(docQN, "")
 	if err != nil {
 		return mdlerrors.NewBackend("list translation nodes", err)
 	}

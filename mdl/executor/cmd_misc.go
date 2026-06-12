@@ -383,7 +383,7 @@ func listVersion(ctx *ExecContext) error {
 		return mdlerrors.NewNotConnected()
 	}
 
-	pv := ctx.Backend.ProjectVersion()
+	pv := ctx.ConnectionManager.ProjectVersion()
 	fmt.Fprintf(ctx.Output, "Mendix Version: %s\n", pv.ProductVersion)
 	fmt.Fprintf(ctx.Output, "Build Version:  %s\n", pv.BuildVersion)
 	fmt.Fprintf(ctx.Output, "MPR Format:     v%d\n", pv.FormatVersion)
@@ -451,7 +451,7 @@ func execExecuteScript(ctx *ExecContext, s *ast.ExecuteScriptStmt) error {
 	// calls inherit the outer transaction.
 	isRoot := ctx.ScriptDepth == 0
 	var scriptTx backend.ScriptTransaction
-	if isRoot && ctx.Backend != nil && ctx.Backend.IsConnected() {
+	if isRoot && ctx.Backend != nil && ctx.ConnectionManager.IsConnected() {
 		var err error
 		scriptTx, err = ctx.Backend.BeginScriptTransaction()
 		if err != nil {

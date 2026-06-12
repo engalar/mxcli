@@ -221,7 +221,7 @@ func (e *Executor) ExportProject(outputDir string, opts ExportOptions) error {
 		return fmt.Errorf("mkdir %s: %w", outputDir, err)
 	}
 
-	mods, err := ctx.Backend.ListModules()
+	mods, err := ctx.ModuleLister.ListModules()
 	if err != nil {
 		return fmt.Errorf("list modules: %w", err)
 	}
@@ -230,8 +230,8 @@ func (e *Executor) ExportProject(outputDir string, opts ExportOptions) error {
 	// Pre-load unit hash data once for the whole export run.
 	ec := &exportCache{}
 	if !opts.Force {
-		ec.unitHashes, _ = ctx.Backend.ListUnitHashes()
-		ec.allUnits, _ = ctx.Backend.ListUnits()
+		ec.unitHashes, _ = ctx.MetadataReader.ListUnitHashes()
+		ec.allUnits, _ = ctx.MetadataReader.ListUnits()
 	}
 
 	marketContent := marketplaceFileContent(marketplace)
@@ -434,7 +434,7 @@ func writeOrLog(path, hash, content string, opts ExportOptions, progress func(st
 }
 
 func exportEnumerations(ctx *ExecContext, outputDir string, m *model.Module, h *ContainerHierarchy, opts ExportOptions, ec *exportCache, domHash string, progress func(string)) error {
-	enums, err := ctx.Backend.ListEnumerations()
+	enums, err := ctx.EnumerationReader.ListEnumerations()
 	if err != nil {
 		return nil
 	}
@@ -509,7 +509,7 @@ func exportAssociations(ctx *ExecContext, outputDir string, m *model.Module, opt
 }
 
 func exportConstants(ctx *ExecContext, outputDir string, m *model.Module, opts ExportOptions, ec *exportCache, progress func(string)) error {
-	consts, err := ctx.Backend.ListConstants()
+	consts, err := ctx.ConstantReader.ListConstants()
 	if err != nil {
 		return nil
 	}

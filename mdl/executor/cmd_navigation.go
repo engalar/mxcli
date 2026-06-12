@@ -19,7 +19,7 @@ func execAlterNavigation(ctx *ExecContext, s *ast.AlterNavigationStmt) error {
 		return mdlerrors.NewNotConnectedWrite()
 	}
 
-	nav, err := ctx.Backend.GetNavigation()
+	nav, err := ctx.NavigationReader.GetNavigation()
 	if err != nil {
 		return mdlerrors.NewBackend("get navigation", err)
 	}
@@ -64,7 +64,7 @@ func execAlterNavigation(ctx *ExecContext, s *ast.AlterNavigationStmt) error {
 		spec.MenuItems = append(spec.MenuItems, convertMenuItemDef(mi))
 	}
 
-	if err := ctx.Backend.UpdateNavigationProfile(nav.ID, s.ProfileName, spec); err != nil {
+	if err := ctx.NavigationWriter.UpdateNavigationProfile(nav.ID, s.ProfileName, spec); err != nil {
 		return mdlerrors.NewBackend("update navigation profile", err)
 	}
 
@@ -101,7 +101,7 @@ func profileNames(nav *types.NavigationDocument) string {
 // listNavigation handles SHOW NAVIGATION command.
 // Displays an overview of all navigation profiles with their home pages and menu item counts.
 func listNavigation(ctx *ExecContext) error {
-	nav, err := ctx.Backend.GetNavigation()
+	nav, err := ctx.NavigationReader.GetNavigation()
 	if err != nil {
 		return mdlerrors.NewBackend("get navigation", err)
 	}
@@ -159,7 +159,7 @@ func listNavigation(ctx *ExecContext) error {
 // listNavigationMenu handles SHOW NAVIGATION MENU [profile] command.
 // Displays the menu tree for a specific profile, or all profiles if none specified.
 func listNavigationMenu(ctx *ExecContext, profileName *ast.QualifiedName) error {
-	nav, err := ctx.Backend.GetNavigation()
+	nav, err := ctx.NavigationReader.GetNavigation()
 	if err != nil {
 		return mdlerrors.NewBackend("get navigation", err)
 	}
@@ -184,7 +184,7 @@ func listNavigationMenu(ctx *ExecContext, profileName *ast.QualifiedName) error 
 // listNavigationHomes handles SHOW NAVIGATION HOMES command.
 // Displays all home page configurations including role-based overrides.
 func listNavigationHomes(ctx *ExecContext) error {
-	nav, err := ctx.Backend.GetNavigation()
+	nav, err := ctx.NavigationReader.GetNavigation()
 	if err != nil {
 		return mdlerrors.NewBackend("get navigation", err)
 	}
@@ -226,7 +226,7 @@ func listNavigationHomes(ctx *ExecContext) error {
 // describeNavigation handles DESCRIBE NAVIGATION [profile] command.
 // Outputs a complete MDL-style description of a navigation profile.
 func describeNavigation(ctx *ExecContext, name ast.QualifiedName) error {
-	nav, err := ctx.Backend.GetNavigation()
+	nav, err := ctx.NavigationReader.GetNavigation()
 	if err != nil {
 		return mdlerrors.NewBackend("get navigation", err)
 	}

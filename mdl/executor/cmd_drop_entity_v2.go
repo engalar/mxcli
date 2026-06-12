@@ -52,11 +52,11 @@ func execDropEntityGen(ctx *ExecContext, s *ast.DropEntityStmt) error {
 		warnMicroflowEntityParamRefs(ctx, s.Name.String())
 
 		if src := ent.Source(); src != nil && src.TypeName() == "DomainModels$OqlViewEntitySource" {
-			if err := ctx.Backend.DeleteViewEntitySourceDocumentByName(s.Name.Module, s.Name.Name); err != nil {
+			if err := ctx.DomainModelWriter.DeleteViewEntitySourceDocumentByName(s.Name.Module, s.Name.Name); err != nil {
 				return mdlerrors.NewBackend("delete view entity source document", err)
 			}
 		}
-		if err := ctx.Backend.DeleteEntity(model.ID(dm.ID()), model.ID(ent.ID())); err != nil {
+		if err := ctx.DomainModelWriter.DeleteEntity(model.ID(dm.ID()), model.ID(ent.ID())); err != nil {
 			return mdlerrors.NewBackend("delete entity", err)
 		}
 		invalidateDomainModelGenForModule(ctx, module.ID)

@@ -203,7 +203,7 @@ func databaseRetrieveMatchesAssociationTarget(ctx *ExecContext, entityName, asso
 		return false
 	}
 
-	mod, err := ctx.Backend.GetModuleByName(moduleName)
+	mod, err := ctx.ModuleLister.GetModuleByName(moduleName)
 	if err != nil || mod == nil {
 		return false
 	}

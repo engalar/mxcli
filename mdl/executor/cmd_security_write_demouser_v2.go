@@ -161,10 +161,10 @@ func execCreateDemoUserGen(ctx *ExecContext, s *ast.CreateDemoUserStmt) error {
 		if s.Entity != "" {
 			entity = s.Entity
 		}
-		if err := ctx.Backend.RemoveDemoUser(model.ID(ps.ID()), s.UserName); err != nil {
+		if err := ctx.SecurityProjectManager.RemoveDemoUser(model.ID(ps.ID()), s.UserName); err != nil {
 			return mdlerrors.NewBackend("update demo user", err)
 		}
-		if err := ctx.Backend.AddDemoUser(model.ID(ps.ID()), s.UserName, s.Password, entity, mergedRoles); err != nil {
+		if err := ctx.SecurityProjectManager.AddDemoUser(model.ID(ps.ID()), s.UserName, s.Password, entity, mergedRoles); err != nil {
 			return mdlerrors.NewBackend("update demo user", err)
 		}
 		invalidateProjectSecurityCache(ctx)
@@ -182,7 +182,7 @@ func execCreateDemoUserGen(ctx *ExecContext, s *ast.CreateDemoUserStmt) error {
 		entity = detected
 	}
 
-	if err := ctx.Backend.AddDemoUser(model.ID(ps.ID()), s.UserName, s.Password, entity, s.UserRoles); err != nil {
+	if err := ctx.SecurityProjectManager.AddDemoUser(model.ID(ps.ID()), s.UserName, s.Password, entity, s.UserRoles); err != nil {
 		return mdlerrors.NewBackend("create demo user", err)
 	}
 	invalidateProjectSecurityCache(ctx)
@@ -222,7 +222,7 @@ func execDropDemoUserGen(ctx *ExecContext, s *ast.DropDemoUserStmt) error {
 		return mdlerrors.NewNotFound("demo user", s.UserName)
 	}
 
-	if err := ctx.Backend.RemoveDemoUser(model.ID(ps.ID()), s.UserName); err != nil {
+	if err := ctx.SecurityProjectManager.RemoveDemoUser(model.ID(ps.ID()), s.UserName); err != nil {
 		return mdlerrors.NewBackend("drop demo user", err)
 	}
 	invalidateProjectSecurityCache(ctx)
@@ -233,7 +233,7 @@ func execDropDemoUserGen(ctx *ExecContext, s *ast.DropDemoUserStmt) error {
 
 // detectUserEntityGen finds the entity that generalizes System.User.
 func detectUserEntityGen(ctx *ExecContext) (string, error) {
-	modules, err := ctx.Backend.ListModules()
+	modules, err := ctx.ModuleLister.ListModules()
 	if err != nil {
 		return "", mdlerrors.NewBackend("list modules", err)
 	}

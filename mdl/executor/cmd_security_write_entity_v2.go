@@ -180,7 +180,7 @@ func execGrantEntityAccessGen(ctx *ExecContext, s *ast.GrantEntityAccessStmt) er
 		})
 	}
 
-	if err := ctx.Backend.AddEntityAccessRule(backend.EntityAccessRuleParams{
+	if err := ctx.SecurityEntityAccessManager.AddEntityAccessRule(backend.EntityAccessRuleParams{
 		UnitID:              model.ID(dm.ID()),
 		EntityName:          s.Entity.Name,
 		RoleNames:           roleNames,
@@ -198,7 +198,7 @@ func execGrantEntityAccessGen(ctx *ExecContext, s *ast.GrantEntityAccessStmt) er
 	invalidateDomainModelGenForModule(ctx, module.ID)
 	invalidateDomainModelsCache(ctx)
 
-	if msgs, err := ctx.Backend.ReconcileMemberAccesses(model.ID(dm.ID()), module.Name); err != nil {
+	if msgs, err := ctx.SecurityEntityAccessManager.ReconcileMemberAccesses(model.ID(dm.ID()), module.Name); err != nil {
 		return mdlerrors.NewBackend("reconcile member accesses", err)
 	} else if len(msgs) > 0 && !ctx.Quiet {
 		for _, msg := range msgs {
@@ -282,7 +282,7 @@ func execRevokeEntityAccessGen(ctx *ExecContext, s *ast.RevokeEntityAccessStmt) 
 			}
 		}
 
-		modified, err := ctx.Backend.RevokeEntityMemberAccess(model.ID(dm.ID()), s.Entity.Name, roleNames, revocation)
+		modified, err := ctx.SecurityEntityAccessManager.RevokeEntityMemberAccess(model.ID(dm.ID()), s.Entity.Name, roleNames, revocation)
 		if err != nil {
 			return mdlerrors.NewBackend("revoke entity access", err)
 		}
@@ -299,7 +299,7 @@ func execRevokeEntityAccessGen(ctx *ExecContext, s *ast.RevokeEntityAccessStmt) 
 		}
 	} else {
 		// Full revoke — remove entire access rule.
-		modified, err := ctx.Backend.RemoveEntityAccessRule(model.ID(dm.ID()), s.Entity.Name, roleNames)
+		modified, err := ctx.SecurityEntityAccessManager.RemoveEntityAccessRule(model.ID(dm.ID()), s.Entity.Name, roleNames)
 		if err != nil {
 			return mdlerrors.NewBackend("revoke entity access", err)
 		}

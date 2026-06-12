@@ -665,7 +665,7 @@ func createExternalEntities(ctx *ExecContext, s *ast.CreateExternalEntitiesStmt)
 					continue
 				}
 				applyExternalEntityFields(existingEntity, et, isTopLevel, serviceRef, entitySet, keyParts, attrs)
-				if err := ctx.Backend.UpdateEntityGen(model.ID(dm.ID()), existingEntity); err != nil {
+				if err := ctx.DomainModelWriter.UpdateEntityGen(model.ID(dm.ID()), existingEntity); err != nil {
 					fmt.Fprintf(ctx.Output, "  FAILED: %s.%s — %v\n", targetModule, mendixName, err)
 					failed++
 					continue
@@ -679,7 +679,7 @@ func createExternalEntities(ctx *ExecContext, s *ast.CreateExternalEntitiesStmt)
 			newEntity.SetName(mendixName)
 			newEntity.SetLocation(layoutPos(100+(created+updated)*150, 100))
 			applyExternalEntityFields(newEntity, et, isTopLevel, serviceRef, entitySet, keyParts, attrs)
-			if err := ctx.Backend.CreateEntityGen(model.ID(dm.ID()), newEntity); err != nil {
+			if err := ctx.DomainModelWriter.CreateEntityGen(model.ID(dm.ID()), newEntity); err != nil {
 				fmt.Fprintf(ctx.Output, "  FAILED: %s.%s — %v\n", targetModule, mendixName, err)
 				failed++
 				continue
@@ -823,7 +823,7 @@ func createPrimitiveCollectionNPEs(
 				npe.SetSource(src)
 				npe.AddAttributes(attr)
 
-				if err := ctx.Backend.CreateEntityGen(model.ID(dm.ID()), npe); err != nil {
+				if err := ctx.DomainModelWriter.CreateEntityGen(model.ID(dm.ID()), npe); err != nil {
 					fmt.Fprintf(ctx.Output, "  NPE FAILED: %s — %v\n", npeName, err)
 					continue
 				}
@@ -843,7 +843,7 @@ func createPrimitiveCollectionNPEs(
 				assoc.SetOwner(string(genDm.AssociationOwnerDefault))
 				assoc.SetStorageFormat(string(genDm.AssociationStorageColumn))
 				assoc.SetSource(genRest.NewODataPrimitiveCollectionAssociationSource())
-				if err := ctx.Backend.CreateAssociationGen(model.ID(dm.ID()), assoc); err != nil {
+				if err := ctx.DomainModelWriter.CreateAssociationGen(model.ID(dm.ID()), assoc); err != nil {
 					fmt.Fprintf(ctx.Output, "  NPE ASSOC FAILED: %s — %v\n", assocName, err)
 				}
 			}
@@ -1072,7 +1072,7 @@ func createNavigationAssociations(
 				src.SetUpdatableFromParent(updatable)
 				assoc.SetSource(src)
 
-				if err := ctx.Backend.CreateAssociationGen(model.ID(dm.ID()), assoc); err != nil {
+				if err := ctx.DomainModelWriter.CreateAssociationGen(model.ID(dm.ID()), assoc); err != nil {
 					fmt.Fprintf(ctx.Output, "  ASSOC FAILED: %s.%s — %v\n", parentEnt.Name(), assocName, err)
 					continue
 				}

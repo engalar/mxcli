@@ -63,10 +63,10 @@ func execCreateViewEntityGen(ctx *ExecContext, s *ast.CreateViewEntityStmt) erro
 				s.Position = &ast.Position{X: x, Y: y}
 			}
 		}
-		if err := ctx.Backend.DeleteViewEntitySourceDocumentByName(s.Name.Module, s.Name.Name); err != nil {
+		if err := ctx.DomainModelWriter.DeleteViewEntitySourceDocumentByName(s.Name.Module, s.Name.Name); err != nil {
 			return mdlerrors.NewBackend("delete existing ViewEntitySourceDocument", err)
 		}
-		if err := ctx.Backend.DeleteEntity(model.ID(dm.ID()), model.ID(existingEntity.ID())); err != nil {
+		if err := ctx.DomainModelWriter.DeleteEntity(model.ID(dm.ID()), model.ID(existingEntity.ID())); err != nil {
 			return mdlerrors.NewBackend("delete existing entity for replace", err)
 		}
 		dm, err = getDomainModelGenCached(ctx, module.ID)
@@ -82,10 +82,10 @@ func execCreateViewEntityGen(ctx *ExecContext, s *ast.CreateViewEntityStmt) erro
 	location := autoLayoutLocationGen(s.Position, existingEntity, dm)
 	sourceDocRef := s.Name.Module + "." + s.Name.Name
 
-	if err := ctx.Backend.DeleteViewEntitySourceDocumentByName(s.Name.Module, s.Name.Name); err != nil {
+	if err := ctx.DomainModelWriter.DeleteViewEntitySourceDocumentByName(s.Name.Module, s.Name.Name); err != nil {
 		return mdlerrors.NewBackend("delete existing ViewEntitySourceDocument", err)
 	}
-	if _, err := ctx.Backend.CreateViewEntitySourceDocument(
+	if _, err := ctx.DomainModelWriter.CreateViewEntitySourceDocument(
 		module.ID,
 		s.Name.Module,
 		s.Name.Name,
@@ -102,7 +102,7 @@ func execCreateViewEntityGen(ctx *ExecContext, s *ast.CreateViewEntityStmt) erro
 	preserveViewEntityIDs(entity, existingEntity)
 
 	if existingEntity != nil && s.CreateOrModify {
-		if err := ctx.Backend.UpdateEntityGen(model.ID(dm.ID()), entity); err != nil {
+		if err := ctx.DomainModelWriter.UpdateEntityGen(model.ID(dm.ID()), entity); err != nil {
 			return mdlerrors.NewBackend("update view entity", err)
 		}
 		invalidateDomainModelGenForModule(ctx, module.ID)
@@ -113,7 +113,7 @@ func execCreateViewEntityGen(ctx *ExecContext, s *ast.CreateViewEntityStmt) erro
 		return nil
 	}
 
-	if err := ctx.Backend.CreateEntityGen(model.ID(dm.ID()), entity); err != nil {
+	if err := ctx.DomainModelWriter.CreateEntityGen(model.ID(dm.ID()), entity); err != nil {
 		return mdlerrors.NewBackend("create view entity", err)
 	}
 	invalidateDomainModelGenForModule(ctx, module.ID)

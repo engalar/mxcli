@@ -10,6 +10,7 @@ import (
 	genJA "github.com/mendixlabs/mxcli/modelsdk/gen/javaactions"
 	genJSA "github.com/mendixlabs/mxcli/modelsdk/gen/javascriptactions"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
+	genSec "github.com/mendixlabs/mxcli/modelsdk/gen/security"
 	genWf "github.com/mendixlabs/mxcli/modelsdk/gen/workflows"
 )
 
@@ -207,8 +208,9 @@ type NavigationWriter interface {
 	UpdateNavigationProfile(navDocID model.ID, profileName string, spec types.NavigationProfileSpec) error
 }
 
-// ImageCollectionWriter provides image collection mutations.
+// ImageCollectionWriter provides image collection read and write operations.
 type ImageCollectionWriter interface {
+	ListImageCollections() ([]*types.ImageCollection, error)
 	CreateImageCollection(ic *types.ImageCollection) error
 	UpdateImageCollection(ic *types.ImageCollection) error
 	DeleteImageCollection(id string) error
@@ -245,4 +247,111 @@ type MetadataReader interface {
 type WidgetInspector interface {
 	FindCustomWidgetType(widgetID string) (*types.RawCustomWidgetType, error)
 	FindAllCustomWidgetTypes(widgetID string) ([]*types.RawCustomWidgetType, error)
+}
+
+// ConnectionManager provides connection lifecycle operations.
+type ConnectionManager interface {
+	Connect(path string) error
+	Disconnect() error
+	IsConnected() bool
+	Path() string
+	Version() types.MPRVersion
+	ProjectVersion() *types.ProjectVersion
+	GetMendixVersion() (string, error)
+}
+
+// FolderManager provides folder CRUD operations.
+type FolderManager interface {
+	ListFolders() ([]*types.FolderInfo, error)
+	CreateFolder(folder *model.Folder) error
+	DeleteFolder(id model.ID) error
+	MoveFolder(id model.ID, newContainerID model.ID) error
+}
+
+// ModuleSettingsReader provides read-only module settings access.
+type ModuleSettingsReader interface {
+	ListModuleSettings() ([]*types.ModuleSettings, error)
+	GetModuleSettings(moduleID model.ID) (*types.ModuleSettings, error)
+}
+
+// ModuleSettingsWriter provides module settings mutations.
+type ModuleSettingsWriter interface {
+	UpdateModuleSettings(ms *types.ModuleSettings) error
+}
+
+// ServiceWriter provides write operations for OData, REST, business event,
+// database connection, and data transformer services.
+type ServiceWriter interface {
+	CreateConsumedODataService(svc *model.ConsumedODataService) error
+	CreatePublishedODataService(svc *model.PublishedODataService) error
+	UpdateConsumedODataService(svc *model.ConsumedODataService) error
+	UpdatePublishedODataService(svc *model.PublishedODataService) error
+	DeleteConsumedODataService(id model.ID) error
+	DeletePublishedODataService(id model.ID) error
+	CreateConsumedRestService(svc *model.ConsumedRestService) error
+	CreatePublishedRestService(svc *model.PublishedRestService) error
+	UpdateConsumedRestService(svc *model.ConsumedRestService) error
+	UpdatePublishedRestService(svc *model.PublishedRestService) error
+	DeleteConsumedRestService(id model.ID) error
+	DeletePublishedRestService(id model.ID) error
+	CreateBusinessEventService(svc *model.BusinessEventService) error
+	UpdateBusinessEventService(svc *model.BusinessEventService) error
+	DeleteBusinessEventService(id model.ID) error
+	CreateDatabaseConnection(conn *model.DatabaseConnection) error
+	UpdateDatabaseConnection(conn *model.DatabaseConnection) error
+	MoveDatabaseConnection(conn *model.DatabaseConnection) error
+	DeleteDatabaseConnection(id model.ID) error
+	CreateDataTransformer(dt *model.DataTransformer) error
+	UpdateDataTransformer(dt *model.DataTransformer) error
+	DeleteDataTransformer(id model.ID) error
+}
+
+// RenameManager provides cross-cutting rename and reference-update operations.
+type RenameManager interface {
+	UpdateQualifiedNameInAllUnits(oldName, newName string) (int, error)
+	RenameReferences(oldName, newName string, dryRun bool) ([]types.RenameHit, error)
+	RenameDocumentByName(moduleName, oldName, newName string) error
+}
+
+// SecurityProjectManager manages project-level security.
+type SecurityProjectManager interface {
+	GetProjectSecurityGen() (*genSec.ProjectSecurity, error)
+	SetProjectSecurityLevel(unitID model.ID, level string) error
+	SetProjectDemoUsersEnabled(unitID model.ID, enabled bool) error
+	AddUserRole(unitID model.ID, name string, moduleRoles []string, manageAllRoles bool) error
+	AlterUserRoleModuleRoles(unitID model.ID, userRoleName string, add bool, moduleRoles []string) error
+	RemoveUserRole(unitID model.ID, name string) error
+	AddDemoUser(unitID model.ID, userName, password, entity string, userRoles []string) error
+	RemoveDemoUser(unitID model.ID, userName string) error
+	SetPasswordPolicy(unitID model.ID, minLength *int32, requireDigit, requireMixedCase, requireSymbol *bool) error
+}
+
+// SecurityModuleManager manages module-level security.
+type SecurityModuleManager interface {
+	GetModuleSecurityGen(moduleID model.ID) (*genSec.ModuleSecurity, error)
+	ListModuleSecurityGen() ([]*genSec.ModuleSecurity, error)
+	AddModuleRole(unitID model.ID, roleName, description string) error
+	RemoveModuleRole(unitID model.ID, roleName string) error
+	RemoveModuleRoleFromAllUserRoles(unitID model.ID, qualifiedRole string) (int, error)
+}
+
+// SecurityEntityAccessManager manages entity-level access rules.
+type SecurityEntityAccessManager interface {
+	UpdateAllowedRoles(unitID model.ID, roles []string) error
+	UpdatePublishedRestServiceRoles(unitID model.ID, roles []string) error
+	RemoveFromAllowedRoles(unitID model.ID, roleName string) (bool, error)
+	AddEntityAccessRule(params EntityAccessRuleParams) error
+	RemoveEntityAccessRule(unitID model.ID, entityName string, roleNames []string) (int, error)
+	RevokeEntityMemberAccess(unitID model.ID, entityName string, roleNames []string, revocation types.EntityAccessRevocation) (int, error)
+	RemoveRoleFromAllEntities(unitID model.ID, roleName string) (int, error)
+	ReconcileMemberAccesses(unitID model.ID, moduleName string) ([]string, error)
+}
+
+// PageModelAccess provides page model read/write access.
+type PageModelAccess interface {
+	GetPageModel(id model.ID) (*types.PageModel, error)
+	GetSnippetModel(id model.ID) (*types.PageModel, error)
+	GetLayoutModel(id model.ID) (*types.PageModel, error)
+	WritePageModel(id model.ID, m *types.PageModel) error
+	WriteSnippetModel(id model.ID, m *types.PageModel) error
 }

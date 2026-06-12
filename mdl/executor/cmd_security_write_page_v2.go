@@ -68,7 +68,7 @@ func execGrantPageAccessGen(ctx *ExecContext, s *ast.GrantPageAccessStmt) error 
 		existing := filterAutoDocumentRoles(pg.AllowedRolesQualifiedNames())
 		merged, added := mergeAllowedRoles(existing, validRoles)
 
-		if err := ctx.Backend.UpdateAllowedRoles(model.ID(pg.ID()), merged); err != nil {
+		if err := ctx.SecurityEntityAccessManager.UpdateAllowedRoles(model.ID(pg.ID()), merged); err != nil {
 			return mdlerrors.NewBackend("update page access", err)
 		}
 
@@ -111,7 +111,7 @@ func execRevokePageAccessGen(ctx *ExecContext, s *ast.RevokePageAccessStmt) erro
 		existing := pg.AllowedRolesQualifiedNames()
 		remaining, removed := filterAllowedRoles(existing, s.Roles)
 
-		if err := ctx.Backend.UpdateAllowedRoles(model.ID(pg.ID()), remaining); err != nil {
+		if err := ctx.SecurityEntityAccessManager.UpdateAllowedRoles(model.ID(pg.ID()), remaining); err != nil {
 			return mdlerrors.NewBackend("update page access", err)
 		}
 

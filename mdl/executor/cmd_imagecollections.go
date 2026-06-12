@@ -71,12 +71,12 @@ func execCreateImageCollection(ctx *ExecContext, s *ast.CreateImageCollectionStm
 	}
 
 	if existing != nil {
-		if err := ctx.Backend.UpdateImageCollection(ic); err != nil {
+		if err := ctx.ImageCollectionWriter.UpdateImageCollection(ic); err != nil {
 			return mdlerrors.NewBackend("update image collection", err)
 		}
 		fmt.Fprintf(ctx.Output, "Modified image collection: %s\n", s.Name)
 	} else {
-		if err := ctx.Backend.CreateImageCollection(ic); err != nil {
+		if err := ctx.ImageCollectionWriter.CreateImageCollection(ic); err != nil {
 			return mdlerrors.NewBackend("create image collection", err)
 		}
 		fmt.Fprintf(ctx.Output, "Created image collection: %s\n", s.Name)
@@ -98,7 +98,7 @@ func execDropImageCollection(ctx *ExecContext, s *ast.DropImageCollectionStmt) e
 		return mdlerrors.NewNotFound("image collection", s.Name.String())
 	}
 
-	if err := ctx.Backend.DeleteImageCollection(string(ic.ID)); err != nil {
+	if err := ctx.ImageCollectionWriter.DeleteImageCollection(string(ic.ID)); err != nil {
 		return mdlerrors.NewBackend("delete image collection", err)
 	}
 
@@ -212,7 +212,7 @@ func extToImageFormat(ext string) string {
 
 // listImageCollections handles SHOW IMAGE COLLECTION [IN module].
 func listImageCollections(ctx *ExecContext, moduleName string) error {
-	collections, err := ctx.Backend.ListImageCollections()
+	collections, err := ctx.ImageCollectionWriter.ListImageCollections()
 	if err != nil {
 		return mdlerrors.NewBackend("list image collections", err)
 	}
@@ -247,7 +247,7 @@ func listImageCollections(ctx *ExecContext, moduleName string) error {
 
 // findImageCollection finds an image collection by module and name.
 func findImageCollection(ctx *ExecContext, moduleName, collectionName string) *types.ImageCollection {
-	collections, err := ctx.Backend.ListImageCollections()
+	collections, err := ctx.ImageCollectionWriter.ListImageCollections()
 	if err != nil {
 		return nil
 	}
@@ -333,7 +333,7 @@ func execAlterImageCollection(ctx *ExecContext, s *ast.AlterImageCollectionStmt)
 
 		case *ast.MoveImageCollectionAction:
 			if dirty {
-				if err := ctx.Backend.UpdateImageCollection(ic); err != nil {
+				if err := ctx.ImageCollectionWriter.UpdateImageCollection(ic); err != nil {
 					return mdlerrors.NewBackend("update image collection before move", err)
 				}
 				dirty = false
@@ -343,7 +343,7 @@ func execAlterImageCollection(ctx *ExecContext, s *ast.AlterImageCollectionStmt)
 				return mdlerrors.NewNotFound("module", action.Target.Module)
 			}
 			ic.ContainerID = targetMod.ID
-			if err := ctx.Backend.MoveImageCollection(ic); err != nil {
+			if err := ctx.ImageCollectionWriter.MoveImageCollection(ic); err != nil {
 				return mdlerrors.NewBackend("move image collection", err)
 			}
 			invalidateHierarchy(ctx)
@@ -373,7 +373,7 @@ func execAlterImageCollection(ctx *ExecContext, s *ast.AlterImageCollectionStmt)
 	}
 
 	if dirty {
-		if err := ctx.Backend.UpdateImageCollection(ic); err != nil {
+		if err := ctx.ImageCollectionWriter.UpdateImageCollection(ic); err != nil {
 			return mdlerrors.NewBackend("update image collection", err)
 		}
 	}

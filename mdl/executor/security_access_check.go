@@ -74,7 +74,7 @@ func (e *Executor) AnalyzeAccess() ([]AccessGap, []string, error) {
 
 // buildUserRoleMap reads ProjectSecurity and returns UserRoleName → []ModuleRoleQN.
 func buildUserRoleMap(ctx *ExecContext) (map[string][]string, error) {
-	ps, err := ctx.Backend.GetProjectSecurityGen()
+	ps, err := ctx.SecurityProjectManager.GetProjectSecurityGen()
 	if err != nil {
 		return nil, err
 	}
@@ -97,7 +97,7 @@ func buildUserRoleMap(ctx *ExecContext) (map[string][]string, error) {
 func buildEntityGrants(ctx *ExecContext) (map[string]map[string]entityAccessSummary, error) {
 	result := make(map[string]map[string]entityAccessSummary)
 
-	dms, err := ctx.Backend.ListDomainModelsGen()
+	dms, err := ctx.DomainModelReader.ListDomainModelsGen()
 	if err != nil {
 		return nil, err
 	}
@@ -162,7 +162,7 @@ type mfLoad struct {
 
 // loadPages fetches all pages from the backend exactly once.
 func loadPages(ctx *ExecContext) (*pageLoad, error) {
-	pages, err := ctx.Backend.ListPagesGen()
+	pages, err := ctx.PageReader.ListPagesGen()
 	if err != nil {
 		return nil, err
 	}
@@ -175,7 +175,7 @@ func loadPages(ctx *ExecContext) (*pageLoad, error) {
 
 // loadMicroflows fetches all microflows from the backend exactly once.
 func loadMicroflows(ctx *ExecContext) (*mfLoad, error) {
-	mfs, err := ctx.Backend.ListMicroflowsGen()
+	mfs, err := ctx.MicroflowReader.ListMicroflowsGen()
 	if err != nil {
 		return nil, err
 	}
@@ -416,7 +416,7 @@ func buildPageModels(ctx *ExecContext, pl *pageLoad) (map[string]*types.PageMode
 			continue
 		}
 		pageQN := pl.hierarchy.GetQualifiedName(model.ID(pg.ID()), pg.Name())
-		pm, err := ctx.Backend.GetPageModel(model.ID(pg.ID()))
+		pm, err := ctx.PageModelAccess.GetPageModel(model.ID(pg.ID()))
 		if err != nil {
 			warnings = append(warnings, fmt.Sprintf("page %s: %v", pageQN, err))
 			continue

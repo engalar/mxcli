@@ -439,7 +439,7 @@ func execDropPage(ctx *ExecContext, s *ast.DropPageStmt) error {
 		modName := h.GetModuleName(modID)
 		if modName == s.Name.Module && p.Elem.Name() == s.Name.Name {
 			pgID := model.ID(p.Elem.ID())
-			if err := ctx.Backend.DeletePageGen(pgID); err != nil {
+			if err := ctx.PageWriter.DeletePageGen(pgID); err != nil {
 				return mdlerrors.NewBackend("delete page", err)
 			}
 			invalidatePagesGenCache(ctx)
@@ -475,7 +475,7 @@ func execDropSnippet(ctx *ExecContext, s *ast.DropSnippetStmt) error {
 		modName := h.GetModuleName(modID)
 		if modName == s.Name.Module && p.Elem.Name() == s.Name.Name {
 			snpID := model.ID(p.Elem.ID())
-			if err := ctx.Backend.DeleteSnippetGen(snpID); err != nil {
+			if err := ctx.PageWriter.DeleteSnippetGen(snpID); err != nil {
 				return mdlerrors.NewBackend("delete snippet", err)
 			}
 			invalidatePagesGenCache(ctx)

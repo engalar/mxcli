@@ -53,7 +53,7 @@ type wfBuildCtx struct {
 func newWfBuildCtx(ctx *ExecContext) *wfBuildCtx {
 	wbc := &wfBuildCtx{}
 	if ctx != nil && ctx.Connected() {
-		if rpv := ctx.Backend.ProjectVersion(); rpv != nil {
+		if rpv := ctx.ConnectionManager.ProjectVersion(); rpv != nil {
 			wbc.version = version.Parse(rpv.ProductVersion)
 		}
 	}
@@ -850,12 +850,12 @@ func execCreateWorkflowGen(ctx *ExecContext, s *ast.CreateWorkflowStmt) error {
 		// In-place update: preserve UnitID so references and BSON git-diff
 		// stay stable.
 		wf.SetID(element.ID(existingID))
-		if err := ctx.Backend.UpdateWorkflowGen(wf); err != nil {
+		if err := ctx.WorkflowWriter.UpdateWorkflowGen(wf); err != nil {
 			return mdlerrors.NewBackend("update workflow", err)
 		}
 	} else {
 		// New unit: gen Create generates a fresh UnitID.
-		if err := ctx.Backend.CreateWorkflowGen(string(module.ID), "Documents", wf); err != nil {
+		if err := ctx.WorkflowWriter.CreateWorkflowGen(string(module.ID), "Documents", wf); err != nil {
 			return mdlerrors.NewBackend("create workflow", err)
 		}
 	}
@@ -1161,7 +1161,7 @@ func execDropWorkflowGen(ctx *ExecContext, s *ast.DropWorkflowStmt) error {
 		modID := h.FindModuleID(model.ID(p.ContainerID))
 		modName := h.GetModuleName(modID)
 		if modName == s.Name.Module && p.Elem.Name() == s.Name.Name {
-			if err := ctx.Backend.DeleteWorkflow(model.ID(p.Elem.ID())); err != nil {
+			if err := ctx.WorkflowWriter.DeleteWorkflow(model.ID(p.Elem.ID())); err != nil {
 				return mdlerrors.NewBackend("delete workflow", err)
 			}
 			invalidateHierarchy(ctx)

@@ -11,8 +11,8 @@ import (
 )
 
 func execConnect(ctx *ExecContext, s *ast.ConnectStmt) error {
-	if ctx.Backend != nil && ctx.Backend.IsConnected() {
-		if err := ctx.Backend.Disconnect(); err != nil {
+	if ctx.Backend != nil && ctx.ConnectionManager.IsConnected() {
+		if err := ctx.ConnectionManager.Disconnect(); err != nil {
 			fmt.Fprintf(ctx.Output, "Warning: disconnect error: %v\n", err)
 		}
 	}
@@ -25,7 +25,7 @@ func execConnect(ctx *ExecContext, s *ast.ConnectStmt) error {
 		ctx.Backend = b
 	} else if ctx.Backend != nil {
 		// Persistent backend (per-MPR daemon): Connect is a no-op on noOpConnectBackend.
-		if err := ctx.Backend.Connect(s.Path); err != nil {
+		if err := ctx.ConnectionManager.Connect(s.Path); err != nil {
 			return mdlerrors.NewBackend("connect", err)
 		}
 	} else {
@@ -43,7 +43,7 @@ func execConnect(ctx *ExecContext, s *ast.ConnectStmt) error {
 	// Display connection info with version.
 	// Written to StatusOutput (stderr by default) so it never pollutes stdout
 	// when the caller redirects stdout to a file (e.g. > describe-snapshot.mdl).
-	pv := ctx.Backend.ProjectVersion()
+	pv := ctx.ConnectionManager.ProjectVersion()
 	if !ctx.Quiet {
 		fmt.Fprintf(ctx.statusWriter(), "Connected to: %s (Mendix %s)\n", s.Path, pv.ProductVersion)
 	}
@@ -61,8 +61,8 @@ func reconnect(ctx *ExecContext) error {
 	}
 
 	// Close existing connection
-	if ctx.Backend != nil && ctx.Backend.IsConnected() {
-		if err := ctx.Backend.Disconnect(); err != nil {
+	if ctx.Backend != nil && ctx.ConnectionManager.IsConnected() {
+		if err := ctx.ConnectionManager.Disconnect(); err != nil {
 			fmt.Fprintf(ctx.Output, "Warning: disconnect error: %v\n", err)
 		}
 	}
@@ -76,7 +76,7 @@ func reconnect(ctx *ExecContext) error {
 		ctx.Backend = b
 	} else if ctx.Backend != nil {
 		// Persistent backend: Connect is a no-op on noOpConnectBackend.
-		if err := ctx.Backend.Connect(ctx.MprPath); err != nil {
+		if err := ctx.ConnectionManager.Connect(ctx.MprPath); err != nil {
 			return mdlerrors.NewBackend("reconnect", err)
 		}
 	} else {
@@ -93,7 +93,7 @@ func reconnect(ctx *ExecContext) error {
 }
 
 func execDisconnect(ctx *ExecContext) error {
-	if ctx.Backend == nil || !ctx.Backend.IsConnected() {
+	if ctx.Backend == nil || !ctx.ConnectionManager.IsConnected() {
 		fmt.Fprintln(ctx.Output, "Not connected")
 		return nil
 	}
@@ -105,7 +105,7 @@ func execDisconnect(ctx *ExecContext) error {
 		}
 	}
 
-	if err := ctx.Backend.Disconnect(); err != nil {
+	if err := ctx.ConnectionManager.Disconnect(); err != nil {
 		fmt.Fprintf(ctx.Output, "Warning: disconnect error: %v\n", err)
 	}
 	fmt.Fprintf(ctx.Output, "Disconnected from: %s\n", ctx.MprPath)
@@ -117,19 +117,19 @@ func execDisconnect(ctx *ExecContext) error {
 }
 
 func execStatus(ctx *ExecContext) error {
-	if ctx.Backend == nil || !ctx.Backend.IsConnected() {
+	if ctx.Backend == nil || !ctx.ConnectionManager.IsConnected() {
 		fmt.Fprintln(ctx.Output, "Status: Not connected")
 		return nil
 	}
 
-	pv := ctx.Backend.ProjectVersion()
+	pv := ctx.ConnectionManager.ProjectVersion()
 	fmt.Fprintf(ctx.Output, "Status: Connected\n")
 	fmt.Fprintf(ctx.Output, "Project: %s\n", ctx.MprPath)
 	fmt.Fprintf(ctx.Output, "Mendix Version: %s\n", pv.ProductVersion)
 	fmt.Fprintf(ctx.Output, "MPR Format: v%d\n", pv.FormatVersion)
 
 	// Show module count
-	modules, err := ctx.Backend.ListModules()
+	modules, err := ctx.ModuleLister.ListModules()
 	if err == nil {
 		fmt.Fprintf(ctx.Output, "Modules: %d\n", len(modules))
 	}

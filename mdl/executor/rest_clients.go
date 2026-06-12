@@ -329,7 +329,7 @@ func createRestClient(ctx *ExecContext, stmt *ast.CreateRestClientStmt) error {
 				// Preserve the existing ID so SEND REST REQUEST references stay valid after replace.
 				preservedID = existing.ID
 				wasModified = true
-				if err := ctx.Backend.DeleteConsumedRestService(existing.ID); err != nil {
+				if err := ctx.ServiceWriter.DeleteConsumedRestService(existing.ID); err != nil {
 					return mdlerrors.NewBackend("delete existing rest client", err)
 				}
 			} else {
@@ -407,7 +407,7 @@ func createRestClient(ctx *ExecContext, stmt *ast.CreateRestClientStmt) error {
 	}
 
 	// Write to project
-	if err := ctx.Backend.CreateConsumedRestService(svc); err != nil {
+	if err := ctx.ServiceWriter.CreateConsumedRestService(svc); err != nil {
 		return mdlerrors.NewBackend("create rest client", err)
 	}
 
@@ -518,7 +518,7 @@ func convertMappingEntries(entries []ast.RestMappingEntry, importDirection bool)
 // ensureConstant creates a string constant if it doesn't already exist.
 func ensureConstant(ctx *ExecContext, moduleName string, containerID model.ID, constName, value string) error {
 	// Check if constant already exists
-	constants, _ := ctx.Backend.ListConstants()
+	constants, _ := ctx.ConstantReader.ListConstants()
 	h, _ := getHierarchy(ctx)
 	for _, c := range constants {
 		modID := h.FindModuleID(c.ContainerID)
@@ -536,7 +536,7 @@ func ensureConstant(ctx *ExecContext, moduleName string, containerID model.ID, c
 		DefaultValue: value,
 		ExportLevel:  "Hidden",
 	}
-	return ctx.Backend.CreateConstant(constant)
+	return ctx.ConstantWriter.CreateConstant(constant)
 }
 
 // dropRestClient handles DROP REST CLIENT statement.
@@ -560,7 +560,7 @@ func dropRestClient(ctx *ExecContext, stmt *ast.DropRestClientStmt) error {
 		modID := h.FindModuleID(svc.ContainerID)
 		moduleName := h.GetModuleName(modID)
 		if strings.EqualFold(moduleName, stmt.Name.Module) && strings.EqualFold(svc.Name, stmt.Name.Name) {
-			if err := ctx.Backend.DeleteConsumedRestService(svc.ID); err != nil {
+			if err := ctx.ServiceWriter.DeleteConsumedRestService(svc.ID); err != nil {
 				return mdlerrors.NewBackend("delete rest client", err)
 			}
 			fmt.Fprintf(ctx.Output, "Dropped rest client: %s.%s\n", moduleName, svc.Name)
@@ -591,12 +591,12 @@ func resolveAndFormatRestAuthValue(ctx *ExecContext, value string) string {
 		parts := strings.SplitN(qualifiedName, ".", 2)
 		if len(parts) == 2 {
 			moduleName, constName := parts[0], parts[1]
-			if constants, err := ctx.Backend.ListConstants(); err == nil {
+			if constants, err := ctx.ConstantReader.ListConstants(); err == nil {
 				for _, c := range constants {
 					if !strings.EqualFold(c.Name, constName) {
 						continue
 					}
-					if mod, err := ctx.Backend.GetModule(c.ContainerID); err == nil &&
+					if mod, err := ctx.ModuleLister.GetModule(c.ContainerID); err == nil &&
 						strings.EqualFold(mod.Name, moduleName) {
 						return "'" + c.DefaultValue + "'"
 					}
@@ -690,7 +690,7 @@ func createRestClientFromSpec(ctx *ExecContext, stmt *ast.CreateRestClientStmt) 
 				// Reuse the existing ID so microflow references stay valid.
 				svc.ID = existing.ID
 				openAPIWasModified = true
-				if err := ctx.Backend.DeleteConsumedRestService(existing.ID); err != nil {
+				if err := ctx.ServiceWriter.DeleteConsumedRestService(existing.ID); err != nil {
 					return mdlerrors.NewBackend("delete existing rest client", err)
 				}
 			} else {
@@ -700,7 +700,7 @@ func createRestClientFromSpec(ctx *ExecContext, stmt *ast.CreateRestClientStmt) 
 		}
 	}
 
-	if err := ctx.Backend.CreateConsumedRestService(svc); err != nil {
+	if err := ctx.ServiceWriter.CreateConsumedRestService(svc); err != nil {
 		return mdlerrors.NewBackend("create rest client", err)
 	}
 

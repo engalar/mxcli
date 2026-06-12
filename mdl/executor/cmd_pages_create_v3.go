@@ -102,17 +102,17 @@ func execCreatePageV3(ctx *ExecContext, s *ast.CreatePageStmtV3) error {
 	if len(pagesToDelete) > 0 {
 		// Reuse first existing page's UUID to avoid git delete+add (which crashes Studio Pro RevStatusCache)
 		genPage.SetID(element.ID(pagesToDelete[0]))
-		if err := ctx.Backend.UpdatePageGen(genPage); err != nil {
+		if err := ctx.PageWriter.UpdatePageGen(genPage); err != nil {
 			return mdlerrors.NewBackend("update page", err)
 		}
 		// Delete any additional duplicates
 		for _, id := range pagesToDelete[1:] {
-			if err := ctx.Backend.DeletePageGen(id); err != nil {
+			if err := ctx.PageWriter.DeletePageGen(id); err != nil {
 				return mdlerrors.NewBackend("delete duplicate page", err)
 			}
 		}
 	} else {
-		if err := ctx.Backend.CreatePageGen(string(containerID), "Documents", genPage); err != nil {
+		if err := ctx.PageWriter.CreatePageGen(string(containerID), "Documents", genPage); err != nil {
 			return mdlerrors.NewBackend("create page", err)
 		}
 	}
@@ -135,7 +135,7 @@ func execCreatePageV3(ctx *ExecContext, s *ast.CreatePageStmtV3) error {
 	if pm, pmErr := pageASTToModel(s, s.Name.Module); pmErr == nil && pm != nil {
 		if pageModelHasLossyWidget(pm) {
 			// Skip overlay; preserve builder's rich BSON.
-		} else if werr := ctx.Backend.WritePageModel(model.ID(genPage.ID()), pm); werr != nil {
+		} else if werr := ctx.PageModelAccess.WritePageModel(model.ID(genPage.ID()), pm); werr != nil {
 			log.Printf("warning: WritePageModel overlay failed for %s.%s: %v",
 				s.Name.Module, s.Name.Name, werr)
 		}
@@ -214,13 +214,13 @@ func execCreateSnippetV3(ctx *ExecContext, s *ast.CreateSnippetStmtV3) error {
 
 	// Delete old snippets only after successful build
 	for _, id := range snippetsToDelete {
-		if err := ctx.Backend.DeleteSnippetGen(id); err != nil {
+		if err := ctx.PageWriter.DeleteSnippetGen(id); err != nil {
 			return mdlerrors.NewBackend("delete existing snippet", err)
 		}
 	}
 
 	// Create the snippet in the MPR
-	if err := ctx.Backend.CreateSnippetGen(string(containerID), "Documents", genSnippet); err != nil {
+	if err := ctx.PageWriter.CreateSnippetGen(string(containerID), "Documents", genSnippet); err != nil {
 		return mdlerrors.NewBackend("create snippet", err)
 	}
 

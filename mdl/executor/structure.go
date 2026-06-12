@@ -252,7 +252,7 @@ func countByModuleFromBackend(ctx *ExecContext, kind string) map[string]int {
 
 	switch kind {
 	case "constants":
-		if constants, err := ctx.Backend.ListConstants(); err == nil {
+		if constants, err := ctx.ConstantReader.ListConstants(); err == nil {
 			for _, c := range constants {
 				modID := h.FindModuleID(c.ContainerID)
 				modName := h.GetModuleName(modID)
@@ -260,7 +260,7 @@ func countByModuleFromBackend(ctx *ExecContext, kind string) map[string]int {
 			}
 		}
 	case "scheduled_events":
-		if events, err := ctx.Backend.ListScheduledEvents(); err == nil {
+		if events, err := ctx.ScheduledEventReader.ListScheduledEvents(); err == nil {
 			for _, ev := range events {
 				modID := h.FindModuleID(ev.ContainerID)
 				modName := h.GetModuleName(modID)

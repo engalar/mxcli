@@ -152,11 +152,11 @@ func persistEntityDirect(ctx *ExecContext, s *ast.CreateEntityStmt, dm *genDm.Do
 		if elem, ok := existing.(interface{ ID() element.ID }); ok {
 			gen.SetID(elem.ID())
 		}
-		if err := ctx.Backend.UpdateEntityGen(model.ID(dm.ID()), gen); err != nil {
+		if err := ctx.DomainModelWriter.UpdateEntityGen(model.ID(dm.ID()), gen); err != nil {
 			return mdlerrors.NewBackend("CREATE ENTITY: update", err)
 		}
 	} else {
-		if err := ctx.Backend.CreateEntityGen(model.ID(dm.ID()), gen); err != nil {
+		if err := ctx.DomainModelWriter.CreateEntityGen(model.ID(dm.ID()), gen); err != nil {
 			return mdlerrors.NewBackend("CREATE ENTITY: create", err)
 		}
 	}
@@ -166,7 +166,7 @@ func persistEntityDirect(ctx *ExecContext, s *ast.CreateEntityStmt, dm *genDm.Do
 	invalidateHierarchy(ctx)
 
 	if s.Position == nil {
-		if err := ctx.Backend.RelayoutDomainModel(model.ID(dm.ID())); err != nil {
+		if err := ctx.DomainModelWriter.RelayoutDomainModel(model.ID(dm.ID())); err != nil {
 			fmt.Fprintf(ctx.Output, "warning: auto-layout failed: %v\n", err)
 		} else {
 			invalidateDomainModelGenForModule(ctx, module.ID)

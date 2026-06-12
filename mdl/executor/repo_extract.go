@@ -206,7 +206,7 @@ func (ctx *ExecContext) deleteMicroflowViaRepoOrBackend(id model.ID) error {
 	if ctx.Microflows != nil {
 		return ctx.Microflows.Delete(id)
 	}
-	return ctx.Backend.DeleteMicroflow(id)
+	return ctx.MicroflowWriter.DeleteMicroflow(id)
 }
 
 // deleteNanoflowViaRepoOrBackend mirrors deleteMicroflowViaRepoOrBackend.
@@ -214,7 +214,7 @@ func (ctx *ExecContext) deleteNanoflowViaRepoOrBackend(id model.ID) error {
 	if ctx.Nanoflows != nil {
 		return ctx.Nanoflows.Delete(id)
 	}
-	return ctx.Backend.DeleteNanoflow(id)
+	return ctx.MicroflowWriter.DeleteNanoflow(id)
 }
 
 // isRuleViaRepoOrBackend checks whether a microflow qualified name

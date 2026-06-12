@@ -107,8 +107,20 @@ type ExecContext struct {
 	UnitWriter        backend.UnitWriter
 	NavigationReader  backend.NavigationReader
 	NavigationWriter  backend.NavigationWriter
-	ServiceLister     backend.ServiceLister
-	MetadataReader    backend.MetadataReader
+	ImageCollectionWriter     backend.ImageCollectionWriter
+	ScheduledEventReader      backend.ScheduledEventReader
+	ServiceLister             backend.ServiceLister
+	ServiceWriter             backend.ServiceWriter
+	MetadataReader            backend.MetadataReader
+	ConnectionManager         backend.ConnectionManager
+	FolderManager             backend.FolderManager
+	ModuleSettingsReader      backend.ModuleSettingsReader
+	ModuleSettingsWriter      backend.ModuleSettingsWriter
+	RenameManager             backend.RenameManager
+	SecurityProjectManager    backend.SecurityProjectManager
+	SecurityModuleManager     backend.SecurityModuleManager
+	SecurityEntityAccessManager backend.SecurityEntityAccessManager
+	PageModelAccess           backend.PageModelAccess
 
 	ExecRepos
 	ExecIO
@@ -147,13 +159,25 @@ func (ctx *ExecContext) initRoles() {
 	ctx.UnitWriter = ctx.Backend
 	ctx.NavigationReader = ctx.Backend
 	ctx.NavigationWriter = ctx.Backend
+	ctx.ImageCollectionWriter = ctx.Backend
+	ctx.ScheduledEventReader = ctx.Backend
 	ctx.ServiceLister = ctx.Backend
+	ctx.ServiceWriter = ctx.Backend
 	ctx.MetadataReader = ctx.Backend
+	ctx.ConnectionManager = ctx.Backend
+	ctx.FolderManager = ctx.Backend
+	ctx.ModuleSettingsReader = ctx.Backend
+	ctx.ModuleSettingsWriter = ctx.Backend
+	ctx.RenameManager = ctx.Backend
+	ctx.SecurityProjectManager = ctx.Backend
+	ctx.SecurityModuleManager = ctx.Backend
+	ctx.SecurityEntityAccessManager = ctx.Backend
+	ctx.PageModelAccess = ctx.Backend
 }
 
 // Connected returns true if a project is connected via the Backend.
 func (ctx *ExecContext) Connected() bool {
-	return ctx.Backend != nil && ctx.Backend.IsConnected()
+	return ctx.Backend != nil && ctx.ConnectionManager.IsConnected()
 }
 
 // ConnectedForWrite returns true if a project is connected and the backend
@@ -200,7 +224,7 @@ func (ctx *ExecContext) ensureCache() {
 // trackModifiedDomainModel records a domain model that was modified during
 // execution, so it can be reconciled at the end of the program.
 func (ctx *ExecContext) trackModifiedDomainModel(moduleID model.ID, moduleName string) {
-	if ctx.Backend == nil || !ctx.Backend.IsConnected() {
+	if ctx.Backend == nil || !ctx.ConnectionManager.IsConnected() {
 		return
 	}
 	ctx.ensureCache()

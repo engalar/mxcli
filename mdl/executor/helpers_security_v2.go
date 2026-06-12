@@ -47,7 +47,7 @@ func listModuleSecurityWithContainerGen(ctx *ExecContext) ([]ModuleSecurityGenWi
 	if ctx.Cache != nil && ctx.Cache.moduleSecurityWithContainerGen != nil {
 		return ctx.Cache.moduleSecurityWithContainerGen, nil
 	}
-	modules, err := ctx.Backend.ListModules()
+	modules, err := ctx.ModuleLister.ListModules()
 	if err != nil {
 		return nil, err
 	}

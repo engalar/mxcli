@@ -68,7 +68,7 @@ func execAlterAssociationGen(ctx *ExecContext, s *ast.AlterAssociationStmt) erro
 			continue
 		}
 		apply(assoc.SetOwner, assoc.SetStorageFormat, assoc.SetDocumentation, assoc.SetDeleteBehavior)
-		if err := ctx.Backend.UpdateDomainModelGen(dm); err != nil {
+		if err := ctx.DomainModelWriter.UpdateDomainModelGen(dm); err != nil {
 			return mdlerrors.NewBackend("update association", err)
 		}
 		setDomainModelGenCached(ctx, module.ID, dm)
@@ -85,7 +85,7 @@ func execAlterAssociationGen(ctx *ExecContext, s *ast.AlterAssociationStmt) erro
 			continue
 		}
 		apply(assoc.SetOwner, assoc.SetStorageFormat, assoc.SetDocumentation, assoc.SetDeleteBehavior)
-		if err := ctx.Backend.UpdateDomainModelGen(dm); err != nil {
+		if err := ctx.DomainModelWriter.UpdateDomainModelGen(dm); err != nil {
 			return mdlerrors.NewBackend("update cross-module association", err)
 		}
 		setDomainModelGenCached(ctx, module.ID, dm)

@@ -43,7 +43,7 @@ func TestListEntitiesGen_RendersFixtureEntities(t *testing.T) {
 
 func TestListEntitiesGen_FilterByModule(t *testing.T) {
 	ctx := newDomainModelsTestContext(t)
-	mods, err := ctx.Backend.ListModules()
+	mods, err := ctx.ModuleLister.ListModules()
 	if err != nil || len(mods) == 0 {
 		t.Skip("fixture has no modules")
 	}
@@ -141,7 +141,7 @@ func TestDescribeEntityGen_RendersFixtureEntity(t *testing.T) {
 	if err != nil || len(pairs) == 0 {
 		t.Skip("fixture has no domain models")
 	}
-	mods, _ := ctx.Backend.ListModules()
+	mods, _ := ctx.ModuleLister.ListModules()
 	moduleNames := make(map[string]string)
 	for _, m := range mods {
 		moduleNames[string(m.ID)] = m.Name

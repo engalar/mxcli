@@ -141,7 +141,7 @@ func execCreateDataTransformer(ctx *ExecContext, s *ast.CreateDataTransformerStm
 
 	if existingID != "" {
 		dt.ID = existingID
-		if err := ctx.Backend.UpdateDataTransformer(dt); err != nil {
+		if err := ctx.ServiceWriter.UpdateDataTransformer(dt); err != nil {
 			return mdlerrors.NewBackend("update data transformer", err)
 		}
 		if !ctx.Quiet {
@@ -151,7 +151,7 @@ func execCreateDataTransformer(ctx *ExecContext, s *ast.CreateDataTransformerStm
 		return nil
 	}
 
-	if err := ctx.Backend.CreateDataTransformer(dt); err != nil {
+	if err := ctx.ServiceWriter.CreateDataTransformer(dt); err != nil {
 		return mdlerrors.NewBackend("create data transformer", err)
 	}
 
@@ -202,7 +202,7 @@ func execDropDataTransformer(ctx *ExecContext, s *ast.DropDataTransformerStmt) e
 		modID := h.FindModuleID(dt.ContainerID)
 		modName := h.GetModuleName(modID)
 		if modName == s.Name.Module && dt.Name == s.Name.Name {
-			if err := ctx.Backend.DeleteDataTransformer(dt.ID); err != nil {
+			if err := ctx.ServiceWriter.DeleteDataTransformer(dt.ID); err != nil {
 				return mdlerrors.NewBackend("drop data transformer", err)
 			}
 			if !ctx.Quiet {

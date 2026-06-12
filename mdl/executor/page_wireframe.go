@@ -141,7 +141,7 @@ func PageWireframeJSON(ctx *ExecContext, name string) error {
 	title := pickPageTitleGen(foundPage)
 
 	layoutName := ""
-	rawData, _ := ctx.Backend.GetRawUnit(pageID)
+	rawData, _ := ctx.UnitReader.GetRawUnit(pageID)
 	if rawData != nil {
 		if formCall, ok := rawData["FormCall"].(map[string]any); ok {
 			if layoutID := extractBinaryID(formCall["Layout"]); layoutID != "" {

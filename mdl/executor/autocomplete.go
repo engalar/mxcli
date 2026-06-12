@@ -16,7 +16,7 @@ func getModuleNames(ctx *ExecContext) []string {
 	if !ctx.Connected() {
 		return nil
 	}
-	modules, err := ctx.Backend.ListModules()
+	modules, err := ctx.ModuleLister.ListModules()
 	if err != nil {
 		return nil
 	}
@@ -176,7 +176,7 @@ func getEnumerationNamesAC(ctx *ExecContext, moduleFilter string) []string {
 	if err != nil {
 		return nil
 	}
-	enums, err := ctx.Backend.ListEnumerations()
+	enums, err := ctx.EnumerationReader.ListEnumerations()
 	if err != nil {
 		return nil
 	}
@@ -372,7 +372,7 @@ func getJsonStructureNamesAC(ctx *ExecContext, moduleFilter string) []string {
 	if err != nil {
 		return nil
 	}
-	structures, err := ctx.Backend.ListJsonStructures()
+	structures, err := ctx.MappingReader.ListJsonStructures()
 	if err != nil {
 		return nil
 	}

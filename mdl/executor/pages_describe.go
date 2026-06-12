@@ -69,7 +69,7 @@ func describePage(ctx *ExecContext, name ast.QualifiedName) error {
 	// Get title
 	title := pickPageTitleGen(foundPage)
 	layoutName := resolvePageLayoutName(ctx, foundPage)
-	rawData, _ := ctx.Backend.GetRawUnit(pageID)
+	rawData, _ := ctx.UnitReader.GetRawUnit(pageID)
 
 	// @excluded annotation
 	if foundPage.Excluded() {
@@ -140,7 +140,7 @@ func describePage(ctx *ExecContext, name ast.QualifiedName) error {
 	// without the newer AllowedRoles field written by mxcli's gen path.
 	pageRoles := foundPage.AllowedRolesQualifiedNames()
 	if len(pageRoles) == 0 {
-		if rawData, err := ctx.Backend.GetRawUnit(pageID); err == nil {
+		if rawData, err := ctx.UnitReader.GetRawUnit(pageID); err == nil {
 			pageRoles = readVersionedStringArray(rawData["AllowedModuleRoles"]) // nolint:describe-raw-bson — no gen accessor for AllowedModuleRoles; this is a fallback for human-edited pages missing the AllowedRoles field
 		}
 	}
@@ -347,7 +347,7 @@ func describeLayout(ctx *ExecContext, name ast.QualifiedName) error {
 	fmt.Fprint(ctx.Output, ")")
 
 	// Body: only emit braces when there are renderable widgets.
-	pm, pmErr := ctx.Backend.GetLayoutModel(layoutID)
+	pm, pmErr := ctx.PageModelAccess.GetLayoutModel(layoutID)
 	if pmErr == nil && pm != nil && len(pm.Widgets) > 0 {
 		fmt.Fprint(ctx.Output, " {\n")
 		for _, n := range pm.Widgets {
@@ -386,7 +386,7 @@ func renderLayoutWidget(w io.Writer, node *types.WidgetNode, depth int) {
 // getLayoutWidgetsFromRaw extracts widgets from raw layout BSON.
 func getLayoutWidgetsFromRaw(ctx *ExecContext, layoutID model.ID) []rawWidget {
 	// Get raw layout data
-	rawData, err := ctx.Backend.GetRawUnit(layoutID)
+	rawData, err := ctx.UnitReader.GetRawUnit(layoutID)
 	if err != nil {
 		return nil
 	}
@@ -414,7 +414,7 @@ func outputWidgetMDLV3Comment(ctx *ExecContext, w rawWidget, indent int) {
 // getSnippetWidgetsFromRaw extracts widgets from raw snippet BSON.
 func getSnippetWidgetsFromRaw(ctx *ExecContext, snippetID model.ID) []rawWidget {
 	// Get raw snippet data
-	rawData, err := ctx.Backend.GetRawUnit(snippetID)
+	rawData, err := ctx.UnitReader.GetRawUnit(snippetID)
 	if err != nil {
 		return nil
 	}
@@ -652,7 +652,7 @@ func readVersionedStringArray(v any) []string {
 // getPageWidgetsFromRaw extracts widgets from raw page BSON.
 func getPageWidgetsFromRaw(ctx *ExecContext, pageID model.ID) []rawWidget {
 	// Get raw page data
-	rawData, err := ctx.Backend.GetRawUnit(pageID)
+	rawData, err := ctx.UnitReader.GetRawUnit(pageID)
 	if err != nil {
 		return nil
 	}
@@ -787,7 +787,7 @@ func resolvePageLayoutName(ctx *ExecContext, page *genPg.Page) string {
 	if page == nil {
 		return ""
 	}
-	rawData, err := ctx.Backend.GetRawUnit(model.ID(page.ID()))
+	rawData, err := ctx.UnitReader.GetRawUnit(model.ID(page.ID()))
 	if err != nil || rawData == nil {
 		return ""
 	}

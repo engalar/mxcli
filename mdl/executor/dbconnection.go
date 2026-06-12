@@ -113,7 +113,7 @@ func createDatabaseConnection(ctx *ExecContext, stmt *ast.CreateDatabaseConnecti
 	if existingConnID != "" {
 		// In-place update: preserve UUID so BSON git-diff sees a modification.
 		conn.ID = existingConnID
-		if err := ctx.Backend.UpdateDatabaseConnection(conn); err != nil {
+		if err := ctx.ServiceWriter.UpdateDatabaseConnection(conn); err != nil {
 			return mdlerrors.NewBackend("update database connection", err)
 		}
 		invalidateHierarchy(ctx)
@@ -121,7 +121,7 @@ func createDatabaseConnection(ctx *ExecContext, stmt *ast.CreateDatabaseConnecti
 		return nil
 	}
 
-	if err := ctx.Backend.CreateDatabaseConnection(conn); err != nil {
+	if err := ctx.ServiceWriter.CreateDatabaseConnection(conn); err != nil {
 		return mdlerrors.NewBackend("create database connection", err)
 	}
 
@@ -282,7 +282,7 @@ func outputDatabaseConnectionMDL(ctx *ExecContext, conn *model.DatabaseConnectio
 
 // resolveConstantDefault looks up a constant by qualified name and returns its default value.
 func resolveConstantDefault(ctx *ExecContext, qualifiedName string) string {
-	constants, err := ctx.Backend.ListConstants()
+	constants, err := ctx.ConstantReader.ListConstants()
 	if err != nil {
 		return ""
 	}

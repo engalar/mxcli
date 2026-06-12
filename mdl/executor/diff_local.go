@@ -36,11 +36,11 @@ func diffLocal(ctx *ExecContext, ref string, opts DiffOptions) error {
 	}
 
 	// Check MPR version
-	if ctx.Backend.Version() != 2 {
+	if ctx.ConnectionManager.Version() != 2 {
 		return mdlerrors.NewUnsupported("diff-local only supports MPR v2 format (Mendix 10.18+)")
 	}
 
-	contentsDir := ctx.Backend.ContentsDir()
+	contentsDir := ctx.MetadataReader.ContentsDir()
 	if contentsDir == "" {
 		return mdlerrors.NewValidation("mprcontents directory not found")
 	}

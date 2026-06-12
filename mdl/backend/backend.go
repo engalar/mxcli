@@ -67,7 +67,17 @@ type FullBackend interface {
 	NavigationWriter
 	ImageCollectionWriter
 	ServiceLister
+	ServiceWriter
 	ScheduledEventReader
 	MetadataReader
 	WidgetInspector
+	ConnectionManager
+	FolderManager
+	ModuleSettingsReader
+	ModuleSettingsWriter
+	RenameManager
+	SecurityProjectManager
+	SecurityModuleManager
+	SecurityEntityAccessManager
+	PageModelAccess
 }

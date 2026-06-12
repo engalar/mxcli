@@ -1028,10 +1028,10 @@ func execDropJavaActionGen(ctx *ExecContext, s *ast.DropJavaActionStmt) error {
 		// Phase D Delete is not yet wired through the gen repo (Phase
 		// D5 fills the writer); for now route through the legacy
 		// backend Delete which targets the same MPR Unit row by ID.
-		if err := ctx.Backend.DeleteJavaAction(model.ID(p.Elem.ID())); err != nil {
+		if err := ctx.JavaActionWriter.DeleteJavaAction(model.ID(p.Elem.ID())); err != nil {
 			return mdlerrors.NewBackend("delete java action", err)
 		}
-		if err := ctx.Backend.DeleteJavaSourceFile(modName, p.Elem.Name()); err != nil {
+		if err := ctx.JavaActionWriter.DeleteJavaSourceFile(modName, p.Elem.Name()); err != nil {
 			return mdlerrors.NewBackend("delete java source file", err)
 		}
 		invalidateJavaActionsCache(ctx)
@@ -1081,7 +1081,7 @@ func execCreateJavaScriptAction(ctx *ExecContext, s *ast.CreateJavaScriptActionS
 	}
 	if s.Platform != "" {
 		existingJSA.SetPlatform(s.Platform)
-		if err := ctx.Backend.UpdateJavaScriptActionGen(existingJSA); err != nil {
+		if err := ctx.JavaActionWriter.UpdateJavaScriptActionGen(existingJSA); err != nil {
 			return mdlerrors.NewBackend("update javascript action platform", err)
 		}
 	}
@@ -1256,7 +1256,7 @@ func execCreateJavaActionGen(ctx *ExecContext, s *ast.CreateJavaActionStmt) erro
 
 	// Find the module (no auto-create — keeps parity with legacy
 	// execCreateJavaAction behaviour: missing module → NotFound).
-	modules, err := ctx.Backend.ListModules()
+	modules, err := ctx.ModuleLister.ListModules()
 	if err != nil {
 		return mdlerrors.NewBackend("get modules", err)
 	}
@@ -1390,11 +1390,11 @@ func execCreateJavaActionGen(ctx *ExecContext, s *ast.CreateJavaActionStmt) erro
 
 	// Persist via the gen-aware backend siblings.
 	if existingJA != nil {
-		if err := ctx.Backend.UpdateJavaActionGen(ja); err != nil {
+		if err := ctx.JavaActionWriter.UpdateJavaActionGen(ja); err != nil {
 			return mdlerrors.NewBackend("update java action", err)
 		}
 	} else {
-		if err := ctx.Backend.CreateJavaActionGen(string(containerID), "Documents", ja); err != nil {
+		if err := ctx.JavaActionWriter.CreateJavaActionGen(string(containerID), "Documents", ja); err != nil {
 			return mdlerrors.NewBackend("create java action", err)
 		}
 	}
@@ -1424,7 +1424,7 @@ func execCreateJavaActionGen(ctx *ExecContext, s *ast.CreateJavaActionStmt) erro
 				params = append(params, pp)
 			}
 		}
-		if werr := ctx.Backend.WriteJavaSourceFileGen(moduleName, s.Name.Name, s.JavaCode, params, ja.ActionReturnType(), s.Imports, s.ExtraCode); werr != nil {
+		if werr := ctx.JavaActionWriter.WriteJavaSourceFileGen(moduleName, s.Name.Name, s.JavaCode, params, ja.ActionReturnType(), s.Imports, s.ExtraCode); werr != nil {
 			if !strings.Contains(werr.Error(), "not implemented") {
 				return mdlerrors.NewBackend("write java source file", werr)
 			}

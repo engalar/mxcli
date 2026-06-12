@@ -34,7 +34,7 @@ func listJavaActionsWithContainerGen(ctx *ExecContext) ([]ContainerWithGen[*genJ
 			return ctx.JavaActions.ListAll()
 		}
 		if ctx.Backend != nil {
-			return ctx.Backend.ListJavaActionsGen()
+			return ctx.JavaActionReader.ListJavaActionsGen()
 		}
 		return nil, nil
 	}

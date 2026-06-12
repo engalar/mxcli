@@ -28,7 +28,7 @@ func defaultDocumentAccessRoles(ctx *ExecContext, module *model.Module) []model.
 		return nil
 	}
 
-	ms, err := ctx.Backend.GetModuleSecurityGen(module.ID)
+	ms, err := ctx.SecurityModuleManager.GetModuleSecurityGen(module.ID)
 	if err != nil || ms == nil {
 		return nil
 	}
@@ -39,7 +39,7 @@ func defaultDocumentAccessRoles(ctx *ExecContext, module *model.Module) []model.
 		return nil
 	}
 
-	if err := ctx.Backend.AddModuleRole(model.ID(ms.ID()), autoDocumentRoleName, autoDocumentRoleDescription); err != nil {
+	if err := ctx.SecurityModuleManager.AddModuleRole(model.ID(ms.ID()), autoDocumentRoleName, autoDocumentRoleDescription); err != nil {
 		return nil
 	}
 	return []model.ID{model.ID(module.Name + "." + autoDocumentRoleName)}
@@ -65,7 +65,7 @@ func remapDocumentAccessRoles(ctx *ExecContext, targetModule *model.Module, curr
 		return nil
 	}
 
-	ms, err := ctx.Backend.GetModuleSecurityGen(targetModule.ID)
+	ms, err := ctx.SecurityModuleManager.GetModuleSecurityGen(targetModule.ID)
 	if err != nil || ms == nil {
 		return nil
 	}
@@ -140,7 +140,7 @@ func cloneRoleIDs(roles []model.ID) []model.ID {
 // pruneInvalidUserRoles removes user roles that no longer have any non-System
 // module role assignments. Mendix rejects those roles with CE0157.
 func pruneInvalidUserRoles(ctx *ExecContext, _ *genSec.ProjectSecurity) error {
-	ps, err := ctx.Backend.GetProjectSecurityGen()
+	ps, err := ctx.SecurityProjectManager.GetProjectSecurityGen()
 	if err != nil || ps == nil {
 		return err
 	}
@@ -160,7 +160,7 @@ func pruneInvalidUserRoles(ctx *ExecContext, _ *genSec.ProjectSecurity) error {
 		if hasNonSystemRole {
 			continue
 		}
-		if err := ctx.Backend.RemoveUserRole(model.ID(ps.ID()), typed.Name()); err != nil {
+		if err := ctx.SecurityProjectManager.RemoveUserRole(model.ID(ps.ID()), typed.Name()); err != nil {
 			return err
 		}
 		if !ctx.Quiet {

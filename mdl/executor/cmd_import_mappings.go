@@ -22,7 +22,7 @@ func listImportMappings(ctx *ExecContext, inModule string) error {
 		return mdlerrors.NewNotConnected()
 	}
 
-	all, err := ctx.Backend.ListImportMappings()
+	all, err := ctx.MappingReader.ListImportMappings()
 	if err != nil {
 		return mdlerrors.NewBackend("list import mappings", err)
 	}
@@ -85,7 +85,7 @@ func describeImportMapping(ctx *ExecContext, name ast.QualifiedName) error {
 		return mdlerrors.NewNotConnected()
 	}
 
-	im, err := ctx.Backend.GetImportMappingByQualifiedName(name.Module, name.Name)
+	im, err := ctx.MappingReader.GetImportMappingByQualifiedName(name.Module, name.Name)
 	if err != nil {
 		if strings.Contains(err.Error(), "not found") {
 			return mdlerrors.NewNotFound("import mapping", name.String())
@@ -196,7 +196,7 @@ func execCreateImportMapping(ctx *ExecContext, s *ast.CreateImportMappingStmt) e
 		return mdlerrors.NewNotConnectedWrite()
 	}
 
-	existing, _ := ctx.Backend.GetImportMappingByQualifiedName(s.Name.Module, s.Name.Name)
+	existing, _ := ctx.MappingReader.GetImportMappingByQualifiedName(s.Name.Module, s.Name.Name)
 	if existing != nil && !s.CreateOrModify {
 		return mdlerrors.NewAlreadyExists("import mapping", s.Name.String())
 	}
@@ -224,7 +224,7 @@ func execCreateImportMapping(ctx *ExecContext, s *ast.CreateImportMappingStmt) e
 	// Build path→JsonElement map from JSON structure — mapping elements clone from this
 	jsElementsByPath := map[string]*types.JsonElement{}
 	if s.SchemaKind == "JSON_STRUCTURE" && s.SchemaRef.Module != "" {
-		if js, err2 := ctx.Backend.GetJsonStructureByQualifiedName(s.SchemaRef.Module, s.SchemaRef.Name); err2 == nil && js != nil {
+		if js, err2 := ctx.MappingReader.GetJsonStructureByQualifiedName(s.SchemaRef.Module, s.SchemaRef.Name); err2 == nil && js != nil {
 			buildJsonElementPathMap(js.Elements, jsElementsByPath)
 		}
 	}
@@ -237,7 +237,7 @@ func execCreateImportMapping(ctx *ExecContext, s *ast.CreateImportMappingStmt) e
 
 	if existing != nil {
 		im.ID = existing.ID
-		if err := ctx.Backend.UpdateImportMapping(im); err != nil {
+		if err := ctx.MappingWriter.UpdateImportMapping(im); err != nil {
 			return mdlerrors.NewBackend("update import mapping", err)
 		}
 		if !ctx.Quiet {
@@ -246,7 +246,7 @@ func execCreateImportMapping(ctx *ExecContext, s *ast.CreateImportMappingStmt) e
 		return nil
 	}
 
-	if err := ctx.Backend.CreateImportMapping(im); err != nil {
+	if err := ctx.MappingWriter.CreateImportMapping(im); err != nil {
 		return mdlerrors.NewBackend("create import mapping", err)
 	}
 
@@ -438,7 +438,7 @@ func execDropImportMapping(ctx *ExecContext, s *ast.DropImportMappingStmt) error
 		return mdlerrors.NewNotConnectedWrite()
 	}
 
-	im, err := ctx.Backend.GetImportMappingByQualifiedName(s.Name.Module, s.Name.Name)
+	im, err := ctx.MappingReader.GetImportMappingByQualifiedName(s.Name.Module, s.Name.Name)
 	if err != nil {
 		if strings.Contains(err.Error(), "not found") {
 			return mdlerrors.NewNotFound("import mapping", s.Name.String())
@@ -446,7 +446,7 @@ func execDropImportMapping(ctx *ExecContext, s *ast.DropImportMappingStmt) error
 		return mdlerrors.NewBackend("get import mapping", err)
 	}
 
-	if err := ctx.Backend.DeleteImportMapping(im.ID); err != nil {
+	if err := ctx.MappingWriter.DeleteImportMapping(im.ID); err != nil {
 		return mdlerrors.NewBackend("drop import mapping", err)
 	}
 

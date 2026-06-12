@@ -214,7 +214,7 @@ func execDropAgentEditorModel(ctx *ExecContext, s *ast.DropModelStmt) error {
 // returns a ConstantRef ready to embed in a Model/KnowledgeBase
 // document's providerFields.key field.
 func resolveConstantRef(ctx *ExecContext, name ast.QualifiedName) (*types.ConstantRef, error) {
-	consts, err := ctx.Backend.ListConstants()
+	consts, err := ctx.ConstantReader.ListConstants()
 	if err != nil {
 		return nil, fmt.Errorf("failed to list constants: %w", err)
 	}

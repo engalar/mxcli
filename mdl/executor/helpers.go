@@ -24,7 +24,7 @@ func getModulesFromCache(ctx *ExecContext) ([]*model.Module, error) {
 	if ctx.Cache != nil && ctx.Cache.modules != nil {
 		return ctx.Cache.modules, nil
 	}
-	modules, err := ctx.Backend.ListModules()
+	modules, err := ctx.ModuleLister.ListModules()
 	if err != nil {
 		return nil, err
 	}
@@ -121,7 +121,7 @@ func resolveFolder(ctx *ExecContext, moduleID model.ID, folderPath string) (mode
 		return moduleID, nil
 	}
 
-	folders, err := ctx.Backend.ListFolders()
+	folders, err := ctx.FolderManager.ListFolders()
 	if err != nil {
 		return "", mdlerrors.NewBackend("list folders", err)
 	}
@@ -178,7 +178,7 @@ func createFolder(ctx *ExecContext, name string, containerID model.ID) (model.ID
 		Name:        name,
 	}
 
-	if err := ctx.Backend.CreateFolder(folder); err != nil {
+	if err := ctx.FolderManager.CreateFolder(folder); err != nil {
 		return "", err
 	}
 
@@ -209,7 +209,7 @@ func enumerationExists(ctx *ExecContext, qualifiedName string) bool {
 	}
 
 	// Get all enumerations and check if one matches
-	enums, err := ctx.Backend.ListEnumerations()
+	enums, err := ctx.EnumerationReader.ListEnumerations()
 	if err != nil {
 		return false
 	}

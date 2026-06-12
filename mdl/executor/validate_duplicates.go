@@ -409,7 +409,7 @@ func loadProjectNameSets(ctx *ExecContext) *projectNameSets {
 
 	// Enumerations
 	ps.enumerations = make(map[string]bool)
-	if enums, err := ctx.Backend.ListEnumerations(); err == nil {
+	if enums, err := ctx.EnumerationReader.ListEnumerations(); err == nil {
 		for _, e := range enums {
 			ps.enumerations[h.GetQualifiedName(e.ContainerID, e.Name)] = true
 		}
@@ -417,7 +417,7 @@ func loadProjectNameSets(ctx *ExecContext) *projectNameSets {
 
 	// Constants
 	ps.constants = make(map[string]bool)
-	if consts, err := ctx.Backend.ListConstants(); err == nil {
+	if consts, err := ctx.ConstantReader.ListConstants(); err == nil {
 		for _, c := range consts {
 			ps.constants[h.GetQualifiedName(c.ContainerID, c.Name)] = true
 		}
@@ -453,7 +453,7 @@ func loadProjectNameSets(ctx *ExecContext) *projectNameSets {
 
 	// JSON structures
 	ps.jsonStructures = make(map[string]bool)
-	if jss, err := ctx.Backend.ListJsonStructures(); err == nil {
+	if jss, err := ctx.MappingReader.ListJsonStructures(); err == nil {
 		for _, j := range jss {
 			ps.jsonStructures[h.GetQualifiedName(j.ContainerID, j.Name)] = true
 		}
@@ -461,7 +461,7 @@ func loadProjectNameSets(ctx *ExecContext) *projectNameSets {
 
 	// Import mappings
 	ps.importMappings = make(map[string]bool)
-	if ims, err := ctx.Backend.ListImportMappings(); err == nil {
+	if ims, err := ctx.MappingReader.ListImportMappings(); err == nil {
 		for _, m := range ims {
 			ps.importMappings[h.GetQualifiedName(m.ContainerID, m.Name)] = true
 		}
@@ -469,7 +469,7 @@ func loadProjectNameSets(ctx *ExecContext) *projectNameSets {
 
 	// Export mappings
 	ps.exportMappings = make(map[string]bool)
-	if ems, err := ctx.Backend.ListExportMappings(); err == nil {
+	if ems, err := ctx.MappingReader.ListExportMappings(); err == nil {
 		for _, m := range ems {
 			ps.exportMappings[h.GetQualifiedName(m.ContainerID, m.Name)] = true
 		}
@@ -517,7 +517,7 @@ func loadProjectNameSets(ctx *ExecContext) *projectNameSets {
 
 	// Image collections
 	ps.imageCollections = make(map[string]bool)
-	if ics, err := ctx.Backend.ListImageCollections(); err == nil {
+	if ics, err := ctx.ImageCollectionWriter.ListImageCollections(); err == nil {
 		for _, ic := range ics {
 			ps.imageCollections[h.GetQualifiedName(ic.ContainerID, ic.Name)] = true
 		}

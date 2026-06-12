@@ -81,7 +81,7 @@ func (pageMoverImpl) find(ctx *ExecContext, name ast.QualifiedName) (model.ID, e
 }
 
 func (pageMoverImpl) moveToContainer(ctx *ExecContext, id model.ID, _ ast.QualifiedName, targetContainerID model.ID) error {
-	if err := ctx.Backend.MoveDocumentGen(id, targetContainerID); err != nil {
+	if err := ctx.PageWriter.MoveDocumentGen(id, targetContainerID); err != nil {
 		return mdlerrors.NewBackend("move page", err)
 	}
 	return nil
@@ -102,7 +102,7 @@ func (pageMoverImpl) crossModuleHook(ctx *ExecContext, id model.ID, _ ast.Qualif
 			currentRoleIDs[i] = model.ID(qn)
 		}
 		remappedIDs := remapDocumentAccessRoles(ctx, targetModule, currentRoleIDs)
-		if err := ctx.Backend.UpdateAllowedRoles(id, documentRoleStrings(remappedIDs)); err != nil {
+		if err := ctx.SecurityEntityAccessManager.UpdateAllowedRoles(id, documentRoleStrings(remappedIDs)); err != nil {
 			return mdlerrors.NewBackend("remap page access", err)
 		}
 		return nil
@@ -205,7 +205,7 @@ func (snippetMoverImpl) find(ctx *ExecContext, name ast.QualifiedName) (model.ID
 }
 
 func (snippetMoverImpl) moveToContainer(ctx *ExecContext, id model.ID, _ ast.QualifiedName, targetContainerID model.ID) error {
-	if err := ctx.Backend.MoveDocumentGen(id, targetContainerID); err != nil {
+	if err := ctx.PageWriter.MoveDocumentGen(id, targetContainerID); err != nil {
 		return mdlerrors.NewBackend("move snippet", err)
 	}
 	return nil
@@ -273,7 +273,7 @@ func (enumerationMoverImpl) moveToContainer(ctx *ExecContext, _ model.ID, name a
 		return mdlerrors.NewNotFound("enumeration", name.String())
 	}
 	enum.ContainerID = targetContainerID
-	if err := ctx.Backend.MoveEnumeration(enum); err != nil {
+	if err := ctx.EnumerationWriter.MoveEnumeration(enum); err != nil {
 		return mdlerrors.NewBackend("move enumeration", err)
 	}
 	return nil
@@ -282,7 +282,7 @@ func (enumerationMoverImpl) moveToContainer(ctx *ExecContext, _ model.ID, name a
 func (enumerationMoverImpl) crossModuleHook(ctx *ExecContext, _ model.ID, name ast.QualifiedName, targetModule *model.Module) error {
 	oldQualifiedName := name.String()
 	newQualifiedName := targetModule.Name + "." + name.Name
-	if err := ctx.Backend.UpdateEnumerationRefsInAllDomainModels(oldQualifiedName, newQualifiedName); err != nil {
+	if err := ctx.DomainModelWriter.UpdateEnumerationRefsInAllDomainModels(oldQualifiedName, newQualifiedName); err != nil {
 		return mdlerrors.NewBackend("update enumeration references", err)
 	}
 	return nil
@@ -300,7 +300,7 @@ type constantMoverImpl struct {
 }
 
 func (constantMoverImpl) find(ctx *ExecContext, name ast.QualifiedName) (model.ID, error) {
-	constants, err := ctx.Backend.ListConstants()
+	constants, err := ctx.ConstantReader.ListConstants()
 	if err != nil {
 		return "", mdlerrors.NewBackend("list constants", err)
 	}
@@ -318,7 +318,7 @@ func (constantMoverImpl) find(ctx *ExecContext, name ast.QualifiedName) (model.I
 }
 
 func (constantMoverImpl) moveToContainer(ctx *ExecContext, id model.ID, name ast.QualifiedName, targetContainerID model.ID) error {
-	constants, err := ctx.Backend.ListConstants()
+	constants, err := ctx.ConstantReader.ListConstants()
 	if err != nil {
 		return mdlerrors.NewBackend("list constants", err)
 	}
@@ -327,7 +327,7 @@ func (constantMoverImpl) moveToContainer(ctx *ExecContext, id model.ID, name ast
 			continue
 		}
 		c.ContainerID = targetContainerID
-		if err := ctx.Backend.MoveConstant(c); err != nil {
+		if err := ctx.ConstantWriter.MoveConstant(c); err != nil {
 			return mdlerrors.NewBackend("move constant", err)
 		}
 		return nil
@@ -374,7 +374,7 @@ func (databaseConnectionMoverImpl) moveToContainer(ctx *ExecContext, id model.ID
 			continue
 		}
 		conn.ContainerID = targetContainerID
-		if err := ctx.Backend.MoveDatabaseConnection(conn); err != nil {
+		if err := ctx.ServiceWriter.MoveDatabaseConnection(conn); err != nil {
 			return mdlerrors.NewBackend("move database connection", err)
 		}
 		return nil
@@ -415,7 +415,7 @@ func (javaActionMoverImpl) find(ctx *ExecContext, name ast.QualifiedName) (model
 }
 
 func (javaActionMoverImpl) moveToContainer(ctx *ExecContext, id model.ID, _ ast.QualifiedName, targetContainerID model.ID) error {
-	if err := ctx.Backend.MoveDocumentGen(id, targetContainerID); err != nil {
+	if err := ctx.PageWriter.MoveDocumentGen(id, targetContainerID); err != nil {
 		return mdlerrors.NewBackend("move java action", err)
 	}
 	return nil
@@ -458,7 +458,7 @@ func (javaScriptActionMoverImpl) find(ctx *ExecContext, name ast.QualifiedName) 
 }
 
 func (javaScriptActionMoverImpl) moveToContainer(ctx *ExecContext, id model.ID, _ ast.QualifiedName, targetContainerID model.ID) error {
-	if err := ctx.Backend.MoveDocumentGen(id, targetContainerID); err != nil {
+	if err := ctx.PageWriter.MoveDocumentGen(id, targetContainerID); err != nil {
 		return mdlerrors.NewBackend("move javascript action", err)
 	}
 	return nil
@@ -501,7 +501,7 @@ func (layoutMoverImpl) find(ctx *ExecContext, name ast.QualifiedName) (model.ID,
 }
 
 func (layoutMoverImpl) moveToContainer(ctx *ExecContext, id model.ID, _ ast.QualifiedName, targetContainerID model.ID) error {
-	if err := ctx.Backend.MoveDocumentGen(id, targetContainerID); err != nil {
+	if err := ctx.PageWriter.MoveDocumentGen(id, targetContainerID); err != nil {
 		return mdlerrors.NewBackend("move layout", err)
 	}
 	return nil
@@ -540,7 +540,7 @@ func (workflowMoverImpl) find(ctx *ExecContext, name ast.QualifiedName) (model.I
 }
 
 func (workflowMoverImpl) moveToContainer(ctx *ExecContext, id model.ID, _ ast.QualifiedName, targetContainerID model.ID) error {
-	if err := ctx.Backend.MoveDocumentGen(id, targetContainerID); err != nil {
+	if err := ctx.PageWriter.MoveDocumentGen(id, targetContainerID); err != nil {
 		return mdlerrors.NewBackend("move workflow", err)
 	}
 	return nil
