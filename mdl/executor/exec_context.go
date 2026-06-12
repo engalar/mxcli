@@ -307,15 +307,16 @@ func GetHierarchyForMining(ctx *ExecContext) (*ContainerHierarchy, error) {
 
 // getDomainModelGenCached returns the DomainModel for moduleID using
 // executorCache.domainModelByModule as a write-through cache.
-// On miss it calls ctx.Backend.GetDomainModelGen and stores the result.
+// On miss it calls ctx.DomainModelReader.GetDomainModelGen and stores the result.
 func getDomainModelGenCached(ctx *ExecContext, moduleID model.ID) (*genDm.DomainModel, error) {
+	ctx.initRoles()
 	ctx.ensureCache()
 	if ctx.Cache.domainModelByModule != nil {
 		if dm, ok := ctx.Cache.domainModelByModule[moduleID]; ok {
 			return dm, nil
 		}
 	}
-	dm, err := ctx.Backend.GetDomainModelGen(moduleID)
+	dm, err := ctx.DomainModelReader.GetDomainModelGen(moduleID)
 	if err != nil {
 		return nil, err
 	}
@@ -327,7 +328,7 @@ func getDomainModelGenCached(ctx *ExecContext, moduleID model.ID) (*genDm.Domain
 }
 
 // setDomainModelGenCached updates the cached DomainModel for moduleID.
-// Call immediately after ctx.Backend.UpdateDomainModelGen(dm) for write-through.
+// Call immediately after ctx.DomainModelWriter.UpdateDomainModelGen(dm) for write-through.
 func setDomainModelGenCached(ctx *ExecContext, moduleID model.ID, dm *genDm.DomainModel) {
 	ctx.ensureCache()
 	if ctx.Cache.domainModelByModule == nil {
