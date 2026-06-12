@@ -5,9 +5,8 @@ package mprbackend
 import (
 	"fmt"
 
-	"go.mongodb.org/mongo-driver/v2/bson"
-
 	"github.com/mendixlabs/mxcli/model"
+	"github.com/mendixlabs/mxcli/modelsdk/element"
 	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 	modelsdkmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
 )
@@ -55,21 +54,22 @@ func (b *MprBackend) createViewEntitySourceDocumentViaModelsdk(moduleID model.ID
 	if b.msdkWriter == nil {
 		return "", fmt.Errorf("modelsdk writer not initialized")
 	}
-	docID := model.ID(modelsdkmpr.GenerateID())
-	doc := bson.D{
-		{Key: "$ID", Value: modelsdkmpr.IDToBsonBinary(string(docID))},
-		{Key: "$Type", Value: "DomainModels$ViewEntitySourceDocument"},
-		{Key: "Documentation", Value: documentation},
-		{Key: "Excluded", Value: false},
-		{Key: "ExportLevel", Value: "Hidden"},
-		{Key: "Name", Value: docName},
-		{Key: "Oql", Value: oqlQuery},
+	doc := genDm.NewViewEntitySourceDocument()
+	if doc.ID() == "" {
+		doc.SetID(element.ID(modelsdkmpr.GenerateID()))
 	}
-	contents, err := bson.Marshal(doc)
+	doc.SetName(docName)
+	doc.SetDocumentation(documentation)
+	doc.SetOql(oqlQuery)
+	doc.SetExcluded(false)
+	doc.SetExportLevel("Hidden")
+
+	contents, err := b.newEncoder().Encode(doc)
 	if err != nil {
 		return "", fmt.Errorf("serialize ViewEntitySourceDocument: %w", err)
 	}
-	if err := b.insertUnit(string(docID), string(moduleID), "Documents", "DomainModels$ViewEntitySourceDocument", contents); err != nil {
+	docID := model.ID(doc.ID())
+	if err := b.insertUnit(string(docID), string(moduleID), "Documents", doc.TypeName(), contents); err != nil {
 		return "", fmt.Errorf("insert ViewEntitySourceDocument: %w", err)
 	}
 	_ = moduleName
