@@ -80,4 +80,9 @@ type FullBackend interface {
 	SecurityModuleManager
 	SecurityEntityAccessManager
 	PageModelAccess
+	PageMutationOperator
+	WorkflowMutationOperator
+	WidgetBuilder
+	ScriptTransactionManager
+	AgentEditorOperator
 }

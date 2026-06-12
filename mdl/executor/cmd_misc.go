@@ -453,7 +453,7 @@ func execExecuteScript(ctx *ExecContext, s *ast.ExecuteScriptStmt) error {
 	var scriptTx backend.ScriptTransaction
 	if isRoot && ctx.Backend != nil && ctx.ConnectionManager.IsConnected() {
 		var err error
-		scriptTx, err = ctx.Backend.BeginScriptTransaction()
+		scriptTx, err = ctx.ScriptTransactionManager.BeginScriptTransaction()
 		if err != nil {
 			return fmt.Errorf("begin transaction for script '%s': %w", s.Path, err)
 		}

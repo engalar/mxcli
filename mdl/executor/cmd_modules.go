@@ -762,7 +762,7 @@ func describeModule(ctx *ExecContext, moduleName string, withAll bool) error {
 	// Model / KnowledgeBase / ConsumedMCPService first (leaves), Agent last
 	// (may reference the others via its TOOL / KNOWLEDGE BASE / MCP SERVICE
 	// blocks).
-	if models, err := ctx.Backend.ListAgentEditorModels(); err == nil {
+	if models, err := ctx.AgentEditorOperator.ListAgentEditorModels(); err == nil {
 		for _, m := range models {
 			if moduleContainers[m.ContainerID] {
 				if err := describeAgentEditorModel(ctx, ast.QualifiedName{Module: moduleName, Name: m.Name}); err == nil {
@@ -771,7 +771,7 @@ func describeModule(ctx *ExecContext, moduleName string, withAll bool) error {
 			}
 		}
 	}
-	if kbs, err := ctx.Backend.ListAgentEditorKnowledgeBases(); err == nil {
+	if kbs, err := ctx.AgentEditorOperator.ListAgentEditorKnowledgeBases(); err == nil {
 		for _, kb := range kbs {
 			if moduleContainers[kb.ContainerID] {
 				if err := describeAgentEditorKnowledgeBase(ctx, ast.QualifiedName{Module: moduleName, Name: kb.Name}); err == nil {
@@ -780,7 +780,7 @@ func describeModule(ctx *ExecContext, moduleName string, withAll bool) error {
 			}
 		}
 	}
-	if svcs, err := ctx.Backend.ListAgentEditorConsumedMCPServices(); err == nil {
+	if svcs, err := ctx.AgentEditorOperator.ListAgentEditorConsumedMCPServices(); err == nil {
 		for _, svc := range svcs {
 			if moduleContainers[svc.ContainerID] {
 				if err := describeAgentEditorConsumedMCPService(ctx, ast.QualifiedName{Module: moduleName, Name: svc.Name}); err == nil {
@@ -789,7 +789,7 @@ func describeModule(ctx *ExecContext, moduleName string, withAll bool) error {
 			}
 		}
 	}
-	if agents, err := ctx.Backend.ListAgentEditorAgents(); err == nil {
+	if agents, err := ctx.AgentEditorOperator.ListAgentEditorAgents(); err == nil {
 		for _, a := range agents {
 			if moduleContainers[a.ContainerID] {
 				if err := describeAgentEditorAgent(ctx, ast.QualifiedName{Module: moduleName, Name: a.Name}); err == nil {

@@ -120,7 +120,12 @@ type ExecContext struct {
 	SecurityProjectManager    backend.SecurityProjectManager
 	SecurityModuleManager     backend.SecurityModuleManager
 	SecurityEntityAccessManager backend.SecurityEntityAccessManager
-	PageModelAccess           backend.PageModelAccess
+	PageModelAccess                backend.PageModelAccess
+	PageMutationOperator           backend.PageMutationOperator
+	WorkflowMutationOperator       backend.WorkflowMutationOperator
+	WidgetBuilder                  backend.WidgetBuilder
+	ScriptTransactionManager       backend.ScriptTransactionManager
+	AgentEditorOperator            backend.AgentEditorOperator
 
 	ExecRepos
 	ExecIO
@@ -173,6 +178,11 @@ func (ctx *ExecContext) initRoles() {
 	ctx.SecurityModuleManager = ctx.Backend
 	ctx.SecurityEntityAccessManager = ctx.Backend
 	ctx.PageModelAccess = ctx.Backend
+	ctx.PageMutationOperator = ctx.Backend
+	ctx.WorkflowMutationOperator = ctx.Backend
+	ctx.WidgetBuilder = ctx.Backend
+	ctx.ScriptTransactionManager = ctx.Backend
+	ctx.AgentEditorOperator = ctx.Backend
 }
 
 // Connected returns true if a project is connected via the Backend.

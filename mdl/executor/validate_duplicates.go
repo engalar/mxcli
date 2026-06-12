@@ -485,7 +485,7 @@ func loadProjectNameSets(ctx *ExecContext) *projectNameSets {
 
 	// Agent editor: models
 	ps.agentModels = make(map[string]bool)
-	if ms, err := ctx.Backend.ListAgentEditorModels(); err == nil {
+	if ms, err := ctx.AgentEditorOperator.ListAgentEditorModels(); err == nil {
 		for _, m := range ms {
 			ps.agentModels[h.GetQualifiedName(m.ContainerID, m.Name)] = true
 		}
@@ -493,7 +493,7 @@ func loadProjectNameSets(ctx *ExecContext) *projectNameSets {
 
 	// Agent editor: knowledge bases
 	ps.knowledgeBases = make(map[string]bool)
-	if kbs, err := ctx.Backend.ListAgentEditorKnowledgeBases(); err == nil {
+	if kbs, err := ctx.AgentEditorOperator.ListAgentEditorKnowledgeBases(); err == nil {
 		for _, k := range kbs {
 			ps.knowledgeBases[h.GetQualifiedName(k.ContainerID, k.Name)] = true
 		}
@@ -501,7 +501,7 @@ func loadProjectNameSets(ctx *ExecContext) *projectNameSets {
 
 	// Agent editor: consumed MCP services
 	ps.consumedMcp = make(map[string]bool)
-	if svcs, err := ctx.Backend.ListAgentEditorConsumedMCPServices(); err == nil {
+	if svcs, err := ctx.AgentEditorOperator.ListAgentEditorConsumedMCPServices(); err == nil {
 		for _, s := range svcs {
 			ps.consumedMcp[h.GetQualifiedName(s.ContainerID, s.Name)] = true
 		}
@@ -509,7 +509,7 @@ func loadProjectNameSets(ctx *ExecContext) *projectNameSets {
 
 	// Agent editor: agents
 	ps.agents = make(map[string]bool)
-	if ags, err := ctx.Backend.ListAgentEditorAgents(); err == nil {
+	if ags, err := ctx.AgentEditorOperator.ListAgentEditorAgents(); err == nil {
 		for _, a := range ags {
 			ps.agents[h.GetQualifiedName(a.ContainerID, a.Name)] = true
 		}

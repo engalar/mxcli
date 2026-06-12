@@ -23,7 +23,7 @@ func listAgentEditorKnowledgeBases(ctx *ExecContext, moduleName string) error {
 		return mdlerrors.NewNotConnected()
 	}
 
-	kbs, err := ctx.Backend.ListAgentEditorKnowledgeBases()
+	kbs, err := ctx.AgentEditorOperator.ListAgentEditorKnowledgeBases()
 	if err != nil {
 		return mdlerrors.NewBackend("list knowledge bases", err)
 	}
@@ -127,7 +127,7 @@ func describeAgentEditorKnowledgeBase(ctx *ExecContext, name ast.QualifiedName) 
 
 // findAgentEditorKnowledgeBase looks up a KB by module and name.
 func findAgentEditorKnowledgeBase(ctx *ExecContext, moduleName, kbName string) *types.KnowledgeBase {
-	kbs, err := ctx.Backend.ListAgentEditorKnowledgeBases()
+	kbs, err := ctx.AgentEditorOperator.ListAgentEditorKnowledgeBases()
 	if err != nil {
 		return nil
 	}

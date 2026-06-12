@@ -140,7 +140,7 @@ func moveEntity(ctx *ExecContext, name ast.QualifiedName, sourceModule, targetMo
 		// The SourceDocumentRef was already updated by MoveEntity to use the new module name.
 		// Extract the original doc name (before the module prefix was changed).
 		docName := name.Name // ViewEntitySourceDocument name matches the entity name
-		if err := ctx.Backend.MoveViewEntitySourceDocument(sourceModule.Name, targetModule.ID, docName); err != nil {
+		if err := ctx.DomainModelWriter.MoveViewEntitySourceDocument(sourceModule.Name, targetModule.ID, docName); err != nil {
 			fmt.Fprintf(ctx.Output, "Warning: Could not move ViewEntitySourceDocument: %v\n", err)
 		}
 	}

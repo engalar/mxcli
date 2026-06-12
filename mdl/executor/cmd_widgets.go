@@ -207,7 +207,7 @@ func updateWidgetsInContainer(ctx *ExecContext, containerID string, widgetRefs [
 	containerName := widgetRefs[0].ContainerName
 
 	// Open the container (page, layout, or snippet) through the backend mutator.
-	mutator, err := ctx.Backend.OpenPageForMutation(model.ID(containerID))
+	mutator, err := ctx.PageMutationOperator.OpenPageForMutation(model.ID(containerID))
 	if err != nil {
 		return 0, mdlerrors.NewBackend(fmt.Sprintf("open %s for mutation", containerName), err)
 	}

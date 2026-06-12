@@ -355,3 +355,45 @@ type PageModelAccess interface {
 	WritePageModel(id model.ID, m *types.PageModel) error
 	WriteSnippetModel(id model.ID, m *types.PageModel) error
 }
+
+// PageMutationOperator provides page/layout/snippet mutation capabilities.
+type PageMutationOperator interface {
+	OpenPageForMutation(unitID model.ID) (PageMutator, error)
+}
+
+// WorkflowMutationOperator provides workflow mutation capabilities.
+type WorkflowMutationOperator interface {
+	OpenWorkflowForMutation(unitID model.ID) (WorkflowMutator, error)
+}
+
+// WidgetBuilder provides pluggable widget construction lifecycle.
+type WidgetBuilder interface {
+	BeginPageBuild()
+	EndPageBuild()
+	// BuildDataGridDatasource is defined in WidgetSerializationBackend or on MprBackend directly.
+}
+
+// ScriptTransactionManager provides atomic script execution.
+type ScriptTransactionManager interface {
+	BeginScriptTransaction() (ScriptTransaction, error)
+}
+
+// AgentEditorOperator provides agent editor CRUD operations.
+type AgentEditorOperator interface {
+	ListAgentEditorModels() ([]*types.Model, error)
+	ListAgentEditorKnowledgeBases() ([]*types.KnowledgeBase, error)
+	ListAgentEditorConsumedMCPServices() ([]*types.ConsumedMCPService, error)
+	ListAgentEditorAgents() ([]*types.Agent, error)
+	CreateAgentEditorModel(m *types.Model) error
+	UpdateAgentEditorModel(m *types.Model) error
+	DeleteAgentEditorModel(id string) error
+	CreateAgentEditorKnowledgeBase(k *types.KnowledgeBase) error
+	UpdateAgentEditorKnowledgeBase(k *types.KnowledgeBase) error
+	DeleteAgentEditorKnowledgeBase(id string) error
+	CreateAgentEditorConsumedMCPService(c *types.ConsumedMCPService) error
+	UpdateAgentEditorConsumedMCPService(c *types.ConsumedMCPService) error
+	DeleteAgentEditorConsumedMCPService(id string) error
+	CreateAgentEditorAgent(a *types.Agent) error
+	UpdateAgentEditorAgent(a *types.Agent) error
+	DeleteAgentEditorAgent(id string) error
+}

@@ -87,7 +87,7 @@ func translatePage(ctx *ExecContext, stmt *ast.TranslateStmt, containerType stri
 		return err
 	}
 
-	mutator, err := ctx.Backend.OpenPageForMutation(unitID)
+	mutator, err := ctx.PageMutationOperator.OpenPageForMutation(unitID)
 	if err != nil {
 		return mdlerrors.NewBackend("open "+containerType+" for mutation", err)
 	}

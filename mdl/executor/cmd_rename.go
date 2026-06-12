@@ -155,7 +155,7 @@ func execRenameModule(ctx *ExecContext, s *ast.RenameStmt) error {
 
 	// Update the module name
 	module.Name = newModuleName
-	if err := ctx.Backend.UpdateModule(module); err != nil {
+	if err := ctx.ModuleWriter.UpdateModule(module); err != nil {
 		return mdlerrors.NewBackend("update module name", err)
 	}
 

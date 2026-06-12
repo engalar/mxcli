@@ -23,7 +23,7 @@ func listAgentEditorModels(ctx *ExecContext, moduleName string) error {
 		return mdlerrors.NewNotConnected()
 	}
 
-	models, err := ctx.Backend.ListAgentEditorModels()
+	models, err := ctx.AgentEditorOperator.ListAgentEditorModels()
 	if err != nil {
 		return mdlerrors.NewBackend("list models", err)
 	}
@@ -176,7 +176,7 @@ func execCreateAgentEditorModel(ctx *ExecContext, s *ast.CreateModelStmt) error 
 
 	if existing != nil {
 		m.ID = existing.ID
-		if err := ctx.Backend.UpdateAgentEditorModel(m); err != nil {
+		if err := ctx.AgentEditorOperator.UpdateAgentEditorModel(m); err != nil {
 			return mdlerrors.NewBackend("update model", err)
 		}
 		invalidateHierarchy(ctx)
@@ -184,7 +184,7 @@ func execCreateAgentEditorModel(ctx *ExecContext, s *ast.CreateModelStmt) error 
 		return nil
 	}
 
-	if err := ctx.Backend.CreateAgentEditorModel(m); err != nil {
+	if err := ctx.AgentEditorOperator.CreateAgentEditorModel(m); err != nil {
 		return mdlerrors.NewBackend("create model", err)
 	}
 	invalidateHierarchy(ctx)
@@ -203,7 +203,7 @@ func execDropAgentEditorModel(ctx *ExecContext, s *ast.DropModelStmt) error {
 		return mdlerrors.NewNotFound("model", s.Name.String())
 	}
 
-	if err := ctx.Backend.DeleteAgentEditorModel(string(m.ID)); err != nil {
+	if err := ctx.AgentEditorOperator.DeleteAgentEditorModel(string(m.ID)); err != nil {
 		return mdlerrors.NewBackend("delete model", err)
 	}
 	fmt.Fprintf(ctx.Output, "Dropped model: %s\n", s.Name)
@@ -237,7 +237,7 @@ func resolveConstantRef(ctx *ExecContext, name ast.QualifiedName) (*types.Consta
 
 // findAgentEditorModel looks up a model by module and name.
 func findAgentEditorModel(ctx *ExecContext, moduleName, modelName string) *types.Model {
-	models, err := ctx.Backend.ListAgentEditorModels()
+	models, err := ctx.AgentEditorOperator.ListAgentEditorModels()
 	if err != nil {
 		return nil
 	}
