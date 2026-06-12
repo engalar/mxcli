@@ -48,6 +48,35 @@ func (b *MprBackend) moveViewEntitySourceDocumentViaModelsdk(sourceModuleName st
 	return b.msdkWriter.UpdateUnitContainer(string(docID), string(targetModuleID))
 }
 
+// ── UpdateViewEntitySourceDocument ────────────────────
+
+func (b *MprBackend) updateViewEntitySourceDocumentViaModelsdk(moduleName, docName, oqlQuery, documentation string) error {
+	if b.msdkWriter == nil {
+		return fmt.Errorf("modelsdk writer not initialized")
+	}
+	docID, err := b.msdkReader.FindViewEntitySourceDocumentID(moduleName, docName)
+	if err != nil {
+		return fmt.Errorf("find view entity source document: %w", err)
+	}
+	if docID == "" {
+		return fmt.Errorf("view entity source document %s.%s not found", moduleName, docName)
+	}
+
+	doc := genDm.NewViewEntitySourceDocument()
+	doc.SetID(element.ID(docID)) // preserve existing $ID
+	doc.SetName(docName)
+	doc.SetDocumentation(documentation)
+	doc.SetOql(oqlQuery)
+	doc.SetExcluded(false)
+	doc.SetExportLevel("Hidden")
+
+	contents, err := b.newEncoder().Encode(doc)
+	if err != nil {
+		return fmt.Errorf("serialize ViewEntitySourceDocument: %w", err)
+	}
+	return b.writeUnitContents(docID, contents)
+}
+
 // ── CreateViewEntitySourceDocument ────────────────────
 
 func (b *MprBackend) createViewEntitySourceDocumentViaModelsdk(moduleID model.ID, moduleName, docName, oqlQuery, documentation string) (model.ID, error) {

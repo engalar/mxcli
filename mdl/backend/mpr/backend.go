@@ -370,6 +370,9 @@ func (b *MprBackend) DeleteViewEntitySourceDocument(id model.ID) error {
 func (b *MprBackend) DeleteViewEntitySourceDocumentByName(moduleName, docName string) error {
 	return b.deleteViewEntitySourceDocumentByNameViaModelsdk(moduleName, docName)
 }
+func (b *MprBackend) UpdateViewEntitySourceDocument(moduleName, docName, oqlQuery, documentation string) error {
+	return b.updateViewEntitySourceDocumentViaModelsdk(moduleName, docName, oqlQuery, documentation)
+}
 func (b *MprBackend) FindViewEntitySourceDocumentID(moduleName, docName string) (model.ID, error) {
 	return b.msdkReader.FindViewEntitySourceDocumentID(moduleName, docName)
 }

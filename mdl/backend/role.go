@@ -50,6 +50,7 @@ type DomainModelReader interface {
 type DomainModelWriter interface {
 	UpdateDomainModelGen(dm *genDm.DomainModel) error
 	CreateEntityGen(domainModelID model.ID, entity *genDm.Entity) error
+	UpdateViewEntitySourceDocument(moduleName, docName, oqlQuery, documentation string) error
 	UpdateEntityGen(domainModelID model.ID, entity *genDm.Entity) error
 	MoveEntityGen(entity *genDm.Entity, sourceDMID, targetDMID model.ID, sourceModuleName, targetModuleName string) ([]string, error)
 	CreateAssociationGen(domainModelID model.ID, assoc *genDm.Association) error
