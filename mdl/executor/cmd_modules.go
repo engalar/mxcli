@@ -239,7 +239,7 @@ func execDropModule(ctx *ExecContext, s *ast.DropModuleStmt) error {
 	}
 
 	// Delete business event services in this module
-	if services, err := ctx.Backend.ListBusinessEventServices(); err == nil {
+	if services, err := ctx.ServiceLister.ListBusinessEventServices(); err == nil {
 		for _, svc := range services {
 			if moduleContainers[svc.ContainerID] {
 				if err := ctx.ServiceWriter.DeleteBusinessEventService(svc.ID); err != nil {
@@ -252,7 +252,7 @@ func execDropModule(ctx *ExecContext, s *ast.DropModuleStmt) error {
 	}
 
 	// Delete database connections in this module
-	if conns, err := ctx.Backend.ListDatabaseConnections(); err == nil {
+	if conns, err := ctx.ServiceLister.ListDatabaseConnections(); err == nil {
 		for _, conn := range conns {
 			if moduleContainers[conn.ContainerID] {
 				if err := ctx.ServiceWriter.DeleteDatabaseConnection(conn.ID); err != nil {
@@ -265,7 +265,7 @@ func execDropModule(ctx *ExecContext, s *ast.DropModuleStmt) error {
 	}
 
 	// Delete consumed OData services (clients) in this module
-	if services, err := ctx.Backend.ListConsumedODataServices(); err == nil {
+	if services, err := ctx.ServiceLister.ListConsumedODataServices(); err == nil {
 		for _, svc := range services {
 			if moduleContainers[svc.ContainerID] {
 				if err := ctx.ServiceWriter.DeleteConsumedODataService(svc.ID); err != nil {
@@ -278,7 +278,7 @@ func execDropModule(ctx *ExecContext, s *ast.DropModuleStmt) error {
 	}
 
 	// Delete published OData services in this module
-	if services, err := ctx.Backend.ListPublishedODataServices(); err == nil {
+	if services, err := ctx.ServiceLister.ListPublishedODataServices(); err == nil {
 		for _, svc := range services {
 			if moduleContainers[svc.ContainerID] {
 				if err := ctx.ServiceWriter.DeletePublishedODataService(svc.ID); err != nil {
@@ -704,7 +704,7 @@ func describeModule(ctx *ExecContext, moduleName string, withAll bool) error {
 	}
 
 	// Output database connections
-	if conns, err := ctx.Backend.ListDatabaseConnections(); err == nil {
+	if conns, err := ctx.ServiceLister.ListDatabaseConnections(); err == nil {
 		for _, conn := range conns {
 			if moduleContainers[conn.ContainerID] {
 				if err := outputDatabaseConnectionMDL(ctx, conn, moduleName); err == nil {
@@ -715,7 +715,7 @@ func describeModule(ctx *ExecContext, moduleName string, withAll bool) error {
 	}
 
 	// Output business event services
-	if services, err := ctx.Backend.ListBusinessEventServices(); err == nil {
+	if services, err := ctx.ServiceLister.ListBusinessEventServices(); err == nil {
 		for _, svc := range services {
 			if moduleContainers[svc.ContainerID] {
 				if err := describeBusinessEventService(ctx, ast.QualifiedName{Module: moduleName, Name: svc.Name}); err == nil {
@@ -729,7 +729,7 @@ func describeModule(ctx *ExecContext, moduleName string, withAll bool) error {
 	h, _ := getHierarchy(ctx)
 
 	// Output consumed OData services (clients)
-	if services, err := ctx.Backend.ListConsumedODataServices(); err == nil {
+	if services, err := ctx.ServiceLister.ListConsumedODataServices(); err == nil {
 		for _, svc := range services {
 			if moduleContainers[svc.ContainerID] {
 				folderPath := ""
@@ -744,7 +744,7 @@ func describeModule(ctx *ExecContext, moduleName string, withAll bool) error {
 	}
 
 	// Output published OData services
-	if services, err := ctx.Backend.ListPublishedODataServices(); err == nil {
+	if services, err := ctx.ServiceLister.ListPublishedODataServices(); err == nil {
 		for _, svc := range services {
 			if moduleContainers[svc.ContainerID] {
 				folderPath := ""

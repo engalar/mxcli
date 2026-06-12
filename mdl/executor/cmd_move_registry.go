@@ -347,7 +347,7 @@ type databaseConnectionMoverImpl struct {
 }
 
 func (databaseConnectionMoverImpl) find(ctx *ExecContext, name ast.QualifiedName) (model.ID, error) {
-	connections, err := ctx.Backend.ListDatabaseConnections()
+	connections, err := ctx.ServiceLister.ListDatabaseConnections()
 	if err != nil {
 		return "", mdlerrors.NewBackend("list database connections", err)
 	}
@@ -365,7 +365,7 @@ func (databaseConnectionMoverImpl) find(ctx *ExecContext, name ast.QualifiedName
 }
 
 func (databaseConnectionMoverImpl) moveToContainer(ctx *ExecContext, id model.ID, name ast.QualifiedName, targetContainerID model.ID) error {
-	connections, err := ctx.Backend.ListDatabaseConnections()
+	connections, err := ctx.ServiceLister.ListDatabaseConnections()
 	if err != nil {
 		return mdlerrors.NewBackend("list database connections", err)
 	}

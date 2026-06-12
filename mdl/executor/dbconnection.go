@@ -28,7 +28,7 @@ func createDatabaseConnection(ctx *ExecContext, stmt *ast.CreateDatabaseConnecti
 	}
 
 	// Check for existing connection
-	existing, _ := ctx.Backend.ListDatabaseConnections()
+	existing, _ := ctx.ServiceLister.ListDatabaseConnections()
 	h, _ := getHierarchy(ctx)
 
 	var existingConnID model.ID
@@ -132,7 +132,7 @@ func createDatabaseConnection(ctx *ExecContext, stmt *ast.CreateDatabaseConnecti
 
 // listDatabaseConnections handles SHOW DATABASE CONNECTIONS command.
 func listDatabaseConnections(ctx *ExecContext, moduleName string) error {
-	connections, err := ctx.Backend.ListDatabaseConnections()
+	connections, err := ctx.ServiceLister.ListDatabaseConnections()
 	if err != nil {
 		return mdlerrors.NewBackend("list database connections", err)
 	}
@@ -186,7 +186,7 @@ func listDatabaseConnections(ctx *ExecContext, moduleName string) error {
 
 // describeDatabaseConnection handles DESCRIBE DATABASE CONNECTION command.
 func describeDatabaseConnection(ctx *ExecContext, name ast.QualifiedName) error {
-	connections, err := ctx.Backend.ListDatabaseConnections()
+	connections, err := ctx.ServiceLister.ListDatabaseConnections()
 	if err != nil {
 		return mdlerrors.NewBackend("list database connections", err)
 	}

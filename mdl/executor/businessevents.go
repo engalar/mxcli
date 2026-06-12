@@ -18,7 +18,7 @@ func listBusinessEventServices(ctx *ExecContext, inModule string) error {
 		return mdlerrors.NewNotConnected()
 	}
 
-	services, err := ctx.Backend.ListBusinessEventServices()
+	services, err := ctx.ServiceLister.ListBusinessEventServices()
 	if err != nil {
 		return mdlerrors.NewBackend("list business event services", err)
 	}
@@ -98,7 +98,7 @@ func listBusinessEvents(ctx *ExecContext, inModule string) error {
 		return mdlerrors.NewNotConnected()
 	}
 
-	services, err := ctx.Backend.ListBusinessEventServices()
+	services, err := ctx.ServiceLister.ListBusinessEventServices()
 	if err != nil {
 		return mdlerrors.NewBackend("list business event services", err)
 	}
@@ -175,7 +175,7 @@ func describeBusinessEventService(ctx *ExecContext, name ast.QualifiedName) erro
 		return mdlerrors.NewNotConnected()
 	}
 
-	services, err := ctx.Backend.ListBusinessEventServices()
+	services, err := ctx.ServiceLister.ListBusinessEventServices()
 	if err != nil {
 		return mdlerrors.NewBackend("list business event services", err)
 	}
@@ -272,7 +272,7 @@ func createBusinessEventService(ctx *ExecContext, stmt *ast.CreateBusinessEventS
 	}
 
 	// Check for existing service with same name
-	existingServices, _ := ctx.Backend.ListBusinessEventServices()
+	existingServices, _ := ctx.ServiceLister.ListBusinessEventServices()
 	h, err := getHierarchy(ctx)
 	if err != nil {
 		return mdlerrors.NewBackend("build hierarchy", err)
@@ -386,7 +386,7 @@ func dropBusinessEventService(ctx *ExecContext, stmt *ast.DropBusinessEventServi
 		return mdlerrors.NewNotConnectedWrite()
 	}
 
-	services, err := ctx.Backend.ListBusinessEventServices()
+	services, err := ctx.ServiceLister.ListBusinessEventServices()
 	if err != nil {
 		return mdlerrors.NewBackend("list business event services", err)
 	}

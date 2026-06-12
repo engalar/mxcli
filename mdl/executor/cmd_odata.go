@@ -42,7 +42,7 @@ func outputJavadocIndented(w io.Writer, text string, indent string) {
 // listODataClients handles SHOW ODATA CLIENTS [IN module] command.
 func listODataClients(ctx *ExecContext, moduleName string) error {
 
-	services, err := ctx.Backend.ListConsumedODataServices()
+	services, err := ctx.ServiceLister.ListConsumedODataServices()
 	if err != nil {
 		return mdlerrors.NewBackend("list consumed OData services", err)
 	}
@@ -106,7 +106,7 @@ func listODataClients(ctx *ExecContext, moduleName string) error {
 // describeODataClient handles DESCRIBE ODATA CLIENT command.
 func describeODataClient(ctx *ExecContext, name ast.QualifiedName) error {
 
-	services, err := ctx.Backend.ListConsumedODataServices()
+	services, err := ctx.ServiceLister.ListConsumedODataServices()
 	if err != nil {
 		return mdlerrors.NewBackend("list consumed OData services", err)
 	}
@@ -224,7 +224,7 @@ func outputConsumedODataServiceMDL(ctx *ExecContext, svc *model.ConsumedODataSer
 // listODataServices handles SHOW ODATA SERVICES [IN module] command.
 func listODataServices(ctx *ExecContext, moduleName string) error {
 
-	services, err := ctx.Backend.ListPublishedODataServices()
+	services, err := ctx.ServiceLister.ListPublishedODataServices()
 	if err != nil {
 		return mdlerrors.NewBackend("list published OData services", err)
 	}
@@ -285,7 +285,7 @@ func listODataServices(ctx *ExecContext, moduleName string) error {
 // describeODataService handles DESCRIBE ODATA SERVICE command.
 func describeODataService(ctx *ExecContext, name ast.QualifiedName) error {
 
-	services, err := ctx.Backend.ListPublishedODataServices()
+	services, err := ctx.ServiceLister.ListPublishedODataServices()
 	if err != nil {
 		return mdlerrors.NewBackend("list published OData services", err)
 	}
@@ -949,7 +949,7 @@ func createODataClient(ctx *ExecContext, stmt *ast.CreateODataClientStmt) error 
 	}
 
 	// Check if client already exists
-	services, err := ctx.Backend.ListConsumedODataServices()
+	services, err := ctx.ServiceLister.ListConsumedODataServices()
 	if err == nil {
 		h, _ := getHierarchy(ctx)
 		for _, svc := range services {
@@ -1157,7 +1157,7 @@ func alterODataClient(ctx *ExecContext, stmt *ast.AlterODataClientStmt) error {
 		return mdlerrors.NewNotConnectedWrite()
 	}
 
-	services, err := ctx.Backend.ListConsumedODataServices()
+	services, err := ctx.ServiceLister.ListConsumedODataServices()
 	if err != nil {
 		return mdlerrors.NewBackend("list consumed OData services", err)
 	}
@@ -1250,7 +1250,7 @@ func dropODataClient(ctx *ExecContext, stmt *ast.DropODataClientStmt) error {
 		return mdlerrors.NewNotConnectedWrite()
 	}
 
-	services, err := ctx.Backend.ListConsumedODataServices()
+	services, err := ctx.ServiceLister.ListConsumedODataServices()
 	if err != nil {
 		return mdlerrors.NewBackend("list consumed OData services", err)
 	}
@@ -1320,7 +1320,7 @@ func createODataService(ctx *ExecContext, stmt *ast.CreateODataServiceStmt) erro
 	}
 
 	// Check if service already exists
-	services, err := ctx.Backend.ListPublishedODataServices()
+	services, err := ctx.ServiceLister.ListPublishedODataServices()
 	if err == nil {
 		h, _ := getHierarchy(ctx)
 		for _, svc := range services {
@@ -1413,7 +1413,7 @@ func alterODataService(ctx *ExecContext, stmt *ast.AlterODataServiceStmt) error 
 		return mdlerrors.NewNotConnectedWrite()
 	}
 
-	services, err := ctx.Backend.ListPublishedODataServices()
+	services, err := ctx.ServiceLister.ListPublishedODataServices()
 	if err != nil {
 		return mdlerrors.NewBackend("list published OData services", err)
 	}
@@ -1469,7 +1469,7 @@ func dropODataService(ctx *ExecContext, stmt *ast.DropODataServiceStmt) error {
 		return mdlerrors.NewNotConnectedWrite()
 	}
 
-	services, err := ctx.Backend.ListPublishedODataServices()
+	services, err := ctx.ServiceLister.ListPublishedODataServices()
 	if err != nil {
 		return mdlerrors.NewBackend("list published OData services", err)
 	}
@@ -1527,7 +1527,7 @@ func validateMetadataURL(rawURL string) error {
 // validateODataClientExists returns an error if no consumed OData service matching
 // the given qualified name exists in the project.
 func validateODataClientExists(ctx *ExecContext, ref ast.QualifiedName) error {
-	services, err := ctx.Backend.ListConsumedODataServices()
+	services, err := ctx.ServiceLister.ListConsumedODataServices()
 	if err != nil {
 		return mdlerrors.NewBackend("list consumed OData services", err)
 	}

@@ -16,7 +16,7 @@ import (
 // listPublishedRestServices handles SHOW PUBLISHED REST SERVICES [IN module] command.
 func listPublishedRestServices(ctx *ExecContext, moduleName string) error {
 
-	services, err := ctx.Backend.ListPublishedRestServices()
+	services, err := ctx.ServiceLister.ListPublishedRestServices()
 	if err != nil {
 		return mdlerrors.NewBackend("list published rest services", err)
 	}
@@ -79,7 +79,7 @@ func listPublishedRestServices(ctx *ExecContext, moduleName string) error {
 // describePublishedRestService handles DESCRIBE PUBLISHED REST SERVICE command.
 func describePublishedRestService(ctx *ExecContext, name ast.QualifiedName) error {
 
-	services, err := ctx.Backend.ListPublishedRestServices()
+	services, err := ctx.ServiceLister.ListPublishedRestServices()
 	if err != nil {
 		return mdlerrors.NewBackend("list published rest services", err)
 	}
@@ -160,7 +160,7 @@ func describePublishedRestService(ctx *ExecContext, name ast.QualifiedName) erro
 // findPublishedRestService looks up a published REST service by module and name.
 func findPublishedRestService(ctx *ExecContext, moduleName, name string) (*model.PublishedRestService, error) {
 
-	services, err := ctx.Backend.ListPublishedRestServices()
+	services, err := ctx.ServiceLister.ListPublishedRestServices()
 	if err != nil {
 		return nil, err
 	}
@@ -268,7 +268,7 @@ func execDropPublishedRestService(ctx *ExecContext, s *ast.DropPublishedRestServ
 		return mdlerrors.NewNotConnectedWrite()
 	}
 
-	services, err := ctx.Backend.ListPublishedRestServices()
+	services, err := ctx.ServiceLister.ListPublishedRestServices()
 	if err != nil {
 		return mdlerrors.NewBackend("list published rest services", err)
 	}

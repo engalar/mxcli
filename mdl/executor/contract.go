@@ -326,7 +326,7 @@ func outputContractEntityMDL(ctx *ExecContext, et *types.EdmEntityType, svcQN st
 
 // parseServiceContract finds a consumed OData service by name and parses its cached $metadata.
 func parseServiceContract(ctx *ExecContext, name ast.QualifiedName) (*types.EdmxDocument, string, error) {
-	services, err := ctx.Backend.ListConsumedODataServices()
+	services, err := ctx.ServiceLister.ListConsumedODataServices()
 	if err != nil {
 		return nil, "", mdlerrors.NewBackend("list consumed OData services", err)
 	}
@@ -1486,7 +1486,7 @@ func describeContractMessage(ctx *ExecContext, name ast.QualifiedName) error {
 
 // parseAsyncAPIContract finds a business event service by name and parses its cached AsyncAPI document.
 func parseAsyncAPIContract(ctx *ExecContext, name ast.QualifiedName) (*types.AsyncAPIDocument, string, error) {
-	services, err := ctx.Backend.ListBusinessEventServices()
+	services, err := ctx.ServiceLister.ListBusinessEventServices()
 	if err != nil {
 		return nil, "", mdlerrors.NewBackend("list business event services", err)
 	}

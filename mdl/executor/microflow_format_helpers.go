@@ -55,7 +55,7 @@ func loadRestServices(ctx *ExecContext) ([]*model.ConsumedRestService, error) {
 	if !ctx.Connected() {
 		return nil, nil
 	}
-	svcs, err := ctx.Backend.ListConsumedRestServices()
+	svcs, err := ctx.ServiceLister.ListConsumedRestServices()
 	return svcs, err
 }
 

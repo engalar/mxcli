@@ -30,7 +30,7 @@ func safeIdent(name string) string {
 // listRestClients handles SHOW REST CLIENTS [IN module] command.
 func listRestClients(ctx *ExecContext, moduleName string) error {
 
-	services, err := ctx.Backend.ListConsumedRestServices()
+	services, err := ctx.ServiceLister.ListConsumedRestServices()
 	if err != nil {
 		return mdlerrors.NewBackend("list consumed rest services", err)
 	}
@@ -92,7 +92,7 @@ func listRestClients(ctx *ExecContext, moduleName string) error {
 // describeRestClient handles DESCRIBE REST CLIENT command.
 func describeRestClient(ctx *ExecContext, name ast.QualifiedName) error {
 
-	services, err := ctx.Backend.ListConsumedRestServices()
+	services, err := ctx.ServiceLister.ListConsumedRestServices()
 	if err != nil {
 		return mdlerrors.NewBackend("list consumed rest services", err)
 	}
@@ -310,7 +310,7 @@ func createRestClient(ctx *ExecContext, stmt *ast.CreateRestClientStmt) error {
 	}
 
 	// Check for existing service with same name
-	existingServices, err := ctx.Backend.ListConsumedRestServices()
+	existingServices, err := ctx.ServiceLister.ListConsumedRestServices()
 	if err != nil {
 		return mdlerrors.NewBackend("list rest clients", err)
 	}
@@ -546,7 +546,7 @@ func dropRestClient(ctx *ExecContext, stmt *ast.DropRestClientStmt) error {
 		return mdlerrors.NewNotConnectedWrite()
 	}
 
-	services, err := ctx.Backend.ListConsumedRestServices()
+	services, err := ctx.ServiceLister.ListConsumedRestServices()
 	if err != nil {
 		return mdlerrors.NewBackend("list consumed rest services", err)
 	}
@@ -673,7 +673,7 @@ func createRestClientFromSpec(ctx *ExecContext, stmt *ast.CreateRestClientStmt) 
 
 	// Handle OR MODIFY: delete existing if present, preserving UnitID so any
 	// SEND REST REQUEST microflows that reference this service by ID remain valid.
-	existingServices, err := ctx.Backend.ListConsumedRestServices()
+	existingServices, err := ctx.ServiceLister.ListConsumedRestServices()
 	if err != nil {
 		return mdlerrors.NewBackend("list rest clients", err)
 	}

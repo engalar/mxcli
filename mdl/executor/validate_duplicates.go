@@ -437,7 +437,7 @@ func loadProjectNameSets(ctx *ExecContext) *projectNameSets {
 
 	// Business event services
 	ps.businessEvents = make(map[string]bool)
-	if bes, err := ctx.Backend.ListBusinessEventServices(); err == nil {
+	if bes, err := ctx.ServiceLister.ListBusinessEventServices(); err == nil {
 		for _, b := range bes {
 			ps.businessEvents[h.GetQualifiedName(b.ContainerID, b.Name)] = true
 		}
@@ -445,7 +445,7 @@ func loadProjectNameSets(ctx *ExecContext) *projectNameSets {
 
 	// Published REST services
 	ps.publishedRest = make(map[string]bool)
-	if prs, err := ctx.Backend.ListPublishedRestServices(); err == nil {
+	if prs, err := ctx.ServiceLister.ListPublishedRestServices(); err == nil {
 		for _, p := range prs {
 			ps.publishedRest[h.GetQualifiedName(p.ContainerID, p.Name)] = true
 		}
@@ -477,7 +477,7 @@ func loadProjectNameSets(ctx *ExecContext) *projectNameSets {
 
 	// Data transformers
 	ps.dataTransformers = make(map[string]bool)
-	if dts, err := ctx.Backend.ListDataTransformers(); err == nil {
+	if dts, err := ctx.ServiceLister.ListDataTransformers(); err == nil {
 		for _, d := range dts {
 			ps.dataTransformers[h.GetQualifiedName(d.ContainerID, d.Name)] = true
 		}

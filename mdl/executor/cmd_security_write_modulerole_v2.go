@@ -168,7 +168,7 @@ func execDropModuleRoleGen(ctx *ExecContext, s *ast.DropModuleRoleStmt) error {
 		}
 
 		// Cascade: OData services
-		if svcs, err := ctx.Backend.ListPublishedODataServices(); err == nil {
+		if svcs, err := ctx.ServiceLister.ListPublishedODataServices(); err == nil {
 			for _, svc := range svcs {
 				modID := h.FindModuleID(svc.ContainerID)
 				if modID != module.ID {

@@ -45,7 +45,7 @@ func execGrantODataServiceAccessGen(ctx *ExecContext, s *ast.GrantODataServiceAc
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}
 
-	services, err := ctx.Backend.ListPublishedODataServices()
+	services, err := ctx.ServiceLister.ListPublishedODataServices()
 	if err != nil {
 		return mdlerrors.NewBackend("list published OData services", err)
 	}
@@ -100,7 +100,7 @@ func execRevokeODataServiceAccessGen(ctx *ExecContext, s *ast.RevokeODataService
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}
 
-	services, err := ctx.Backend.ListPublishedODataServices()
+	services, err := ctx.ServiceLister.ListPublishedODataServices()
 	if err != nil {
 		return mdlerrors.NewBackend("list published OData services", err)
 	}
@@ -151,7 +151,7 @@ func execGrantPublishedRestServiceAccessGen(ctx *ExecContext, s *ast.GrantPublis
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}
 
-	services, err := ctx.Backend.ListPublishedRestServices()
+	services, err := ctx.ServiceLister.ListPublishedRestServices()
 	if err != nil {
 		return mdlerrors.NewBackend("list published rest services", err)
 	}
@@ -206,7 +206,7 @@ func execRevokePublishedRestServiceAccessGen(ctx *ExecContext, s *ast.RevokePubl
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}
 
-	services, err := ctx.Backend.ListPublishedRestServices()
+	services, err := ctx.ServiceLister.ListPublishedRestServices()
 	if err != nil {
 		return mdlerrors.NewBackend("list published rest services", err)
 	}
