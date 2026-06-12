@@ -74,7 +74,10 @@ type ExecContext struct {
 	context.Context
 
 	// Backend provides all domain operations. Nil when not connected.
-	// Deprecated: prefer role-specific fields below.
+	// Deprecated: All production code has been migrated to role-specific
+	// fields (DomainModelReader, PageWriter, etc.). Only the ImportBuffer
+	// type assertion and some test fixtures still reference this field.
+	// Remove once those are migrated.
 	Backend backend.FullBackend
 
 	// Logger is the session diagnostics logger (nil = no logging).
