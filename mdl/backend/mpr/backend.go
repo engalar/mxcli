@@ -30,7 +30,6 @@ import (
 	genProj "github.com/mendixlabs/mxcli/modelsdk/gen/projects"
 	genSec "github.com/mendixlabs/mxcli/modelsdk/gen/security"
 	genWf "github.com/mendixlabs/mxcli/modelsdk/gen/workflows"
-	"github.com/mendixlabs/mxcli/modelsdk/meta"
 	modelsdkmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
 	"github.com/mendixlabs/mxcli/modelsdk/mprread"
 	mdlversion "github.com/mendixlabs/mxcli/modelsdk/version"
@@ -76,6 +75,12 @@ type MprBackend struct {
 	// These extract method groups into focused types as part of the
 	// MprBackend facade decomposition (Phase 3).
 	modules          *moduleBackend
+	microflows       *microflowBackend
+	workflows        *workflowBackend
+	pages            *pageBackend
+	java             *javaBackend
+	domainmodels     *domainModelBackend
+	security         *securityBackend
 	folders          *folderBackend
 	scheduledEvents  *scheduledEventBackend
 	enumerations     *enumerationBackend
@@ -154,6 +159,12 @@ func (b *MprBackend) Connect(path string) error {
 	b.msdkWriter = mw
 	b.path = path
 	b.modules = newModuleBackend(r)
+	b.microflows = newMicroflowBackend(mw)
+	b.workflows = newWorkflowBackend(mw)
+	b.pages = newPageBackend(mw)
+	b.java = newJavaBackend(mw)
+	b.domainmodels = newDomainModelBackend(mw)
+	b.security = newSecurityBackend(mw)
 	b.folders = newFolderBackend(r)
 	b.scheduledEvents = newScheduledEventBackend(r)
 	b.enumerations = newEnumerationBackend(r)
@@ -191,6 +202,36 @@ func (b *MprBackend) initSubBackends() {
 		}
 		if b.mappings == nil {
 			b.mappings = newMappingBackend(b.reader)
+		}
+		if b.microflows == nil && b.msdkWriter != nil {
+			if w, ok := b.msdkWriter.(*modelsdkmpr.Writer); ok {
+				b.microflows = newMicroflowBackend(w)
+			}
+		}
+		if b.workflows == nil && b.msdkWriter != nil {
+			if w, ok := b.msdkWriter.(*modelsdkmpr.Writer); ok {
+				b.workflows = newWorkflowBackend(w)
+			}
+		}
+		if b.pages == nil && b.msdkWriter != nil {
+			if w, ok := b.msdkWriter.(*modelsdkmpr.Writer); ok {
+				b.pages = newPageBackend(w)
+			}
+		}
+		if b.java == nil && b.msdkWriter != nil {
+			if w, ok := b.msdkWriter.(*modelsdkmpr.Writer); ok {
+				b.java = newJavaBackend(w)
+			}
+		}
+		if b.domainmodels == nil && b.msdkWriter != nil {
+			if w, ok := b.msdkWriter.(*modelsdkmpr.Writer); ok {
+				b.domainmodels = newDomainModelBackend(w)
+			}
+		}
+		if b.security == nil && b.msdkWriter != nil {
+			if w, ok := b.msdkWriter.(*modelsdkmpr.Writer); ok {
+				b.security = newSecurityBackend(w)
+			}
 		}
 	}
 }
@@ -359,11 +400,8 @@ func (b *MprBackend) UpdateEnumerationRefsInAllDomainModels(oldQualifiedName, ne
 
 func (b *MprBackend) DeleteMicroflow(id model.ID) error { return b.deleteMicroflowViaModelsdk(id) }
 func (b *MprBackend) IsRule(qualifiedName string) (bool, error) {
-	repo := b.Microflows()
-	if repo == nil {
-		return false, fmt.Errorf("MprBackend.IsRule: microflow repo not initialized (backend not connected)")
-	}
-	return repo.IsRule(qualifiedName)
+	b.initSubBackends()
+	return b.microflows.IsRule(qualifiedName)
 }
 
 func (b *MprBackend) DeleteNanoflow(id model.ID) error { return b.deleteNanoflowViaModelsdk(id) }
@@ -372,21 +410,15 @@ func (b *MprBackend) DeleteNanoflow(id model.ID) error { return b.deleteNanoflow
 // (b.Microflows()), returning gen-typed values. Returns an error if the
 // modelsdk writer is unavailable (backend not connected).
 func (b *MprBackend) ListMicroflowsGen() ([]*genMf.Microflow, error) {
-	repo := b.Microflows()
-	if repo == nil {
-		return nil, fmt.Errorf("ListMicroflowsGen: modelsdk writer unavailable (backend not connected)")
-	}
-	return repo.ListAll()
+	b.initSubBackends()
+	return b.microflows.ListMicroflowsGen()
 }
 
 // ListNanoflowsGen routes through the modelsdk-native nanoflow repo
 // (b.Nanoflows()). Empty moduleID means "all modules".
 func (b *MprBackend) ListNanoflowsGen() ([]*genMf.Nanoflow, error) {
-	repo := b.Nanoflows()
-	if repo == nil {
-		return nil, fmt.Errorf("ListNanoflowsGen: modelsdk writer unavailable (backend not connected)")
-	}
-	return repo.List("")
+	b.initSubBackends()
+	return b.microflows.ListNanoflowsGen()
 }
 
 // GetMicroflowGen fetches a single microflow body by ID as a
@@ -395,11 +427,8 @@ func (b *MprBackend) ListNanoflowsGen() ([]*genMf.Nanoflow, error) {
 // the modelsdk writer is unavailable so callers can fall through to a
 // no-op rather than failing the entire build.
 func (b *MprBackend) GetMicroflowGen(id model.ID) (*genMf.Microflow, error) {
-	repo := b.Microflows()
-	if repo == nil {
-		return nil, nil
-	}
-	return repo.Get(id)
+	b.initSubBackends()
+	return b.microflows.GetMicroflowGen(id)
 }
 
 // ---------------------------------------------------------------------------
@@ -415,19 +444,13 @@ func (b *MprBackend) GetMicroflowGen(id model.ID) (*genMf.Microflow, error) {
 // were retired in Stage 3.3.5.E1.
 
 func (b *MprBackend) ListPagesGen() ([]*genPg.Page, error) {
-	w, ok := b.concreteWriter()
-	if !ok {
-		return nil, fmt.Errorf("ListPagesGen: no modelsdk writer")
-	}
-	return mprrepos.NewPageRepository(w).ListAll()
+	b.initSubBackends()
+	return b.pages.ListPagesGen()
 }
 
 func (b *MprBackend) GetPageGen(id model.ID) (*genPg.Page, error) {
-	w, ok := b.concreteWriter()
-	if !ok {
-		return nil, fmt.Errorf("GetPageGen: no modelsdk writer")
-	}
-	return mprrepos.NewPageRepository(w).Get(id)
+	b.initSubBackends()
+	return b.pages.GetPageGen(id)
 }
 
 func (b *MprBackend) CreatePageGen(parentUUID, containmentName string, page *genPg.Page) error {
@@ -453,19 +476,13 @@ func (b *MprBackend) UpdatePageGen(page *genPg.Page) error {
 }
 
 func (b *MprBackend) ListLayoutsGen() ([]*genPg.Layout, error) {
-	w, ok := b.concreteWriter()
-	if !ok {
-		return nil, fmt.Errorf("ListLayoutsGen: no modelsdk writer")
-	}
-	return mprrepos.NewLayoutRepository(w).ListAll()
+	b.initSubBackends()
+	return b.pages.ListLayoutsGen()
 }
 
 func (b *MprBackend) GetLayoutGen(id model.ID) (*genPg.Layout, error) {
-	w, ok := b.concreteWriter()
-	if !ok {
-		return nil, fmt.Errorf("GetLayoutGen: no modelsdk writer")
-	}
-	return mprrepos.NewLayoutRepository(w).Get(id)
+	b.initSubBackends()
+	return b.pages.GetLayoutGen(id)
 }
 
 func (b *MprBackend) CreateLayoutGen(parentUUID, containmentName string, layout *genPg.Layout) error {
@@ -491,19 +508,13 @@ func (b *MprBackend) UpdateLayoutGen(layout *genPg.Layout) error {
 }
 
 func (b *MprBackend) ListSnippetsGen() ([]*genPg.Snippet, error) {
-	w, ok := b.concreteWriter()
-	if !ok {
-		return nil, fmt.Errorf("ListSnippetsGen: no modelsdk writer")
-	}
-	return mprrepos.NewSnippetRepository(w).ListAll()
+	b.initSubBackends()
+	return b.pages.ListSnippetsGen()
 }
 
 func (b *MprBackend) GetSnippetGen(id model.ID) (*genPg.Snippet, error) {
-	w, ok := b.concreteWriter()
-	if !ok {
-		return nil, fmt.Errorf("GetSnippetGen: no modelsdk writer")
-	}
-	return mprrepos.NewSnippetRepository(w).Get(id)
+	b.initSubBackends()
+	return b.pages.GetSnippetGen(id)
 }
 
 func (b *MprBackend) CreateSnippetGen(parentUUID, containmentName string, snippet *genPg.Snippet) error {
@@ -533,11 +544,8 @@ func (b *MprBackend) UpdateSnippetGen(snippet *genPg.Snippet) error {
 // (and other callers without direct repo access) can resolve a Page's
 // parent container without re-implementing the SQL probe.
 func (b *MprBackend) GetPageContainerUUID(id model.ID) (model.ID, error) {
-	w, ok := b.concreteWriter()
-	if !ok {
-		return "", fmt.Errorf("GetPageContainerUUID: no modelsdk writer")
-	}
-	return mprrepos.NewPageRepository(w).GetContainerUUID(id)
+	b.initSubBackends()
+	return b.pages.GetPageContainerUUID(id)
 }
 
 // Stage 3.3.5.D5.c gen-typed delete + move surface. All four methods
@@ -704,7 +712,8 @@ func (b *MprBackend) DeleteConstant(id model.ID) error {
 // ---------------------------------------------------------------------------
 
 func (b *MprBackend) GetProjectSecurityGen() (*genSec.ProjectSecurity, error) {
-	return b.Security().Get()
+	b.initSubBackends()
+	return b.security.GetProjectSecurityGen()
 }
 func (b *MprBackend) SetProjectSecurityLevel(unitID model.ID, level string) error {
 	return b.setSecurityLevelViaModelsdk(unitID, level)
@@ -732,23 +741,12 @@ func (b *MprBackend) SetPasswordPolicy(unitID model.ID, minLength *int32, requir
 }
 
 func (b *MprBackend) GetModuleSecurityGen(moduleID model.ID) (*genSec.ModuleSecurity, error) {
-	return b.Security().GetModuleSecurity(moduleID)
+	b.initSubBackends()
+	return b.security.GetModuleSecurityGen(moduleID)
 }
 func (b *MprBackend) ListModuleSecurityGen() ([]*genSec.ModuleSecurity, error) {
-	modules, err := b.ListModules()
-	if err != nil {
-		return nil, err
-	}
-	repo := b.Security()
-	out := make([]*genSec.ModuleSecurity, 0, len(modules))
-	for _, m := range modules {
-		ms, err := repo.GetModuleSecurity(m.ID)
-		if err != nil || ms == nil {
-			continue
-		}
-		out = append(out, ms)
-	}
-	return out, nil
+	b.initSubBackends()
+	return b.security.ListModuleSecurityGen()
 }
 func (b *MprBackend) AddModuleRole(unitID model.ID, roleName, description string) error {
 	return b.addModuleRoleViaModelsdk(unitID, roleName, description)
@@ -1072,19 +1070,13 @@ func (b *MprBackend) RenameJavaSourceFile(moduleName, oldName, newName string) e
 // existing path-based writer with gen-typed parameters.
 
 func (b *MprBackend) ListJavaActionsGen() ([]*genJA.JavaAction, error) {
-	w, ok := b.concreteWriter()
-	if !ok {
-		return nil, fmt.Errorf("ListJavaActionsGen: no modelsdk writer")
-	}
-	return mprrepos.NewJavaActionRepository(w).ListAll()
+	b.initSubBackends()
+	return b.java.ListJavaActionsGen()
 }
 
 func (b *MprBackend) ReadJavaActionByNameGen(qualifiedName string) (*genJA.JavaAction, error) {
-	w, ok := b.concreteWriter()
-	if !ok {
-		return nil, fmt.Errorf("ReadJavaActionByNameGen: no modelsdk writer")
-	}
-	return mprrepos.NewJavaActionRepository(w).FindByQualifiedName(qualifiedName)
+	b.initSubBackends()
+	return b.java.ReadJavaActionByNameGen(qualifiedName)
 }
 
 // CreateJavaActionGen writes a gen-typed JavaAction directly via the
@@ -1121,19 +1113,13 @@ func (b *MprBackend) WriteJavaSourceFileGen(moduleName, actionName string, javaC
 }
 
 func (b *MprBackend) ListJavaScriptActionsGen() ([]*genJSA.JavaScriptAction, error) {
-	w, ok := b.concreteWriter()
-	if !ok {
-		return nil, fmt.Errorf("ListJavaScriptActionsGen: no modelsdk writer")
-	}
-	return mprrepos.NewJavaScriptActionRepository(w).ListAll()
+	b.initSubBackends()
+	return b.java.ListJavaScriptActionsGen()
 }
 
 func (b *MprBackend) ReadJavaScriptActionByNameGen(qualifiedName string) (*genJSA.JavaScriptAction, error) {
-	w, ok := b.concreteWriter()
-	if !ok {
-		return nil, fmt.Errorf("ReadJavaScriptActionByNameGen: no modelsdk writer")
-	}
-	return mprrepos.NewJavaScriptActionRepository(w).FindByQualifiedName(qualifiedName)
+	b.initSubBackends()
+	return b.java.ReadJavaScriptActionByNameGen(qualifiedName)
 }
 
 func (b *MprBackend) UpdateJavaScriptActionGen(jsa *genJSA.JavaScriptAction) error {
@@ -1165,19 +1151,13 @@ func (b *MprBackend) DeleteWorkflow(id model.ID) error { return b.deleteWorkflow
 // pure-ID DeleteWorkflow remains alongside this gen-typed quartet.
 
 func (b *MprBackend) ListWorkflowsGen() ([]*genWf.Workflow, error) {
-	w, ok := b.concreteWriter()
-	if !ok {
-		return nil, fmt.Errorf("ListWorkflowsGen: no modelsdk writer")
-	}
-	return mprrepos.NewWorkflowRepository(w).ListAll()
+	b.initSubBackends()
+	return b.workflows.ListWorkflowsGen()
 }
 
 func (b *MprBackend) GetWorkflowGen(id model.ID) (*genWf.Workflow, error) {
-	w, ok := b.concreteWriter()
-	if !ok {
-		return nil, fmt.Errorf("GetWorkflowGen: no modelsdk writer")
-	}
-	return mprrepos.NewWorkflowRepository(w).Get(id)
+	b.initSubBackends()
+	return b.workflows.GetWorkflowGen(id)
 }
 
 func (b *MprBackend) CreateWorkflowGen(parentUUID, containmentName string, wf *genWf.Workflow) error {
@@ -1496,48 +1476,18 @@ func serializeWorkflowActivityGenStandalone(a element.Element) (any, error) {
 // modelsdk-native gen DomainModel; bypasses the legacy sdk parser.
 
 func (b *MprBackend) ListDomainModelsGen() ([]*genDm.DomainModel, error) {
-	w, ok := b.concreteWriter()
-	if !ok {
-		return nil, fmt.Errorf("ListDomainModelsGen: no modelsdk writer")
-	}
-	dms, err := mprrepos.NewDomainModelRepository(w).List("")
-	if err != nil {
-		return nil, err
-	}
-	// Append the built-in System module domain model so that resolvers
-	// (resolveEntity, lookupEnumRefGen) can find System.* entities without
-	// any caller-side special casing.
-	return append(dms, builtinSystemDomainModel()), nil
+	b.initSubBackends()
+	return b.domainmodels.ListDomainModelsGen()
 }
 
 func (b *MprBackend) GetDomainModelGen(moduleID model.ID) (*genDm.DomainModel, error) {
-	// The System module's entities are baked into the Mendix runtime and not
-	// stored in the MPR file. Return the built-in virtual domain model so that
-	// entity lookups (page params, attribute resolution) work for System.* types
-	// without any caller-side special casing.
-	if string(moduleID) == meta.SystemModuleID {
-		return builtinSystemDomainModel(), nil
-	}
-	w, ok := b.concreteWriter()
-	if !ok {
-		return nil, fmt.Errorf("GetDomainModelGen: no modelsdk writer")
-	}
-	dms, err := mprrepos.NewDomainModelRepository(w).List(moduleID)
-	if err != nil {
-		return nil, err
-	}
-	if len(dms) == 0 {
-		return nil, nil
-	}
-	return dms[0], nil
+	b.initSubBackends()
+	return b.domainmodels.GetDomainModelGen(moduleID)
 }
 
 func (b *MprBackend) GetDomainModelByIDGen(id model.ID) (*genDm.DomainModel, error) {
-	w, ok := b.concreteWriter()
-	if !ok {
-		return nil, fmt.Errorf("GetDomainModelByIDGen: no modelsdk writer")
-	}
-	return mprrepos.NewDomainModelRepository(w).Get(id)
+	b.initSubBackends()
+	return b.domainmodels.GetDomainModelByIDGen(id)
 }
 
 func (b *MprBackend) UpdateDomainModelGen(dm *genDm.DomainModel) error {
