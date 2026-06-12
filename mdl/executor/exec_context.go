@@ -74,16 +74,81 @@ type ExecContext struct {
 	context.Context
 
 	// Backend provides all domain operations. Nil when not connected.
+	// Deprecated: prefer role-specific fields below.
 	Backend backend.FullBackend
 
 	// Logger is the session diagnostics logger (nil = no logging).
 	Logger *diaglog.Logger
+
+	// Role-specific backend interfaces. Populated lazily from Backend.
+	// Handler code should use these instead of ctx.Backend when only
+	// one domain is needed.
+	ModuleLister      backend.ModuleLister
+	ModuleWriter      backend.ModuleWriter
+	DomainModelReader backend.DomainModelReader
+	DomainModelWriter backend.DomainModelWriter
+	MicroflowReader   backend.MicroflowReader
+	MicroflowWriter   backend.MicroflowWriter
+	WorkflowReader    backend.WorkflowReader
+	WorkflowWriter    backend.WorkflowWriter
+	PageReader        backend.PageReader
+	PageWriter        backend.PageWriter
+	JavaActionReader  backend.JavaActionReader
+	JavaActionWriter  backend.JavaActionWriter
+	EnumerationReader backend.EnumerationReader
+	EnumerationWriter backend.EnumerationWriter
+	ConstantReader    backend.ConstantReader
+	ConstantWriter    backend.ConstantWriter
+	SettingsReader    backend.SettingsReader
+	SettingsWriter    backend.SettingsWriter
+	MappingReader     backend.MappingReader
+	MappingWriter     backend.MappingWriter
+	UnitReader        backend.UnitReader
+	UnitWriter        backend.UnitWriter
+	NavigationReader  backend.NavigationReader
+	NavigationWriter  backend.NavigationWriter
+	ServiceLister     backend.ServiceLister
+	MetadataReader    backend.MetadataReader
 
 	ExecRepos
 	ExecIO
 	ExecSession
 	ExecConnection
 	ExecCallbacks
+}
+
+// initRoles populates the role-specific backend fields from Backend. Safe to
+// call multiple times; idempotent once Backend is set.
+func (ctx *ExecContext) initRoles() {
+	if ctx.Backend == nil || ctx.ModuleLister != nil {
+		return
+	}
+	ctx.ModuleLister = ctx.Backend
+	ctx.ModuleWriter = ctx.Backend
+	ctx.DomainModelReader = ctx.Backend
+	ctx.DomainModelWriter = ctx.Backend
+	ctx.MicroflowReader = ctx.Backend
+	ctx.MicroflowWriter = ctx.Backend
+	ctx.WorkflowReader = ctx.Backend
+	ctx.WorkflowWriter = ctx.Backend
+	ctx.PageReader = ctx.Backend
+	ctx.PageWriter = ctx.Backend
+	ctx.JavaActionReader = ctx.Backend
+	ctx.JavaActionWriter = ctx.Backend
+	ctx.EnumerationReader = ctx.Backend
+	ctx.EnumerationWriter = ctx.Backend
+	ctx.ConstantReader = ctx.Backend
+	ctx.ConstantWriter = ctx.Backend
+	ctx.SettingsReader = ctx.Backend
+	ctx.SettingsWriter = ctx.Backend
+	ctx.MappingReader = ctx.Backend
+	ctx.MappingWriter = ctx.Backend
+	ctx.UnitReader = ctx.Backend
+	ctx.UnitWriter = ctx.Backend
+	ctx.NavigationReader = ctx.Backend
+	ctx.NavigationWriter = ctx.Backend
+	ctx.ServiceLister = ctx.Backend
+	ctx.MetadataReader = ctx.Backend
 }
 
 // Connected returns true if a project is connected via the Backend.

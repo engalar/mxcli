@@ -78,6 +78,7 @@ func (r *Registry) Lookup(stmt ast.Statement) StmtHandler {
 // Dispatch finds and executes the handler for stmt. Returns an
 // UnsupportedError if no handler is registered.
 func (r *Registry) Dispatch(ctx *ExecContext, stmt ast.Statement) error {
+	ctx.initRoles()
 	h := r.Lookup(stmt)
 	if h == nil {
 		return mdlerrors.NewUnsupported(fmt.Sprintf("unhandled statement type %T", stmt))
