@@ -627,7 +627,9 @@ func listExternalActions(ctx *ExecContext, moduleName string) error {
 			continue
 		}
 		oc, _ := mf.ObjectCollection().(*genMf.MicroflowObjectCollection)
-		extractActions(oc, modName, mf.Name())
+		if oc != nil {
+			extractActions(oc, modName, mf.Name())
+		}
 	}
 	for _, nf := range nfs {
 		if nf == nil {
@@ -638,7 +640,9 @@ func listExternalActions(ctx *ExecContext, moduleName string) error {
 			continue
 		}
 		oc, _ := nf.ObjectCollection().(*genMf.MicroflowObjectCollection)
-		extractActions(oc, modName, nf.Name())
+		if oc != nil {
+			extractActions(oc, modName, nf.Name())
+		}
 	}
 
 	if len(actionMap) == 0 && ctx.Format != FormatJSON {
