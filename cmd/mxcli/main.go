@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"runtime/pprof"
 	"strings"
 	"time"
 
@@ -29,6 +30,27 @@ var (
 const warningBanner = "WARNING: This is a vibe-coded PoC, alpha quality, use with caution.\n"
 
 func main() {
+	// CPU profiling (dev): set MXCLI_CPU_PROFILE=profile.prof
+	var profileFile *os.File
+	if cp := os.Getenv("MXCLI_CPU_PROFILE"); cp != "" {
+		f, err := os.Create(cp)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "cpuprofile: %v\n", err)
+		} else {
+			pprof.StartCPUProfile(f)
+			profileFile = f
+		}
+	}
+
+	code := run()
+	if profileFile != nil {
+		pprof.StopCPUProfile()
+		profileFile.Close()
+	}
+	os.Exit(code)
+}
+
+func run() int {
 	// Intercept --serve <socket-path> BEFORE cobra parses flags.
 	if sockPath := extractServeSocket(os.Args[1:]); sockPath != "" {
 		idleTimeout := extractIdleTimeout(os.Args[1:])
@@ -37,13 +59,13 @@ func main() {
 			b, err := openPersistentBackend(mprPath)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "mxcli-daemon: %v\n", err)
-				os.Exit(1)
+				return 1
 			}
 			persistentDaemonBackend = b
 			defer closePersistentBackend()
 		}
 		runDaemonServer(sockPath, idleTimeout, nil)
-		return
+		return 0
 	}
 
 	// Show warning banner unless --quiet, -q, --help, -h, or --version is passed
@@ -53,8 +75,9 @@ func main() {
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
+		return 1
 	}
+	return 0
 }
 
 // shouldSuppressWarning checks if the warning should be suppressed

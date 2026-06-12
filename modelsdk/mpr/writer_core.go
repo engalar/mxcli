@@ -135,7 +135,15 @@ type WriteTransaction struct {
 	tx           *sql.Tx
 	writer       *Writer
 	pendingFiles []pendingFile
+	// pendingCache tracks unitID → contents for units written in this tx.
+	// On Commit, these are pushed to the reader's contentCache.
+	pendingCache []cacheEntry
 	committed    bool
+}
+
+type cacheEntry struct {
+	unitID   string
+	contents []byte
 }
 
 type pendingFile struct {
@@ -194,6 +202,7 @@ func (wt *WriteTransaction) WriteUnit(unitID string, contents []byte) error {
 			tempPath:  tempPath,
 			finalPath: finalPath,
 		})
+		wt.pendingCache = append(wt.pendingCache, cacheEntry{unitID: unitID, contents: contents})
 
 		// Update hash in DB
 		hash := sha256.Sum256(contents)
@@ -239,6 +248,12 @@ func (wt *WriteTransaction) Commit() error {
 	wt.committed = true
 	// Invalidate reader cache so next read sees the updated data
 	wt.writer.reader.InvalidateCache()
+	// Push committed contents to reader's content cache so subsequent
+	// reads within the same session avoid disk I/O.
+	for _, e := range wt.pendingCache {
+		wt.writer.reader.contentCache[e.unitID] = e.contents
+	}
+	wt.pendingCache = nil
 	return nil
 }
 
@@ -439,6 +454,9 @@ func (w *Writer) insertUnit(unitID, containerID, containmentName, unitType strin
 			return err
 		}
 		w.reader.InvalidateCache()
+		// Push written content to reader's in-memory cache so subsequent
+		// reads within the same session avoid disk I/O.
+		w.reader.contentCache[unitID] = contents
 		w.updateTransactionID()
 		return nil
 	}
@@ -509,6 +527,9 @@ func (w *Writer) updateUnit(unitID string, contents []byte) error {
 		`, contentsHash, unitIDBlob)
 		if err == nil {
 			w.reader.InvalidateCache()
+			// Push updated content to reader's cache so subsequent reads
+			// within the same session avoid disk I/O.
+			w.reader.contentCache[unitID] = contents
 			w.updateTransactionID()
 		}
 		return err
@@ -578,6 +599,8 @@ func (w *Writer) deleteUnit(unitID string) error {
 	}
 
 	w.reader.InvalidateCache()
+	// Remove deleted unit from content cache.
+	delete(w.reader.contentCache, unitID)
 	w.updateTransactionID()
 	return nil
 }
@@ -691,6 +714,10 @@ func (w *Writer) BatchWrite(ops []BatchWriteOp) error {
 
 	w.updateTransactionID()
 	w.reader.InvalidateCache()
+	// Push all written contents to reader's cache.
+	for _, op := range ops {
+		w.reader.contentCache[op.UnitID] = op.Contents
+	}
 	return nil
 }
 
