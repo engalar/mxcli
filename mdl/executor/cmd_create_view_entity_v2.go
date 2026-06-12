@@ -9,6 +9,7 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 	"github.com/mendixlabs/mxcli/model"
+	"github.com/mendixlabs/mxcli/modelsdk/element"
 	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 )
 
@@ -82,9 +83,20 @@ func execCreateViewEntityGen(ctx *ExecContext, s *ast.CreateViewEntityStmt) erro
 	location := autoLayoutLocationGen(s.Position, existingEntity, dm)
 	sourceDocRef := s.Name.Module + "." + s.Name.Name
 
+	// For MODIFY, capture old source doc ID before delete so we can
+	// preserve it in the entity reference (prevents broken document links).
+	var oldSourceDocID model.ID
+	if existingEntity != nil && s.CreateOrModify {
+		if src, ok := existingEntity.Source().(*genDm.OqlViewEntitySource); ok && src != nil {
+			oldSourceDocID = model.ID(src.ID())
+		}
+	}
+
+	// Delete old source document if it exists (no-op on fresh CREATE).
 	if err := ctx.DomainModelWriter.DeleteViewEntitySourceDocumentByName(s.Name.Module, s.Name.Name); err != nil {
 		return mdlerrors.NewBackend("delete existing ViewEntitySourceDocument", err)
 	}
+
 	if _, err := ctx.DomainModelWriter.CreateViewEntitySourceDocument(
 		module.ID,
 		s.Name.Module,
@@ -99,7 +111,14 @@ func execCreateViewEntityGen(ctx *ExecContext, s *ast.CreateViewEntityStmt) erro
 	if entity == nil {
 		return mdlerrors.NewValidation("failed to build gen view entity from AST")
 	}
+
+	// Refresh entity IDs for MODIFY, preserving the old source doc ID.
 	preserveViewEntityIDs(entity, existingEntity)
+	if oldSourceDocID != "" {
+		if src, ok := entity.Source().(*genDm.OqlViewEntitySource); ok && src != nil {
+			src.SetID(element.ID(oldSourceDocID))
+		}
+	}
 
 	if existingEntity != nil && s.CreateOrModify {
 		if err := ctx.DomainModelWriter.UpdateEntityGen(model.ID(dm.ID()), entity); err != nil {
@@ -133,9 +152,7 @@ func astToViewEntityGen(s *ast.CreateViewEntityStmt, sourceDocRef string, locati
 	entity.SetDocumentation(s.Documentation)
 	entity.SetLocation(layoutPos(location.X, location.Y))
 
-	noGen := genDm.NewNoGeneralization()
-	noGen.SetPersistable(true)
-	entity.SetGeneralization(noGen)
+	entity.SetGeneralization(genDm.NewNoGeneralization())
 
 	src := genDm.NewOqlViewEntitySource()
 	src.SetSourceDocumentQualifiedName(sourceDocRef)
