@@ -138,9 +138,10 @@ type ExecContext struct {
 }
 
 // initRoles populates the role-specific backend fields from Backend. Safe to
-// call multiple times; idempotent once Backend is set.
+// call multiple times. Repopulates every call so reconnecting to a new project
+// picks up the new Backend's role interface implementations.
 func (ctx *ExecContext) initRoles() {
-	if ctx.Backend == nil || ctx.ModuleLister != nil {
+	if ctx.Backend == nil {
 		return
 	}
 	ctx.ModuleLister = ctx.Backend

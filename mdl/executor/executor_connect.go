@@ -23,6 +23,7 @@ func execConnect(ctx *ExecContext, s *ast.ConnectStmt) error {
 			return mdlerrors.NewBackend("connect", err)
 		}
 		ctx.Backend = b
+		ctx.initRoles() // populate role interfaces from the new backend
 	} else if ctx.Backend != nil {
 		// Persistent backend (per-MPR daemon): Connect is a no-op on noOpConnectBackend.
 		if err := ctx.ConnectionManager.Connect(s.Path); err != nil {
@@ -74,6 +75,7 @@ func reconnect(ctx *ExecContext) error {
 			return mdlerrors.NewBackend("reconnect", err)
 		}
 		ctx.Backend = b
+		ctx.initRoles() // populate role interfaces from the new backend
 	} else if ctx.Backend != nil {
 		// Persistent backend: Connect is a no-op on noOpConnectBackend.
 		if err := ctx.ConnectionManager.Connect(ctx.MprPath); err != nil {
