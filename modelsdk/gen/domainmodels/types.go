@@ -3356,21 +3356,11 @@ func (o *ValidationRule) InitFromRaw(raw bson.Raw) {
 
 type ViewEntitySourceDocument struct {
 	element.Base
-	name          *property.Primitive[string]
 	documentation *property.Primitive[string]
 	excluded      *property.Primitive[bool]
 	exportLevel   *property.Enum[string]
+	name          *property.Primitive[string]
 	oql           *property.Primitive[string]
-}
-
-// Name returns the value of the name property.
-func (o *ViewEntitySourceDocument) Name() string {
-	return o.name.Get()
-}
-
-// SetName sets the value of the name property.
-func (o *ViewEntitySourceDocument) SetName(v string) {
-	o.name.Set(v)
 }
 
 // Documentation returns the value of the documentation property.
@@ -3403,6 +3393,16 @@ func (o *ViewEntitySourceDocument) SetExportLevel(v string) {
 	o.exportLevel.Set(v)
 }
 
+// Name returns the value of the name property.
+func (o *ViewEntitySourceDocument) Name() string {
+	return o.name.Get()
+}
+
+// SetName sets the value of the name property.
+func (o *ViewEntitySourceDocument) SetName(v string) {
+	o.name.Set(v)
+}
+
 // Oql returns the value of the oql property.
 func (o *ViewEntitySourceDocument) Oql() string {
 	return o.oql.Get()
@@ -3416,7 +3416,6 @@ func (o *ViewEntitySourceDocument) SetOql(v string) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 // NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ViewEntitySourceDocument) InitFromRaw(raw bson.Raw) {
-	o.name.Init(raw)
 	o.documentation.Init(raw)
 	o.excluded.Init(raw)
 	if val, err := raw.LookupErr("ExportLevel"); err == nil {
@@ -3424,6 +3423,7 @@ func (o *ViewEntitySourceDocument) InitFromRaw(raw bson.Raw) {
 			o.exportLevel.SetFromDecode(s)
 		}
 	}
+	o.name.Init(raw)
 	o.oql.Init(raw)
 }
 
@@ -4636,17 +4636,17 @@ func NewValidationRule() *ValidationRule {
 func initViewEntitySourceDocument() *ViewEntitySourceDocument {
 	o := &ViewEntitySourceDocument{}
 	o.SetTypeName("DomainModels$ViewEntitySourceDocument")
-	o.name = property.NewPrimitive[string]("Name", property.DecodeString)
-	o.name.Bind(&o.Base, 0)
 	o.documentation = property.NewPrimitive[string]("Documentation", property.DecodeString)
-	o.documentation.Bind(&o.Base, 1)
+	o.documentation.Bind(&o.Base, 0)
 	o.excluded = property.NewPrimitive[bool]("Excluded", property.DecodeBool)
-	o.excluded.Bind(&o.Base, 2)
+	o.excluded.Bind(&o.Base, 1)
 	o.exportLevel = property.NewEnum[string]("ExportLevel")
-	o.exportLevel.Bind(&o.Base, 3)
+	o.exportLevel.Bind(&o.Base, 2)
+	o.name = property.NewPrimitive[string]("Name", property.DecodeString)
+	o.name.Bind(&o.Base, 3)
 	o.oql = property.NewPrimitive[string]("Oql", property.DecodeString)
 	o.oql.Bind(&o.Base, 4)
-	o.SetProperties([]element.Property{o.name, o.documentation, o.excluded, o.exportLevel, o.oql})
+	o.SetProperties([]element.Property{o.documentation, o.excluded, o.exportLevel, o.name, o.oql})
 	return o
 }
 
