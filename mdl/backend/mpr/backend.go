@@ -67,18 +67,21 @@ type MprBackend struct {
 	// transactions; the whole script commits atomically via a single BatchWrite
 	// at the end — see backend.ScriptTransaction.
 	scriptBuf *ScriptBuffer
-
 	// unitBuf is non-nil when an ImportSession is active.
 	// writeUnitContents routes writes through the buffer instead of opening
 	// individual SQLite transactions. Reads are satisfied from the overlay.
 	unitBuf *unitstore.BufferedUnitStore
-
 	// widgetTypeCache is non-nil during a page build (BeginPageBuild..EndPageBuild).
 	// It maps widgetID → widgetTypeCacheEntry, enabling one CustomWidgets$CustomWidgetType
 	// schema to be shared across all instances of the same widget type on a page.
 	// This matches Studio Pro's canonical format and reduces page BSON size by up to 50%
 	// on pages with multiple same-type filter widgets.
 	widgetTypeCache map[string]*widgetTypeCacheEntry
+
+	// Domain-specific sub-backends. Populated lazily after Connect().
+	// These extract method groups into focused types as part of the
+	// MprBackend facade decomposition (Phase 3).
+	modules *moduleBackend
 }
 
 // widgetTypeCacheEntry holds the per-page cached type schema for one widget type.
@@ -149,7 +152,16 @@ func (b *MprBackend) Connect(path string) error {
 	b.msdkReader = r
 	b.msdkWriter = mw
 	b.path = path
+	b.modules = newModuleBackend(r)
 	return nil
+}
+
+// initSubBackends lazily initialises domain-specific sub-backends.
+// Safe to call multiple times.
+func (b *MprBackend) initSubBackends() {
+	if b.modules == nil && b.reader != nil {
+		b.modules = newModuleBackend(b.reader)
+	}
 }
 
 func (b *MprBackend) Disconnect() error {
@@ -186,41 +198,20 @@ func (b *MprBackend) GetMendixVersion() (string, error) { return b.msdkReader.Ge
 func (b *MprBackend) Commit() error { return nil }
 
 // ---------------------------------------------------------------------------
-// ModuleBackend
+// ModuleBackend — reads delegate to moduleBackend, writes stay on MprBackend
 // ---------------------------------------------------------------------------
 
 func (b *MprBackend) ListModules() ([]*model.Module, error) {
-	units, err := mprread.ListModules(b.msdkReader)
-	if err != nil {
-		return nil, err
-	}
-	mods := moduleUnitsToModel(units)
-	mods = append(mods, buildSystemModuleForBackend())
-	return mods, nil
+	b.initSubBackends()
+	return b.modules.ListModules()
 }
 func (b *MprBackend) GetModule(id model.ID) (*model.Module, error) {
-	mods, err := b.ListModules()
-	if err != nil {
-		return nil, err
-	}
-	for _, m := range mods {
-		if m.ID == id {
-			return m, nil
-		}
-	}
-	return nil, fmt.Errorf("module not found: %s", id)
+	b.initSubBackends()
+	return b.modules.GetModule(id)
 }
 func (b *MprBackend) GetModuleByName(name string) (*model.Module, error) {
-	mods, err := b.ListModules()
-	if err != nil {
-		return nil, err
-	}
-	for _, m := range mods {
-		if m.Name == name {
-			return m, nil
-		}
-	}
-	return nil, fmt.Errorf("module not found: %s", name)
+	b.initSubBackends()
+	return b.modules.GetModuleByName(name)
 }
 func (b *MprBackend) CreateModule(module *model.Module) error {
 	return b.createModuleViaModelsdk(module)
