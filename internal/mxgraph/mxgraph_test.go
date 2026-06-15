@@ -1,6 +1,10 @@
 package mxgraph
 
-import "testing"
+import (
+	"bytes"
+	"io"
+	"testing"
+)
 
 func TestDirectionValues(t *testing.T) {
 	if Outbound != 0 || Inbound != 1 || Both != 2 {
@@ -172,6 +176,55 @@ func TestTraverseDepth(t *testing.T) {
 	results := g.Traverse("m1", "HAS_ENTITY", 2)
 	if len(results) != 1 {
 		t.Errorf("expected 1 result (e1), got %d", len(results))
+	}
+}
+
+func TestSnapshotRoundtrip(t *testing.T) {
+	g := buildTestGraph()
+	data, err := MarshalSnapshot(g)
+	if err != nil {
+		t.Fatalf("MarshalSnapshot: %v", err)
+	}
+	g2, err := UnmarshalSnapshot(data)
+	if err != nil {
+		t.Fatalf("UnmarshalSnapshot: %v", err)
+	}
+	if g2.GetNode("e1") == nil {
+		t.Error("e1 missing after roundtrip")
+	}
+	if len(g2.Neighbors("e1")) != 1 {
+		t.Errorf("expected 1 neighbor, got %d", len(g2.Neighbors("e1")))
+	}
+}
+
+func TestDeltaAppendReplay(t *testing.T) {
+	var buf bytes.Buffer
+	w := NewDeltaWriter(&buf)
+	if err := w.WriteEvent(Event{Type: NodeCreated, Node: &Node{ID: "n1", Label: "Entity"}}); err != nil {
+		t.Fatal(err)
+	}
+	if err := w.WriteEvent(Event{Type: NodeCreated, Node: &Node{ID: "n2", Label: "Attribute"}}); err != nil {
+		t.Fatal(err)
+	}
+	if err := w.WriteEvent(Event{Type: EdgeCreated, Edge: &Edge{ID: "e1", From: "n1", To: "n2", Type: "HAS_ATTRIBUTE"}}); err != nil {
+		t.Fatal(err)
+	}
+	w.Close()
+
+	g := New()
+	r := NewDeltaReader(&buf)
+	for {
+		ev, err := r.ReadEvent()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			t.Fatalf("ReadEvent: %v", err)
+		}
+		g.Apply([]Event{ev})
+	}
+	if g.GetNode("n1") == nil || g.GetNode("n2") == nil {
+		t.Error("nodes not restored after delta replay")
 	}
 }
 
