@@ -1,0 +1,56 @@
+-- ============================================================
+-- 模块 09：JS Action 扩展 — 参考实现
+-- 前提：先运行模块 01（HD 模块必须存在）
+-- 运行：mxcli exec js-actions.mdl -p MyProject.mpr
+-- 注：call javascript action 语法要求 Mendix 10.6+
+-- ============================================================
+
+-- ============================================================
+-- 复制到剪贴板（浏览器 Clipboard API）
+-- ============================================================
+
+create or modify nanoflow HD.NF_CopyToClipboard
+  ($Text: string)
+  returns void
+  folder 'UI'
+{
+  call javascript action (
+    code = 'if (navigator.clipboard) { navigator.clipboard.writeText($Text).then(() => { mx.ui.info("已复制到剪贴板"); }).catch(() => { mx.ui.error("复制失败，请手动复制"); }); } else { mx.ui.error("浏览器不支持剪贴板 API"); }',
+    parameters = { $Text: string }
+  );
+}
+/
+
+-- ============================================================
+-- 浏览器桌面通知（Web Notifications API）
+-- ============================================================
+
+create or modify nanoflow HD.NF_NotifyHighPriority
+  ($Subject: string)
+  returns void
+  folder 'UI'
+{
+  call javascript action (
+    code = 'if (typeof Notification !== "undefined") { if (Notification.permission === "granted") { new Notification("高优先级工单", { body: $Subject, icon: "/favicon.ico" }); } else if (Notification.permission !== "denied") { Notification.requestPermission().then(function(p) { if (p === "granted") { new Notification("高优先级工单", { body: $Subject }); } }); } }',
+    parameters = { $Subject: string }
+  );
+}
+/
+
+-- ============================================================
+-- 相对时间格式化："N分钟前" / "N小时前" / "N天前"
+-- ============================================================
+
+create or modify nanoflow HD.NF_FormatRelativeTime
+  ($DateTime: DateTime)
+  returns string as $Result
+  folder 'UI'
+{
+  declare $Result: string = call javascript action (
+    code = 'var diff = Date.now() - $DateTime.getTime(); var seconds = Math.floor(diff / 1000); if (seconds < 60) { return "刚刚"; } var minutes = Math.floor(seconds / 60); if (minutes < 60) { return minutes + "分钟前"; } var hours = Math.floor(minutes / 60); if (hours < 24) { return hours + "小时前"; } return Math.floor(hours / 24) + "天前"; ',
+    parameters = { $DateTime: DateTime },
+    return_type = string
+  );
+  return $Result;
+}
+/
