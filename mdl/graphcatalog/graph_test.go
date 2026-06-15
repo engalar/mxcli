@@ -133,6 +133,43 @@ func TestProjectGraph_References(t *testing.T) {
 	}
 }
 
+func TestProjectGraph_Persist_Roundtrip(t *testing.T) {
+	pg := buildTestProjectGraph()
+
+	data, err := pg.MarshalSnapshot()
+	if err != nil {
+		t.Fatalf("MarshalSnapshot: %v", err)
+	}
+	if len(data) == 0 {
+		t.Fatal("MarshalSnapshot returned empty data")
+	}
+
+	pg2, err := graphcatalog.UnmarshalSnapshot(data)
+	if err != nil {
+		t.Fatalf("UnmarshalSnapshot: %v", err)
+	}
+
+	entities := pg2.Entities("Helpdesk")
+	if len(entities) != 2 {
+		t.Fatalf("after roundtrip, Entities(Helpdesk) = %d, want 2", len(entities))
+	}
+	callers := pg2.Callers("Helpdesk.ACT_CreateTicket", false)
+	if len(callers) != 1 {
+		t.Fatalf("after roundtrip, Callers = %d, want 1", len(callers))
+	}
+	if callers[0].Caller != "Helpdesk.ACT_AssignAgent" {
+		t.Errorf("after roundtrip, Caller = %q, want Helpdesk.ACT_AssignAgent", callers[0].Caller)
+	}
+}
+
+func TestSnapshotPath(t *testing.T) {
+	got := graphcatalog.SnapshotPath("/tmp/proj")
+	want := "/tmp/proj/.mxcli/graph.gob"
+	if got != want {
+		t.Errorf("SnapshotPath = %q, want %q", got, want)
+	}
+}
+
 func TestProjectGraph_Impact(t *testing.T) {
 	pg := buildTestProjectGraph()
 	// Ticket is CREATEd by mf1 — inbound CREATES edge.
