@@ -101,6 +101,20 @@ func (g *Graph) removeEdgeFromIndex(from, to NodeID, rel RelType) {
 	}
 }
 
+func (g *Graph) removeEdgeFromAdj(e *Edge) {
+	g.removeEdgeFromIndex(e.From, e.To, e.Type)
+	if inEdges, ok := g.inEdges[e.To]; ok {
+		if targets, ok := inEdges[e.Type]; ok {
+			for i, s := range targets {
+				if s == e.From {
+					inEdges[e.Type] = append(targets[:i], targets[i+1:]...)
+					break
+				}
+			}
+		}
+	}
+}
+
 func (g *Graph) Apply(events []Event) {
 	for _, ev := range events {
 		switch ev.Type {
@@ -120,6 +134,10 @@ func (g *Graph) Apply(events []Event) {
 			g.AddEdge(ev.Edge.ID, ev.Edge.From, ev.Edge.To, ev.Edge.Type, ev.Edge.Props)
 		case EdgeDeleted:
 			g.mu.Lock()
+			e := g.edges[ev.Edge.ID]
+			if e != nil {
+				g.removeEdgeFromAdj(e)
+			}
 			delete(g.edges, ev.Edge.ID)
 			g.mu.Unlock()
 		}
