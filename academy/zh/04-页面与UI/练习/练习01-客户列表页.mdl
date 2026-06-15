@@ -1,0 +1,30 @@
+-- ============================================================
+-- 练习 01：客户列表页
+-- 前提：先运行模块 01 的参考实现
+-- 目标：创建 HD.Customer_Overview 页面
+-- ============================================================
+
+-- HD.Customer_Overview：
+-- 要求：
+--   title: 'Customers'，layout: Atlas_Core.Atlas_Default
+--   DataGrid：datasource = database from HD.Customer，sort by Name asc
+--   列：Name（文字过滤器）、Email、Company
+--   操作列：Open 按钮（链接样式，打开 HD.Customer_Detail——暂不存在，先占位）
+--   控制栏：New Customer 按钮（create_object HD.Customer then show_page HD.Customer_Detail）
+
+-- TODO：补全页面定义
+create or replace page HD.Customer_Overview
+(
+  title:  'Customers',
+  layout: Atlas_Core.Atlas_Default,
+  folder: 'Customer'
+)
+{
+  -- 提示：用 layoutgrid → row → column (desktopwidth: 12) → datagrid
+  -- 你的代码写在这里：
+
+};
+
+-- 验证命令：
+--   mxcli check 练习01-客户列表页.mdl
+--   mxcli exec  练习01-客户列表页.mdl -p MyProject.mpr

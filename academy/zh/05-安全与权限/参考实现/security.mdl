@@ -1,0 +1,114 @@
+-- ============================================================
+-- 模块 05：安全与权限 — 参考实现
+-- 前提：先运行模块 01–04 的参考实现
+-- 运行：mxcli exec security.mdl -p MyProject.mpr
+-- ============================================================
+
+-- ============================================================
+-- 模块角色定义
+-- ============================================================
+
+create module role HD.CustomerRole;
+create module role HD.AgentRole;
+create module role HD.ManagerRole;
+
+-- ============================================================
+-- 实体访问规则
+-- ============================================================
+
+alter project security level production;
+
+-- CustomerRole：只读/写自己的工单（行级过滤）
+grant HD.CustomerRole on HD.Ticket (create,
+  read (Subject, Description, Status, Priority, SLADueAt, ResolvedAt, IsOverSLA,
+        HD.Ticket_Customer, HD.Ticket_Agent),
+  write (Subject, Description))
+  where '[HD.Ticket_Customer/HD.Customer/System.owner=''[%CurrentUser%]'']';
+
+-- CustomerRole：只看非内部评论
+grant HD.CustomerRole on HD.TicketComment (create, read *)
+  where '[IsInternal = false]';
+
+grant HD.CustomerRole on HD.Customer (read *, write *);
+grant HD.CustomerRole on HD.TicketSearch (read *, write *);
+
+-- AgentRole：所有工单完整访问
+grant HD.AgentRole on HD.Ticket (create, read *, write *);
+grant HD.AgentRole on HD.TicketComment (create, read *, write *);
+grant HD.AgentRole on HD.Customer (read *);
+grant HD.AgentRole on HD.Agent (read *);
+grant HD.AgentRole on HD.TicketSearch (read *, write *);
+
+-- ManagerRole：在 AgentRole 基础上增加删除
+grant HD.ManagerRole on HD.Ticket (create, read *, write *, delete);
+grant HD.ManagerRole on HD.TicketComment (create, read *, write *, delete);
+grant HD.ManagerRole on HD.Customer (read *, write *);
+grant HD.ManagerRole on HD.Agent (read *, write *);
+grant HD.ManagerRole on HD.TicketSearch (read *, write *);
+
+-- ============================================================
+-- 微流权限
+-- ============================================================
+
+grant execute on microflow HD.ACT_Ticket_Submit  to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
+grant execute on microflow HD.ACT_Ticket_Assign  to HD.AgentRole, HD.ManagerRole;
+grant execute on microflow HD.ACT_Ticket_Resolve to HD.AgentRole, HD.ManagerRole;
+grant execute on microflow HD.ACT_Ticket_Reopen  to HD.AgentRole, HD.ManagerRole;
+grant execute on microflow HD.ACT_Ticket_Close   to HD.AgentRole, HD.ManagerRole;
+grant execute on microflow HD.ACT_AddComment     to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
+grant execute on microflow HD.DS_MyTickets       to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
+
+-- 纳流权限
+grant execute on nanoflow HD.NF_Ticket_QuickCreate  to HD.CustomerRole, HD.AgentRole;
+grant execute on nanoflow HD.NF_TicketSearch_Apply   to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
+grant execute on nanoflow HD.NF_Priority_GetLabel    to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
+
+-- 页面权限
+grant view on page HD.Ticket_Overview     to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
+grant view on page HD.MyTickets_Overview  to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
+grant view on page HD.Ticket_Detail       to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
+grant view on page HD.Ticket_NewEdit      to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
+grant view on page HD.AddComment_Form     to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
+
+-- ============================================================
+-- 用户角色
+-- ============================================================
+
+create or modify user role Customer (System.User, HD.CustomerRole);
+create or modify user role Agent    (System.User, HD.AgentRole);
+create or modify user role Manager  (System.User, HD.ManagerRole);
+
+-- ============================================================
+-- 演示用户
+-- ============================================================
+
+alter project security demo users on;
+
+alter project security password policy (
+  min_length:         8,
+  require_digit:      true,
+  require_mixed_case: true,
+  require_symbol:     false
+);
+
+create or modify demo user 'demo_customer@helpdesk.test' password 'Demo12345678'
+  entity Administration.Account (Customer);
+create or modify demo user 'demo_agent@helpdesk.test'    password 'Demo12345678'
+  entity Administration.Account (Agent);
+create or modify demo user 'demo_manager@helpdesk.test'  password 'Demo12345678'
+  entity Administration.Account (Manager);
+
+-- ============================================================
+-- 导航
+-- ============================================================
+
+create or replace navigation Responsive
+  home page HD.MyTickets_Overview  for Customer
+  home page HD.Ticket_Overview     for Agent
+  home page HD.Ticket_Overview     for Manager
+  home page MyFirstModule.Home_Web
+  login page Administration.login
+  menu (
+    menu item 'My Tickets'  page HD.MyTickets_Overview;
+    menu item 'All Tickets' page HD.Ticket_Overview;
+  );

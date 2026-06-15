@@ -1,0 +1,134 @@
+-- ============================================================
+-- 模块 01：领域建模 — 参考实现
+-- 从空项目运行：mxcli exec domain-model.mdl -p MyProject.mpr
+-- 验证：~/.mxcli/mxbuild/*/modeler/mx check MyProject.mpr
+-- ============================================================
+
+create module HD;
+
+-- ============================================================
+-- 枚举：工单状态（5 个状态，构成状态机）
+-- ============================================================
+
+create or modify enumeration HD.TicketStatus (
+  Draft      'Draft',
+  Open       'Open',
+  InProgress 'In Progress',
+  Resolved   'Resolved',
+  Closed     'Closed'
+);
+
+-- ============================================================
+-- 枚举：工单优先级（4 个级别）
+-- ============================================================
+
+create or modify enumeration HD.TicketPriority (
+  Low      'Low',
+  Normal   'Normal',
+  High     'High',
+  Critical 'Critical'
+);
+
+-- ============================================================
+-- 实体：客户（提交工单的员工）
+-- system members (owner) 让 Mendix 追踪记录的创建者
+-- ============================================================
+
+create or modify persistent entity HD.Customer (
+  Name:    string(200) not null,
+  Email:   string(200) not null,
+  Company: string(200)
+)
+system members (owner)
+index (Email);
+
+-- ============================================================
+-- 实体：客服（处理工单的 IT 支持人员）
+-- ============================================================
+
+create or modify persistent entity HD.Agent (
+  Name:     string(200) not null,
+  Email:    string(200) not null,
+  IsActive: boolean default true
+);
+
+-- ============================================================
+-- 实体：工单（核心业务对象）
+-- system members (owner, createdDate, changedDate, changedBy)
+-- 让 Mendix 自动记录创建者、创建时间、修改时间、修改人
+-- ============================================================
+
+create or modify persistent entity HD.Ticket (
+  Subject:     string(500) not null,
+  Description: string,
+  Status:      HD.TicketStatus   default Draft,
+  Priority:    HD.TicketPriority default Normal,
+  SLADueAt:   datetime,
+  ResolvedAt:  datetime,
+  IsOverSLA:   boolean default false
+)
+system members (owner, createdDate, changedDate, changedBy)
+index (Status)
+index (Priority)
+index (SLADueAt);
+
+-- ============================================================
+-- 实体：工单评论（记录处理过程中的沟通）
+-- ============================================================
+
+create or modify persistent entity HD.TicketComment (
+  Content:    string not null,
+  IsInternal: boolean default false
+);
+
+-- ============================================================
+-- 非持久化实体：工单搜索表单（客户端过滤，不存库）
+-- ============================================================
+
+create or modify non-persistent entity HD.TicketSearch (
+  SubjectKeyword: string(200),
+  StatusFilter:   HD.TicketStatus,
+  PriorityFilter: HD.TicketPriority
+);
+
+-- ============================================================
+-- 关联：工单 → 客户（多对一：多张工单属于一个客户）
+-- from HD.Ticket to HD.Customer = Ticket 持有 Customer 的外键
+-- ============================================================
+
+create or modify association HD.Ticket_Customer
+  from HD.Ticket to HD.Customer
+  type reference
+  owner default;
+
+-- ============================================================
+-- 关联：工单 → 客服（可空：工单初始可能尚未指派）
+-- ============================================================
+
+create or modify association HD.Ticket_Agent
+  from HD.Ticket to HD.Agent
+  type reference
+  owner default;
+
+-- ============================================================
+-- 关联：评论 → 工单（多对一：多条评论属于一张工单）
+-- ============================================================
+
+create or modify association HD.TicketComment_Ticket
+  from HD.TicketComment to HD.Ticket
+  type reference
+  owner default;
+
+-- ============================================================
+-- 常量：SLA 截止时间（小时数），可按环境配置
+-- ============================================================
+
+create or modify constant HD.SLA_HIGH_HOURS
+  type integer
+  default 8
+  comment 'SLA deadline in hours for High-priority tickets.';
+
+create or modify constant HD.SLA_CRITICAL_HOURS
+  type integer
+  default 2
+  comment 'SLA deadline in hours for Critical-priority tickets.';

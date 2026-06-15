@@ -1,0 +1,22 @@
+-- ============================================================
+-- 练习 01：客户实体
+-- 目标：补全 HD.Customer 实体的缺失属性
+-- ============================================================
+
+create module HD;
+
+-- HD.Customer 实体已给出 Name 属性，请补全其余属性
+create or modify persistent entity HD.Customer (
+  Name: string(200) not null
+  -- TODO 1：添加 Email 属性（string, 200 字符, not null）
+  -- TODO 2：添加 Company 属性（string, 200 字符, 可以为空）
+)
+system members (owner);
+
+-- HD.Agent 实体需要你从头编写
+-- 业务需求：姓名、邮箱、是否在岗（默认在岗）
+-- TODO 3：在此处创建 HD.Agent 实体
+
+-- 验证命令：
+--   mxcli check 练习01-客户实体.mdl
+--   mxcli exec  练习01-客户实体.mdl -p MyProject.mpr

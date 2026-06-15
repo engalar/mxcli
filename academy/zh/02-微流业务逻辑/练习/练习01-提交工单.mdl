@@ -1,0 +1,30 @@
+-- ============================================================
+-- 练习 01：提交工单微流
+-- 前提：先运行 01-领域建模/参考实现/domain-model.mdl
+-- 目标：补全 ACT_Ticket_Submit 的缺失部分
+-- ============================================================
+
+create or modify microflow HD.ACT_Ticket_Submit
+  ($Ticket: HD.Ticket)
+  returns boolean as $Success
+  folder 'Ticket'
+{
+  -- TODO 1：添加标题非空校验
+  -- 如果 $Ticket/Subject = '' 则显示验证反馈并 return false
+  -- 提示：validation feedback $Ticket/Subject message '...';
+
+  -- TODO 2：按优先级计算 SLA 截止时间并更新状态
+  -- Critical → addHours('[%CurrentDateTime%]', @HD.SLA_CRITICAL_HOURS)
+  -- High     → addHours('[%CurrentDateTime%]', @HD.SLA_HIGH_HOURS)
+  -- 其他     → addHours('[%CurrentDateTime%]', 24)
+  -- 提示：用 if / else 嵌套
+
+  -- TODO 3：commit $Ticket 并 return true
+
+  return false; -- 占位，完成上方 TODO 后删除此行
+}
+/
+
+-- 验证命令：
+--   mxcli check 练习01-提交工单.mdl
+--   mxcli exec  练习01-提交工单.mdl -p MyProject.mpr

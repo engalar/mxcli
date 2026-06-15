@@ -1,0 +1,12 @@
+-- ============================================================
+-- 模块 00：Hello World
+-- 这是你的第一个 MDL 文件，展示最基本的结构。
+-- 运行：mxcli exec hello-world.mdl -p MyProject.mpr
+-- ============================================================
+
+create module HD;
+
+create or modify persistent entity HD.Customer (
+  Name:  string(200) not null,
+  Email: string(200) not null
+);

@@ -1,0 +1,38 @@
+-- ============================================================
+-- 练习 02：关联设计
+-- 前提：先运行 练习01-客户实体.mdl（或 参考实现/domain-model.mdl）
+-- 目标：创建工单实体，并建立与客户的关联
+-- ============================================================
+
+-- 工单枚举（已给出，不需要修改）
+create or modify enumeration HD.TicketStatus (
+  Draft 'Draft', Open 'Open', InProgress 'In Progress',
+  Resolved 'Resolved', Closed 'Closed'
+);
+
+create or modify enumeration HD.TicketPriority (
+  Low 'Low', Normal 'Normal', High 'High', Critical 'Critical'
+);
+
+-- HD.Ticket 实体已给出基本属性，请补全
+create or modify persistent entity HD.Ticket (
+  Subject:     string(500) not null,
+  Description: string,
+  Status:      HD.TicketStatus   default Draft,
+  Priority:    HD.TicketPriority default Normal
+  -- TODO 1：添加 SLADueAt 属性（datetime, 可为空）
+  -- TODO 2：添加 ResolvedAt 属性（datetime, 可为空）
+  -- TODO 3：添加 IsOverSLA 属性（boolean, 默认 false）
+)
+system members (owner, createdDate, changedDate, changedBy);
+
+-- TODO 4：创建 HD.Ticket_Customer 关联
+-- 要求：from HD.Ticket to HD.Customer，type reference，owner default
+-- 提示：从 Ticket 到 Customer（Ticket 持有外键）
+
+-- TODO 5：创建 HD.Ticket_Agent 关联（可空，表示尚未指派）
+-- 要求：同上，from HD.Ticket to HD.Agent
+
+-- 验证命令：
+--   mxcli check 练习02-关联设计.mdl
+--   mxcli exec  练习02-关联设计.mdl -p MyProject.mpr
