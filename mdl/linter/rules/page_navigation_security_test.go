@@ -77,7 +77,7 @@ func TestModuleFromQualified(t *testing.T) {
 
 func TestPageNavigationSecurityRule_NilReader(t *testing.T) {
 	r := NewPageNavigationSecurityRule()
-	ctx := linter.NewLintContextFromDB(nil)
+	ctx := linter.NewLintContext(nil, nil)
 	violations := r.Check(ctx)
 	if violations != nil {
 		t.Errorf("expected nil with nil reader, got %v", violations)

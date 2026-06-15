@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/mendixlabs/mxcli/mdl/linter"
+	"github.com/mendixlabs/mxcli/mdl/graphcatalog"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
@@ -36,8 +37,8 @@ func (r *ExclusiveSplitCaptionRule) Check(ctx *linter.LintContext) []linter.Viol
 
 	var violations []linter.Violation
 
-	for mf := range ctx.Microflows() {
-		if ctx.IsExcluded(mf.ModuleName) {
+	for _, mf := range ctx.Microflows() {
+		if ctx.IsExcluded(mf.Module) {
 			continue
 		}
 
@@ -56,7 +57,7 @@ func (r *ExclusiveSplitCaptionRule) Check(ctx *linter.LintContext) []linter.Viol
 	return violations
 }
 
-func findEmptySplitCaptions(objects []element.Element, mf linter.Microflow, r *ExclusiveSplitCaptionRule, violations *[]linter.Violation) {
+func findEmptySplitCaptions(objects []element.Element, mf graphcatalog.MicroflowNode, r *ExclusiveSplitCaptionRule, violations *[]linter.Violation) {
 	for _, obj := range objects {
 		switch act := obj.(type) {
 		case *genMf.ExclusiveSplit:
@@ -67,9 +68,9 @@ func findEmptySplitCaptions(objects []element.Element, mf linter.Microflow, r *E
 					Severity: r.DefaultSeverity(),
 					Message: fmt.Sprintf("Exclusive split in '%s.%s' has no caption. "+
 						"Add a question or description to clarify the decision.",
-						mf.ModuleName, mf.Name),
+						mf.Module, mf.Name),
 					Location: linter.Location{
-						Module:       mf.ModuleName,
+						Module:       mf.Module,
 						DocumentType: "microflow",
 						DocumentName: mf.Name,
 						DocumentID:   mf.ID,

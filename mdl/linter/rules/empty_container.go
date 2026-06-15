@@ -40,30 +40,25 @@ func (r *EmptyContainerRule) Check(ctx *linter.LintContext) []linter.Violation {
 		return nil
 	}
 
-	// Collect page/snippet containers that have DivContainer widgets
+	// Walk every page and snippet, scanning raw BSON for empty containers.
+	// graphcatalog no longer carries per-widget container metadata, so the
+	// container set is derived from the page/snippet listings directly.
 	type containerInfo struct {
 		ID            string
 		QualifiedName string
 		Type          string // "PAGE" or "SNIPPET"
 		ModuleName    string
 	}
-	containers := make(map[string]containerInfo)
-
-	for w := range ctx.Widgets() {
-		if ctx.IsExcluded(w.ModuleName) {
-			continue
-		}
-		if w.WidgetType != "Forms$DivContainer" {
-			continue
-		}
-		if _, ok := containers[w.ContainerID]; !ok {
-			containers[w.ContainerID] = containerInfo{
-				ID:            w.ContainerID,
-				QualifiedName: w.ContainerQualifiedName,
-				Type:          w.ContainerType,
-				ModuleName:    w.ModuleName,
-			}
-		}
+	var containers []containerInfo
+	for _, p := range ctx.Pages() {
+		containers = append(containers, containerInfo{
+			ID: p.ID, QualifiedName: p.QualifiedName, Type: "PAGE", ModuleName: p.Module,
+		})
+	}
+	for _, s := range ctx.Snippets() {
+		containers = append(containers, containerInfo{
+			ID: s.ID, QualifiedName: s.QualifiedName, Type: "SNIPPET", ModuleName: s.Module,
+		})
 	}
 
 	var violations []linter.Violation

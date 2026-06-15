@@ -54,8 +54,8 @@ func (r *OverlappingActivitiesRule) Check(ctx *linter.LintContext) []linter.Viol
 
 	var violations []linter.Violation
 
-	for mf := range ctx.Microflows() {
-		if ctx.IsExcluded(mf.ModuleName) {
+	for _, mf := range ctx.Microflows() {
+		if ctx.IsExcluded(mf.Module) {
 			continue
 		}
 
@@ -135,10 +135,10 @@ func (r *OverlappingActivitiesRule) Check(ctx *linter.LintContext) []linter.Viol
 							"Activities '%s' (%d,%d) and '%s' (%d,%d) overlap in microflow '%s.%s'. "+
 								"Each MDL statement that creates a canvas activity needs its own @position annotation.",
 							a.caption, a.x, a.y, b.caption, b.x, b.y,
-							mf.ModuleName, mf.Name,
+							mf.Module, mf.Name,
 						),
 						Location: linter.Location{
-							Module:       mf.ModuleName,
+							Module:       mf.Module,
 							DocumentType: "microflow",
 							DocumentName: mf.Name,
 							DocumentID:   mf.ID,

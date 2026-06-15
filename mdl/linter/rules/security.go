@@ -30,8 +30,12 @@ func (r *NoEntityAccessRulesRule) Description() string {
 func (r *NoEntityAccessRulesRule) Check(ctx *linter.LintContext) []linter.Violation {
 	var violations []linter.Violation
 
-	for e := range ctx.Entities() {
-		if e.EntityType != "Persistent" || e.IsExternal || e.AccessRuleCount > 0 {
+	// Persistability and access-rule count are not graph node properties; join
+	// graph entity nodes against gen-typed facts from the deep reader.
+	facts := entityFactsByID(ctx)
+	for _, e := range ctx.Entities() {
+		f := facts[e.ID]
+		if !f.Persistent || e.IsExternal || f.AccessRuleCount > 0 {
 			continue
 		}
 		violations = append(violations, linter.Violation{
@@ -39,7 +43,7 @@ func (r *NoEntityAccessRulesRule) Check(ctx *linter.LintContext) []linter.Violat
 			Severity: r.DefaultSeverity(),
 			Message:  fmt.Sprintf("Persistent entity '%s' has no access rules", e.QualifiedName),
 			Location: linter.Location{
-				Module:       e.ModuleName,
+				Module:       e.Module,
 				DocumentType: "entity",
 				DocumentName: e.Name,
 				DocumentID:   e.ID,

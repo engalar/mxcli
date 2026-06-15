@@ -54,35 +54,30 @@ func (r *DataGrid2ColumnRule) Check(ctx *linter.LintContext) []linter.Violation 
 		return nil
 	}
 
-	// Collect unique containers (pages/snippets) that have at least one DataGrid2.
+	// Walk every page and snippet, scanning the raw BSON for DataGrid2 widgets.
+	// graphcatalog no longer carries per-widget container metadata, so the
+	// container set is derived from the page/snippet listings directly.
 	type containerInfo struct {
 		ID            string
 		QualifiedName string
 		Type          string
 		ModuleName    string
 	}
-	seen := make(map[string]containerInfo)
-
-	for w := range ctx.Widgets() {
-		if ctx.IsExcluded(w.ModuleName) {
-			continue
-		}
-		if w.WidgetType != datagrid2WidgetType {
-			continue
-		}
-		if _, ok := seen[w.ContainerID]; !ok {
-			seen[w.ContainerID] = containerInfo{
-				ID:            w.ContainerID,
-				QualifiedName: w.ContainerQualifiedName,
-				Type:          w.ContainerType,
-				ModuleName:    w.ModuleName,
-			}
-		}
+	var containers []containerInfo
+	for _, p := range ctx.Pages() {
+		containers = append(containers, containerInfo{
+			ID: p.ID, QualifiedName: p.QualifiedName, Type: "PAGE", ModuleName: p.Module,
+		})
+	}
+	for _, s := range ctx.Snippets() {
+		containers = append(containers, containerInfo{
+			ID: s.ID, QualifiedName: s.QualifiedName, Type: "SNIPPET", ModuleName: s.Module,
+		})
 	}
 
 	var violations []linter.Violation
 
-	for _, c := range seen {
+	for _, c := range containers {
 		rawData, err := reader.GetRawUnit(model.ID(c.ID))
 		if err != nil || rawData == nil {
 			continue

@@ -64,7 +64,7 @@ func TestFindCommitsInLoops_NilAction(t *testing.T) {
 
 func TestNoCommitInLoopRule_NilReader(t *testing.T) {
 	r := NewNoCommitInLoopRule()
-	ctx := linter.NewLintContextFromDB(nil)
+	ctx := linter.NewLintContext(nil, nil)
 	// Reader() is nil, should return nil
 	violations := r.Check(ctx)
 	if violations != nil {

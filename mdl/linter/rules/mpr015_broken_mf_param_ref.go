@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/mendixlabs/mxcli/mdl/linter"
+	"github.com/mendixlabs/mxcli/mdl/graphcatalog"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
@@ -42,7 +43,7 @@ func (r *BrokenMFParamRefRule) Check(ctx *linter.LintContext) []linter.Violation
 	}
 
 	type mfEntry struct {
-		meta   linter.Microflow
+		meta   graphcatalog.MicroflowNode
 		genObj *genMf.Microflow
 	}
 
@@ -50,8 +51,8 @@ func (r *BrokenMFParamRefRule) Check(ctx *linter.LintContext) []linter.Violation
 	var allEntries []mfEntry
 	paramSets := make(map[string]map[string]bool) // qualifiedName → param names
 
-	for mf := range ctx.Microflows() {
-		if ctx.IsExcluded(mf.ModuleName) {
+	for _, mf := range ctx.Microflows() {
+		if ctx.IsExcluded(mf.Module) {
 			continue
 		}
 		full, err := reader.GetMicroflowGen(model.ID(mf.ID))
@@ -95,7 +96,7 @@ func mpr015CollectParams(mf *genMf.Microflow) map[string]bool {
 // violations for any MicroflowCallParameterMapping that references a missing param.
 func mpr015CheckObjects(
 	objects []element.Element,
-	mf linter.Microflow,
+	mf graphcatalog.MicroflowNode,
 	paramSets map[string]map[string]bool,
 	r *BrokenMFParamRefRule,
 	violations *[]linter.Violation,
@@ -131,10 +132,10 @@ func mpr015CheckObjects(
 						Severity: r.DefaultSeverity(),
 						Message: fmt.Sprintf(
 							"microflow %s.%s calls %s with parameter mapping %q which no longer exists (CE1613 risk)",
-							mf.ModuleName, mf.Name, targetQN, pqn,
+							mf.Module, mf.Name, targetQN, pqn,
 						),
 						Location: linter.Location{
-							Module:       mf.ModuleName,
+							Module:       mf.Module,
 							DocumentType: "microflow",
 							DocumentName: mf.Name,
 							DocumentID:   mf.ID,

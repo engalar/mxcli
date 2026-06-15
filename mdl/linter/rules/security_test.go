@@ -9,14 +9,11 @@ import (
 )
 
 func TestNoEntityAccessRulesRule_NoViolation(t *testing.T) {
-	db := setupEntitiesDB(t, [][]any{
-		{"id1", "Customer", "MyModule.Customer", "MyModule", "", "PERSISTENT", "", "", 5, 2, 0, 0, 0},
-	})
-	defer db.Close()
-
-	ctx := linter.NewLintContextFromDB(db)
-	rule := NewNoEntityAccessRulesRule()
-	violations := rule.Check(ctx)
+	specs := []entitySpec{
+		{id: "id1", name: "Customer", module: "MyModule", persistent: true, accessRules: 2},
+	}
+	ctx := newGraphContext(buildEntityContext(specs), buildEntityReader(specs))
+	violations := NewNoEntityAccessRulesRule().Check(ctx)
 
 	if len(violations) != 0 {
 		t.Errorf("expected 0 violations, got %d", len(violations))
@@ -24,15 +21,12 @@ func TestNoEntityAccessRulesRule_NoViolation(t *testing.T) {
 }
 
 func TestNoEntityAccessRulesRule_DetectsMissing(t *testing.T) {
-	db := setupEntitiesDB(t, [][]any{
-		{"id1", "Customer", "MyModule.Customer", "MyModule", "", "PERSISTENT", "", "", 5, 0, 0, 0, 0},
-		{"id2", "Order", "MyModule.Order", "MyModule", "", "PERSISTENT", "", "", 3, 1, 0, 0, 0},
-	})
-	defer db.Close()
-
-	ctx := linter.NewLintContextFromDB(db)
-	rule := NewNoEntityAccessRulesRule()
-	violations := rule.Check(ctx)
+	specs := []entitySpec{
+		{id: "id1", name: "Customer", module: "MyModule", persistent: true, accessRules: 0},
+		{id: "id2", name: "Order", module: "MyModule", persistent: true, accessRules: 1},
+	}
+	ctx := newGraphContext(buildEntityContext(specs), buildEntityReader(specs))
+	violations := NewNoEntityAccessRulesRule().Check(ctx)
 
 	if len(violations) != 1 {
 		t.Fatalf("expected 1 violation, got %d", len(violations))
@@ -46,14 +40,11 @@ func TestNoEntityAccessRulesRule_DetectsMissing(t *testing.T) {
 }
 
 func TestNoEntityAccessRulesRule_NonPersistentIgnored(t *testing.T) {
-	db := setupEntitiesDB(t, [][]any{
-		{"id1", "TempObj", "MyModule.TempObj", "MyModule", "", "NON_PERSISTENT", "", "", 2, 0, 0, 0, 0},
-	})
-	defer db.Close()
-
-	ctx := linter.NewLintContextFromDB(db)
-	rule := NewNoEntityAccessRulesRule()
-	violations := rule.Check(ctx)
+	specs := []entitySpec{
+		{id: "id1", name: "TempObj", module: "MyModule", persistent: false},
+	}
+	ctx := newGraphContext(buildEntityContext(specs), buildEntityReader(specs))
+	violations := NewNoEntityAccessRulesRule().Check(ctx)
 
 	if len(violations) != 0 {
 		t.Errorf("expected 0 violations for non-persistent entity, got %d", len(violations))
@@ -61,14 +52,11 @@ func TestNoEntityAccessRulesRule_NonPersistentIgnored(t *testing.T) {
 }
 
 func TestNoEntityAccessRulesRule_ExternalIgnored(t *testing.T) {
-	db := setupEntitiesDB(t, [][]any{
-		{"id1", "ExtEntity", "MyModule.ExtEntity", "MyModule", "", "PERSISTENT", "", "", 2, 0, 0, 0, 1},
-	})
-	defer db.Close()
-
-	ctx := linter.NewLintContextFromDB(db)
-	rule := NewNoEntityAccessRulesRule()
-	violations := rule.Check(ctx)
+	specs := []entitySpec{
+		{id: "id1", name: "ExtEntity", module: "MyModule", persistent: true, external: true, accessRules: 0},
+	}
+	ctx := newGraphContext(buildEntityContext(specs), buildEntityReader(specs))
+	violations := NewNoEntityAccessRulesRule().Check(ctx)
 
 	if len(violations) != 0 {
 		t.Errorf("expected 0 violations for external entity, got %d", len(violations))
@@ -90,7 +78,7 @@ func TestNoEntityAccessRulesRule_Metadata(t *testing.T) {
 // Full behavioral coverage requires integration tests with a real .mpr project.
 
 func TestWeakPasswordPolicyRule_NilReader(t *testing.T) {
-	ctx := linter.NewLintContextFromDB(nil)
+	ctx := linter.NewLintContext(nil, nil)
 	rule := NewWeakPasswordPolicyRule()
 	violations := rule.Check(ctx)
 
@@ -104,7 +92,7 @@ func TestWeakPasswordPolicyRule_NilReader(t *testing.T) {
 
 func TestDemoUsersActiveRule_NilReader(t *testing.T) {
 	r := NewDemoUsersActiveRule()
-	ctx := linter.NewLintContextFromDB(nil)
+	ctx := linter.NewLintContext(nil, nil)
 	violations := r.Check(ctx)
 	if violations != nil {
 		t.Errorf("expected nil with nil reader, got %v", violations)

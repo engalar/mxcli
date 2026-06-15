@@ -3,63 +3,56 @@
 package rules
 
 import (
-	"database/sql"
 	"testing"
 
-	"github.com/mendixlabs/mxcli/mdl/catalog"
-	"github.com/mendixlabs/mxcli/mdl/linter"
-
-	_ "modernc.org/sqlite"
+	"github.com/mendixlabs/mxcli/mdl/graphcatalog"
+	"github.com/mendixlabs/mxcli/mdl/graphcatalog/mock"
+	"github.com/mendixlabs/mxcli/model"
+	"github.com/mendixlabs/mxcli/modelsdk/element"
+	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 )
 
-// setupMicroflowsDB creates an in-memory SQLite database with the microflows and modules tables.
-// Each row is [Id, Name, QualifiedName, ModuleName, Folder, MicroflowType, Description, ReturnType, ParameterCount, ActivityCount, Complexity].
-func setupMicroflowsDB(t *testing.T, rows [][]any) catalog.CatalogDB {
-	t.Helper()
-	db, err := sql.Open("sqlite", ":memory:")
-	if err != nil {
-		t.Fatalf("failed to open in-memory db: %v", err)
+// mfWithActivities builds a gen Microflow whose object collection holds n
+// objects (an empty collection means the microflow has no activities).
+func mfWithActivities(id, name string, n int) *genMf.Microflow {
+	mf := genMf.NewMicroflow()
+	mf.SetID(element.ID(id))
+	mf.SetName(name)
+	oc := genMf.NewMicroflowObjectCollection()
+	for i := 0; i < n; i++ {
+		oc.AddObjects(genMf.NewActionActivity())
 	}
+	mf.SetObjectCollection(oc)
+	return mf
+}
 
-	_, err = db.Exec(`CREATE TABLE modules (Name TEXT PRIMARY KEY, Source TEXT)`)
-	if err != nil {
-		t.Fatalf("failed to create modules table: %v", err)
+// buildMicroflowContext wires a mock graph (microflow node listing) plus a deep
+// reader returning the gen-typed bodies, keyed by ID.
+func buildMicroflowContext(nodes []graphcatalog.MicroflowNode, bodies map[model.ID]*genMf.Microflow) (*mock.MockProjectGraph, *mockReader) {
+	g := &mock.MockProjectGraph{
+		MicroflowsFunc: func(module string) []graphcatalog.MicroflowNode {
+			if module == "" {
+				return nodes
+			}
+			var out []graphcatalog.MicroflowNode
+			for _, n := range nodes {
+				if n.Module == module {
+					out = append(out, n)
+				}
+			}
+			return out
+		},
 	}
-
-	_, err = db.Exec(`CREATE TABLE microflows (
-		Id TEXT, Name TEXT, QualifiedName TEXT, ModuleName TEXT, Folder TEXT,
-		MicroflowType TEXT, Description TEXT, ReturnType TEXT,
-		ParameterCount INTEGER, ActivityCount INTEGER, Complexity INTEGER
-	)`)
-	if err != nil {
-		t.Fatalf("failed to create microflows table: %v", err)
-	}
-
-	for _, row := range rows {
-		_, err := db.Exec(`INSERT INTO microflows VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-			row...)
-		if err != nil {
-			t.Fatalf("failed to insert row: %v", err)
-		}
-		// Ensure module exists
-		moduleName := row[3].(string)
-		if _, err := db.Exec(`INSERT OR IGNORE INTO modules (Name, Source) VALUES (?, '')`, moduleName); err != nil {
-			t.Fatalf("failed to insert module: %v", err)
-		}
-	}
-
-	return catalog.WrapSqlDB(db)
+	return g, &mockReader{microflows: bodies}
 }
 
 func TestEmptyMicroflowRule_NoViolations(t *testing.T) {
-	db := setupMicroflowsDB(t, [][]any{
-		{"id1", "ACT_Process", "MyModule.ACT_Process", "MyModule", "", "Microflow", "", "Void", 0, 3, 1},
-	})
-	defer db.Close()
-
-	ctx := linter.NewLintContextFromDB(db)
-	rule := NewEmptyMicroflowRule()
-	violations := rule.Check(ctx)
+	nodes := []graphcatalog.MicroflowNode{microflowNode("id1", "ACT_Process", "MyModule")}
+	bodies := map[model.ID]*genMf.Microflow{
+		model.ID("id1"): mfWithActivities("id1", "ACT_Process", 3),
+	}
+	g, reader := buildMicroflowContext(nodes, bodies)
+	violations := NewEmptyMicroflowRule().Check(newGraphContext(g, reader))
 
 	if len(violations) != 0 {
 		t.Errorf("expected 0 violations, got %d", len(violations))
@@ -67,15 +60,16 @@ func TestEmptyMicroflowRule_NoViolations(t *testing.T) {
 }
 
 func TestEmptyMicroflowRule_DetectsEmpty(t *testing.T) {
-	db := setupMicroflowsDB(t, [][]any{
-		{"id1", "ACT_Process", "MyModule.ACT_Process", "MyModule", "", "Microflow", "", "Void", 0, 0, 0},
-		{"id2", "ACT_Other", "MyModule.ACT_Other", "MyModule", "", "Microflow", "", "Void", 0, 5, 2},
-	})
-	defer db.Close()
-
-	ctx := linter.NewLintContextFromDB(db)
-	rule := NewEmptyMicroflowRule()
-	violations := rule.Check(ctx)
+	nodes := []graphcatalog.MicroflowNode{
+		microflowNode("id1", "ACT_Process", "MyModule"),
+		microflowNode("id2", "ACT_Other", "MyModule"),
+	}
+	bodies := map[model.ID]*genMf.Microflow{
+		model.ID("id1"): mfWithActivities("id1", "ACT_Process", 0),
+		model.ID("id2"): mfWithActivities("id2", "ACT_Other", 5),
+	}
+	g, reader := buildMicroflowContext(nodes, bodies)
+	violations := NewEmptyMicroflowRule().Check(newGraphContext(g, reader))
 
 	if len(violations) != 1 {
 		t.Fatalf("expected 1 violation, got %d", len(violations))

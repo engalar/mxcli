@@ -10,6 +10,7 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/mendixlabs/mxcli/mdl/graphcatalog"
 	genSec "github.com/mendixlabs/mxcli/modelsdk/gen/security"
 	"go.starlark.net/starlark"
 	"go.starlark.net/starlarkstruct"
@@ -269,7 +270,7 @@ func (r *StarlarkRule) builtinEntities(_ *starlark.Thread, _ *starlark.Builtin, 
 	}
 
 	var entities []starlark.Value
-	for entity := range r.ctx.Entities() {
+	for _, entity := range r.ctx.Entities() {
 		entities = append(entities, entityToStarlark(entity))
 	}
 
@@ -283,7 +284,7 @@ func (r *StarlarkRule) builtinMicroflows(_ *starlark.Thread, _ *starlark.Builtin
 	}
 
 	var microflows []starlark.Value
-	for mf := range r.ctx.Microflows() {
+	for _, mf := range r.ctx.Microflows() {
 		microflows = append(microflows, microflowToStarlark(mf))
 	}
 
@@ -297,7 +298,7 @@ func (r *StarlarkRule) builtinPages(_ *starlark.Thread, _ *starlark.Builtin, arg
 	}
 
 	var pages []starlark.Value
-	for page := range r.ctx.Pages() {
+	for _, page := range r.ctx.Pages() {
 		pages = append(pages, pageToStarlark(page))
 	}
 
@@ -311,7 +312,7 @@ func (r *StarlarkRule) builtinEnumerations(_ *starlark.Thread, _ *starlark.Built
 	}
 
 	var enums []starlark.Value
-	for enum := range r.ctx.Enumerations() {
+	for _, enum := range r.ctx.Enumerations() {
 		enums = append(enums, enumerationToStarlark(enum))
 	}
 
@@ -324,9 +325,13 @@ func (r *StarlarkRule) builtinWidgets(_ *starlark.Thread, _ *starlark.Builtin, a
 		return starlark.NewList(nil), nil
 	}
 
+	// graphcatalog scopes widgets per page; aggregate across all pages to
+	// preserve the previous project-wide widgets() semantics.
 	var widgets []starlark.Value
-	for widget := range r.ctx.Widgets() {
-		widgets = append(widgets, widgetToStarlark(widget))
+	for _, page := range r.ctx.Pages() {
+		for _, widget := range r.ctx.Widgets(page.QualifiedName) {
+			widgets = append(widgets, widgetToStarlark(widget))
+		}
 	}
 
 	return starlark.NewList(widgets), nil
@@ -346,7 +351,7 @@ func (r *StarlarkRule) builtinAttributesFor(_ *starlark.Thread, _ *starlark.Buil
 	}
 
 	var attrs []starlark.Value
-	for attr := range r.ctx.AttributesFor(string(entityQualifiedName)) {
+	for _, attr := range r.ctx.Attributes(string(entityQualifiedName)) {
 		attrs = append(attrs, attributeToStarlark(attr))
 	}
 
@@ -365,10 +370,19 @@ func (r *StarlarkRule) builtinRefsTo(_ *starlark.Thread, _ *starlark.Builtin, ar
 		return starlark.NewList(nil), nil
 	}
 
-	refs := r.ctx.FindReferences(string(targetName))
+	graph := r.ctx.Graph()
+	if graph == nil {
+		return starlark.NewList(nil), nil
+	}
+	// graphcatalog.LintReader does not expose traversal; ProjectGraph also
+	// implements TraversalReader, so use it when available.
+	tr, ok := graph.(graphcatalog.TraversalReader)
+	if !ok {
+		return starlark.NewList(nil), nil
+	}
 	var result []starlark.Value
-	for _, ref := range refs {
-		result = append(result, referenceToStarlark(ref))
+	for _, ref := range tr.References(string(targetName)) {
+		result = append(result, refEdgeToStarlark(ref))
 	}
 
 	return starlark.NewList(result), nil
@@ -381,8 +395,8 @@ func (r *StarlarkRule) builtinPermissions(_ *starlark.Thread, _ *starlark.Builti
 	}
 
 	var result []starlark.Value
-	for p := range r.ctx.Permissions() {
-		result = append(result, allPermissionToStarlark(p))
+	for _, p := range r.ctx.Permissions() {
+		result = append(result, permissionNodeToStarlark(p))
 	}
 
 	return starlark.NewList(result), nil
@@ -402,8 +416,11 @@ func (r *StarlarkRule) builtinPermissionsFor(_ *starlark.Thread, _ *starlark.Bui
 	}
 
 	var perms []starlark.Value
-	for perm := range r.ctx.PermissionsFor(string(entityQualifiedName)) {
-		perms = append(perms, permissionToStarlark(perm))
+	for _, perm := range r.ctx.Permissions() {
+		if perm.EntityName != string(entityQualifiedName) {
+			continue
+		}
+		perms = append(perms, entityPermissionNodeToStarlark(perm))
 	}
 
 	return starlark.NewList(perms), nil
@@ -416,7 +433,7 @@ func (r *StarlarkRule) builtinSnippets(_ *starlark.Thread, _ *starlark.Builtin, 
 	}
 
 	var snippets []starlark.Value
-	for s := range r.ctx.Snippets() {
+	for _, s := range r.ctx.Snippets() {
 		snippets = append(snippets, snippetToStarlark(s))
 	}
 
@@ -430,7 +447,7 @@ func (r *StarlarkRule) builtinDatabaseConnections(_ *starlark.Thread, _ *starlar
 	}
 
 	var connections []starlark.Value
-	for dc := range r.ctx.DatabaseConnections() {
+	for _, dc := range r.ctx.DatabaseConnections() {
 		connections = append(connections, databaseConnectionToStarlark(dc))
 	}
 
@@ -450,12 +467,11 @@ func (r *StarlarkRule) builtinActivitiesFor(_ *starlark.Thread, _ *starlark.Buil
 		return nil, err
 	}
 
-	var activities []starlark.Value
-	for a := range r.ctx.ActivitiesFor(string(microflowQualifiedName)) {
-		activities = append(activities, activityToStarlark(a))
-	}
-
-	return starlark.NewList(activities), nil
+	// TODO: activities are not modelled as graph nodes in graphcatalog yet.
+	// Re-enable when the microflow adapter emits Activity nodes (or expose a
+	// deep-reader-backed walk over GetMicroflowGen object collections).
+	_ = microflowQualifiedName
+	return starlark.NewList(nil), nil
 }
 
 // builtinUserRoles returns all user roles from project security.
@@ -479,9 +495,16 @@ func (r *StarlarkRule) builtinModuleRoles(_ *starlark.Thread, _ *starlark.Builti
 		return starlark.NewList(nil), nil
 	}
 
+	// graphcatalog has no dedicated module-role listing; derive the distinct
+	// set from role mappings.
+	seen := make(map[string]bool)
 	var result []starlark.Value
-	for mr := range r.ctx.ModuleRoles() {
-		result = append(result, moduleRoleToStarlark(mr))
+	for _, rm := range r.ctx.RoleMappings() {
+		if rm.ModuleRole == "" || seen[rm.ModuleRole] {
+			continue
+		}
+		seen[rm.ModuleRole] = true
+		result = append(result, moduleRoleStringToStarlark(rm.ModuleRole))
 	}
 
 	return starlark.NewList(result), nil
@@ -494,8 +517,8 @@ func (r *StarlarkRule) builtinRoleMappings(_ *starlark.Thread, _ *starlark.Built
 	}
 
 	var result []starlark.Value
-	for rm := range r.ctx.RoleMappings() {
-		result = append(result, roleMappingToStarlark(rm))
+	for _, rm := range r.ctx.RoleMappings() {
+		result = append(result, roleMappingNodeToStarlark(rm))
 	}
 
 	return starlark.NewList(result), nil
@@ -543,141 +566,159 @@ func (r *StarlarkRule) builtinProjectSecurity(_ *starlark.Thread, _ *starlark.Bu
 	}), nil
 }
 
-// entityToStarlark converts an Entity to a Starlark struct.
-func entityToStarlark(e Entity) starlark.Value {
+// moduleOf extracts the module prefix from a qualified name "Module.Element".
+func moduleOf(qualifiedName string) string {
+	if i := strings.IndexByte(qualifiedName, '.'); i >= 0 {
+		return qualifiedName[:i]
+	}
+	return ""
+}
+
+// entityToStarlark converts a graphcatalog EntityNode to a Starlark struct.
+// Fields the in-memory graph does not carry (folder, entity_type, counts) are
+// kept as keys with zero values so existing custom rules don't break with an
+// AttributeError; richer document data is reached via the deep reader.
+func entityToStarlark(e graphcatalog.EntityNode) starlark.Value {
 	return starlarkstruct.FromStringDict(starlark.String("entity"), starlark.StringDict{
 		"id":                    starlark.String(e.ID),
 		"name":                  starlark.String(e.Name),
 		"qualified_name":        starlark.String(e.QualifiedName),
-		"module_name":           starlark.String(e.ModuleName),
-		"folder":                starlark.String(e.Folder),
-		"entity_type":           starlark.String(e.EntityType),
-		"description":           starlark.String(e.Description),
-		"generalization":        starlark.String(e.Generalization),
-		"attribute_count":       starlark.MakeInt(e.AttributeCount),
-		"access_rule_count":     starlark.MakeInt(e.AccessRuleCount),
-		"validation_rule_count": starlark.MakeInt(e.ValidationRuleCount),
-		"has_event_handlers":    starlark.Bool(e.HasEventHandlers),
+		"module_name":           starlark.String(e.Module),
+		"folder":                starlark.String(""),
+		"entity_type":           starlark.String(""),
+		"description":           starlark.String(""),
+		"generalization":        starlark.String(""),
+		"attribute_count":       starlark.MakeInt(0),
+		"access_rule_count":     starlark.MakeInt(0),
+		"validation_rule_count": starlark.MakeInt(0),
+		"has_event_handlers":    starlark.Bool(false),
 		"is_external":           starlark.Bool(e.IsExternal),
 	})
 }
 
-// microflowToStarlark converts a Microflow to a Starlark struct.
-func microflowToStarlark(mf Microflow) starlark.Value {
+// microflowToStarlark converts a graphcatalog MicroflowNode to a Starlark struct.
+func microflowToStarlark(mf graphcatalog.MicroflowNode) starlark.Value {
+	mfType := "Microflow"
+	if mf.IsNanoflow {
+		mfType = "Nanoflow"
+	}
 	return starlarkstruct.FromStringDict(starlark.String("microflow"), starlark.StringDict{
 		"id":              starlark.String(mf.ID),
 		"name":            starlark.String(mf.Name),
 		"qualified_name":  starlark.String(mf.QualifiedName),
-		"module_name":     starlark.String(mf.ModuleName),
-		"folder":          starlark.String(mf.Folder),
-		"microflow_type":  starlark.String(mf.MicroflowType),
-		"description":     starlark.String(mf.Description),
+		"module_name":     starlark.String(mf.Module),
+		"folder":          starlark.String(""),
+		"microflow_type":  starlark.String(mfType),
+		"description":     starlark.String(""),
 		"return_type":     starlark.String(mf.ReturnType),
-		"parameter_count": starlark.MakeInt(mf.ParameterCount),
-		"activity_count":  starlark.MakeInt(mf.ActivityCount),
-		"complexity":      starlark.MakeInt(mf.Complexity),
+		"parameter_count": starlark.MakeInt(0),
+		"activity_count":  starlark.MakeInt(0),
+		"complexity":      starlark.MakeInt(0),
 	})
 }
 
-// pageToStarlark converts a Page to a Starlark struct.
-func pageToStarlark(p Page) starlark.Value {
+// pageToStarlark converts a graphcatalog PageNode to a Starlark struct.
+func pageToStarlark(p graphcatalog.PageNode) starlark.Value {
 	return starlarkstruct.FromStringDict(starlark.String("page"), starlark.StringDict{
 		"id":             starlark.String(p.ID),
 		"name":           starlark.String(p.Name),
 		"qualified_name": starlark.String(p.QualifiedName),
-		"module_name":    starlark.String(p.ModuleName),
-		"folder":         starlark.String(p.Folder),
-		"title":          starlark.String(p.Title),
-		"url":            starlark.String(p.URL),
-		"description":    starlark.String(p.Description),
-		"widget_count":   starlark.MakeInt(p.WidgetCount),
+		"module_name":    starlark.String(p.Module),
+		"folder":         starlark.String(""),
+		"title":          starlark.String(""),
+		"url":            starlark.String(""),
+		"description":    starlark.String(""),
+		"widget_count":   starlark.MakeInt(0),
 	})
 }
 
-// enumerationToStarlark converts an Enumeration to a Starlark struct.
-func enumerationToStarlark(e Enumeration) starlark.Value {
+// enumerationToStarlark converts a graphcatalog EnumerationNode to a Starlark struct.
+func enumerationToStarlark(e graphcatalog.EnumerationNode) starlark.Value {
 	return starlarkstruct.FromStringDict(starlark.String("enumeration"), starlark.StringDict{
 		"id":             starlark.String(e.ID),
 		"name":           starlark.String(e.Name),
 		"qualified_name": starlark.String(e.QualifiedName),
-		"module_name":    starlark.String(e.ModuleName),
-		"folder":         starlark.String(e.Folder),
-		"description":    starlark.String(e.Description),
-		"value_count":    starlark.MakeInt(e.ValueCount),
+		"module_name":    starlark.String(e.Module),
+		"folder":         starlark.String(""),
+		"description":    starlark.String(""),
+		"value_count":    starlark.MakeInt(0),
 	})
 }
 
-// widgetToStarlark converts a Widget to a Starlark struct.
-func widgetToStarlark(w Widget) starlark.Value {
+// widgetToStarlark converts a graphcatalog WidgetNode to a Starlark struct.
+// container_type / container_qualified_name / entity_ref / attribute_ref are not
+// carried by the graph node and are kept as empty keys for API compatibility.
+func widgetToStarlark(w graphcatalog.WidgetNode) starlark.Value {
 	return starlarkstruct.FromStringDict(starlark.String("widget"), starlark.StringDict{
 		"id":                       starlark.String(w.ID),
 		"name":                     starlark.String(w.Name),
 		"widget_type":              starlark.String(w.WidgetType),
-		"container_id":             starlark.String(w.ContainerID),
-		"container_qualified_name": starlark.String(w.ContainerQualifiedName),
-		"container_type":           starlark.String(w.ContainerType),
-		"module_name":              starlark.String(w.ModuleName),
-		"entity_ref":               starlark.String(w.EntityRef),
-		"attribute_ref":            starlark.String(w.AttributeRef),
+		"container_id":             starlark.String(w.PageID),
+		"container_qualified_name": starlark.String(""),
+		"container_type":           starlark.String(""),
+		"module_name":              starlark.String(""),
+		"entity_ref":               starlark.String(""),
+		"attribute_ref":            starlark.String(""),
 	})
 }
 
-// attributeToStarlark converts an Attribute to a Starlark struct.
-func attributeToStarlark(a Attribute) starlark.Value {
+// attributeToStarlark converts a graphcatalog AttributeNode to a Starlark struct.
+func attributeToStarlark(a graphcatalog.AttributeNode) starlark.Value {
 	return starlarkstruct.FromStringDict(starlark.String("attribute"), starlark.StringDict{
 		"id":                    starlark.String(a.ID),
 		"name":                  starlark.String(a.Name),
-		"entity_id":             starlark.String(a.EntityID),
-		"entity_qualified_name": starlark.String(a.EntityQualifiedName),
-		"module_name":           starlark.String(a.ModuleName),
+		"entity_id":             starlark.String(""),
+		"entity_qualified_name": starlark.String(a.Entity),
+		"module_name":           starlark.String(moduleOf(a.Entity)),
 		"data_type":             starlark.String(a.DataType),
-		"length":                starlark.MakeInt(a.Length),
-		"is_unique":             starlark.Bool(a.IsUnique),
-		"is_required":           starlark.Bool(a.IsRequired),
-		"default_value":         starlark.String(a.DefaultValue),
-		"is_calculated":         starlark.Bool(a.IsCalculated),
-		"description":           starlark.String(a.Description),
+		"length":                starlark.MakeInt(0),
+		"is_unique":             starlark.Bool(false),
+		"is_required":           starlark.Bool(false),
+		"default_value":         starlark.String(""),
+		"is_calculated":         starlark.Bool(false),
+		"description":           starlark.String(""),
 	})
 }
 
-// referenceToStarlark converts a Reference to a Starlark struct.
-func referenceToStarlark(r Reference) starlark.Value {
+// refEdgeToStarlark converts a graphcatalog RefEdge to a Starlark reference struct.
+func refEdgeToStarlark(r graphcatalog.RefEdge) starlark.Value {
 	return starlarkstruct.FromStringDict(starlark.String("reference"), starlark.StringDict{
-		"source_type": starlark.String(r.SourceType),
-		"source_id":   starlark.String(r.SourceID),
-		"source_name": starlark.String(r.SourceName),
-		"target_type": starlark.String(r.TargetType),
-		"target_id":   starlark.String(r.TargetID),
-		"target_name": starlark.String(r.TargetName),
+		"source_type": starlark.String(""),
+		"source_id":   starlark.String(""),
+		"source_name": starlark.String(r.Source),
+		"target_type": starlark.String(""),
+		"target_id":   starlark.String(""),
+		"target_name": starlark.String(r.Target),
 		"ref_kind":    starlark.String(r.RefKind),
-		"module_name": starlark.String(r.ModuleName),
+		"module_name": starlark.String(moduleOf(r.Source)),
 	})
 }
 
-// allPermissionToStarlark converts an AllPermission to a Starlark struct.
-func allPermissionToStarlark(p AllPermission) starlark.Value {
+// permissionNodeToStarlark converts a graphcatalog PermissionNode to a Starlark struct.
+func permissionNodeToStarlark(p graphcatalog.PermissionNode) starlark.Value {
 	return starlarkstruct.FromStringDict(starlark.String("permission"), starlark.StringDict{
-		"module_role_name": starlark.String(p.ModuleRoleName),
-		"element_type":     starlark.String(p.ElementType),
-		"element_name":     starlark.String(p.ElementName),
-		"member_name":      starlark.String(p.MemberName),
-		"access_type":      starlark.String(p.AccessType),
-		"xpath_constraint": starlark.String(p.XPathConstraint),
-		"is_constrained":   starlark.Bool(p.IsConstrained),
-		"module_name":      starlark.String(p.ModuleName),
+		"module_role_name": starlark.String(p.ModuleRole),
+		"element_type":     starlark.String("ENTITY"),
+		"element_name":     starlark.String(p.EntityName),
+		"member_name":      starlark.String(""),
+		"access_type":      starlark.String(p.AccessRights),
+		"xpath_constraint": starlark.String(""),
+		"is_constrained":   starlark.Bool(false),
+		"module_name":      starlark.String(moduleOf(p.EntityName)),
 	})
 }
 
-// permissionToStarlark converts a Permission to a Starlark struct.
-func permissionToStarlark(p Permission) starlark.Value {
+// entityPermissionNodeToStarlark converts a PermissionNode to the entity-scoped
+// Starlark struct returned by permissions_for.
+func entityPermissionNodeToStarlark(p graphcatalog.PermissionNode) starlark.Value {
 	return starlarkstruct.FromStringDict(starlark.String("entity_permission"), starlark.StringDict{
-		"module_role_name": starlark.String(p.ModuleRoleName),
-		"module_name":      starlark.String(p.ModuleName),
+		"module_role_name": starlark.String(p.ModuleRole),
+		"module_name":      starlark.String(moduleOf(p.EntityName)),
 		"entity_name":      starlark.String(p.EntityName),
-		"access_type":      starlark.String(p.AccessType),
-		"member_name":      starlark.String(p.MemberName),
-		"xpath_constraint": starlark.String(p.XPathConstraint),
-		"is_constrained":   starlark.Bool(p.IsConstrained),
+		"access_type":      starlark.String(p.AccessRights),
+		"member_name":      starlark.String(""),
+		"xpath_constraint": starlark.String(""),
+		"is_constrained":   starlark.Bool(false),
 	})
 }
 
@@ -694,61 +735,47 @@ func userRoleToStarlark(ur UserRoleInfo) starlark.Value {
 	})
 }
 
-// moduleRoleToStarlark converts a ModuleRoleInfo to a Starlark struct.
-func moduleRoleToStarlark(mr ModuleRoleInfo) starlark.Value {
+// moduleRoleStringToStarlark converts a module-role name (derived from role
+// mappings) to a Starlark struct.
+func moduleRoleStringToStarlark(name string) starlark.Value {
 	return starlarkstruct.FromStringDict(starlark.String("module_role"), starlark.StringDict{
-		"name":        starlark.String(mr.Name),
-		"module_name": starlark.String(mr.ModuleName),
-		"description": starlark.String(mr.Description),
+		"name":        starlark.String(name),
+		"module_name": starlark.String(moduleOf(name)),
+		"description": starlark.String(""),
 	})
 }
 
-// roleMappingToStarlark converts a RoleMappingInfo to a Starlark struct.
-func roleMappingToStarlark(rm RoleMappingInfo) starlark.Value {
+// roleMappingNodeToStarlark converts a graphcatalog RoleMappingNode to a Starlark struct.
+func roleMappingNodeToStarlark(rm graphcatalog.RoleMappingNode) starlark.Value {
 	return starlarkstruct.FromStringDict(starlark.String("role_mapping"), starlark.StringDict{
-		"user_role_name":   starlark.String(rm.UserRoleName),
-		"module_role_name": starlark.String(rm.ModuleRoleName),
-		"module_name":      starlark.String(rm.ModuleName),
+		"user_role_name":   starlark.String(rm.UserRole),
+		"module_role_name": starlark.String(rm.ModuleRole),
+		"module_name":      starlark.String(moduleOf(rm.ModuleRole)),
 	})
 }
 
-// snippetToStarlark converts a Snippet to a Starlark struct.
-func snippetToStarlark(s Snippet) starlark.Value {
+// snippetToStarlark converts a graphcatalog SnippetNode to a Starlark struct.
+func snippetToStarlark(s graphcatalog.SnippetNode) starlark.Value {
 	return starlarkstruct.FromStringDict(starlark.String("snippet"), starlark.StringDict{
 		"id":             starlark.String(s.ID),
 		"name":           starlark.String(s.Name),
 		"qualified_name": starlark.String(s.QualifiedName),
-		"module_name":    starlark.String(s.ModuleName),
-		"folder":         starlark.String(s.Folder),
-		"widget_count":   starlark.MakeInt(s.WidgetCount),
+		"module_name":    starlark.String(s.Module),
+		"folder":         starlark.String(""),
+		"widget_count":   starlark.MakeInt(0),
 	})
 }
 
-// activityToStarlark converts an Activity to a Starlark struct.
-func activityToStarlark(a Activity) starlark.Value {
-	return starlarkstruct.FromStringDict(starlark.String("activity"), starlark.StringDict{
-		"id":                       starlark.String(a.ID),
-		"name":                     starlark.String(a.Name),
-		"caption":                  starlark.String(a.Caption),
-		"activity_type":            starlark.String(a.ActivityType),
-		"action_type":              starlark.String(a.ActionType),
-		"microflow_id":             starlark.String(a.MicroflowID),
-		"microflow_qualified_name": starlark.String(a.MicroflowQualifiedName),
-		"module_name":              starlark.String(a.ModuleName),
-		"entity_ref":               starlark.String(a.EntityRef),
-	})
-}
-
-// databaseConnectionToStarlark converts a DatabaseConnection to a Starlark struct.
-func databaseConnectionToStarlark(dc DatabaseConnection) starlark.Value {
+// databaseConnectionToStarlark converts a graphcatalog DatabaseConnectionNode to a Starlark struct.
+func databaseConnectionToStarlark(dc graphcatalog.DatabaseConnectionNode) starlark.Value {
 	return starlarkstruct.FromStringDict(starlark.String("database_connection"), starlark.StringDict{
 		"id":             starlark.String(dc.ID),
 		"name":           starlark.String(dc.Name),
-		"qualified_name": starlark.String(dc.QualifiedName),
-		"module_name":    starlark.String(dc.ModuleName),
-		"folder":         starlark.String(dc.Folder),
+		"qualified_name": starlark.String(""),
+		"module_name":    starlark.String(""),
+		"folder":         starlark.String(""),
 		"database_type":  starlark.String(dc.DatabaseType),
-		"query_count":    starlark.MakeInt(dc.QueryCount),
+		"query_count":    starlark.MakeInt(0),
 	})
 }
 

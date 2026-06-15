@@ -64,14 +64,14 @@ func (r *NamingConventionRule) Check(ctx *linter.LintContext) []linter.Violation
 	var violations []linter.Violation
 
 	// Check entity names
-	for entity := range ctx.Entities() {
+	for _, entity := range ctx.Entities() {
 		if !r.EntityPattern.MatchString(entity.Name) {
 			violations = append(violations, linter.Violation{
 				RuleID:   r.ID(),
 				Severity: r.DefaultSeverity(),
 				Message:  fmt.Sprintf("Entity name '%s' should use PascalCase", entity.Name),
 				Location: linter.Location{
-					Module:       entity.ModuleName,
+					Module:       entity.Module,
 					DocumentType: "entity",
 					DocumentName: entity.Name,
 					DocumentID:   entity.ID,
@@ -82,14 +82,14 @@ func (r *NamingConventionRule) Check(ctx *linter.LintContext) []linter.Violation
 	}
 
 	// Check microflow names
-	for mf := range ctx.Microflows() {
+	for _, mf := range ctx.Microflows() {
 		if !r.MicroflowPattern.MatchString(mf.Name) {
 			violations = append(violations, linter.Violation{
 				RuleID:   r.ID(),
 				Severity: r.DefaultSeverity(),
 				Message:  fmt.Sprintf("Microflow name '%s' should use PascalCase with optional prefix (ACT_, SUB_, DS_, VAL_, SCH_, IVK_, BCO_, ACO_, BCR_, ACR_, BDE_, ADE_, BRO_, ARO_, OCH_, SE_, DL_, PWS_, ASU_, NAV_, LOGIN_)", mf.Name),
 				Location: linter.Location{
-					Module:       mf.ModuleName,
+					Module:       mf.Module,
 					DocumentType: "microflow",
 					DocumentName: mf.Name,
 					DocumentID:   mf.ID,
@@ -100,14 +100,14 @@ func (r *NamingConventionRule) Check(ctx *linter.LintContext) []linter.Violation
 	}
 
 	// Check page names
-	for page := range ctx.Pages() {
+	for _, page := range ctx.Pages() {
 		if !r.PagePattern.MatchString(page.Name) {
 			violations = append(violations, linter.Violation{
 				RuleID:   r.ID(),
 				Severity: r.DefaultSeverity(),
 				Message:  fmt.Sprintf("Page name '%s' should use PascalCase", page.Name),
 				Location: linter.Location{
-					Module:       page.ModuleName,
+					Module:       page.Module,
 					DocumentType: "page",
 					DocumentName: page.Name,
 					DocumentID:   page.ID,
@@ -118,14 +118,14 @@ func (r *NamingConventionRule) Check(ctx *linter.LintContext) []linter.Violation
 	}
 
 	// Check enumeration names
-	for enum := range ctx.Enumerations() {
+	for _, enum := range ctx.Enumerations() {
 		if !r.EnumerationPattern.MatchString(enum.Name) {
 			violations = append(violations, linter.Violation{
 				RuleID:   r.ID(),
 				Severity: r.DefaultSeverity(),
 				Message:  fmt.Sprintf("Enumeration name '%s' should use PascalCase", enum.Name),
 				Location: linter.Location{
-					Module:       enum.ModuleName,
+					Module:       enum.Module,
 					DocumentType: "enumeration",
 					DocumentName: enum.Name,
 					DocumentID:   enum.ID,

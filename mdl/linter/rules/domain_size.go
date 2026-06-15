@@ -34,11 +34,14 @@ func (r *DomainModelSizeRule) Description() string {
 
 // Check counts persistent entities per module and flags those exceeding the limit.
 func (r *DomainModelSizeRule) Check(ctx *linter.LintContext) []linter.Violation {
-	// Count persistent entities per module
+	// Count persistent entities per module. Persistability is not a graph node
+	// property; join graph entity nodes (for module grouping) against gen-typed
+	// facts from the deep reader.
+	facts := entityFactsByID(ctx)
 	counts := make(map[string]int)
-	for entity := range ctx.Entities() {
-		if entity.EntityType == "Persistent" {
-			counts[entity.ModuleName]++
+	for _, entity := range ctx.Entities() {
+		if facts[entity.ID].Persistent {
+			counts[entity.Module]++
 		}
 	}
 

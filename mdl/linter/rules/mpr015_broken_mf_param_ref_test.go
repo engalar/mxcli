@@ -3,17 +3,15 @@
 package rules
 
 import (
-	"database/sql"
 	"strings"
 	"testing"
 
-	"github.com/mendixlabs/mxcli/mdl/catalog"
+	"github.com/mendixlabs/mxcli/mdl/graphcatalog"
+	"github.com/mendixlabs/mxcli/mdl/graphcatalog/mock"
 	"github.com/mendixlabs/mxcli/mdl/linter"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
-
-	_ "modernc.org/sqlite"
 )
 
 // mpr015Reader implements linter.LintReader for MPR015 tests.
@@ -63,40 +61,33 @@ func makeMFWithParam(mfName, paramName, targetQN, paramRef string) *genMf.Microf
 	return mf
 }
 
-// setupMPR015DB creates an in-memory DB with microflows + modules rows.
-func setupMPR015DB(t *testing.T, rows []struct{ id, qn, mod string }) catalog.CatalogDB {
-	t.Helper()
-	db, err := sql.Open("sqlite", ":memory:")
-	if err != nil {
-		t.Fatalf("open db: %v", err)
-	}
-	if _, err := db.Exec(`CREATE TABLE microflows (
-		Id TEXT, Name TEXT, QualifiedName TEXT, ModuleName TEXT,
-		Folder TEXT, MicroflowType TEXT, Description TEXT, ReturnType TEXT,
-		ParameterCount INTEGER, ActivityCount INTEGER, Complexity INTEGER
-	)`); err != nil {
-		t.Fatalf("create microflows table: %v", err)
-	}
-	if _, err := db.Exec(`CREATE TABLE modules (Name TEXT PRIMARY KEY, Source TEXT)`); err != nil {
-		t.Fatalf("create modules table: %v", err)
-	}
+// mpr015Graph builds a mock graph whose Microflows listing mirrors the given
+// rows (id / qualified name / module), replacing the former SQLite catalog.
+func mpr015Graph(rows []struct{ id, qn, mod string }) *mock.MockProjectGraph {
+	var nodes []graphcatalog.MicroflowNode
 	for _, r := range rows {
-		parts := strings.SplitN(r.qn, ".", 2)
 		name := r.qn
-		if len(parts) == 2 {
+		if parts := strings.SplitN(r.qn, ".", 2); len(parts) == 2 {
 			name = parts[1]
 		}
-		if _, err := db.Exec(
-			`INSERT INTO microflows VALUES (?, ?, ?, ?, '', 'Microflow', '', 'Void', 0, 1, 1)`,
-			r.id, name, r.qn, r.mod,
-		); err != nil {
-			t.Fatalf("insert mf row: %v", err)
-		}
-		if _, err := db.Exec(`INSERT OR IGNORE INTO modules (Name, Source) VALUES (?, '')`, r.mod); err != nil {
-			t.Fatalf("insert module row: %v", err)
-		}
+		nodes = append(nodes, graphcatalog.MicroflowNode{
+			ID: r.id, Name: name, QualifiedName: r.qn, Module: r.mod,
+		})
 	}
-	return catalog.WrapSqlDB(db)
+	return &mock.MockProjectGraph{
+		MicroflowsFunc: func(module string) []graphcatalog.MicroflowNode {
+			if module == "" {
+				return nodes
+			}
+			var out []graphcatalog.MicroflowNode
+			for _, n := range nodes {
+				if n.Module == module {
+					out = append(out, n)
+				}
+			}
+			return out
+		},
+	}
 }
 
 // makeID creates a deterministic element.ID from a string (good enough for tests).
@@ -123,13 +114,10 @@ func TestMPR015_FlagsBrokenParameterRef(t *testing.T) {
 		model.ID(targetID): targetMF,
 		model.ID(callerID): callerMF,
 	}}
-	db := setupMPR015DB(t, []struct{ id, qn, mod string }{
+	ctx := linter.NewLintContext(mpr015Graph([]struct{ id, qn, mod string }{
 		{targetID, "Common_Utils.GET_Message_ById", "Common_Utils"},
 		{callerID, "ContractorReg.Caller_MF", "ContractorReg"},
-	})
-	defer db.Close()
-
-	ctx := linter.NewLintContextFromDBAndReader(db, reader)
+	}), reader)
 	violations := NewBrokenMFParamRefRule().Check(ctx)
 
 	if len(violations) != 1 {
@@ -170,13 +158,10 @@ func TestMPR015_NoViolationWhenParamExists(t *testing.T) {
 		model.ID(targetID): targetMF,
 		model.ID(callerID): callerMF,
 	}}
-	db := setupMPR015DB(t, []struct{ id, qn, mod string }{
+	ctx := linter.NewLintContext(mpr015Graph([]struct{ id, qn, mod string }{
 		{targetID, "Common_Utils.GET_Message_ById", "Common_Utils"},
 		{callerID, "Common_Utils.Caller_OK", "Common_Utils"},
-	})
-	defer db.Close()
-
-	ctx := linter.NewLintContextFromDBAndReader(db, reader)
+	}), reader)
 	violations := NewBrokenMFParamRefRule().Check(ctx)
 	if len(violations) != 0 {
 		t.Fatalf("expected 0 violations, got %d: %v", len(violations), violations)
@@ -199,12 +184,9 @@ func TestMPR015_UnknownTargetSkipped(t *testing.T) {
 		model.ID(callerID): callerMF,
 	}}
 	// Only the caller is in the catalog; External.SomeMF is absent.
-	db := setupMPR015DB(t, []struct{ id, qn, mod string }{
+	ctx := linter.NewLintContext(mpr015Graph([]struct{ id, qn, mod string }{
 		{callerID, "MyModule.Caller_Ext", "MyModule"},
-	})
-	defer db.Close()
-
-	ctx := linter.NewLintContextFromDBAndReader(db, reader)
+	}), reader)
 	violations := NewBrokenMFParamRefRule().Check(ctx)
 	if len(violations) != 0 {
 		t.Fatalf("expected 0 violations for unknown target, got %d: %v", len(violations), violations)
@@ -246,13 +228,10 @@ func TestMPR015_BrokenRefInsideLoop(t *testing.T) {
 		model.ID(targetID): targetMF,
 		model.ID(callerID): callerMF,
 	}}
-	db := setupMPR015DB(t, []struct{ id, qn, mod string }{
+	ctx := linter.NewLintContext(mpr015Graph([]struct{ id, qn, mod string }{
 		{targetID, "Common.SUB_Process", "Common"},
 		{callerID, "MyModule.Caller_Loop", "MyModule"},
-	})
-	defer db.Close()
-
-	ctx := linter.NewLintContextFromDBAndReader(db, reader)
+	}), reader)
 	violations := NewBrokenMFParamRefRule().Check(ctx)
 	if len(violations) != 1 {
 		t.Fatalf("expected 1 violation inside loop, got %d: %v", len(violations), violations)
@@ -264,7 +243,7 @@ func TestMPR015_BrokenRefInsideLoop(t *testing.T) {
 
 // TestMPR015_ReaderNil_ReturnsEmpty verifies graceful no-op when reader is absent.
 func TestMPR015_ReaderNil_ReturnsEmpty(t *testing.T) {
-	ctx := linter.NewLintContextFromDB(nil)
+	ctx := linter.NewLintContext(nil, nil)
 	violations := NewBrokenMFParamRefRule().Check(ctx)
 	if len(violations) != 0 {
 		t.Fatalf("expected 0 violations without reader, got %d", len(violations))

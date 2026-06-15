@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/mendixlabs/mxcli/mdl/linter"
+	"github.com/mendixlabs/mxcli/mdl/graphcatalog"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
@@ -33,8 +34,8 @@ func (r *NoCommitInLoopRule) Check(ctx *linter.LintContext) []linter.Violation {
 
 	var violations []linter.Violation
 
-	for mf := range ctx.Microflows() {
-		if ctx.IsExcluded(mf.ModuleName) {
+	for _, mf := range ctx.Microflows() {
+		if ctx.IsExcluded(mf.Module) {
 			continue
 		}
 
@@ -58,7 +59,7 @@ func (r *NoCommitInLoopRule) Check(ctx *linter.LintContext) []linter.Violation {
 // directly or transitively inside a LoopedActivity. Note: gen renames
 // "CommitObjectsAction" to "CommitAction" but the BSON storage type
 // stays "CommitAction" (see CLAUDE.md storage-name table).
-func findCommitsInLoops(objects []element.Element, mf linter.Microflow, r *NoCommitInLoopRule, violations *[]linter.Violation, insideLoop bool) {
+func findCommitsInLoops(objects []element.Element, mf graphcatalog.MicroflowNode, r *NoCommitInLoopRule, violations *[]linter.Violation, insideLoop bool) {
 	for _, obj := range objects {
 		switch act := obj.(type) {
 		case *genMf.ActionActivity:
@@ -75,9 +76,9 @@ func findCommitsInLoops(objects []element.Element, mf linter.Microflow, r *NoCom
 					Severity: r.DefaultSeverity(),
 					Message: fmt.Sprintf("Microflow '%s.%s' has a Commit action inside a loop. "+
 						"This causes N+1 database operations.",
-						mf.ModuleName, mf.Name),
+						mf.Module, mf.Name),
 					Location: linter.Location{
-						Module:       mf.ModuleName,
+						Module:       mf.Module,
 						DocumentType: "microflow",
 						DocumentName: mf.Name,
 						DocumentID:   mf.ID,

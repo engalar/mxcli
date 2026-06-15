@@ -3,27 +3,31 @@
 package linter
 
 import (
-	"database/sql"
-	"iter"
-
 	"github.com/mendixlabs/mxcli/mdl/backend"
-	"github.com/mendixlabs/mxcli/mdl/catalog"
+	"github.com/mendixlabs/mxcli/mdl/graphcatalog"
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
+	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 	genSec "github.com/mendixlabs/mxcli/modelsdk/gen/security"
 )
 
-// LintReader provides read access to MPR document data needed by lint rules.
-// Implemented by MprBackend (and any backend satisfying these signatures).
+// LintReader provides deep, gen-typed read access to MPR document bodies that
+// the in-memory graph (graphcatalog) does not surface as node properties.
+// Implemented by MprBackend.
 //
-// Followup F2: GetMicroflow returns the gen-typed flow body so rules
-// walk the same modelsdk-native representation the executor and
-// catalog consume.
+// The graph catalog exposes lightweight node listings (Name / Module /
+// QualifiedName); rules that need richer document data — entity access rules,
+// entity persistability, microflow activity bodies — reach for these gen-typed
+// accessors instead.
 type LintReader interface {
 	GetMicroflowGen(id model.ID) (*genMf.Microflow, error)
 	GetProjectSecurityGen() (*genSec.ProjectSecurity, error)
 	GetNavigation() (*types.NavigationDocument, error)
+	// ListDomainModelsGen returns every domain model as a gen-typed object,
+	// so rules can inspect entities' AccessRules and Persistable state that
+	// graphcatalog's EntityNode does not carry.
+	ListDomainModelsGen() ([]*genDm.DomainModel, error)
 	// PageReader supplies the gen-typed Page/Layout/Snippet read surface
 	// (ListPagesGen, GetPageGen, GetPageContainerUUID, etc.). Embedded to
 	// avoid re-declaring page read methods already defined on the backend;
@@ -35,47 +39,32 @@ type LintReader interface {
 	GetRawUnit(id model.ID) (map[string]any, error)
 }
 
-// LintContext wraps a catalog and provides rule-friendly APIs.
+// LintContext wraps the project graph and a deep reader, exposing rule-friendly
+// APIs. The graph supplies node listings; the reader supplies gen-typed bodies.
 type LintContext struct {
-	catalog  *catalog.Catalog
-	db       catalog.CatalogDB
-	excluded map[string]bool
+	graph    graphcatalog.LintReader
 	reader   LintReader
+	excluded map[string]bool
 }
 
-// Reader returns the LintReader, or nil if not set.
+// NewLintContext creates a LintContext from a graph catalog and a deep reader.
+// Either may be nil; rules must guard with Graph() != nil / Reader() != nil.
+func NewLintContext(graph graphcatalog.LintReader, reader LintReader) *LintContext {
+	return &LintContext{
+		graph:    graph,
+		reader:   reader,
+		excluded: make(map[string]bool),
+	}
+}
+
+// Graph returns the graph catalog, or nil if not set.
+func (ctx *LintContext) Graph() graphcatalog.LintReader {
+	return ctx.graph
+}
+
+// Reader returns the deep reader, or nil if not set.
 func (ctx *LintContext) Reader() LintReader {
 	return ctx.reader
-}
-
-// NewLintContext creates a new LintContext from a catalog and an optional reader.
-// reader may be nil; rules that require backend access must check Reader() != nil.
-func NewLintContext(cat *catalog.Catalog, reader LintReader) *LintContext {
-	return &LintContext{
-		catalog:  cat,
-		db:       cat.CatalogDB(),
-		excluded: make(map[string]bool),
-		reader:   reader,
-	}
-}
-
-// NewLintContextFromDB creates a new LintContext from a CatalogDB.
-// Used in tests to provide an in-memory database with test data.
-func NewLintContextFromDB(db catalog.CatalogDB) *LintContext {
-	return &LintContext{
-		db:       db,
-		excluded: make(map[string]bool),
-	}
-}
-
-// NewLintContextFromDBAndReader creates a LintContext with both a CatalogDB and a reader.
-// Used in tests that need reader-backed lint rules.
-func NewLintContextFromDBAndReader(db catalog.CatalogDB, reader LintReader) *LintContext {
-	return &LintContext{
-		db:       db,
-		reader:   reader,
-		excluded: make(map[string]bool),
-	}
 }
 
 // SetExcludedModules sets the list of modules to exclude from linting.
@@ -91,234 +80,124 @@ func (ctx *LintContext) IsExcluded(moduleName string) bool {
 	return ctx.excluded[moduleName]
 }
 
-// Catalog returns the underlying catalog.
-func (ctx *LintContext) Catalog() *catalog.Catalog {
-	return ctx.catalog
-}
-
-// CatalogDB returns the underlying database abstraction for advanced queries.
-func (ctx *LintContext) CatalogDB() catalog.CatalogDB {
-	return ctx.db
-}
-
-// Query executes a SQL query and returns rows.
-func (ctx *LintContext) Query(query string, args ...any) (*sql.Rows, error) {
-	return ctx.db.Query(query, args...)
-}
-
-// Entity represents an entity from the catalog.
-type Entity struct {
-	ID                  string
-	Name                string
-	QualifiedName       string
-	ModuleName          string
-	Folder              string
-	EntityType          string // "Persistent", "NonPersistent", "View"
-	Description         string
-	Generalization      string
-	AttributeCount      int
-	AccessRuleCount     int
-	ValidationRuleCount int
-	HasEventHandlers    bool
-	IsExternal          bool
-}
-
-// Entities returns an iterator over all entities (excluding system modules).
-func (ctx *LintContext) Entities() iter.Seq[Entity] {
-	return func(yield func(Entity) bool) {
-		rows, err := ctx.db.Query(`
-			SELECT e.Id, e.Name, e.QualifiedName, e.ModuleName, e.Folder,
-			       CASE e.EntityType
-			           WHEN 'PERSISTENT' THEN 'Persistent'
-			           WHEN 'NON_PERSISTENT' THEN 'NonPersistent'
-			           WHEN 'VIEW' THEN 'View'
-			           ELSE e.EntityType
-			       END,
-			       e.Description, e.Generalization, e.AttributeCount,
-			       e.AccessRuleCount, e.ValidationRuleCount,
-			       e.HasEventHandlers, e.IsExternal
-			FROM entities e
-			LEFT JOIN modules m ON e.ModuleName = m.Name
-			WHERE COALESCE(m.Source, '') = ''
-			ORDER BY e.ModuleName, e.Name
-		`)
-		if err != nil {
-			return
-		}
-		defer rows.Close()
-
-		for rows.Next() {
-			var e Entity
-			var desc, gen, folder sql.NullString
-			var hasEventHandlers, isExternal int
-			err := rows.Scan(&e.ID, &e.Name, &e.QualifiedName, &e.ModuleName, &folder,
-				&e.EntityType, &desc, &gen, &e.AttributeCount,
-				&e.AccessRuleCount, &e.ValidationRuleCount,
-				&hasEventHandlers, &isExternal)
-			if err != nil {
-				continue
-			}
-			e.Folder = folder.String
-			e.Description = desc.String
-			e.Generalization = gen.String
-			e.HasEventHandlers = hasEventHandlers == 1
-			e.IsExternal = isExternal == 1
-
-			if ctx.excluded[e.ModuleName] {
-				continue
-			}
-
-			if !yield(e) {
-				return
-			}
-		}
+// Entities returns all entities across non-excluded modules.
+func (ctx *LintContext) Entities() []graphcatalog.EntityNode {
+	if ctx.graph == nil {
+		return nil
 	}
-}
-
-// Attribute represents an attribute of an entity from the catalog.
-type Attribute struct {
-	ID                  string
-	Name                string
-	EntityID            string
-	EntityQualifiedName string
-	ModuleName          string
-	DataType            string
-	Length              int
-	IsUnique            bool
-	IsRequired          bool
-	DefaultValue        string
-	IsCalculated        bool
-	Description         string
-}
-
-// AttributesFor returns an iterator over all attributes for a given entity.
-func (ctx *LintContext) AttributesFor(entityQualifiedName string) iter.Seq[Attribute] {
-	return func(yield func(Attribute) bool) {
-		rows, err := ctx.db.Query(`
-			SELECT Id, Name, EntityId, EntityQualifiedName, ModuleName,
-			       DataType, Length, IsUnique, IsRequired, DefaultValue,
-			       IsCalculated, Description
-			FROM attributes
-			WHERE EntityQualifiedName = ?
-			ORDER BY Name
-		`, entityQualifiedName)
-		if err != nil {
-			return
+	all := ctx.graph.Entities("")
+	result := make([]graphcatalog.EntityNode, 0, len(all))
+	for _, e := range all {
+		if ctx.excluded[e.Module] {
+			continue
 		}
-		defer rows.Close()
-
-		for rows.Next() {
-			var a Attribute
-			var dataType, defaultVal, desc sql.NullString
-			var length sql.NullInt64
-			var isUnique, isRequired, isCalculated int
-			err := rows.Scan(&a.ID, &a.Name, &a.EntityID, &a.EntityQualifiedName,
-				&a.ModuleName, &dataType, &length, &isUnique, &isRequired, &defaultVal,
-				&isCalculated, &desc)
-			if err != nil {
-				continue
-			}
-			a.DataType = dataType.String
-			a.Length = int(length.Int64)
-			a.IsUnique = isUnique == 1
-			a.IsRequired = isRequired == 1
-			a.DefaultValue = defaultVal.String
-			a.IsCalculated = isCalculated == 1
-			a.Description = desc.String
-
-			if !yield(a) {
-				return
-			}
-		}
+		result = append(result, e)
 	}
+	return result
 }
 
-// Permission represents an entity access rule from the catalog.
-type Permission struct {
-	ModuleRoleName  string
-	ModuleName      string // module of the role
-	EntityName      string // qualified entity name
-	AccessType      string // CREATE, READ, WRITE, DELETE, MEMBER_READ, MEMBER_WRITE
-	MemberName      string // populated for MEMBER_READ/MEMBER_WRITE, empty for entity-level
-	XPathConstraint string // empty means unconstrained
-	IsConstrained   bool   // convenience: XPathConstraint != ""
-}
-
-// PermissionsFor returns an iterator over all permissions for a given entity.
-func (ctx *LintContext) PermissionsFor(entityQualifiedName string) iter.Seq[Permission] {
-	return func(yield func(Permission) bool) {
-		rows, err := ctx.db.Query(`
-			SELECT ModuleRoleName, ElementName, MemberName, AccessType, XPathConstraint, ModuleName
-			FROM permissions
-			WHERE ElementType = 'ENTITY' AND ElementName = ?
-			ORDER BY ModuleRoleName, AccessType
-		`, entityQualifiedName)
-		if err != nil {
-			return
-		}
-		defer rows.Close()
-
-		for rows.Next() {
-			var p Permission
-			var memberName, xpathConstraint, moduleName sql.NullString
-			err := rows.Scan(&p.ModuleRoleName, &p.EntityName, &memberName, &p.AccessType, &xpathConstraint, &moduleName)
-			if err != nil {
-				continue
-			}
-			p.MemberName = memberName.String
-			p.XPathConstraint = xpathConstraint.String
-			p.ModuleName = moduleName.String
-			p.IsConstrained = p.XPathConstraint != ""
-
-			if !yield(p) {
-				return
-			}
-		}
+// Microflows returns all microflows and nanoflows across non-excluded modules.
+func (ctx *LintContext) Microflows() []graphcatalog.MicroflowNode {
+	if ctx.graph == nil {
+		return nil
 	}
-}
-
-// AllPermission represents a permission from the catalog covering all element types.
-type AllPermission struct {
-	ModuleRoleName  string
-	ElementType     string // ENTITY, MICROFLOW, PAGE, ODATA_SERVICE
-	ElementName     string // qualified name of the element
-	MemberName      string // populated for MEMBER_READ/MEMBER_WRITE
-	AccessType      string // CREATE, READ, WRITE, DELETE, EXECUTE, VIEW, ACCESS, MEMBER_READ, MEMBER_WRITE
-	XPathConstraint string
-	IsConstrained   bool
-	ModuleName      string
-}
-
-// Permissions returns an iterator over all permissions in the catalog.
-func (ctx *LintContext) Permissions() iter.Seq[AllPermission] {
-	return func(yield func(AllPermission) bool) {
-		if ctx.db == nil {
-			return
+	all := ctx.graph.Microflows("")
+	result := make([]graphcatalog.MicroflowNode, 0, len(all))
+	for _, mf := range all {
+		if ctx.excluded[mf.Module] {
+			continue
 		}
-		rows, err := ctx.db.Query(`
-			SELECT ModuleRoleName, ElementType, ElementName,
-				COALESCE(MemberName, ''), AccessType,
-				COALESCE(XPathConstraint, ''), COALESCE(ModuleName, '')
-			FROM permissions
-			ORDER BY ElementType, ElementName, ModuleRoleName, AccessType
-		`)
-		if err != nil {
-			return
-		}
-		defer rows.Close()
-
-		for rows.Next() {
-			var p AllPermission
-			if err := rows.Scan(&p.ModuleRoleName, &p.ElementType, &p.ElementName,
-				&p.MemberName, &p.AccessType, &p.XPathConstraint, &p.ModuleName); err != nil {
-				continue
-			}
-			p.IsConstrained = p.XPathConstraint != ""
-			if !yield(p) {
-				return
-			}
-		}
+		result = append(result, mf)
 	}
+	return result
+}
+
+// Pages returns all pages across non-excluded modules.
+func (ctx *LintContext) Pages() []graphcatalog.PageNode {
+	if ctx.graph == nil {
+		return nil
+	}
+	all := ctx.graph.Pages("")
+	result := make([]graphcatalog.PageNode, 0, len(all))
+	for _, p := range all {
+		if ctx.excluded[p.Module] {
+			continue
+		}
+		result = append(result, p)
+	}
+	return result
+}
+
+// Enumerations returns all enumerations across non-excluded modules.
+func (ctx *LintContext) Enumerations() []graphcatalog.EnumerationNode {
+	if ctx.graph == nil {
+		return nil
+	}
+	all := ctx.graph.Enumerations("")
+	result := make([]graphcatalog.EnumerationNode, 0, len(all))
+	for _, e := range all {
+		if ctx.excluded[e.Module] {
+			continue
+		}
+		result = append(result, e)
+	}
+	return result
+}
+
+// Snippets returns all snippets across non-excluded modules.
+func (ctx *LintContext) Snippets() []graphcatalog.SnippetNode {
+	if ctx.graph == nil {
+		return nil
+	}
+	all := ctx.graph.Snippets("")
+	result := make([]graphcatalog.SnippetNode, 0, len(all))
+	for _, s := range all {
+		if ctx.excluded[s.Module] {
+			continue
+		}
+		result = append(result, s)
+	}
+	return result
+}
+
+// DatabaseConnections returns all database connections.
+func (ctx *LintContext) DatabaseConnections() []graphcatalog.DatabaseConnectionNode {
+	if ctx.graph == nil {
+		return nil
+	}
+	return ctx.graph.DatabaseConnections()
+}
+
+// Attributes returns the attributes of the given entity.
+func (ctx *LintContext) Attributes(entityQualifiedName string) []graphcatalog.AttributeNode {
+	if ctx.graph == nil {
+		return nil
+	}
+	return ctx.graph.Attributes(entityQualifiedName)
+}
+
+// Widgets returns the widgets contained in the given page.
+func (ctx *LintContext) Widgets(pageQualifiedName string) []graphcatalog.WidgetNode {
+	if ctx.graph == nil {
+		return nil
+	}
+	return ctx.graph.Widgets(pageQualifiedName)
+}
+
+// Permissions returns all entity-access permission nodes.
+func (ctx *LintContext) Permissions() []graphcatalog.PermissionNode {
+	if ctx.graph == nil {
+		return nil
+	}
+	return ctx.graph.Permissions()
+}
+
+// RoleMappings returns all user-role to module-role mappings.
+func (ctx *LintContext) RoleMappings() []graphcatalog.RoleMappingNode {
+	if ctx.graph == nil {
+		return nil
+	}
+	return ctx.graph.RoleMappings()
 }
 
 // UserRoleInfo represents a user role from project security.
@@ -328,13 +207,12 @@ type UserRoleInfo struct {
 	ModuleRoles []string
 }
 
-// UserRoles returns the user roles from project security.
+// UserRoles returns the user roles from project security via the deep reader.
 func (ctx *LintContext) UserRoles() []UserRoleInfo {
-	reader := ctx.reader
-	if reader == nil {
+	if ctx.reader == nil {
 		return nil
 	}
-	ps, err := reader.GetProjectSecurityGen()
+	ps, err := ctx.reader.GetProjectSecurityGen()
 	if err != nil || ps == nil {
 		return nil
 	}
@@ -353,574 +231,4 @@ func (ctx *LintContext) UserRoles() []UserRoleInfo {
 		})
 	}
 	return roles
-}
-
-// RoleMappingInfo represents a user role to module role mapping.
-type RoleMappingInfo struct {
-	UserRoleName   string
-	ModuleRoleName string
-	ModuleName     string
-}
-
-// RoleMappings returns all user role to module role mappings from the catalog.
-func (ctx *LintContext) RoleMappings() iter.Seq[RoleMappingInfo] {
-	return func(yield func(RoleMappingInfo) bool) {
-		if ctx.db == nil {
-			return
-		}
-		rows, err := ctx.db.Query(`
-			SELECT UserRoleName, ModuleRoleName, COALESCE(ModuleName, '')
-			FROM role_mappings
-			ORDER BY UserRoleName, ModuleRoleName
-		`)
-		if err != nil {
-			return
-		}
-		defer rows.Close()
-		for rows.Next() {
-			var rm RoleMappingInfo
-			if err := rows.Scan(&rm.UserRoleName, &rm.ModuleRoleName, &rm.ModuleName); err != nil {
-				continue
-			}
-			if !yield(rm) {
-				return
-			}
-		}
-	}
-}
-
-// ModuleRoleInfo represents a module role from a specific module.
-type ModuleRoleInfo struct {
-	Name        string
-	ModuleName  string
-	Description string
-}
-
-// ModuleRoles returns all module roles from the catalog role_mappings table.
-// Returns deduplicated module roles derived from role mapping data.
-func (ctx *LintContext) ModuleRoles() iter.Seq[ModuleRoleInfo] {
-	return func(yield func(ModuleRoleInfo) bool) {
-		if ctx.db == nil {
-			return
-		}
-		rows, err := ctx.db.Query(`
-			SELECT DISTINCT ModuleRoleName, COALESCE(ModuleName, '')
-			FROM role_mappings
-			ORDER BY ModuleName, ModuleRoleName
-		`)
-		if err != nil {
-			return
-		}
-		defer rows.Close()
-		for rows.Next() {
-			var mr ModuleRoleInfo
-			if err := rows.Scan(&mr.Name, &mr.ModuleName); err != nil {
-				continue
-			}
-			if !yield(mr) {
-				return
-			}
-		}
-	}
-}
-
-// Microflow represents a microflow from the catalog.
-type Microflow struct {
-	ID             string
-	Name           string
-	QualifiedName  string
-	ModuleName     string
-	Folder         string
-	MicroflowType  string // "Microflow", "Nanoflow"
-	Description    string
-	ReturnType     string
-	ParameterCount int
-	ActivityCount  int
-	Complexity     int // McCabe cyclomatic complexity
-}
-
-// Microflows returns an iterator over all microflows (excluding system modules).
-func (ctx *LintContext) Microflows() iter.Seq[Microflow] {
-	return func(yield func(Microflow) bool) {
-		rows, err := ctx.db.Query(`
-			SELECT mf.Id, mf.Name, mf.QualifiedName, mf.ModuleName, mf.Folder,
-			       mf.MicroflowType, mf.Description, mf.ReturnType,
-			       mf.ParameterCount, mf.ActivityCount, mf.Complexity
-			FROM microflows mf
-			LEFT JOIN modules m ON mf.ModuleName = m.Name
-			WHERE COALESCE(m.Source, '') = ''
-			ORDER BY mf.ModuleName, mf.Name
-		`)
-		if err != nil {
-			return
-		}
-		defer rows.Close()
-
-		for rows.Next() {
-			var mf Microflow
-			var desc, retType, folder sql.NullString
-			err := rows.Scan(&mf.ID, &mf.Name, &mf.QualifiedName, &mf.ModuleName, &folder,
-				&mf.MicroflowType, &desc, &retType, &mf.ParameterCount, &mf.ActivityCount, &mf.Complexity)
-			if err != nil {
-				continue
-			}
-			mf.Folder = folder.String
-			mf.Description = desc.String
-			mf.ReturnType = retType.String
-
-			if ctx.excluded[mf.ModuleName] {
-				continue
-			}
-
-			if !yield(mf) {
-				return
-			}
-		}
-	}
-}
-
-// Page represents a page from the catalog.
-type Page struct {
-	ID            string
-	Name          string
-	QualifiedName string
-	ModuleName    string
-	Folder        string
-	Title         string
-	URL           string
-	Description   string
-	WidgetCount   int
-}
-
-// Pages returns an iterator over all pages (excluding system modules).
-func (ctx *LintContext) Pages() iter.Seq[Page] {
-	return func(yield func(Page) bool) {
-		rows, err := ctx.db.Query(`
-			SELECT p.Id, p.Name, p.QualifiedName, p.ModuleName, p.Folder,
-			       p.Title, p.URL, p.Description, p.WidgetCount
-			FROM pages p
-			LEFT JOIN modules m ON p.ModuleName = m.Name
-			WHERE COALESCE(m.Source, '') = ''
-			ORDER BY p.ModuleName, p.Name
-		`)
-		if err != nil {
-			return
-		}
-		defer rows.Close()
-
-		for rows.Next() {
-			var pg Page
-			var title, url, desc, folder sql.NullString
-			var widgetCount sql.NullInt64
-			err := rows.Scan(&pg.ID, &pg.Name, &pg.QualifiedName, &pg.ModuleName, &folder,
-				&title, &url, &desc, &widgetCount)
-			if err != nil {
-				continue
-			}
-			pg.Folder = folder.String
-			pg.Title = title.String
-			pg.URL = url.String
-			pg.Description = desc.String
-			pg.WidgetCount = int(widgetCount.Int64)
-
-			if ctx.excluded[pg.ModuleName] {
-				continue
-			}
-
-			if !yield(pg) {
-				return
-			}
-		}
-	}
-}
-
-// Enumeration represents an enumeration from the catalog.
-type Enumeration struct {
-	ID            string
-	Name          string
-	QualifiedName string
-	ModuleName    string
-	Folder        string
-	Description   string
-	ValueCount    int
-}
-
-// Enumerations returns an iterator over all enumerations (excluding system modules).
-func (ctx *LintContext) Enumerations() iter.Seq[Enumeration] {
-	return func(yield func(Enumeration) bool) {
-		rows, err := ctx.db.Query(`
-			SELECT en.Id, en.Name, en.QualifiedName, en.ModuleName, en.Folder,
-			       en.Description, en.ValueCount
-			FROM enumerations en
-			LEFT JOIN modules m ON en.ModuleName = m.Name
-			WHERE COALESCE(m.Source, '') = ''
-			ORDER BY en.ModuleName, en.Name
-		`)
-		if err != nil {
-			return
-		}
-		defer rows.Close()
-
-		for rows.Next() {
-			var en Enumeration
-			var desc, folder sql.NullString
-			err := rows.Scan(&en.ID, &en.Name, &en.QualifiedName, &en.ModuleName, &folder,
-				&desc, &en.ValueCount)
-			if err != nil {
-				continue
-			}
-			en.Folder = folder.String
-			en.Description = desc.String
-
-			if ctx.excluded[en.ModuleName] {
-				continue
-			}
-
-			if !yield(en) {
-				return
-			}
-		}
-	}
-}
-
-// Widget represents a widget from the catalog.
-type Widget struct {
-	ID                     string
-	Name                   string
-	WidgetType             string
-	ContainerID            string
-	ContainerQualifiedName string
-	ContainerType          string
-	ModuleName             string
-	EntityRef              string // Qualified name of referenced entity (e.g., "OtherModule.Customer")
-	AttributeRef           string
-}
-
-// Widgets returns an iterator over all widgets (excluding system modules).
-func (ctx *LintContext) Widgets() iter.Seq[Widget] {
-	return func(yield func(Widget) bool) {
-		rows, err := ctx.db.Query(`
-			SELECT w.Id, w.Name, w.WidgetType, w.ContainerId, w.ContainerQualifiedName,
-			       w.ContainerType, w.ModuleName, w.EntityRef, w.AttributeRef
-			FROM widgets w
-			LEFT JOIN modules m ON w.ModuleName = m.Name
-			WHERE COALESCE(m.Source, '') = ''
-			ORDER BY w.ModuleName, w.ContainerQualifiedName, w.Name
-		`)
-		if err != nil {
-			return
-		}
-		defer rows.Close()
-
-		for rows.Next() {
-			var w Widget
-			var containerID, containerQName, containerType, entityRef, attrRef sql.NullString
-			err := rows.Scan(&w.ID, &w.Name, &w.WidgetType, &containerID, &containerQName,
-				&containerType, &w.ModuleName, &entityRef, &attrRef)
-			if err != nil {
-				continue
-			}
-			w.ContainerID = containerID.String
-			w.ContainerQualifiedName = containerQName.String
-			w.ContainerType = containerType.String
-			w.EntityRef = entityRef.String
-			w.AttributeRef = attrRef.String
-
-			if ctx.excluded[w.ModuleName] {
-				continue
-			}
-
-			if !yield(w) {
-				return
-			}
-		}
-	}
-}
-
-// Snippet represents a snippet from the catalog.
-type Snippet struct {
-	ID            string
-	Name          string
-	QualifiedName string
-	ModuleName    string
-	Folder        string
-	WidgetCount   int
-}
-
-// Snippets returns an iterator over all snippets (excluding system modules).
-func (ctx *LintContext) Snippets() iter.Seq[Snippet] {
-	return func(yield func(Snippet) bool) {
-		rows, err := ctx.db.Query(`
-			SELECT s.Id, s.Name, s.QualifiedName, s.ModuleName, s.Folder, s.WidgetCount
-			FROM snippets s
-			LEFT JOIN modules m ON s.ModuleName = m.Name
-			WHERE COALESCE(m.Source, '') = ''
-			ORDER BY s.ModuleName, s.Name
-		`)
-		if err != nil {
-			return
-		}
-		defer rows.Close()
-
-		for rows.Next() {
-			var s Snippet
-			var folder sql.NullString
-			var widgetCount sql.NullInt64
-			err := rows.Scan(&s.ID, &s.Name, &s.QualifiedName, &s.ModuleName, &folder, &widgetCount)
-			if err != nil {
-				continue
-			}
-			s.Folder = folder.String
-			s.WidgetCount = int(widgetCount.Int64)
-
-			if ctx.excluded[s.ModuleName] {
-				continue
-			}
-
-			if !yield(s) {
-				return
-			}
-		}
-	}
-}
-
-// DatabaseConnection represents a database connection from the catalog.
-type DatabaseConnection struct {
-	ID            string
-	Name          string
-	QualifiedName string
-	ModuleName    string
-	Folder        string
-	DatabaseType  string
-	QueryCount    int
-}
-
-// DatabaseConnections returns an iterator over all database connections (excluding system modules).
-func (ctx *LintContext) DatabaseConnections() iter.Seq[DatabaseConnection] {
-	return func(yield func(DatabaseConnection) bool) {
-		rows, err := ctx.db.Query(`
-			SELECT dc.Id, dc.Name, dc.QualifiedName, dc.ModuleName, dc.Folder,
-			       dc.DatabaseType, dc.QueryCount
-			FROM database_connections dc
-			LEFT JOIN modules m ON dc.ModuleName = m.Name
-			WHERE COALESCE(m.Source, '') = ''
-			ORDER BY dc.ModuleName, dc.Name
-		`)
-		if err != nil {
-			return
-		}
-		defer rows.Close()
-
-		for rows.Next() {
-			var dc DatabaseConnection
-			var folder sql.NullString
-			err := rows.Scan(&dc.ID, &dc.Name, &dc.QualifiedName, &dc.ModuleName, &folder,
-				&dc.DatabaseType, &dc.QueryCount)
-			if err != nil {
-				continue
-			}
-			dc.Folder = folder.String
-
-			if ctx.excluded[dc.ModuleName] {
-				continue
-			}
-
-			if !yield(dc) {
-				return
-			}
-		}
-	}
-}
-
-// Activity represents an activity from the activities table (FULL catalog mode).
-type Activity struct {
-	ID                     string
-	Name                   string
-	Caption                string
-	ActivityType           string
-	ActionType             string
-	MicroflowID            string
-	MicroflowQualifiedName string
-	ModuleName             string
-	EntityRef              string
-}
-
-// ActivitiesFor returns an iterator over all activities for a given microflow.
-func (ctx *LintContext) ActivitiesFor(microflowQualifiedName string) iter.Seq[Activity] {
-	return func(yield func(Activity) bool) {
-		rows, err := ctx.db.Query(`
-			SELECT Id, Name, Caption, ActivityType, ActionType,
-			       MicroflowId, MicroflowQualifiedName, ModuleName, EntityRef
-			FROM activities
-			WHERE MicroflowQualifiedName = ?
-			ORDER BY Sequence
-		`, microflowQualifiedName)
-		if err != nil {
-			return
-		}
-		defer rows.Close()
-
-		for rows.Next() {
-			var a Activity
-			var name, caption, actionType, entityRef sql.NullString
-			err := rows.Scan(&a.ID, &name, &caption, &a.ActivityType, &actionType,
-				&a.MicroflowID, &a.MicroflowQualifiedName, &a.ModuleName, &entityRef)
-			if err != nil {
-				continue
-			}
-			a.Name = name.String
-			a.Caption = caption.String
-			a.ActionType = actionType.String
-			a.EntityRef = entityRef.String
-
-			if !yield(a) {
-				return
-			}
-		}
-	}
-}
-
-// Reference represents a reference from the refs table.
-type Reference struct {
-	SourceType string
-	SourceID   string
-	SourceName string
-	TargetType string
-	TargetID   string
-	TargetName string
-	RefKind    string
-	ModuleName string
-}
-
-// HasRefsTable checks if the refs table has been populated.
-func (ctx *LintContext) HasRefsTable() bool {
-	var count int
-	err := ctx.db.QueryRow("SELECT COUNT(*) FROM refs").Scan(&count)
-	return err == nil && count > 0
-}
-
-// FindReferences finds all references to a given element.
-func (ctx *LintContext) FindReferences(targetName string) []Reference {
-	var refs []Reference
-	rows, err := ctx.db.Query(`
-		SELECT SourceType, SourceId, SourceName, TargetType, TargetId, TargetName, RefKind, ModuleName
-		FROM refs
-		WHERE TargetName = ?
-	`, targetName)
-	if err != nil {
-		return refs
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		var r Reference
-		var srcID, tgtID sql.NullString
-		err := rows.Scan(&r.SourceType, &srcID, &r.SourceName, &r.TargetType,
-			&tgtID, &r.TargetName, &r.RefKind, &r.ModuleName)
-		if err != nil {
-			continue
-		}
-		r.SourceID = srcID.String
-		r.TargetID = tgtID.String
-		refs = append(refs, r)
-	}
-	return refs
-}
-
-// FindUnused finds elements with no incoming references.
-func (ctx *LintContext) FindUnused(kind string) []string {
-	var unused []string
-
-	var query string
-	switch kind {
-	case "entity":
-		query = `
-			SELECT e.QualifiedName
-			FROM entities e
-			LEFT JOIN modules m ON e.ModuleName = m.Name
-			WHERE COALESCE(m.Source, '') = ''
-			AND e.QualifiedName NOT IN (
-				SELECT DISTINCT TargetName FROM refs WHERE TargetType = 'ENTITY'
-			)
-		`
-	case "microflow":
-		query = `
-			SELECT mf.QualifiedName
-			FROM microflows mf
-			LEFT JOIN modules m ON mf.ModuleName = m.Name
-			WHERE COALESCE(m.Source, '') = ''
-			AND mf.QualifiedName NOT IN (
-				SELECT DISTINCT TargetName FROM refs WHERE TargetType IN ('MICROFLOW', 'NANOFLOW')
-			)
-		`
-	case "page":
-		query = `
-			SELECT p.QualifiedName
-			FROM pages p
-			LEFT JOIN modules m ON p.ModuleName = m.Name
-			WHERE COALESCE(m.Source, '') = ''
-			AND p.QualifiedName NOT IN (
-				SELECT DISTINCT TargetName FROM refs WHERE TargetType = 'PAGE'
-			)
-		`
-	default:
-		return unused
-	}
-
-	rows, err := ctx.db.Query(query)
-	if err != nil {
-		return unused
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		var name string
-		if err := rows.Scan(&name); err == nil {
-			unused = append(unused, name)
-		}
-	}
-	return unused
-}
-
-// ModuleDependencies returns a map of module -> modules it depends on.
-func (ctx *LintContext) ModuleDependencies() map[string][]string {
-	deps := make(map[string][]string)
-
-	rows, err := ctx.db.Query(`
-		SELECT DISTINCT ModuleName,
-		       CASE
-		           WHEN INSTR(TargetName, '.') > 0
-		           THEN SUBSTR(TargetName, 1, INSTR(TargetName, '.') - 1)
-		           ELSE ''
-		       END as TargetModule
-		FROM refs
-		WHERE TargetName != '' AND ModuleName != ''
-	`)
-	if err != nil {
-		return deps
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		var srcModule, tgtModule string
-		if err := rows.Scan(&srcModule, &tgtModule); err != nil || tgtModule == "" || srcModule == tgtModule {
-			continue
-		}
-		deps[srcModule] = append(deps[srcModule], tgtModule)
-	}
-
-	// Deduplicate
-	for mod, targets := range deps {
-		seen := make(map[string]bool)
-		unique := []string{}
-		for _, t := range targets {
-			if !seen[t] {
-				seen[t] = true
-				unique = append(unique, t)
-			}
-		}
-		deps[mod] = unique
-	}
-
-	return deps
 }

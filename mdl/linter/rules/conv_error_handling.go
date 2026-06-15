@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/mendixlabs/mxcli/mdl/linter"
+	"github.com/mendixlabs/mxcli/mdl/graphcatalog"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
@@ -70,8 +71,8 @@ func (r *ErrorHandlingOnCallsRule) Check(ctx *linter.LintContext) []linter.Viola
 
 	var violations []linter.Violation
 
-	for mf := range ctx.Microflows() {
-		if ctx.IsExcluded(mf.ModuleName) {
+	for _, mf := range ctx.Microflows() {
+		if ctx.IsExcluded(mf.Module) {
 			continue
 		}
 
@@ -90,7 +91,7 @@ func (r *ErrorHandlingOnCallsRule) Check(ctx *linter.LintContext) []linter.Viola
 	return violations
 }
 
-func findUnhandledCalls(objects []element.Element, mf linter.Microflow, r *ErrorHandlingOnCallsRule, violations *[]linter.Violation) {
+func findUnhandledCalls(objects []element.Element, mf graphcatalog.MicroflowNode, r *ErrorHandlingOnCallsRule, violations *[]linter.Violation) {
 	for _, obj := range objects {
 		switch act := obj.(type) {
 		case *genMf.ActionActivity:
@@ -117,9 +118,9 @@ func findUnhandledCalls(objects []element.Element, mf linter.Microflow, r *Error
 				RuleID:   r.ID(),
 				Severity: r.DefaultSeverity(),
 				Message: fmt.Sprintf("%s in '%s.%s' uses '%s' error handling instead of Custom.",
-					actionName, mf.ModuleName, mf.Name, errorHandlingType(inner)),
+					actionName, mf.Module, mf.Name, errorHandlingType(inner)),
 				Location: linter.Location{
-					Module:       mf.ModuleName,
+					Module:       mf.Module,
 					DocumentType: "microflow",
 					DocumentName: mf.Name,
 					DocumentID:   mf.ID,
@@ -162,8 +163,8 @@ func (r *NoContinueErrorHandlingRule) Check(ctx *linter.LintContext) []linter.Vi
 
 	var violations []linter.Violation
 
-	for mf := range ctx.Microflows() {
-		if ctx.IsExcluded(mf.ModuleName) {
+	for _, mf := range ctx.Microflows() {
+		if ctx.IsExcluded(mf.Module) {
 			continue
 		}
 
@@ -182,7 +183,7 @@ func (r *NoContinueErrorHandlingRule) Check(ctx *linter.LintContext) []linter.Vi
 	return violations
 }
 
-func findContinueErrorHandling(objects []element.Element, mf linter.Microflow, r *NoContinueErrorHandlingRule, violations *[]linter.Violation) {
+func findContinueErrorHandling(objects []element.Element, mf graphcatalog.MicroflowNode, r *NoContinueErrorHandlingRule, violations *[]linter.Violation) {
 	for _, obj := range objects {
 		switch act := obj.(type) {
 		case *genMf.ActionActivity:
@@ -196,9 +197,9 @@ func findContinueErrorHandling(objects []element.Element, mf linter.Microflow, r
 					RuleID:   r.ID(),
 					Severity: r.DefaultSeverity(),
 					Message: fmt.Sprintf("Activity '%s' in '%s.%s' uses 'Continue' error handling, which silently swallows errors.",
-						caption, mf.ModuleName, mf.Name),
+						caption, mf.Module, mf.Name),
 					Location: linter.Location{
-						Module:       mf.ModuleName,
+						Module:       mf.Module,
 						DocumentType: "microflow",
 						DocumentName: mf.Name,
 						DocumentID:   mf.ID,
@@ -220,9 +221,9 @@ func findContinueErrorHandling(objects []element.Element, mf linter.Microflow, r
 					RuleID:   r.ID(),
 					Severity: r.DefaultSeverity(),
 					Message: fmt.Sprintf("Loop '%s' in '%s.%s' uses 'Continue' error handling, which silently swallows errors.",
-						caption, mf.ModuleName, mf.Name),
+						caption, mf.Module, mf.Name),
 					Location: linter.Location{
-						Module:       mf.ModuleName,
+						Module:       mf.Module,
 						DocumentType: "microflow",
 						DocumentName: mf.Name,
 						DocumentID:   mf.ID,

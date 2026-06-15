@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/mendixlabs/mxcli/mdl/linter"
+	"github.com/mendixlabs/mxcli/mdl/graphcatalog"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
@@ -38,8 +39,8 @@ func (r *ValidationFeedbackRule) Check(ctx *linter.LintContext) []linter.Violati
 
 	var violations []linter.Violation
 
-	for mf := range ctx.Microflows() {
-		if ctx.IsExcluded(mf.ModuleName) {
+	for _, mf := range ctx.Microflows() {
+		if ctx.IsExcluded(mf.Module) {
 			continue
 		}
 
@@ -60,7 +61,7 @@ func (r *ValidationFeedbackRule) Check(ctx *linter.LintContext) []linter.Violati
 
 // walkObjects recursively walks gen ObjectCollection items looking
 // for empty validation feedback templates.
-func walkObjects(objects []element.Element, mf linter.Microflow, r *ValidationFeedbackRule, violations *[]linter.Violation) {
+func walkObjects(objects []element.Element, mf graphcatalog.MicroflowNode, r *ValidationFeedbackRule, violations *[]linter.Violation) {
 	for _, obj := range objects {
 		switch act := obj.(type) {
 		case *genMf.ActionActivity:
@@ -75,9 +76,9 @@ func walkObjects(objects []element.Element, mf linter.Microflow, r *ValidationFe
 						Severity: r.DefaultSeverity(),
 						Message: fmt.Sprintf("Validation feedback in '%s.%s' has empty message template. "+
 							"Mendix requires a non-empty feedback message (CE0091).",
-							mf.ModuleName, mf.Name),
+							mf.Module, mf.Name),
 						Location: linter.Location{
-							Module:       mf.ModuleName,
+							Module:       mf.Module,
 							DocumentType: "microflow",
 							DocumentName: mf.Name,
 							DocumentID:   mf.ID,

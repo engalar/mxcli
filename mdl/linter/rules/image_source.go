@@ -43,30 +43,25 @@ func (r *ImageSourceRule) Check(ctx *linter.LintContext) []linter.Violation {
 		return nil
 	}
 
-	// Collect containers that have image widgets
+	// Walk every page and snippet, scanning raw BSON for image widgets.
+	// graphcatalog no longer carries per-widget container metadata, so the
+	// container set is derived from the page/snippet listings directly.
 	type containerInfo struct {
 		ID            string
 		QualifiedName string
 		Type          string // "PAGE" or "SNIPPET"
 		ModuleName    string
 	}
-	containers := make(map[string]containerInfo)
-
-	for w := range ctx.Widgets() {
-		if ctx.IsExcluded(w.ModuleName) {
-			continue
-		}
-		if w.WidgetType != "Forms$StaticImageViewer" && w.WidgetType != "Forms$ImageViewer" {
-			continue
-		}
-		if _, ok := containers[w.ContainerID]; !ok {
-			containers[w.ContainerID] = containerInfo{
-				ID:            w.ContainerID,
-				QualifiedName: w.ContainerQualifiedName,
-				Type:          w.ContainerType,
-				ModuleName:    w.ModuleName,
-			}
-		}
+	var containers []containerInfo
+	for _, p := range ctx.Pages() {
+		containers = append(containers, containerInfo{
+			ID: p.ID, QualifiedName: p.QualifiedName, Type: "PAGE", ModuleName: p.Module,
+		})
+	}
+	for _, s := range ctx.Snippets() {
+		containers = append(containers, containerInfo{
+			ID: s.ID, QualifiedName: s.QualifiedName, Type: "SNIPPET", ModuleName: s.Module,
+		})
 	}
 
 	var violations []linter.Violation
