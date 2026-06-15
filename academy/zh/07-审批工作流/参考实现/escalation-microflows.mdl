@@ -1,0 +1,165 @@
+-- ============================================================
+-- 模块 07：审批工作流 — 微流
+-- 前提：先运行 escalation-domain.mdl
+-- 运行：mxcli exec escalation-microflows.mdl -p MyProject.mpr
+-- ============================================================
+
+-- ============================================================
+-- 发起升级申请（参数版，供后台/测试直接调用）
+-- 前置：工单必须是 InProgress 状态
+-- ============================================================
+
+create or modify microflow HD.ACT_StartEscalation
+  ($Ticket: HD.Ticket, $Reason: string)
+  returns boolean as $Success
+  folder 'Escalation'
+{
+  if $Ticket/Status != HD.TicketStatus.InProgress {
+    show message 'Only In Progress tickets can be escalated.' type warning;
+    return false;
+  }
+  $ER = create HD.EscalationRequest (
+    Reason                        = $Reason,
+    RequestedAt                   = '[%CurrentDateTime%]',
+    ApprovalStatus                = HD.EscalationStatus.Pending,
+    HD.EscalationRequest_Ticket   = $Ticket
+  );
+  commit $ER;
+  return true;
+}
+/
+
+-- ============================================================
+-- 打开"发起升级"弹窗
+-- 先校验工单状态，再创建空的 EscalationRequest 并关联工单，
+-- 最后把对象作为参数传给弹窗页面（避免 datasource: new 无效语法）。
+-- ============================================================
+
+create or modify microflow HD.ACT_OpenEscalationForm
+  ($Ticket: HD.Ticket)
+  returns nothing
+  folder 'Escalation'
+{
+  if $Ticket/Status != HD.TicketStatus.InProgress {
+    show message 'Only In Progress tickets can be escalated.' type warning;
+    return;
+  }
+  $NewER = create HD.EscalationRequest (
+    RequestedAt                  = '[%CurrentDateTime%]',
+    ApprovalStatus               = HD.EscalationStatus.Pending,
+    HD.EscalationRequest_Ticket  = $Ticket
+  );
+  show page HD.EscalationStart_Form (EscalationRequest: $NewER);
+}
+/
+
+-- ============================================================
+-- 提交升级申请（弹窗保存调用）
+-- 对象已在 ACT_OpenEscalationForm 中创建并关联好工单，
+-- Reason 由表单写入，这里 commit 即可。
+-- ============================================================
+
+create or modify microflow HD.ACT_StartEscalation_FromObject
+  ($EscalationRequest: HD.EscalationRequest)
+  returns boolean as $Success
+  folder 'Escalation'
+{
+  if $EscalationRequest/Reason = '' or $EscalationRequest/Reason = empty {
+    validation feedback $EscalationRequest/Reason message 'Please provide a reason for escalation.';
+    return false;
+  }
+  commit $EscalationRequest;
+  return true;
+}
+/
+
+-- ============================================================
+-- 批准升级申请
+-- 效果：ApprovalStatus → Approved；工单 Priority → Critical
+-- ============================================================
+
+create or modify microflow HD.ACT_Escalation_Approve
+  ($EscalationRequest: HD.EscalationRequest)
+  returns boolean as $Success
+  folder 'Escalation'
+{
+  change $EscalationRequest (ApprovalStatus = HD.EscalationStatus.Approved);
+  commit $EscalationRequest;
+
+  retrieve $Ticket from $EscalationRequest/HD.EscalationRequest_Ticket;
+  if $Ticket != empty {
+    change $Ticket (Priority = HD.TicketPriority.Critical);
+    commit $Ticket;
+  }
+  return true;
+}
+/
+
+-- ============================================================
+-- 拒绝升级申请（参数版，供后台/测试直接调用）
+-- ============================================================
+
+create or modify microflow HD.ACT_Escalation_Reject
+  ($EscalationRequest: HD.EscalationRequest, $Reason: string)
+  returns boolean as $Success
+  folder 'Escalation'
+{
+  change $EscalationRequest (
+    ApprovalStatus  = HD.EscalationStatus.Rejected,
+    RejectionReason = $Reason
+  );
+  commit $EscalationRequest;
+  return true;
+}
+/
+
+-- ============================================================
+-- 打开"拒绝升级"弹窗
+-- 直接把待拒绝的申请传给表单，表单编辑其 RejectionReason 字段。
+-- ============================================================
+
+create or modify microflow HD.ACT_OpenRejectForm
+  ($EscalationRequest: HD.EscalationRequest)
+  returns nothing
+  folder 'Escalation'
+{
+  show page HD.EscalationReject_Form (EscalationRequest: $EscalationRequest);
+}
+/
+
+-- ============================================================
+-- 确认拒绝（弹窗保存调用）
+-- RejectionReason 已由表单写入对象，这里设置状态并 commit。
+-- ============================================================
+
+create or modify microflow HD.ACT_Escalation_Reject_FromObject
+  ($EscalationRequest: HD.EscalationRequest)
+  returns boolean as $Success
+  folder 'Escalation'
+{
+  if $EscalationRequest/RejectionReason = '' or $EscalationRequest/RejectionReason = empty {
+    validation feedback $EscalationRequest/RejectionReason message 'Please provide a rejection reason.';
+    return false;
+  }
+  change $EscalationRequest (ApprovalStatus = HD.EscalationStatus.Rejected);
+  commit $EscalationRequest;
+  return true;
+}
+/
+
+-- ============================================================
+-- 数据源：当前经理可见的待审批升级申请
+-- ============================================================
+
+create or modify microflow HD.DS_PendingEscalations
+  ()
+  returns list of HD.EscalationRequest as $List
+  folder 'Escalation'
+{
+  retrieve $List from HD.EscalationRequest
+    where [ApprovalStatus = 'Pending']
+    sort by RequestedAt asc
+    limit 0;
+  return $List;
+}
+/

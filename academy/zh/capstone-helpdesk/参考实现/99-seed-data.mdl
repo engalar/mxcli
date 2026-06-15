@@ -1,0 +1,145 @@
+-- ============================================================
+-- Capstone 99：演示种子数据
+-- 前提：先运行 01–07；在运行时由 Manager 触发（导航菜单）
+-- 运行：mxcli exec 99-seed-data.mdl -p MyProject.mpr
+-- 触发：登录为 demo_manager，导航菜单"Initialize Demo Data"
+-- ============================================================
+
+create or modify microflow HD.ACT_SeedDemoData ()
+  returns boolean as $OK
+  folder 'System'
+{
+  -- 幂等保护：已有工单则直接返回
+  retrieve $existing from HD.Ticket limit 1;
+  if $existing != empty {
+    return true;
+  }
+
+  -- 客户
+  $Cust1 = create HD.Customer (Name = 'Alice Tan',  Email = 'alice@acme.com',    Company = 'Acme Corp');
+  $Cust2 = create HD.Customer (Name = 'Bob Lee',    Email = 'bob@globex.com',    Company = 'Globex Inc');
+  $Cust3 = create HD.Customer (Name = 'Carol Wu',   Email = 'carol@initech.com', Company = 'Initech Ltd');
+  commit $Cust1;
+  commit $Cust2;
+  commit $Cust3;
+
+  -- 客服
+  $Agent1 = create HD.Agent (Name = 'Alice Smith', Email = 'alice.smith@helpdesk.internal', IsActive = true);
+  $Agent2 = create HD.Agent (Name = 'Bob Jones',   Email = 'bob.jones@helpdesk.internal',  IsActive = true);
+  commit $Agent1;
+  commit $Agent2;
+
+  -- 工单（5 个，覆盖所有状态）
+  $T1 = create HD.Ticket (
+    Subject = 'Cannot login to portal',
+    Description = 'Getting 403 error after password reset.',
+    Status = HD.TicketStatus.Draft, Priority = HD.TicketPriority.Low,
+    HD.Ticket_Customer = $Cust1
+  );
+  $T2 = create HD.Ticket (
+    Subject = 'Dashboard loads slowly',
+    Description = 'Main dashboard takes 30 seconds to render.',
+    Status = HD.TicketStatus.Open, Priority = HD.TicketPriority.Normal,
+    SLADueAt = addHours('[%CurrentDateTime%]', 24),
+    HD.Ticket_Customer = $Cust2
+  );
+  $T3 = create HD.Ticket (
+    Subject = 'Payment error on checkout',
+    Description = 'Card declined for a valid Visa. Error: PAY_003.',
+    Status = HD.TicketStatus.InProgress, Priority = HD.TicketPriority.High,
+    SLADueAt = addHours('[%CurrentDateTime%]', 8),
+    HD.Ticket_Customer = $Cust1, HD.Ticket_Agent = $Agent1
+  );
+  $T4 = create HD.Ticket (
+    Subject = 'Data export returns empty file',
+    Description = 'CSV export downloads a 0-byte file.',
+    Status = HD.TicketStatus.Resolved, Priority = HD.TicketPriority.Critical,
+    SLADueAt = '[%CurrentDateTime%]', ResolvedAt = '[%CurrentDateTime%]',
+    IsOverSLA = true,
+    HD.Ticket_Customer = $Cust3, HD.Ticket_Agent = $Agent2
+  );
+  $T5 = create HD.Ticket (
+    Subject = 'Table columns misaligned in Firefox',
+    Description = 'Header does not align with rows in Firefox 124.',
+    Status = HD.TicketStatus.Closed, Priority = HD.TicketPriority.Normal,
+    HD.Ticket_Customer = $Cust2
+  );
+  commit $T1;
+  commit $T2;
+  commit $T3;
+  commit $T4;
+  commit $T5;
+
+  -- 每张工单一条评论（loop 示例）
+  retrieve $AllTickets from HD.Ticket limit 10;
+  loop $T in $AllTickets {
+    $C = create HD.TicketComment (
+      Content    = 'Demo comment for: ' + $T/Subject,
+      IsInternal = false,
+      HD.TicketComment_Ticket = $T
+    );
+    commit $C;
+  }
+
+  -- 升级申请（针对 T3：处理中 + 高优先级）
+  $ER = create HD.EscalationRequest (
+    Reason       = 'Customer threatening chargeback. Needs manager review.',
+    RequestedAt  = '[%CurrentDateTime%]',
+    ApprovalStatus = HD.EscalationStatus.Pending,
+    HD.EscalationRequest_Ticket = $T3
+  );
+  commit $ER;
+
+  -- KB 分类
+  $Cat1 = create KB.Category (Name = 'Getting Started', Description = 'Guides for new users.');
+  $Cat2 = create KB.Category (Name = 'Troubleshooting',  Description = 'Common issues and fixes.');
+  commit $Cat1;
+  commit $Cat2;
+
+  -- KB 文章
+  $Art1 = create KB.Article (
+    Title   = 'How to submit a support ticket',
+    Content = 'Navigate to My Tickets, click New Ticket, fill in Subject and Description, then Submit.',
+    Status  = KB.ArticleStatus.Published,
+    PublishedAt = '[%CurrentDateTime%]',
+    KB.Article_Category = $Cat1
+  );
+  $Art2 = create KB.Article (
+    Title   = 'Common login errors and fixes',
+    Content = 'Clear browser cache, try incognito mode. If problem persists, contact support.',
+    Status  = KB.ArticleStatus.Published,
+    PublishedAt = '[%CurrentDateTime%]',
+    KB.Article_Category = $Cat2
+  );
+  $Art3 = create KB.Article (
+    Title   = 'SLA policy overview (Draft)',
+    Content = 'Draft — under review.',
+    Status  = KB.ArticleStatus.Draft,
+    KB.Article_Category = $Cat2
+  );
+  commit $Art1;
+  commit $Art2;
+  commit $Art3;
+
+  return true;
+}
+/
+
+grant execute on microflow HD.ACT_SeedDemoData to HD.ManagerRole;
+
+-- 在导航中加入"初始化演示数据"菜单项
+create or replace navigation Responsive
+  home page HD.MyTickets_Overview           for Customer
+  home page HD.Ticket_Overview              for Agent
+  home page HD.EscalationWorkflow_Overview  for Manager
+  home page MyFirstModule.Home_Web
+  login page Administration.login
+  menu (
+    menu item 'My Tickets'         page HD.MyTickets_Overview;
+    menu item 'All Tickets'        page HD.Ticket_Overview;
+    menu item 'Knowledge Base'     page KB.Article_Overview;
+    menu item 'Escalations'        page HD.EscalationWorkflow_Overview;
+    menu 'Admin' (
+      menu item 'Initialize Demo Data' microflow HD.ACT_SeedDemoData;
+    );
+  );

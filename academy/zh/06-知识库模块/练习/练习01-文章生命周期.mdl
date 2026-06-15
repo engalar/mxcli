@@ -1,0 +1,41 @@
+-- ============================================================
+-- 练习 01：文章生命周期微流
+-- 前提：先运行 参考实现/kb-domain.mdl
+-- 目标：补全 KB.ACT_Article_Publish 微流
+-- ============================================================
+
+create or modify microflow KB.ACT_Article_Publish
+  ($Article: KB.Article)
+  returns boolean as $Success
+  folder 'Article'
+{
+  -- TODO 1：验证 Content 不能为空（包含 empty 和空字符串两种情况）
+  -- 失败时：validation feedback $Article/Content message '...'，return false
+
+  -- TODO 2：用 change 更新两个字段
+  -- Status = KB.ArticleStatus.Published
+  -- PublishedAt = '[%CurrentDateTime%]'
+
+  -- TODO 3：commit + return true
+
+  return false; -- 占位，完成上方 TODO 后删除此行
+}
+/
+
+-- 同时实现归档微流（从头编写）
+create or modify microflow KB.ACT_Article_Archive
+  ($Article: KB.Article)
+  returns boolean as $Success
+  folder 'Article'
+{
+  -- TODO 4：检查 Status 必须是 Published，否则 return false
+  -- TODO 5：change Status = Archived
+  -- TODO 6：commit + return true
+
+  return false; -- 占位，完成上方 TODO 后删除此行
+}
+/
+
+-- 验证命令：
+--   mxcli check 练习01-文章生命周期.mdl
+--   mxcli exec  练习01-文章生命周期.mdl -p MyProject.mpr

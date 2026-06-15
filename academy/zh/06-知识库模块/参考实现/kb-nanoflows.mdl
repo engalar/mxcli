@@ -1,0 +1,22 @@
+-- ============================================================
+-- 模块 06：知识库 — 纳流
+-- 前提：先运行 kb-domain.mdl
+-- 运行：mxcli exec kb-nanoflows.mdl -p MyProject.mpr
+-- ============================================================
+
+-- ============================================================
+-- 文章预览格式化：截取前 200 字作为摘要
+-- ============================================================
+
+create or modify nanoflow KB.NF_Article_FormatPreview
+  ($Article: KB.Article)
+  returns string as $Preview
+  folder 'Article'
+{
+  if length($Article/Content) > 200 {
+    return substring($Article/Content, 1, 200) + '...';
+  } else {
+    return $Article/Content;
+  }
+}
+/

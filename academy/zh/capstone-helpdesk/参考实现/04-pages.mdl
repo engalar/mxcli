@@ -1,0 +1,264 @@
+-- ============================================================
+-- 模块 04：页面与 UI — 参考实现
+-- 前提：先运行模块 01–03 的参考实现
+-- 运行：mxcli exec pages.mdl -p MyProject.mpr
+-- ============================================================
+
+-- ============================================================
+-- 打开添加评论弹窗：创建 Comment 并关联 Ticket，再打开表单
+-- （解决方案：创建对象后再 show page，避免 datasource: new 语法）
+-- ============================================================
+
+create or modify microflow HD.ACT_OpenCommentForm
+  ($Ticket: HD.Ticket)
+  returns nothing
+  folder 'Ticket'
+{
+  $NewComment = create HD.TicketComment (
+    HD.TicketComment_Ticket = $Ticket,
+    IsInternal               = false
+  );
+  show page HD.AddComment_Form (Comment: $NewComment);
+}
+/
+
+-- ============================================================
+-- 添加评论微流（支撑 AddComment_Form 页面保存）
+-- ============================================================
+
+create or modify microflow HD.ACT_AddComment
+  ($Ticket: HD.Ticket, $Comment: HD.TicketComment)
+  returns boolean as $Success
+  folder 'Ticket'
+{
+  change $Comment (HD.TicketComment_Ticket = $Ticket);
+  commit $Comment;
+  return true;
+}
+/
+
+-- ============================================================
+-- 弹窗：新建评论（Content + IsInternal）
+-- ============================================================
+
+create or replace page HD.AddComment_Form
+(
+  title:  'Add Comment',
+  layout: Atlas_Core.PopupLayout,
+  folder: 'Ticket',
+  params: { $Comment: HD.TicketComment }
+)
+{
+  dataview dvComment (datasource: $Comment) {
+    textarea   taContent    (label: 'Comment', attribute: Content)
+    footer ftrButtons {
+      actionbutton btnSave (
+        caption:     'Save',
+        action:      save_changes close_page,
+        buttonstyle: primary
+      )
+      actionbutton btnCancel (caption: 'Cancel', action: cancel_changes close_page)
+    }
+  }
+};
+
+-- ============================================================
+-- 工单列表（全部工单）
+-- 2 列过滤器 + 状态/优先级/SLA 列 + Action 列
+-- ============================================================
+
+create or replace page HD.Ticket_Overview
+(
+  title:  'All Tickets',
+  layout: Atlas_Core.Atlas_Default,
+  folder: 'Ticket'
+)
+{
+  layoutgrid lgMain {
+    row rHeader {
+      column cTitle (desktopwidth: 12) {
+        dynamictext txtTitle (content: 'All Tickets', rendermode: H2)
+      }
+    }
+    row rMain {
+      column cMain (desktopwidth: 12) {
+        datagrid dgTickets (
+          datasource:     database from HD.Ticket sort by SLADueAt asc,
+          PageSize:       20,
+          PagingPosition: both
+        ) {
+          controlbar cb {
+            actionbutton btnNew (
+              caption:     'New Ticket',
+              action:      create_object HD.Ticket then show_page HD.Ticket_NewEdit,
+              buttonstyle: primary
+            )
+          }
+          column colSubject  (attribute: Subject,   caption: 'Subject') {
+            textfilter fSubject
+          }
+          column colStatus   (attribute: Status,    caption: 'Status',   ColumnWidth: manual, Size: 120) {
+            dropdownfilter fStatus
+          }
+          column colPriority (attribute: Priority,  caption: 'Priority', ColumnWidth: manual, Size: 100) {
+            dropdownfilter fPriority
+          }
+          column colSLADue   (attribute: SLADueAt,  caption: 'SLA Due',  ColumnWidth: manual, Size: 140)
+          column colOverdue  (attribute: IsOverSLA, caption: 'Overdue',  ColumnWidth: manual, Size: 80)
+          column colActions  (caption: 'Actions', ShowContentAs: customContent, ColumnWidth: manual, Size: 80) {
+            actionbutton btnOpen (
+              caption:     'Open',
+              action:      show_page HD.Ticket_Detail (Ticket: $currentObject),
+              buttonstyle: link
+            )
+          }
+        }
+      }
+    }
+  }
+};
+
+-- ============================================================
+-- 我的工单（客户视角，使用微流数据源过滤）
+-- ============================================================
+
+create or replace page HD.MyTickets_Overview
+(
+  title:  'My Tickets',
+  layout: Atlas_Core.Atlas_Default,
+  folder: 'Ticket'
+)
+{
+  layoutgrid lgMain {
+    row rHeader {
+      column cTitle (desktopwidth: 12) {
+        dynamictext txtTitle (content: 'My Tickets', rendermode: H2)
+      }
+    }
+    row rMain {
+      column cMain (desktopwidth: 12) {
+        datagrid dgMyTickets (
+          datasource: microflow HD.DS_MyTickets,
+          PageSize:   20
+        ) {
+          controlbar cb {
+            actionbutton btnNew (
+              caption:     'New Ticket',
+              action:      create_object HD.Ticket then show_page HD.Ticket_NewEdit,
+              buttonstyle: primary
+            )
+          }
+          column colSubject  (attribute: Subject,  caption: 'Subject')
+          column colStatus   (attribute: Status,   caption: 'Status',   ColumnWidth: manual, Size: 120)
+          column colPriority (attribute: Priority, caption: 'Priority', ColumnWidth: manual, Size: 100)
+          column colSLADue   (attribute: SLADueAt, caption: 'SLA Due',  ColumnWidth: manual, Size: 140)
+          column colActions  (caption: 'Actions', ShowContentAs: customContent, ColumnWidth: manual, Size: 80) {
+            actionbutton btnOpen (
+              caption:     'Open',
+              action:      show_page HD.Ticket_Detail (Ticket: $currentObject),
+              buttonstyle: link
+            )
+          }
+        }
+      }
+    }
+  }
+};
+
+-- ============================================================
+-- 工单详情：2 列布局（左信息，右操作）+ 底部评论
+-- ============================================================
+
+create or replace page HD.Ticket_Detail
+(
+  title:  'Ticket Detail',
+  layout: Atlas_Core.Atlas_Default,
+  folder: 'Ticket',
+  params: { $Ticket: HD.Ticket }
+)
+{
+  layoutgrid lgMain {
+    row rContent {
+      column cInfo (desktopwidth: 8) {
+        dataview dvTicket (datasource: $Ticket) {
+          dynamictext txtSubject    (content: '{1}', contentparams: [{1} = Subject],   rendermode: H2)
+          dynamictext txtStatus     (content: 'Status: {1}',   contentparams: [{1} = Status])
+          dynamictext txtPriority   (content: 'Priority: {1}', contentparams: [{1} = Priority])
+          dynamictext txtSLA        (content: 'SLA Due: {1}',  contentparams: [{1} = SLADueAt])
+          dynamictext txtOverdue    (content: 'Overdue: {1}',  contentparams: [{1} = IsOverSLA])
+          dynamictext txtDescription(content: '{1}', contentparams: [{1} = Description])
+        }
+      }
+      column cActions (desktopwidth: 4) {
+        dataview dvActions (datasource: $Ticket) {
+          footer ftrActions {
+            actionbutton btnSubmit (
+              caption:     'Submit',
+              action:      microflow HD.ACT_Ticket_Submit (Ticket: $currentObject),
+              buttonstyle: primary
+            )
+            actionbutton btnResolve (
+              caption:     'Resolve',
+              action:      microflow HD.ACT_Ticket_Resolve (Ticket: $currentObject),
+              buttonstyle: default
+            )
+            actionbutton btnReopen (
+              caption:     'Reopen',
+              action:      microflow HD.ACT_Ticket_Reopen (Ticket: $currentObject),
+              buttonstyle: default
+            )
+            actionbutton btnClose (
+              caption:     'Close',
+              action:      microflow HD.ACT_Ticket_Close (Ticket: $currentObject),
+              buttonstyle: default
+            )
+            actionbutton btnComment (
+              caption:     'Add Comment',
+              action:      microflow HD.ACT_OpenCommentForm (Ticket: $currentObject),
+              buttonstyle: default
+            )
+          }
+        }
+      }
+    }
+    row rComments {
+      column cComments (desktopwidth: 12) {
+        dynamictext txtCommentsTitle (content: 'Comments', rendermode: H3)
+        datagrid dgComments (
+          datasource: $Ticket/HD.TicketComment_Ticket/HD.TicketComment
+        ) {
+          column colContent    (attribute: Content,    caption: 'Comment')
+          column colIsInternal (attribute: IsInternal, caption: 'Internal', ColumnWidth: manual, Size: 80)
+        }
+      }
+    }
+  }
+};
+
+-- ============================================================
+-- 新建/编辑工单表单
+-- ============================================================
+
+create or replace page HD.Ticket_NewEdit
+(
+  title:  'New / Edit Ticket',
+  layout: Atlas_Core.Atlas_Default,
+  folder: 'Ticket',
+  params: { $Ticket: HD.Ticket }
+)
+{
+  layoutgrid lgMain {
+    row rMain {
+      column cMain (desktopwidth: 8) {
+        dataview dvForm (datasource: $Ticket) {
+          textbox  tbSubject     (label: 'Subject',     attribute: Subject)
+          textarea taDescription (label: 'Description', attribute: Description)
+          footer ftrButtons {
+            actionbutton btnSave   (caption: 'Save',   action: save_changes close_page, buttonstyle: primary)
+            actionbutton btnCancel (caption: 'Cancel', action: cancel_changes close_page)
+          }
+        }
+      }
+    }
+  }
+};

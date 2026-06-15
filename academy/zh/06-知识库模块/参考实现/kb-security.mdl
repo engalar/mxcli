@@ -1,0 +1,73 @@
+-- ============================================================
+-- 模块 06：知识库 — 安全与导航
+-- 前提：先运行模块 05 security.mdl（用户角色 Customer/Agent/Manager 必须存在）
+-- 运行：mxcli exec kb-security.mdl -p MyProject.mpr
+-- ============================================================
+
+-- ============================================================
+-- KB 模块角色
+-- 注意：module role 不支持 or modify，用 create module role
+-- ============================================================
+
+create module role KB.Reader;
+create module role KB.Contributor;
+create module role KB.Admin;
+
+-- ============================================================
+-- 实体访问规则
+-- ============================================================
+
+-- Reader：只看已发布文章（XPath 行级过滤）
+grant KB.Reader on KB.Article (read *)
+  where '[Status = ''Published'']';
+grant KB.Reader on KB.Category  (read *);
+grant KB.Reader on KB.Tag       (read *);
+grant KB.Reader on KB.ArticleTag(read *);
+
+-- Contributor：完整文章生命周期
+grant KB.Contributor on KB.Article    (create, read *, write *, delete);
+grant KB.Contributor on KB.ArticleTag (create, read *, write *, delete);
+grant KB.Contributor on KB.Category   (create, read *, write *);
+grant KB.Contributor on KB.Tag        (create, read *, write *);
+
+-- Admin：无限制
+grant KB.Admin on KB.Article    (create, read *, write *, delete);
+grant KB.Admin on KB.ArticleTag (create, read *, write *, delete);
+grant KB.Admin on KB.Category   (create, read *, write *, delete);
+grant KB.Admin on KB.Tag        (create, read *, write *, delete);
+
+-- ============================================================
+-- 微流 / 纳流 / 页面权限
+-- ============================================================
+
+grant execute on microflow KB.ACT_Article_Publish to KB.Contributor, KB.Admin;
+grant execute on microflow KB.ACT_Article_Archive to KB.Contributor, KB.Admin;
+grant execute on nanoflow  KB.NF_Article_FormatPreview to KB.Reader, KB.Contributor, KB.Admin;
+
+grant view on page KB.Article_Overview to KB.Reader, KB.Contributor, KB.Admin;
+grant view on page KB.Article_Detail   to KB.Reader, KB.Contributor, KB.Admin;
+grant view on page KB.Article_NewEdit  to KB.Contributor, KB.Admin;
+
+-- ============================================================
+-- 更新用户角色（加入 KB 角色，create or modify 是幂等的）
+-- ============================================================
+
+create or modify user role Customer (System.User, HD.CustomerRole, KB.Reader);
+create or modify user role Agent    (System.User, HD.AgentRole,    KB.Contributor);
+create or modify user role Manager  (System.User, HD.ManagerRole,  KB.Contributor);
+
+-- ============================================================
+-- 更新导航（加入 Knowledge Base 菜单项）
+-- ============================================================
+
+create or replace navigation Responsive
+  home page HD.MyTickets_Overview  for Customer
+  home page HD.Ticket_Overview     for Agent
+  home page HD.Ticket_Overview     for Manager
+  home page MyFirstModule.Home_Web
+  login page Administration.login
+  menu (
+    menu item 'My Tickets'     page HD.MyTickets_Overview;
+    menu item 'All Tickets'    page HD.Ticket_Overview;
+    menu item 'Knowledge Base' page KB.Article_Overview;
+  );

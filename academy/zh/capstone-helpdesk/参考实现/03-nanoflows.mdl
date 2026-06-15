@@ -1,0 +1,64 @@
+-- ============================================================
+-- 模块 03：纳流与客户端 — 参考实现
+-- 前提：先运行 01-领域建模/参考实现/domain-model.mdl
+-- 运行：mxcli exec nanoflows.mdl -p MyProject.mpr
+-- ============================================================
+
+-- ============================================================
+-- 快速创建工单：客户端直接创建 Draft 工单
+-- ============================================================
+
+create or modify nanoflow HD.NF_Ticket_QuickCreate
+  ($Customer: HD.Customer, $Subject: string)
+  returns HD.Ticket as $Ticket
+  folder 'Ticket'
+{
+  $Ticket = create HD.Ticket (
+    Subject          = $Subject,
+    Status           = HD.TicketStatus.Draft,
+    Priority         = HD.TicketPriority.Normal,
+    HD.Ticket_Customer = $Customer
+  );
+  commit $Ticket;
+  return $Ticket;
+}
+/
+
+-- ============================================================
+-- 工单搜索：返回匹配工单列表（简化版：全量检索）
+-- ============================================================
+
+create or modify nanoflow HD.NF_TicketSearch_Apply
+  ($Search: HD.TicketSearch)
+  returns list of HD.Ticket as $Tickets
+  folder 'Ticket/Search'
+{
+  retrieve $Tickets from HD.Ticket limit 100;
+  return $Tickets;
+}
+/
+
+-- ============================================================
+-- 优先级标签格式化：枚举值 → 人性化字符串
+-- ============================================================
+
+create or modify nanoflow HD.NF_Priority_GetLabel
+  ($Priority: HD.TicketPriority)
+  returns string as $Label
+  folder 'Ticket'
+{
+  if $Priority = HD.TicketPriority.Critical {
+    return '🔴 紧急';
+  } else {
+    if $Priority = HD.TicketPriority.High {
+      return '🟠 高';
+    } else {
+      if $Priority = HD.TicketPriority.Normal {
+        return '🟡 普通';
+      } else {
+        return '🟢 低';
+      }
+    }
+  }
+}
+/

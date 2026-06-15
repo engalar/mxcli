@@ -1,0 +1,28 @@
+-- ============================================================
+-- 练习 01：发起升级申请微流
+-- 前提：先运行 参考实现/escalation-domain.mdl（和模块01的 domain-model.mdl）
+-- 目标：补全 HD.ACT_StartEscalation 微流
+-- ============================================================
+
+create or modify microflow HD.ACT_StartEscalation
+  ($Ticket: HD.Ticket, $Reason: string)
+  returns boolean as $Success
+  folder 'Escalation'
+{
+  -- TODO 1：前置检查——工单必须是 InProgress 状态
+  -- 如果不是，show message '...' type warning，return false
+
+  -- TODO 2：创建 EscalationRequest 对象
+  -- 必填字段：Reason = $Reason，RequestedAt = '[%CurrentDateTime%]'
+  --           ApprovalStatus = HD.EscalationStatus.Pending
+  --           关联：HD.EscalationRequest_Ticket = $Ticket
+
+  -- TODO 3：commit 对象，return true
+
+  return false; -- 占位，完成上方 TODO 后删除此行
+}
+/
+
+-- 验证命令：
+--   mxcli check 练习01-升级请求微流.mdl
+--   mxcli exec  练习01-升级请求微流.mdl -p MyProject.mpr
