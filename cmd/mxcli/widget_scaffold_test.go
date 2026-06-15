@@ -49,6 +49,24 @@ func TestParsePropertySpec(t *testing.T) {
 	}
 }
 
+func TestValidateWidgetIDFormat(t *testing.T) {
+	t.Run("TooFewSegments", func(t *testing.T) {
+		if err := validateWidgetIDFormat("com.acme.MyName"); err == nil {
+			t.Fatal("expected error for ID with fewer than 4 segments, got nil")
+		}
+	})
+	t.Run("ValidFourSegments", func(t *testing.T) {
+		if err := validateWidgetIDFormat("com.acme.widget.MyName"); err != nil {
+			t.Fatalf("expected no error for 4-segment ID, got %v", err)
+		}
+	})
+	t.Run("ValidFiveSegments", func(t *testing.T) {
+		if err := validateWidgetIDFormat("com.mendix.widget.custom.MyName"); err != nil {
+			t.Fatalf("expected no error for 5-segment ID, got %v", err)
+		}
+	})
+}
+
 func TestDeriveWidgetID(t *testing.T) {
 	tests := []struct {
 		name string

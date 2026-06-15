@@ -351,6 +351,10 @@ func runWidgetNew(cmd *cobra.Command, args []string) error {
 	widgetID, _ := cmd.Flags().GetString("id")
 	if widgetID == "" {
 		widgetID = deriveWidgetID(name)
+	} else {
+		if err := validateWidgetIDFormat(widgetID); err != nil {
+			return err
+		}
 	}
 	offline, _ := cmd.Flags().GetBool("offline")
 	propStrs, _ := cmd.Flags().GetStringArray("property")

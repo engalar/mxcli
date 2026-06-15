@@ -58,11 +58,19 @@ func discoverWidgets(projectDir string) ([]widgetInfo, error) {
 	return infos, nil
 }
 
+// validateWidgetIDFormat checks that a widget ID has at least 4 dot-separated segments.
+func validateWidgetIDFormat(id string) error {
+	parts := strings.Split(id, ".")
+	if len(parts) < 4 {
+		return fmt.Errorf("widget ID must have at least 4 dot-separated segments (e.g. com.acme.widget.MyName), got %q", id)
+	}
+	return nil
+}
+
 // validateWidgetInfo checks that a discovered widget has a valid ID format and non-empty name.
 func validateWidgetInfo(info widgetInfo) error {
-	parts := strings.Split(info.WidgetID, ".")
-	if len(parts) < 4 {
-		return fmt.Errorf("widget %q: widget ID must have at least 4 dot-separated segments (e.g. com.acme.widget.MyName), got %q", info.Name, info.WidgetID)
+	if err := validateWidgetIDFormat(info.WidgetID); err != nil {
+		return fmt.Errorf("widget %q: %w", info.Name, err)
 	}
 	if info.DisplayName == "" {
 		return fmt.Errorf("widget %q: <name> element is empty in XML", info.Name)
