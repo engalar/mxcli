@@ -1,0 +1,104 @@
+-- ============================================================
+-- 模块 07：审批工作流 — 页面
+-- 前提：先运行 escalation-domain.mdl 和 escalation-microflows.mdl
+-- 运行：mxcli exec escalation-pages.mdl -p MyProject.mpr
+--
+-- 注意：Mendix dataview 不支持 datasource: new。两个弹窗都由微流
+--       先创建/取得对象再 show page，页面用 datasource: $参数 绑定。
+-- ============================================================
+
+-- ============================================================
+-- 弹窗：发起升级申请（客服使用）
+-- 由 HD.ACT_OpenEscalationForm 创建对象并传入
+-- ============================================================
+
+create or replace page HD.EscalationStart_Form
+(
+  title:  'Request Escalation',
+  layout: Atlas_Core.PopupLayout,
+  folder: 'Escalation',
+  params: { $EscalationRequest: HD.EscalationRequest }
+)
+{
+  dataview dvForm (datasource: $EscalationRequest) {
+    textarea taReason (label: 'Reason for Escalation', attribute: Reason)
+    footer ftrButtons {
+      actionbutton btnSubmit (
+        caption:     'Submit Request',
+        action:      microflow HD.ACT_StartEscalation_FromObject (EscalationRequest: $currentObject) close_page,
+        buttonstyle: primary
+      )
+      actionbutton btnCancel (caption: 'Cancel', action: cancel_changes close_page)
+    }
+  }
+};
+
+-- ============================================================
+-- 升级审批概览（经理首页）
+-- ============================================================
+
+create or replace page HD.EscalationWorkflow_Overview
+(
+  title:  'Escalation Requests',
+  layout: Atlas_Core.Atlas_Default,
+  folder: 'Escalation'
+)
+{
+  layoutgrid lgMain {
+    row rHeader {
+      column cTitle (desktopwidth: 12) {
+        dynamictext txtTitle (content: 'Pending Escalation Requests', rendermode: H2)
+      }
+    }
+    row rMain {
+      column cMain (desktopwidth: 12) {
+        datagrid dgEscalations (
+          datasource: microflow HD.DS_PendingEscalations,
+          PageSize:   20
+        ) {
+          column colReason    (attribute: Reason,          caption: 'Reason')
+          column colStatus    (attribute: ApprovalStatus,  caption: 'Status',      ColumnWidth: manual, Size: 110)
+          column colRequested (attribute: RequestedAt,     caption: 'Requested At', ColumnWidth: manual, Size: 140)
+          column colActions (caption: 'Actions', ShowContentAs: customContent, ColumnWidth: manual, Size: 160) {
+            actionbutton btnApprove (
+              caption:     'Approve',
+              action:      microflow HD.ACT_Escalation_Approve (EscalationRequest: $currentObject),
+              buttonstyle: primary
+            )
+            actionbutton btnReject (
+              caption:     'Reject',
+              action:      microflow HD.ACT_OpenRejectForm (EscalationRequest: $currentObject),
+              buttonstyle: default
+            )
+          }
+        }
+      }
+    }
+  }
+};
+
+-- ============================================================
+-- 弹窗：填写拒绝原因（经理使用）
+-- 直接编辑 EscalationRequest 自带的 RejectionReason 字段
+-- ============================================================
+
+create or replace page HD.EscalationReject_Form
+(
+  title:  'Reject Escalation',
+  layout: Atlas_Core.PopupLayout,
+  folder: 'Escalation',
+  params: { $EscalationRequest: HD.EscalationRequest }
+)
+{
+  dataview dvForm (datasource: $EscalationRequest) {
+    textarea taReason (label: 'Rejection Reason', attribute: RejectionReason)
+    footer ftrButtons {
+      actionbutton btnReject (
+        caption:     'Confirm Reject',
+        action:      microflow HD.ACT_Escalation_Reject_FromObject (EscalationRequest: $currentObject) close_page,
+        buttonstyle: danger
+      )
+      actionbutton btnCancel (caption: 'Cancel', action: cancel_changes close_page)
+    }
+  }
+};

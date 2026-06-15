@@ -1,0 +1,34 @@
+-- ============================================================
+-- 模块 07：审批工作流 — 领域模型
+-- 前提：先运行模块 01 domain-model.mdl（HD.Ticket 必须存在）
+-- 运行：mxcli exec escalation-domain.mdl -p MyProject.mpr
+-- ============================================================
+
+-- ============================================================
+-- 枚举：升级申请审批状态
+-- ============================================================
+
+create or modify enumeration HD.EscalationStatus (
+  Pending  'Pending',
+  Approved 'Approved',
+  Rejected 'Rejected'
+);
+
+-- ============================================================
+-- 实体：升级申请
+-- RejectionReason 直接承载拒绝原因（在拒绝表单里编辑），
+-- 因此无需额外的非持久化"拒绝表单"实体。
+-- ============================================================
+
+create or modify persistent entity HD.EscalationRequest (
+  Reason:           string(1000) not null,
+  RequestedAt:      datetime,
+  ApprovalStatus:   HD.EscalationStatus default Pending,
+  RejectionReason:  string(1000)
+);
+
+-- 升级申请 → 工单（一个申请对应一张工单）
+create or modify association HD.EscalationRequest_Ticket
+  from HD.EscalationRequest to HD.Ticket
+  type reference
+  owner default;

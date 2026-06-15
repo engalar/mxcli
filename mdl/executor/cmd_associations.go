@@ -94,7 +94,7 @@ func execCreateAssociation(ctx *ExecContext, s *ast.CreateAssociationStmt) error
 				if doc := associationDocumentation(s); doc != "" {
 					assoc.SetDocumentation(doc)
 				}
-				if err := ctx.Backend.UpdateDomainModelGen(dm); err != nil {
+				if err := ctx.DomainModelWriter.UpdateDomainModelGen(dm); err != nil {
 					return mdlerrors.NewBackend("update association", err)
 				}
 				setDomainModelGenCached(ctx, module.ID, dm)
@@ -119,7 +119,7 @@ func execCreateAssociation(ctx *ExecContext, s *ast.CreateAssociationStmt) error
 				if doc := associationDocumentation(s); doc != "" {
 					ca.SetDocumentation(doc)
 				}
-				if err := ctx.Backend.UpdateDomainModelGen(dm); err != nil {
+				if err := ctx.DomainModelWriter.UpdateDomainModelGen(dm); err != nil {
 					return mdlerrors.NewBackend("update cross-module association", err)
 				}
 				setDomainModelGenCached(ctx, module.ID, dm)
@@ -160,7 +160,7 @@ func execCreateAssociation(ctx *ExecContext, s *ast.CreateAssociationStmt) error
 			ca.SetDocumentation(doc)
 		}
 		dm.AddCrossAssociations(ca)
-		if err := ctx.Backend.UpdateDomainModelGen(dm); err != nil {
+		if err := ctx.DomainModelWriter.UpdateDomainModelGen(dm); err != nil {
 			return mdlerrors.NewBackend("create cross-module association", err)
 		}
 		setDomainModelGenCached(ctx, module.ID, dm)
@@ -183,7 +183,7 @@ func execCreateAssociation(ctx *ExecContext, s *ast.CreateAssociationStmt) error
 		if doc := associationDocumentation(s); doc != "" {
 			assoc.SetDocumentation(doc)
 		}
-		if err := ctx.Backend.CreateAssociationGen(model.ID(dm.ID()), assoc); err != nil {
+		if err := ctx.DomainModelWriter.CreateAssociationGen(model.ID(dm.ID()), assoc); err != nil {
 			return mdlerrors.NewBackend("create association", err)
 		}
 		invalidateDomainModelGenForModule(ctx, module.ID)
@@ -194,7 +194,7 @@ func execCreateAssociation(ctx *ExecContext, s *ast.CreateAssociationStmt) error
 	invalidateDomainModelsCache(ctx)
 
 	if freshDM, err := getDomainModelGenCached(ctx, module.ID); err == nil && freshDM != nil {
-		if err := ctx.Backend.RelayoutDomainModel(model.ID(freshDM.ID())); err != nil {
+		if err := ctx.DomainModelWriter.RelayoutDomainModel(model.ID(freshDM.ID())); err != nil {
 			fmt.Fprintf(ctx.Output, "warning: auto-layout failed: %v\n", err)
 		} else {
 			invalidateDomainModelGenForModule(ctx, module.ID)
@@ -204,7 +204,7 @@ func execCreateAssociation(ctx *ExecContext, s *ast.CreateAssociationStmt) error
 	// Reconcile MemberAccesses immediately — existing access rules on entities
 	// in this DM need MemberAccess entries for the new association (CE0066).
 	if freshDM, err := getDomainModelGenCached(ctx, module.ID); err == nil && freshDM != nil {
-		if msgs, err := ctx.Backend.ReconcileMemberAccesses(model.ID(freshDM.ID()), module.Name); err == nil {
+		if msgs, err := ctx.SecurityEntityAccessManager.ReconcileMemberAccesses(model.ID(freshDM.ID()), module.Name); err == nil {
 			for _, msg := range msgs {
 				fmt.Fprintf(ctx.Output, "  reconciled: %s\n", msg)
 			}
@@ -264,7 +264,7 @@ func execAlterAssociation(ctx *ExecContext, s *ast.AlterAssociationStmt) error {
 		case ast.AlterAssociationSetComment:
 			assoc.SetDocumentation(s.Comment)
 		}
-		if err := ctx.Backend.UpdateDomainModelGen(dm); err != nil {
+		if err := ctx.DomainModelWriter.UpdateDomainModelGen(dm); err != nil {
 			return mdlerrors.NewBackend("update association", err)
 		}
 		setDomainModelGenCached(ctx, module.ID, dm)
@@ -288,7 +288,7 @@ func execAlterAssociation(ctx *ExecContext, s *ast.AlterAssociationStmt) error {
 		case ast.AlterAssociationSetComment:
 			ca.SetDocumentation(s.Comment)
 		}
-		if err := ctx.Backend.UpdateDomainModelGen(dm); err != nil {
+		if err := ctx.DomainModelWriter.UpdateDomainModelGen(dm); err != nil {
 			return mdlerrors.NewBackend("update cross-module association", err)
 		}
 		setDomainModelGenCached(ctx, module.ID, dm)
@@ -324,7 +324,7 @@ func execDropAssociation(ctx *ExecContext, s *ast.DropAssociationStmt) error {
 		if !ok || assoc.Name() != s.Name.Name {
 			continue
 		}
-		if err := ctx.Backend.DeleteAssociation(model.ID(dm.ID()), model.ID(assoc.ID())); err != nil {
+		if err := ctx.DomainModelWriter.DeleteAssociation(model.ID(dm.ID()), model.ID(assoc.ID())); err != nil {
 			return mdlerrors.NewBackend("delete association", err)
 		}
 		fmt.Fprintf(ctx.Output, "Dropped association: %s\n", s.Name)
@@ -335,7 +335,7 @@ func execDropAssociation(ctx *ExecContext, s *ast.DropAssociationStmt) error {
 		if !ok || ca.Name() != s.Name.Name {
 			continue
 		}
-		if err := ctx.Backend.DeleteCrossAssociation(model.ID(dm.ID()), model.ID(ca.ID())); err != nil {
+		if err := ctx.DomainModelWriter.DeleteCrossAssociation(model.ID(dm.ID()), model.ID(ca.ID())); err != nil {
 			return mdlerrors.NewBackend("delete cross-module association", err)
 		}
 		fmt.Fprintf(ctx.Output, "Dropped cross-module association: %s\n", s.Name)
@@ -477,7 +477,7 @@ func listAssociations(ctx *ExecContext, moduleName string) error {
 		return mdlerrors.NewBackend("list domain models", err)
 	}
 
-	mods, err := ctx.Backend.ListModules()
+	mods, err := ctx.ModuleLister.ListModules()
 	if err != nil {
 		return mdlerrors.NewBackend("list modules", err)
 	}
@@ -593,7 +593,7 @@ func describeAssociation(ctx *ExecContext, name ast.QualifiedName) error {
 	if err != nil {
 		return mdlerrors.NewBackend("list domain models", err)
 	}
-	mods, err := ctx.Backend.ListModules()
+	mods, err := ctx.ModuleLister.ListModules()
 	if err != nil {
 		return mdlerrors.NewBackend("list modules", err)
 	}

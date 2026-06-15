@@ -167,7 +167,7 @@ func entityFocusELKGen(ctx *ExecContext, qualifiedName string) error {
 	allPairs, err := listDomainModelsWithContainerGen(ctx)
 	if err == nil {
 		moduleNames := map[model.ID]string{}
-		if mods, modsErr := ctx.Backend.ListModules(); modsErr == nil {
+		if mods, modsErr := ctx.ModuleLister.ListModules(); modsErr == nil {
 			for _, m := range mods {
 				moduleNames[m.ID] = m.Name
 			}
@@ -340,7 +340,7 @@ func buildAllEntityNamesGen(ctx *ExecContext) (map[model.ID]string, map[model.ID
 	if err != nil {
 		return allEntityNames, allEntityModules
 	}
-	mods, err := ctx.Backend.ListModules()
+	mods, err := ctx.ModuleLister.ListModules()
 	if err != nil {
 		return allEntityNames, allEntityModules
 	}

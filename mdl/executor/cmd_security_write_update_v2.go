@@ -33,7 +33,7 @@ func execUpdateSecurityGen(ctx *ExecContext, s *ast.UpdateSecurityStmt) error {
 			continue // module may not have a domain model
 		}
 
-		msgs, err := ctx.Backend.ReconcileMemberAccesses(model.ID(dm.ID()), mod.Name)
+		msgs, err := ctx.SecurityEntityAccessManager.ReconcileMemberAccesses(model.ID(dm.ID()), mod.Name)
 		if err != nil {
 			return mdlerrors.NewBackend(fmt.Sprintf("reconcile security for module %s", mod.Name), err)
 		}

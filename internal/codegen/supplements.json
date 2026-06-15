@@ -132,6 +132,13 @@
       "hasCreatedDate",
       "hasOwner",
       "persistable"
+    ],
+    "DomainModels$ViewEntitySourceDocument": [
+      "documentation",
+      "excluded",
+      "exportLevel",
+      "name",
+      "oql"
     ]
   },
   "ref_list_version3_fields": [

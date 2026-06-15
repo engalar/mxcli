@@ -113,7 +113,7 @@ func listEntitiesGen(ctx *ExecContext, moduleName string) error {
 	}
 
 	// Build module ID -> name lookup (single query).
-	mods, err := ctx.Backend.ListModules()
+	mods, err := ctx.ModuleLister.ListModules()
 	if err != nil {
 		return mdlerrors.NewBackend("list modules", err)
 	}
@@ -251,7 +251,7 @@ func findEntityGen(ctx *ExecContext, qn ast.QualifiedName) (*genDm.Entity, strin
 	if err != nil {
 		return nil, "", err
 	}
-	mods, err := ctx.Backend.ListModules()
+	mods, err := ctx.ModuleLister.ListModules()
 	if err != nil {
 		return nil, "", err
 	}

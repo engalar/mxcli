@@ -57,7 +57,7 @@ func execAlterWorkflow(ctx *ExecContext, s *ast.AlterWorkflowStmt) error {
 	}
 
 	// Open mutator
-	mutator, err := ctx.Backend.OpenWorkflowForMutation(wfID)
+	mutator, err := ctx.WorkflowMutationOperator.OpenWorkflowForMutation(wfID)
 	if err != nil {
 		return mdlerrors.NewBackend("open workflow for mutation", err)
 	}

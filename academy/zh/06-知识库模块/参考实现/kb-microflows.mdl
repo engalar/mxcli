@@ -1,0 +1,47 @@
+-- ============================================================
+-- 模块 06：知识库 — 微流
+-- 前提：先运行 kb-domain.mdl
+-- 运行：mxcli exec kb-microflows.mdl -p MyProject.mpr
+-- ============================================================
+
+-- ============================================================
+-- 发布文章：Draft → Published
+-- 验证：Content 非空
+-- ============================================================
+
+create or modify microflow KB.ACT_Article_Publish
+  ($Article: KB.Article)
+  returns boolean as $Success
+  folder 'Article'
+{
+  if $Article/Content = '' or $Article/Content = empty {
+    validation feedback $Article/Content message 'Article content is required before publishing.';
+    return false;
+  }
+  change $Article (
+    Status      = KB.ArticleStatus.Published,
+    PublishedAt = '[%CurrentDateTime%]'
+  );
+  commit $Article;
+  return true;
+}
+/
+
+-- ============================================================
+-- 归档文章：Published → Archived
+-- 前置检查：必须是 Published 状态
+-- ============================================================
+
+create or modify microflow KB.ACT_Article_Archive
+  ($Article: KB.Article)
+  returns boolean as $Success
+  folder 'Article'
+{
+  if $Article/Status != KB.ArticleStatus.Published {
+    return false;
+  }
+  change $Article (Status = KB.ArticleStatus.Archived);
+  commit $Article;
+  return true;
+}
+/

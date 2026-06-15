@@ -72,6 +72,36 @@ func TestAddCreateVariableActionGenSetsFieldsAndRegistersDeclared(t *testing.T) 
 	}
 }
 
+func TestAddCreateVariableActionGen_ListTypeEmitsCreateListAction(t *testing.T) {
+	fb := newActionTestFb()
+	stmt := &ast.DeclareStmt{
+		Variable: "Orders",
+		Type: ast.DataType{
+			Kind:      ast.TypeListOf,
+			EntityRef: &ast.QualifiedName{Module: "Sales", Name: "Order"},
+		},
+	}
+	id := fb.addCreateVariableActionGen(stmt)
+	if id == "" {
+		t.Fatal("expected non-empty ID")
+	}
+	// Must emit a CreateListAction, NOT a CreateVariableAction
+	listAct, ok := actionFromObjects(t, fb).(*genMf.CreateListAction)
+	if !ok {
+		t.Fatalf("action = %T, want *CreateListAction", actionFromObjects(t, fb))
+	}
+	if listAct.OutputVariableName() != "Orders" {
+		t.Fatalf("output variable name = %q, want Orders", listAct.OutputVariableName())
+	}
+	if listAct.EntityQualifiedName() != "Sales.Order" {
+		t.Fatalf("entity qualified name = %q, want Sales.Order", listAct.EntityQualifiedName())
+	}
+	// varTypes must register with "List of" prefix so loop iteration resolves correctly
+	if fb.varTypes["Orders"] != "List of Sales.Order" {
+		t.Fatalf("varTypes[Orders] = %q, want List of Sales.Order", fb.varTypes["Orders"])
+	}
+}
+
 func TestAddChangeVariableActionGenReportsUndeclaredError(t *testing.T) {
 	fb := newActionTestFb()
 	stmt := &ast.MfSetStmt{
@@ -438,6 +468,58 @@ func TestConvertASTToGenDataTypeEntityListEnum(t *testing.T) {
 			t.Fatalf("enum QN = %q", et.EnumerationQualifiedName())
 		}
 	})
+}
+
+func TestParamEntityRef_HandlesTypeEnumerationAmbiguity(t *testing.T) {
+	tests := []struct {
+		name   string
+		dt     ast.DataType
+		wantQN string // "Module.Name" or "" for nil
+	}{
+		{
+			name:   "TypeListOf with EntityRef",
+			dt:     ast.DataType{Kind: ast.TypeListOf, EntityRef: &ast.QualifiedName{Module: "Sales", Name: "Order"}},
+			wantQN: "Sales.Order",
+		},
+		{
+			name:   "TypeEntity with EntityRef",
+			dt:     ast.DataType{Kind: ast.TypeEntity, EntityRef: &ast.QualifiedName{Module: "Sales", Name: "Order"}},
+			wantQN: "Sales.Order",
+		},
+		{
+			name:   "TypeEnumeration with EnumRef (bare QN parsed as enum)",
+			dt:     ast.DataType{Kind: ast.TypeEnumeration, EnumRef: &ast.QualifiedName{Module: "Sales", Name: "Order"}},
+			wantQN: "Sales.Order",
+		},
+		{
+			name:   "TypeEnumeration with nil ref",
+			dt:     ast.DataType{Kind: ast.TypeEnumeration},
+			wantQN: "",
+		},
+		{
+			name:   "Primitive type returns nil",
+			dt:     ast.DataType{Kind: ast.TypeBoolean},
+			wantQN: "",
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			ref := paramEntityRef(tc.dt)
+			if tc.wantQN == "" {
+				if ref != nil {
+					t.Fatalf("paramEntityRef = %v, want nil", ref)
+				}
+				return
+			}
+			if ref == nil {
+				t.Fatal("paramEntityRef = nil, want non-nil")
+			}
+			gotQN := ref.Module + "." + ref.Name
+			if gotQN != tc.wantQN {
+				t.Fatalf("paramEntityRef = %q, want %q", gotQN, tc.wantQN)
+			}
+		})
+	}
 }
 
 func TestConvertASTToGenDataTypeMissingRefReturnsNil(t *testing.T) {

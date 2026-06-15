@@ -23,7 +23,7 @@ func listAgentEditorAgents(ctx *ExecContext, moduleName string) error {
 		return mdlerrors.NewNotConnected()
 	}
 
-	agents, err := ctx.Backend.ListAgentEditorAgents()
+	agents, err := ctx.AgentEditorOperator.ListAgentEditorAgents()
 	if err != nil {
 		return mdlerrors.NewBackend("list agents", err)
 	}
@@ -231,7 +231,7 @@ func emitKBBlock(ctx *ExecContext, kb types.AgentKBTool) {
 
 // findAgentEditorAgent looks up an agent by module and name.
 func findAgentEditorAgent(ctx *ExecContext, moduleName, agentName string) *types.Agent {
-	agents, err := ctx.Backend.ListAgentEditorAgents()
+	agents, err := ctx.AgentEditorOperator.ListAgentEditorAgents()
 	if err != nil {
 		return nil
 	}

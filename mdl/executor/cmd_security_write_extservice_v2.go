@@ -45,7 +45,7 @@ func execGrantODataServiceAccessGen(ctx *ExecContext, s *ast.GrantODataServiceAc
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}
 
-	services, err := ctx.Backend.ListPublishedODataServices()
+	services, err := ctx.ServiceLister.ListPublishedODataServices()
 	if err != nil {
 		return mdlerrors.NewBackend("list published OData services", err)
 	}
@@ -73,7 +73,7 @@ func execGrantODataServiceAccessGen(ctx *ExecContext, s *ast.GrantODataServiceAc
 
 		merged, added := mergeAllowedRoles(svc.AllowedModuleRoles, validRoles)
 
-		if err := ctx.Backend.UpdateAllowedRoles(svc.ID, merged); err != nil {
+		if err := ctx.SecurityEntityAccessManager.UpdateAllowedRoles(svc.ID, merged); err != nil {
 			return mdlerrors.NewBackend("update OData service access", err)
 		}
 
@@ -100,7 +100,7 @@ func execRevokeODataServiceAccessGen(ctx *ExecContext, s *ast.RevokeODataService
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}
 
-	services, err := ctx.Backend.ListPublishedODataServices()
+	services, err := ctx.ServiceLister.ListPublishedODataServices()
 	if err != nil {
 		return mdlerrors.NewBackend("list published OData services", err)
 	}
@@ -114,7 +114,7 @@ func execRevokeODataServiceAccessGen(ctx *ExecContext, s *ast.RevokeODataService
 
 		remaining, removed := filterAllowedRoles(svc.AllowedModuleRoles, s.Roles)
 
-		if err := ctx.Backend.UpdateAllowedRoles(svc.ID, remaining); err != nil {
+		if err := ctx.SecurityEntityAccessManager.UpdateAllowedRoles(svc.ID, remaining); err != nil {
 			return mdlerrors.NewBackend("update OData service access", err)
 		}
 
@@ -151,7 +151,7 @@ func execGrantPublishedRestServiceAccessGen(ctx *ExecContext, s *ast.GrantPublis
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}
 
-	services, err := ctx.Backend.ListPublishedRestServices()
+	services, err := ctx.ServiceLister.ListPublishedRestServices()
 	if err != nil {
 		return mdlerrors.NewBackend("list published rest services", err)
 	}
@@ -179,7 +179,7 @@ func execGrantPublishedRestServiceAccessGen(ctx *ExecContext, s *ast.GrantPublis
 
 		merged, added := mergeAllowedRoles(svc.AllowedRoles, validRoles)
 
-		if err := ctx.Backend.UpdatePublishedRestServiceRoles(svc.ID, merged); err != nil {
+		if err := ctx.SecurityEntityAccessManager.UpdatePublishedRestServiceRoles(svc.ID, merged); err != nil {
 			return mdlerrors.NewBackend("update published rest service access", err)
 		}
 
@@ -206,7 +206,7 @@ func execRevokePublishedRestServiceAccessGen(ctx *ExecContext, s *ast.RevokePubl
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}
 
-	services, err := ctx.Backend.ListPublishedRestServices()
+	services, err := ctx.ServiceLister.ListPublishedRestServices()
 	if err != nil {
 		return mdlerrors.NewBackend("list published rest services", err)
 	}
@@ -220,7 +220,7 @@ func execRevokePublishedRestServiceAccessGen(ctx *ExecContext, s *ast.RevokePubl
 
 		remaining, removed := filterAllowedRoles(svc.AllowedRoles, s.Roles)
 
-		if err := ctx.Backend.UpdatePublishedRestServiceRoles(svc.ID, remaining); err != nil {
+		if err := ctx.SecurityEntityAccessManager.UpdatePublishedRestServiceRoles(svc.ID, remaining); err != nil {
 			return mdlerrors.NewBackend("update published rest service access", err)
 		}
 

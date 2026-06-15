@@ -77,7 +77,7 @@ func execAlterEntityGen(ctx *ExecContext, s *ast.AlterEntityStmt) error {
 		for _, vr := range astToValidationRulesGen(&ac, s.Name.String()) {
 			entity.AddValidationRules(vr)
 		}
-		if err := ctx.Backend.UpdateEntityGen(model.ID(dm.ID()), entity); err != nil {
+		if err := ctx.DomainModelWriter.UpdateEntityGen(model.ID(dm.ID()), entity); err != nil {
 			return mdlerrors.NewBackend("add attribute", err)
 		}
 		invalidateHierarchy(ctx)
@@ -90,7 +90,7 @@ func execAlterEntityGen(ctx *ExecContext, s *ast.AlterEntityStmt) error {
 			if err != nil {
 				return err
 			}
-			if err := ctx.Backend.UpdateEntityGen(model.ID(dm.ID()), entity); err != nil {
+			if err := ctx.DomainModelWriter.UpdateEntityGen(model.ID(dm.ID()), entity); err != nil {
 				return mdlerrors.NewBackend("drop attribute", err)
 			}
 			invalidateHierarchy(ctx)
@@ -112,7 +112,7 @@ func execAlterEntityGen(ctx *ExecContext, s *ast.AlterEntityStmt) error {
 		removedMemberAccess := cleanupDroppedAttributeReferencesGen(entity, droppedID, attrQN)
 
 		entity.RemoveAttributes(attrIdx)
-		if err := ctx.Backend.UpdateEntityGen(model.ID(dm.ID()), entity); err != nil {
+		if err := ctx.DomainModelWriter.UpdateEntityGen(model.ID(dm.ID()), entity); err != nil {
 			return mdlerrors.NewBackend("drop attribute", err)
 		}
 		invalidateHierarchy(ctx)
@@ -138,7 +138,7 @@ func execAlterEntityGen(ctx *ExecContext, s *ast.AlterEntityStmt) error {
 			return mdlerrors.NewNotFoundMsg("attribute", s.AttributeName, fmt.Sprintf("attribute '%s' not found on entity %s", s.AttributeName, s.Name))
 		}
 		attr.SetName(s.NewName)
-		if err := ctx.Backend.UpdateEntityGen(model.ID(dm.ID()), entity); err != nil {
+		if err := ctx.DomainModelWriter.UpdateEntityGen(model.ID(dm.ID()), entity); err != nil {
 			return mdlerrors.NewBackend("rename attribute", err)
 		}
 		invalidateHierarchy(ctx)
@@ -162,7 +162,7 @@ func execAlterEntityGen(ctx *ExecContext, s *ast.AlterEntityStmt) error {
 			}
 			attr.SetValue(cv)
 		}
-		if err := ctx.Backend.UpdateEntityGen(model.ID(dm.ID()), entity); err != nil {
+		if err := ctx.DomainModelWriter.UpdateEntityGen(model.ID(dm.ID()), entity); err != nil {
 			return mdlerrors.NewBackend("modify attribute", err)
 		}
 		invalidateHierarchy(ctx)
@@ -172,7 +172,7 @@ func execAlterEntityGen(ctx *ExecContext, s *ast.AlterEntityStmt) error {
 
 	case ast.AlterEntitySetDocumentation:
 		entity.SetDocumentation(s.Documentation)
-		if err := ctx.Backend.UpdateEntityGen(model.ID(dm.ID()), entity); err != nil {
+		if err := ctx.DomainModelWriter.UpdateEntityGen(model.ID(dm.ID()), entity); err != nil {
 			return mdlerrors.NewBackend("set documentation", err)
 		}
 		invalidateDomainModelGenForModule(ctx, module.ID)
@@ -181,7 +181,7 @@ func execAlterEntityGen(ctx *ExecContext, s *ast.AlterEntityStmt) error {
 
 	case ast.AlterEntitySetComment:
 		entity.SetDocumentation(s.Comment)
-		if err := ctx.Backend.UpdateEntityGen(model.ID(dm.ID()), entity); err != nil {
+		if err := ctx.DomainModelWriter.UpdateEntityGen(model.ID(dm.ID()), entity); err != nil {
 			return mdlerrors.NewBackend("set comment", err)
 		}
 		invalidateDomainModelGenForModule(ctx, module.ID)
@@ -193,7 +193,7 @@ func execAlterEntityGen(ctx *ExecContext, s *ast.AlterEntityStmt) error {
 			return mdlerrors.NewValidation("no position provided")
 		}
 		entity.SetLocation(layoutPos(s.Position.X, s.Position.Y))
-		if err := ctx.Backend.UpdateEntityGen(model.ID(dm.ID()), entity); err != nil {
+		if err := ctx.DomainModelWriter.UpdateEntityGen(model.ID(dm.ID()), entity); err != nil {
 			return mdlerrors.NewBackend("set position", err)
 		}
 		invalidateDomainModelGenForModule(ctx, module.ID)
@@ -222,7 +222,7 @@ func execAlterEntityGen(ctx *ExecContext, s *ast.AlterEntityStmt) error {
 			return mdlerrors.NewValidationf("no valid index columns on entity %s", s.Name)
 		}
 		entity.AddIndexes(index)
-		if err := ctx.Backend.UpdateEntityGen(model.ID(dm.ID()), entity); err != nil {
+		if err := ctx.DomainModelWriter.UpdateEntityGen(model.ID(dm.ID()), entity); err != nil {
 			return mdlerrors.NewBackend("add index", err)
 		}
 		invalidateDomainModelGenForModule(ctx, module.ID)
@@ -245,7 +245,7 @@ func execAlterEntityGen(ctx *ExecContext, s *ast.AlterEntityStmt) error {
 			return mdlerrors.NewNotFoundMsg("index", s.IndexName, fmt.Sprintf("index '%s' not found on entity %s", s.IndexName, s.Name))
 		}
 		entity.RemoveIndexes(idx)
-		if err := ctx.Backend.UpdateEntityGen(model.ID(dm.ID()), entity); err != nil {
+		if err := ctx.DomainModelWriter.UpdateEntityGen(model.ID(dm.ID()), entity); err != nil {
 			return mdlerrors.NewBackend("drop index", err)
 		}
 		invalidateDomainModelGenForModule(ctx, module.ID)
@@ -269,7 +269,7 @@ func execAlterEntityGen(ctx *ExecContext, s *ast.AlterEntityStmt) error {
 			}
 		}
 		entity.AddEventHandlers(astToEventHandlerGen(s.EventHandler))
-		if err := ctx.Backend.UpdateEntityGen(model.ID(dm.ID()), entity); err != nil {
+		if err := ctx.DomainModelWriter.UpdateEntityGen(model.ID(dm.ID()), entity); err != nil {
 			return mdlerrors.NewBackend("add event handler", err)
 		}
 		invalidateDomainModelGenForModule(ctx, module.ID)
@@ -300,7 +300,7 @@ func execAlterEntityGen(ctx *ExecContext, s *ast.AlterEntityStmt) error {
 				fmt.Sprintf("event handler %s %s not found on %s", s.EventHandler.Moment, s.EventHandler.Event, s.Name))
 		}
 		entity.RemoveEventHandlers(idx)
-		if err := ctx.Backend.UpdateEntityGen(model.ID(dm.ID()), entity); err != nil {
+		if err := ctx.DomainModelWriter.UpdateEntityGen(model.ID(dm.ID()), entity); err != nil {
 			return mdlerrors.NewBackend("drop event handler", err)
 		}
 		invalidateDomainModelGenForModule(ctx, module.ID)
@@ -314,7 +314,7 @@ func execAlterEntityGen(ctx *ExecContext, s *ast.AlterEntityStmt) error {
 			return mdlerrors.NewUnsupported("allow create change locally is only supported for OData remote entities on the gen path")
 		}
 		src.SetCreateChangeLocally(s.BoolValue)
-		if err := ctx.Backend.UpdateEntityGen(model.ID(dm.ID()), entity); err != nil {
+		if err := ctx.DomainModelWriter.UpdateEntityGen(model.ID(dm.ID()), entity); err != nil {
 			return mdlerrors.NewBackend("set allow create change locally", err)
 		}
 		invalidateDomainModelGenForModule(ctx, module.ID)
@@ -342,7 +342,7 @@ func execAlterEntityGen(ctx *ExecContext, s *ast.AlterEntityStmt) error {
 				noGen.SetHasChangedDate(true)
 			}
 		}
-		if err := ctx.Backend.UpdateEntityGen(model.ID(dm.ID()), entity); err != nil {
+		if err := ctx.DomainModelWriter.UpdateEntityGen(model.ID(dm.ID()), entity); err != nil {
 			return mdlerrors.NewBackend("set system members", err)
 		}
 		invalidateDomainModelGenForModule(ctx, module.ID)

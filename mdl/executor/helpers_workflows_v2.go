@@ -35,7 +35,7 @@ func listWorkflowsWithContainerGen(ctx *ExecContext) ([]ContainerWithGen[*genWf.
 		case ctx.Workflows != nil:
 			all, err = ctx.Workflows.ListAll()
 		case ctx.Backend != nil:
-			all, err = ctx.Backend.ListWorkflowsGen()
+			all, err = ctx.WorkflowReader.ListWorkflowsGen()
 		default:
 			return nil, nil
 		}

@@ -140,7 +140,7 @@ func TestInvalidateDomainModelsCache_ClearsBoth(t *testing.T) {
 
 func TestFindDomainModelGenByModule_FindsByName(t *testing.T) {
 	ctx := newDomainModelsTestContext(t)
-	mods, err := ctx.Backend.ListModules()
+	mods, err := ctx.ModuleLister.ListModules()
 	if err != nil || len(mods) == 0 {
 		t.Skip("fixture has no modules")
 	}

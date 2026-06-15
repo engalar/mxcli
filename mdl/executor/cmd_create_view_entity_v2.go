@@ -63,10 +63,10 @@ func execCreateViewEntityGen(ctx *ExecContext, s *ast.CreateViewEntityStmt) erro
 				s.Position = &ast.Position{X: x, Y: y}
 			}
 		}
-		if err := ctx.Backend.DeleteViewEntitySourceDocumentByName(s.Name.Module, s.Name.Name); err != nil {
+		if err := ctx.DomainModelWriter.DeleteViewEntitySourceDocumentByName(s.Name.Module, s.Name.Name); err != nil {
 			return mdlerrors.NewBackend("delete existing ViewEntitySourceDocument", err)
 		}
-		if err := ctx.Backend.DeleteEntity(model.ID(dm.ID()), model.ID(existingEntity.ID())); err != nil {
+		if err := ctx.DomainModelWriter.DeleteEntity(model.ID(dm.ID()), model.ID(existingEntity.ID())); err != nil {
 			return mdlerrors.NewBackend("delete existing entity for replace", err)
 		}
 		dm, err = getDomainModelGenCached(ctx, module.ID)
@@ -82,27 +82,39 @@ func execCreateViewEntityGen(ctx *ExecContext, s *ast.CreateViewEntityStmt) erro
 	location := autoLayoutLocationGen(s.Position, existingEntity, dm)
 	sourceDocRef := s.Name.Module + "." + s.Name.Name
 
-	if err := ctx.Backend.DeleteViewEntitySourceDocumentByName(s.Name.Module, s.Name.Name); err != nil {
-		return mdlerrors.NewBackend("delete existing ViewEntitySourceDocument", err)
-	}
-	if _, err := ctx.Backend.CreateViewEntitySourceDocument(
-		module.ID,
-		s.Name.Module,
-		s.Name.Name,
-		s.Query.RawQuery,
-		s.Documentation,
-	); err != nil {
-		return mdlerrors.NewBackend("create ViewEntitySourceDocument", err)
+	// For MODIFY, update source document in-place to preserve its $ID.
+	// For REPLACE/CREATE, delete old and create new.
+	if existingEntity != nil && s.CreateOrModify {
+		if err := ctx.DomainModelWriter.UpdateViewEntitySourceDocument(
+			s.Name.Module, s.Name.Name, s.Query.RawQuery, s.Documentation,
+		); err != nil {
+			return mdlerrors.NewBackend("update ViewEntitySourceDocument", err)
+		}
+	} else {
+		if err := ctx.DomainModelWriter.DeleteViewEntitySourceDocumentByName(s.Name.Module, s.Name.Name); err != nil {
+			return mdlerrors.NewBackend("delete existing ViewEntitySourceDocument", err)
+		}
+		if _, err := ctx.DomainModelWriter.CreateViewEntitySourceDocument(
+			module.ID,
+			s.Name.Module,
+			s.Name.Name,
+			s.Query.RawQuery,
+			s.Documentation,
+		); err != nil {
+			return mdlerrors.NewBackend("create ViewEntitySourceDocument", err)
+		}
 	}
 
 	entity := astToViewEntityGen(s, sourceDocRef, location)
 	if entity == nil {
 		return mdlerrors.NewValidation("failed to build gen view entity from AST")
 	}
+
+	// Refresh entity IDs for MODIFY, preserving stable $IDs.
 	preserveViewEntityIDs(entity, existingEntity)
 
 	if existingEntity != nil && s.CreateOrModify {
-		if err := ctx.Backend.UpdateEntityGen(model.ID(dm.ID()), entity); err != nil {
+		if err := ctx.DomainModelWriter.UpdateEntityGen(model.ID(dm.ID()), entity); err != nil {
 			return mdlerrors.NewBackend("update view entity", err)
 		}
 		invalidateDomainModelGenForModule(ctx, module.ID)
@@ -113,7 +125,7 @@ func execCreateViewEntityGen(ctx *ExecContext, s *ast.CreateViewEntityStmt) erro
 		return nil
 	}
 
-	if err := ctx.Backend.CreateEntityGen(model.ID(dm.ID()), entity); err != nil {
+	if err := ctx.DomainModelWriter.CreateEntityGen(model.ID(dm.ID()), entity); err != nil {
 		return mdlerrors.NewBackend("create view entity", err)
 	}
 	invalidateDomainModelGenForModule(ctx, module.ID)
@@ -133,9 +145,7 @@ func astToViewEntityGen(s *ast.CreateViewEntityStmt, sourceDocRef string, locati
 	entity.SetDocumentation(s.Documentation)
 	entity.SetLocation(layoutPos(location.X, location.Y))
 
-	noGen := genDm.NewNoGeneralization()
-	noGen.SetPersistable(true)
-	entity.SetGeneralization(noGen)
+	entity.SetGeneralization(genDm.NewNoGeneralization())
 
 	src := genDm.NewOqlViewEntitySource()
 	src.SetSourceDocumentQualifiedName(sourceDocRef)

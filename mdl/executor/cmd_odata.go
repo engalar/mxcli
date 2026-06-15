@@ -42,7 +42,7 @@ func outputJavadocIndented(w io.Writer, text string, indent string) {
 // listODataClients handles SHOW ODATA CLIENTS [IN module] command.
 func listODataClients(ctx *ExecContext, moduleName string) error {
 
-	services, err := ctx.Backend.ListConsumedODataServices()
+	services, err := ctx.ServiceLister.ListConsumedODataServices()
 	if err != nil {
 		return mdlerrors.NewBackend("list consumed OData services", err)
 	}
@@ -106,7 +106,7 @@ func listODataClients(ctx *ExecContext, moduleName string) error {
 // describeODataClient handles DESCRIBE ODATA CLIENT command.
 func describeODataClient(ctx *ExecContext, name ast.QualifiedName) error {
 
-	services, err := ctx.Backend.ListConsumedODataServices()
+	services, err := ctx.ServiceLister.ListConsumedODataServices()
 	if err != nil {
 		return mdlerrors.NewBackend("list consumed OData services", err)
 	}
@@ -224,7 +224,7 @@ func outputConsumedODataServiceMDL(ctx *ExecContext, svc *model.ConsumedODataSer
 // listODataServices handles SHOW ODATA SERVICES [IN module] command.
 func listODataServices(ctx *ExecContext, moduleName string) error {
 
-	services, err := ctx.Backend.ListPublishedODataServices()
+	services, err := ctx.ServiceLister.ListPublishedODataServices()
 	if err != nil {
 		return mdlerrors.NewBackend("list published OData services", err)
 	}
@@ -285,7 +285,7 @@ func listODataServices(ctx *ExecContext, moduleName string) error {
 // describeODataService handles DESCRIBE ODATA SERVICE command.
 func describeODataService(ctx *ExecContext, name ast.QualifiedName) error {
 
-	services, err := ctx.Backend.ListPublishedODataServices()
+	services, err := ctx.ServiceLister.ListPublishedODataServices()
 	if err != nil {
 		return mdlerrors.NewBackend("list published OData services", err)
 	}
@@ -627,7 +627,9 @@ func listExternalActions(ctx *ExecContext, moduleName string) error {
 			continue
 		}
 		oc, _ := mf.ObjectCollection().(*genMf.MicroflowObjectCollection)
-		extractActions(oc, modName, mf.Name())
+		if oc != nil {
+			extractActions(oc, modName, mf.Name())
+		}
 	}
 	for _, nf := range nfs {
 		if nf == nil {
@@ -638,7 +640,9 @@ func listExternalActions(ctx *ExecContext, moduleName string) error {
 			continue
 		}
 		oc, _ := nf.ObjectCollection().(*genMf.MicroflowObjectCollection)
-		extractActions(oc, modName, nf.Name())
+		if oc != nil {
+			extractActions(oc, modName, nf.Name())
+		}
 	}
 
 	if len(actionMap) == 0 && ctx.Format != FormatJSON {
@@ -843,7 +847,7 @@ func execCreateExternalEntity(ctx *ExecContext, s *ast.CreateExternalEntityStmt)
 		if len(attrs) > 0 {
 			replaceExternalEntityAttributesGen(existingEntity, attrs)
 		}
-		if err := ctx.Backend.UpdateEntityGen(model.ID(dm.ID()), existingEntity); err != nil {
+		if err := ctx.DomainModelWriter.UpdateEntityGen(model.ID(dm.ID()), existingEntity); err != nil {
 			return mdlerrors.NewBackend("update external entity", err)
 		}
 		invalidateDomainModelGenForModule(ctx, module.ID)
@@ -860,7 +864,7 @@ func execCreateExternalEntity(ctx *ExecContext, s *ast.CreateExternalEntityStmt)
 		newEntity.AddAttributes(attr)
 	}
 
-	if err := ctx.Backend.CreateEntityGen(model.ID(dm.ID()), newEntity); err != nil {
+	if err := ctx.DomainModelWriter.CreateEntityGen(model.ID(dm.ID()), newEntity); err != nil {
 		return mdlerrors.NewBackend("create external entity", err)
 	}
 	invalidateDomainModelGenForModule(ctx, module.ID)
@@ -945,7 +949,7 @@ func createODataClient(ctx *ExecContext, stmt *ast.CreateODataClientStmt) error 
 	}
 
 	// Check if client already exists
-	services, err := ctx.Backend.ListConsumedODataServices()
+	services, err := ctx.ServiceLister.ListConsumedODataServices()
 	if err == nil {
 		h, _ := getHierarchy(ctx)
 		for _, svc := range services {
@@ -1023,7 +1027,7 @@ func createODataClient(ctx *ExecContext, stmt *ast.CreateODataClientStmt) error 
 							}
 						}
 					}
-					if err := ctx.Backend.UpdateConsumedODataService(svc); err != nil {
+					if err := ctx.ServiceWriter.UpdateConsumedODataService(svc); err != nil {
 						return mdlerrors.NewBackend("update OData client", err)
 					}
 					invalidateHierarchy(ctx)
@@ -1126,7 +1130,7 @@ Got: %s`, stmt.ServiceUrl)
 		}
 	}
 
-	if err := ctx.Backend.CreateConsumedODataService(newSvc); err != nil {
+	if err := ctx.ServiceWriter.CreateConsumedODataService(newSvc); err != nil {
 		return mdlerrors.NewBackend("create OData client", err)
 	}
 	invalidateHierarchy(ctx)
@@ -1153,7 +1157,7 @@ func alterODataClient(ctx *ExecContext, stmt *ast.AlterODataClientStmt) error {
 		return mdlerrors.NewNotConnectedWrite()
 	}
 
-	services, err := ctx.Backend.ListConsumedODataServices()
+	services, err := ctx.ServiceLister.ListConsumedODataServices()
 	if err != nil {
 		return mdlerrors.NewBackend("list consumed OData services", err)
 	}
@@ -1227,7 +1231,7 @@ func alterODataClient(ctx *ExecContext, stmt *ast.AlterODataClientStmt) error {
 					return mdlerrors.NewUnsupported(fmt.Sprintf("unknown OData client property: %s", key))
 				}
 			}
-			if err := ctx.Backend.UpdateConsumedODataService(svc); err != nil {
+			if err := ctx.ServiceWriter.UpdateConsumedODataService(svc); err != nil {
 				return mdlerrors.NewBackend("alter OData client", err)
 			}
 			invalidateHierarchy(ctx)
@@ -1246,7 +1250,7 @@ func dropODataClient(ctx *ExecContext, stmt *ast.DropODataClientStmt) error {
 		return mdlerrors.NewNotConnectedWrite()
 	}
 
-	services, err := ctx.Backend.ListConsumedODataServices()
+	services, err := ctx.ServiceLister.ListConsumedODataServices()
 	if err != nil {
 		return mdlerrors.NewBackend("list consumed OData services", err)
 	}
@@ -1279,7 +1283,7 @@ func dropODataClient(ctx *ExecContext, stmt *ast.DropODataClientStmt) error {
 				}
 			}
 			for _, entityID := range externalEntityIDs {
-				if err := ctx.Backend.DeleteEntity(model.ID(dm.ID()), entityID); err != nil {
+				if err := ctx.DomainModelWriter.DeleteEntity(model.ID(dm.ID()), entityID); err != nil {
 					return mdlerrors.NewBackend("cascade delete external entity", err)
 				}
 			}
@@ -1287,7 +1291,7 @@ func dropODataClient(ctx *ExecContext, stmt *ast.DropODataClientStmt) error {
 				invalidateDomainModelGenForModule(ctx, module.ID)
 			}
 
-			if err := ctx.Backend.DeleteConsumedODataService(svc.ID); err != nil {
+			if err := ctx.ServiceWriter.DeleteConsumedODataService(svc.ID); err != nil {
 				return mdlerrors.NewBackend("drop OData client", err)
 			}
 			invalidateHierarchy(ctx)
@@ -1316,7 +1320,7 @@ func createODataService(ctx *ExecContext, stmt *ast.CreateODataServiceStmt) erro
 	}
 
 	// Check if service already exists
-	services, err := ctx.Backend.ListPublishedODataServices()
+	services, err := ctx.ServiceLister.ListPublishedODataServices()
 	if err == nil {
 		h, _ := getHierarchy(ctx)
 		for _, svc := range services {
@@ -1350,7 +1354,7 @@ func createODataService(ctx *ExecContext, stmt *ast.CreateODataServiceStmt) erro
 					if len(stmt.AuthenticationTypes) > 0 {
 						svc.AuthenticationTypes = stmt.AuthenticationTypes
 					}
-					if err := ctx.Backend.UpdatePublishedODataService(svc); err != nil {
+					if err := ctx.ServiceWriter.UpdatePublishedODataService(svc); err != nil {
 						return mdlerrors.NewBackend("update OData service", err)
 					}
 					invalidateHierarchy(ctx)
@@ -1394,7 +1398,7 @@ func createODataService(ctx *ExecContext, stmt *ast.CreateODataServiceStmt) erro
 		newSvc.EntitySets = append(newSvc.EntitySets, entitySet)
 	}
 
-	if err := ctx.Backend.CreatePublishedODataService(newSvc); err != nil {
+	if err := ctx.ServiceWriter.CreatePublishedODataService(newSvc); err != nil {
 		return mdlerrors.NewBackend("create OData service", err)
 	}
 	invalidateHierarchy(ctx)
@@ -1409,7 +1413,7 @@ func alterODataService(ctx *ExecContext, stmt *ast.AlterODataServiceStmt) error 
 		return mdlerrors.NewNotConnectedWrite()
 	}
 
-	services, err := ctx.Backend.ListPublishedODataServices()
+	services, err := ctx.ServiceLister.ListPublishedODataServices()
 	if err != nil {
 		return mdlerrors.NewBackend("list published OData services", err)
 	}
@@ -1446,7 +1450,7 @@ func alterODataService(ctx *ExecContext, stmt *ast.AlterODataServiceStmt) error 
 					return mdlerrors.NewUnsupported(fmt.Sprintf("unknown OData service property: %s", key))
 				}
 			}
-			if err := ctx.Backend.UpdatePublishedODataService(svc); err != nil {
+			if err := ctx.ServiceWriter.UpdatePublishedODataService(svc); err != nil {
 				return mdlerrors.NewBackend("alter OData service", err)
 			}
 			invalidateHierarchy(ctx)
@@ -1465,7 +1469,7 @@ func dropODataService(ctx *ExecContext, stmt *ast.DropODataServiceStmt) error {
 		return mdlerrors.NewNotConnectedWrite()
 	}
 
-	services, err := ctx.Backend.ListPublishedODataServices()
+	services, err := ctx.ServiceLister.ListPublishedODataServices()
 	if err != nil {
 		return mdlerrors.NewBackend("list published OData services", err)
 	}
@@ -1479,7 +1483,7 @@ func dropODataService(ctx *ExecContext, stmt *ast.DropODataServiceStmt) error {
 		modID := h.FindModuleID(svc.ContainerID)
 		modName := h.GetModuleName(modID)
 		if strings.EqualFold(modName, stmt.Name.Module) && strings.EqualFold(svc.Name, stmt.Name.Name) {
-			if err := ctx.Backend.DeletePublishedODataService(svc.ID); err != nil {
+			if err := ctx.ServiceWriter.DeletePublishedODataService(svc.ID); err != nil {
 				return mdlerrors.NewBackend("drop OData service", err)
 			}
 			invalidateHierarchy(ctx)
@@ -1523,7 +1527,7 @@ func validateMetadataURL(rawURL string) error {
 // validateODataClientExists returns an error if no consumed OData service matching
 // the given qualified name exists in the project.
 func validateODataClientExists(ctx *ExecContext, ref ast.QualifiedName) error {
-	services, err := ctx.Backend.ListConsumedODataServices()
+	services, err := ctx.ServiceLister.ListConsumedODataServices()
 	if err != nil {
 		return mdlerrors.NewBackend("list consumed OData services", err)
 	}

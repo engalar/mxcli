@@ -1,0 +1,24 @@
+-- ============================================================
+-- 练习 00：第一次 exec
+-- 目标：在 HD 模块中添加一个 Agent 实体
+-- ============================================================
+
+create module HD;
+
+-- 已给你 Customer 实体作为参考
+create or modify persistent entity HD.Customer (
+  Name:  string(200) not null,
+  Email: string(200) not null
+);
+
+-- TODO：创建 HD.Agent 实体，包含以下属性：
+--   Name  (string, 200 字符, 不能为空)
+--   Email (string, 200 字符, 不能为空)
+-- 提示：参考上面 HD.Customer 的写法
+
+-- 你的代码写在这里：
+
+
+-- 验证命令：
+--   mxcli check 练习00-第一次exec.mdl
+--   mxcli exec  练习00-第一次exec.mdl -p MyProject.mpr

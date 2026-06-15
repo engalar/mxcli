@@ -349,7 +349,7 @@ func buildCatalog(ctx *ExecContext, full bool, source ...bool) error {
 	// Without this, the reader's unitCacheValid flag stays true and
 	// ListUnits/listUnitsByType returns stale pre-write data, causing
 	// catalog refs (buildReferences) to miss newly-created microflows.
-	ctx.Backend.InvalidateCache()
+	ctx.MetadataReader.InvalidateCache()
 
 	if !ctx.Quiet {
 		if isSource {
@@ -369,7 +369,7 @@ func buildCatalog(ctx *ExecContext, full bool, source ...bool) error {
 	}
 
 	// Set project metadata
-	version, _ := ctx.Backend.GetMendixVersion()
+	version, _ := ctx.ConnectionManager.GetMendixVersion()
 	cat.SetProject("default", "Current Project", version)
 
 	// Build catalog

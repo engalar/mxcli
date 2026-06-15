@@ -82,7 +82,7 @@ func execMove(ctx *ExecContext, s *ast.MoveStmt) error {
 func updateQualifiedNameRefs(ctx *ExecContext, name ast.QualifiedName, newModule string) error {
 	oldQN := name.String()               // "OldModule.ElementName"
 	newQN := newModule + "." + name.Name // "NewModule.ElementName"
-	updated, err := ctx.Backend.UpdateQualifiedNameInAllUnits(oldQN, newQN)
+	updated, err := ctx.RenameManager.UpdateQualifiedNameInAllUnits(oldQN, newQN)
 	if err != nil {
 		return mdlerrors.NewBackend("update references", err)
 	}
@@ -128,7 +128,7 @@ func moveEntity(ctx *ExecContext, name ast.QualifiedName, sourceModule, targetMo
 	}
 
 	// Move entity via writer (converts associations to CrossAssociations, updates validation rule refs)
-	convertedAssocs, err := ctx.Backend.MoveEntityGen(entity, model.ID(sourceDM.ID()), model.ID(targetDM.ID()), sourceModule.Name, targetModule.Name)
+	convertedAssocs, err := ctx.DomainModelWriter.MoveEntityGen(entity, model.ID(sourceDM.ID()), model.ID(targetDM.ID()), sourceModule.Name, targetModule.Name)
 	if err != nil {
 		return mdlerrors.NewBackend("move entity", err)
 	}
@@ -140,7 +140,7 @@ func moveEntity(ctx *ExecContext, name ast.QualifiedName, sourceModule, targetMo
 		// The SourceDocumentRef was already updated by MoveEntity to use the new module name.
 		// Extract the original doc name (before the module prefix was changed).
 		docName := name.Name // ViewEntitySourceDocument name matches the entity name
-		if err := ctx.Backend.MoveViewEntitySourceDocument(sourceModule.Name, targetModule.ID, docName); err != nil {
+		if err := ctx.DomainModelWriter.MoveViewEntitySourceDocument(sourceModule.Name, targetModule.ID, docName); err != nil {
 			fmt.Fprintf(ctx.Output, "Warning: Could not move ViewEntitySourceDocument: %v\n", err)
 		}
 	}
@@ -148,7 +148,7 @@ func moveEntity(ctx *ExecContext, name ast.QualifiedName, sourceModule, targetMo
 	// Update OQL queries in all ViewEntitySourceDocuments that reference the moved entity
 	oldQualifiedName := name.String()                       // e.g., "DmTest.Customer"
 	newQualifiedName := targetModule.Name + "." + name.Name // e.g., "DmTest2.Customer"
-	if oqlUpdated, err := ctx.Backend.UpdateOqlQueriesForMovedEntity(oldQualifiedName, newQualifiedName); err != nil {
+	if oqlUpdated, err := ctx.DomainModelWriter.UpdateOqlQueriesForMovedEntity(oldQualifiedName, newQualifiedName); err != nil {
 		fmt.Fprintf(ctx.Output, "Warning: Could not update OQL queries: %v\n", err)
 	} else if oqlUpdated > 0 {
 		fmt.Fprintf(ctx.Output, "Updated %d OQL query(ies) referencing %s\n", oqlUpdated, oldQualifiedName)

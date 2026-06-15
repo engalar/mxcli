@@ -74,10 +74,61 @@ type ExecContext struct {
 	context.Context
 
 	// Backend provides all domain operations. Nil when not connected.
+	// Deprecated: All production code has been migrated to role-specific
+	// fields (DomainModelReader, PageWriter, etc.). Only the ImportBuffer
+	// type assertion and some test fixtures still reference this field.
+	// Remove once those are migrated.
 	Backend backend.FullBackend
 
 	// Logger is the session diagnostics logger (nil = no logging).
 	Logger *diaglog.Logger
+
+	// Role-specific backend interfaces. Populated lazily from Backend.
+	// Handler code should use these instead of ctx.Backend when only
+	// one domain is needed.
+	ModuleLister      backend.ModuleLister
+	ModuleWriter      backend.ModuleWriter
+	DomainModelReader backend.DomainModelReader
+	DomainModelWriter backend.DomainModelWriter
+	MicroflowReader   backend.MicroflowReader
+	MicroflowWriter   backend.MicroflowWriter
+	WorkflowReader    backend.WorkflowReader
+	WorkflowWriter    backend.WorkflowWriter
+	PageReader        backend.PageReader
+	PageWriter        backend.PageWriter
+	JavaActionReader  backend.JavaActionReader
+	JavaActionWriter  backend.JavaActionWriter
+	EnumerationReader backend.EnumerationReader
+	EnumerationWriter backend.EnumerationWriter
+	ConstantReader    backend.ConstantReader
+	ConstantWriter    backend.ConstantWriter
+	SettingsReader    backend.SettingsReader
+	SettingsWriter    backend.SettingsWriter
+	MappingReader     backend.MappingReader
+	MappingWriter     backend.MappingWriter
+	UnitReader        backend.UnitReader
+	UnitWriter        backend.UnitWriter
+	NavigationReader  backend.NavigationReader
+	NavigationWriter  backend.NavigationWriter
+	ImageCollectionWriter     backend.ImageCollectionWriter
+	ScheduledEventReader      backend.ScheduledEventReader
+	ServiceLister             backend.ServiceLister
+	ServiceWriter             backend.ServiceWriter
+	MetadataReader            backend.MetadataReader
+	ConnectionManager         backend.ConnectionManager
+	FolderManager             backend.FolderManager
+	ModuleSettingsReader      backend.ModuleSettingsReader
+	ModuleSettingsWriter      backend.ModuleSettingsWriter
+	RenameManager             backend.RenameManager
+	SecurityProjectManager    backend.SecurityProjectManager
+	SecurityModuleManager     backend.SecurityModuleManager
+	SecurityEntityAccessManager backend.SecurityEntityAccessManager
+	PageModelAccess                backend.PageModelAccess
+	PageMutationOperator           backend.PageMutationOperator
+	WorkflowMutationOperator       backend.WorkflowMutationOperator
+	WidgetBuilder                  backend.WidgetBuilder
+	ScriptTransactionManager       backend.ScriptTransactionManager
+	AgentEditorOperator            backend.AgentEditorOperator
 
 	ExecRepos
 	ExecIO
@@ -86,9 +137,61 @@ type ExecContext struct {
 	ExecCallbacks
 }
 
+// initRoles populates the role-specific backend fields from Backend. Safe to
+// call multiple times. Repopulates every call so reconnecting to a new project
+// picks up the new Backend's role interface implementations.
+func (ctx *ExecContext) initRoles() {
+	if ctx.Backend == nil {
+		return
+	}
+	ctx.ModuleLister = ctx.Backend
+	ctx.ModuleWriter = ctx.Backend
+	ctx.DomainModelReader = ctx.Backend
+	ctx.DomainModelWriter = ctx.Backend
+	ctx.MicroflowReader = ctx.Backend
+	ctx.MicroflowWriter = ctx.Backend
+	ctx.WorkflowReader = ctx.Backend
+	ctx.WorkflowWriter = ctx.Backend
+	ctx.PageReader = ctx.Backend
+	ctx.PageWriter = ctx.Backend
+	ctx.JavaActionReader = ctx.Backend
+	ctx.JavaActionWriter = ctx.Backend
+	ctx.EnumerationReader = ctx.Backend
+	ctx.EnumerationWriter = ctx.Backend
+	ctx.ConstantReader = ctx.Backend
+	ctx.ConstantWriter = ctx.Backend
+	ctx.SettingsReader = ctx.Backend
+	ctx.SettingsWriter = ctx.Backend
+	ctx.MappingReader = ctx.Backend
+	ctx.MappingWriter = ctx.Backend
+	ctx.UnitReader = ctx.Backend
+	ctx.UnitWriter = ctx.Backend
+	ctx.NavigationReader = ctx.Backend
+	ctx.NavigationWriter = ctx.Backend
+	ctx.ImageCollectionWriter = ctx.Backend
+	ctx.ScheduledEventReader = ctx.Backend
+	ctx.ServiceLister = ctx.Backend
+	ctx.ServiceWriter = ctx.Backend
+	ctx.MetadataReader = ctx.Backend
+	ctx.ConnectionManager = ctx.Backend
+	ctx.FolderManager = ctx.Backend
+	ctx.ModuleSettingsReader = ctx.Backend
+	ctx.ModuleSettingsWriter = ctx.Backend
+	ctx.RenameManager = ctx.Backend
+	ctx.SecurityProjectManager = ctx.Backend
+	ctx.SecurityModuleManager = ctx.Backend
+	ctx.SecurityEntityAccessManager = ctx.Backend
+	ctx.PageModelAccess = ctx.Backend
+	ctx.PageMutationOperator = ctx.Backend
+	ctx.WorkflowMutationOperator = ctx.Backend
+	ctx.WidgetBuilder = ctx.Backend
+	ctx.ScriptTransactionManager = ctx.Backend
+	ctx.AgentEditorOperator = ctx.Backend
+}
+
 // Connected returns true if a project is connected via the Backend.
 func (ctx *ExecContext) Connected() bool {
-	return ctx.Backend != nil && ctx.Backend.IsConnected()
+	return ctx.Backend != nil && ctx.ConnectionManager.IsConnected()
 }
 
 // ConnectedForWrite returns true if a project is connected and the backend
@@ -135,7 +238,7 @@ func (ctx *ExecContext) ensureCache() {
 // trackModifiedDomainModel records a domain model that was modified during
 // execution, so it can be reconciled at the end of the program.
 func (ctx *ExecContext) trackModifiedDomainModel(moduleID model.ID, moduleName string) {
-	if ctx.Backend == nil || !ctx.Backend.IsConnected() {
+	if ctx.Backend == nil || !ctx.ConnectionManager.IsConnected() {
 		return
 	}
 	ctx.ensureCache()
@@ -242,15 +345,16 @@ func GetHierarchyForMining(ctx *ExecContext) (*ContainerHierarchy, error) {
 
 // getDomainModelGenCached returns the DomainModel for moduleID using
 // executorCache.domainModelByModule as a write-through cache.
-// On miss it calls ctx.Backend.GetDomainModelGen and stores the result.
+// On miss it calls ctx.DomainModelReader.GetDomainModelGen and stores the result.
 func getDomainModelGenCached(ctx *ExecContext, moduleID model.ID) (*genDm.DomainModel, error) {
+	ctx.initRoles()
 	ctx.ensureCache()
 	if ctx.Cache.domainModelByModule != nil {
 		if dm, ok := ctx.Cache.domainModelByModule[moduleID]; ok {
 			return dm, nil
 		}
 	}
-	dm, err := ctx.Backend.GetDomainModelGen(moduleID)
+	dm, err := ctx.DomainModelReader.GetDomainModelGen(moduleID)
 	if err != nil {
 		return nil, err
 	}
@@ -262,7 +366,7 @@ func getDomainModelGenCached(ctx *ExecContext, moduleID model.ID) (*genDm.Domain
 }
 
 // setDomainModelGenCached updates the cached DomainModel for moduleID.
-// Call immediately after ctx.Backend.UpdateDomainModelGen(dm) for write-through.
+// Call immediately after ctx.DomainModelWriter.UpdateDomainModelGen(dm) for write-through.
 func setDomainModelGenCached(ctx *ExecContext, moduleID model.ID, dm *genDm.DomainModel) {
 	ctx.ensureCache()
 	if ctx.Cache.domainModelByModule == nil {

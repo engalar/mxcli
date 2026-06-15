@@ -72,6 +72,7 @@ type FieldData struct {
 	IsEnum       bool   // true for Enum — string from BSON
 	IsEnumList   bool   // true for EnumList — string array from BSON
 	Constructor  string // e.g. "property.NewPrimitive[string](\"name\", property.DecodeString)"
+	DescriptorKind string // PropKind constant for descriptors.go (empty for abstract types)
 }
 
 // EnumData holds template data for one enum type.
@@ -292,6 +293,42 @@ func Generate(meta *dtsparser.DomainMeta, outDir string) error {
 		}
 	}
 
+	// Build descriptor kind metadata for descriptors.go.
+	for ti := range types {
+		td := &types[ti]
+		for fi := range td.Fields {
+			f := &td.Fields[fi]
+			switch {
+			case f.IsPartChild && f.IsList:
+				f.DescriptorKind = "PropKindPartList"
+			case f.IsPartChild:
+				f.DescriptorKind = "PropKindPart"
+			case f.IsRef:
+				f.DescriptorKind = "PropKindByNameRef"
+			case f.IsRefList:
+				f.DescriptorKind = "PropKindByNameList"
+			case f.IsIdRef:
+				f.DescriptorKind = "PropKindByIdRef"
+			case f.IsEnum:
+				f.DescriptorKind = "PropKindEnum"
+			case f.IsEnumList:
+				f.DescriptorKind = "PropKindEnumList"
+			case strings.Contains(f.FieldType, "StringListPrimitive"):
+				f.DescriptorKind = "PropKindStringList"
+			case strings.Contains(f.FieldType, "BinaryUUIDPrimitive"):
+				f.DescriptorKind = "PropKindBinaryUUID"
+			case strings.Contains(f.FieldType, "Primitive[string]"):
+				f.DescriptorKind = "PropKindString"
+			case strings.Contains(f.FieldType, "Primitive[bool]"):
+				f.DescriptorKind = "PropKindBool"
+			case strings.Contains(f.FieldType, "Primitive[int32]"):
+				f.DescriptorKind = "PropKindInt32"
+			case strings.Contains(f.FieldType, "Primitive[float64]"):
+				f.DescriptorKind = "PropKindFloat64"
+			}
+		}
+	}
+
 	// Build enums data.
 	var enums []EnumData
 	for _, e := range meta.Enums {
@@ -384,6 +421,12 @@ func Generate(meta *dtsparser.DomainMeta, outDir string) error {
 	if err := renderFile(filepath.Join(outDir, "refs.go"), refsTemplate,
 		typesFileData{Package: pkg, Types: types}); err != nil {
 		return fmt.Errorf("refs.go: %w", err)
+	}
+
+	// Render descriptors.go
+	if err := renderFile(filepath.Join(outDir, "descriptors.go"), descriptorsTemplate,
+		typesFileData{Package: pkg, Types: types}); err != nil {
+		return fmt.Errorf("descriptors.go: %w", err)
 	}
 
 	return nil
@@ -776,10 +819,11 @@ func reorderFields(td *TypeData, propNames []string) {
 // init validates that templates parse at startup so errors surface early.
 func init() {
 	for name, ts := range map[string]string{
-		"types":   typesTemplate,
-		"enums":   enumsTemplate,
-		"version": versionTemplate,
-		"refs":    refsTemplate,
+		"types":       typesTemplate,
+		"enums":       enumsTemplate,
+		"version":     versionTemplate,
+		"refs":        refsTemplate,
+		"descriptors": descriptorsTemplate,
 	} {
 		if _, err := template.New(name).Parse(ts); err != nil {
 			panic(fmt.Sprintf("emitter: template %q parse error: %v", name, err))

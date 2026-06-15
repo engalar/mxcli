@@ -309,7 +309,7 @@ func loadStructureSharedDataGen(ctx *ExecContext, h *ContainerHierarchy) (
 		dmByModule[modName] = pair.DM
 	}
 
-	allEnums, _ := ctx.Backend.ListEnumerations()
+	allEnums, _ := ctx.EnumerationReader.ListEnumerations()
 	enumsByModule = make(structureEnumMapGen)
 	for _, enum := range allEnums {
 		modID := h.FindModuleID(enum.ContainerID)
@@ -317,7 +317,7 @@ func loadStructureSharedDataGen(ctx *ExecContext, h *ContainerHierarchy) (
 		enumsByModule[modName] = append(enumsByModule[modName], enum)
 	}
 
-	allConstants, _ := ctx.Backend.ListConstants()
+	allConstants, _ := ctx.ConstantReader.ListConstants()
 	constByModule = make(structureConstMapGen)
 	for _, c := range allConstants {
 		modID := h.FindModuleID(c.ContainerID)
@@ -325,7 +325,7 @@ func loadStructureSharedDataGen(ctx *ExecContext, h *ContainerHierarchy) (
 		constByModule[modName] = append(constByModule[modName], c)
 	}
 
-	allEvents, _ := ctx.Backend.ListScheduledEvents()
+	allEvents, _ := ctx.ScheduledEventReader.ListScheduledEvents()
 	eventsByModule = make(structureEventMapGen)
 	for _, ev := range allEvents {
 		modID := h.FindModuleID(ev.ContainerID)

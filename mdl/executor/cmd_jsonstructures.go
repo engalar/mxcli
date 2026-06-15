@@ -16,7 +16,7 @@ import (
 
 // listJsonStructures handles SHOW JSON STRUCTURES [IN module].
 func listJsonStructures(ctx *ExecContext, moduleName string) error {
-	structures, err := ctx.Backend.ListJsonStructures()
+	structures, err := ctx.MappingReader.ListJsonStructures()
 	if err != nil {
 		return mdlerrors.NewBackend("list json structures", err)
 	}
@@ -220,12 +220,12 @@ func execCreateJsonStructure(ctx *ExecContext, s *ast.CreateJsonStructureStmt) e
 
 	if existing != nil {
 		js.ID = existing.ID
-		if err := ctx.Backend.UpdateJsonStructure(js); err != nil {
+		if err := ctx.MappingWriter.UpdateJsonStructure(js); err != nil {
 			return mdlerrors.NewBackend("update json structure", err)
 		}
 		fmt.Fprintf(ctx.Output, "Modified json structure: %s\n", s.Name)
 	} else {
-		if err := ctx.Backend.CreateJsonStructure(js); err != nil {
+		if err := ctx.MappingWriter.CreateJsonStructure(js); err != nil {
 			return mdlerrors.NewBackend("create json structure", err)
 		}
 		fmt.Fprintf(ctx.Output, "Created json structure: %s\n", s.Name)
@@ -247,7 +247,7 @@ func execDropJsonStructure(ctx *ExecContext, s *ast.DropJsonStructureStmt) error
 		return mdlerrors.NewNotFound("json structure", s.Name.String())
 	}
 
-	if err := ctx.Backend.DeleteJsonStructure(string(js.ID)); err != nil {
+	if err := ctx.MappingWriter.DeleteJsonStructure(string(js.ID)); err != nil {
 		return mdlerrors.NewBackend("delete json structure", err)
 	}
 
@@ -257,7 +257,7 @@ func execDropJsonStructure(ctx *ExecContext, s *ast.DropJsonStructureStmt) error
 
 // findJsonStructure finds a JSON structure by module and name.
 func findJsonStructure(ctx *ExecContext, moduleName, structName string) *types.JsonStructure {
-	structures, err := ctx.Backend.ListJsonStructures()
+	structures, err := ctx.MappingReader.ListJsonStructures()
 	if err != nil {
 		return nil
 	}

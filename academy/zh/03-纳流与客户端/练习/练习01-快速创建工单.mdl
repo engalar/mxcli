@@ -1,0 +1,25 @@
+-- ============================================================
+-- 练习 01：快速创建工单纳流
+-- 前提：先运行 01-领域建模/参考实现/domain-model.mdl
+-- 目标：补全 NF_Ticket_QuickCreate 的缺失部分
+-- ============================================================
+
+create or modify nanoflow HD.NF_Ticket_QuickCreate
+  ($Customer: HD.Customer, $Subject: string)
+  returns HD.Ticket as $Ticket
+  folder 'Ticket'
+{
+  -- TODO 1：用 create 创建工单对象
+  -- 要求：Subject = $Subject, Status = Draft, Priority = Normal
+  -- 用 HD.Ticket_Customer = $Customer 设置关联
+  -- 提示：$Ticket = create HD.Ticket ( ... );
+
+  -- TODO 2：commit $Ticket
+
+  -- TODO 3：return $Ticket
+}
+/
+
+-- 验证命令：
+--   mxcli check 练习01-快速创建工单.mdl
+--   mxcli exec  练习01-快速创建工单.mdl -p MyProject.mpr

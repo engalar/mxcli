@@ -54,7 +54,7 @@ func translateDocument(ctx *ExecContext, stmt *ast.TranslateStmt) error {
 // before translating, rather than silently writing a translation for a language
 // Studio Pro will not display.
 func requireRegisteredLanguage(ctx *ExecContext, lang string) error {
-	ps, err := ctx.Backend.GetProjectSettings()
+	ps, err := ctx.SettingsReader.GetProjectSettings()
 	if err != nil {
 		return mdlerrors.NewBackend("read project settings", err)
 	}
@@ -87,7 +87,7 @@ func translatePage(ctx *ExecContext, stmt *ast.TranslateStmt, containerType stri
 		return err
 	}
 
-	mutator, err := ctx.Backend.OpenPageForMutation(unitID)
+	mutator, err := ctx.PageMutationOperator.OpenPageForMutation(unitID)
 	if err != nil {
 		return mdlerrors.NewBackend("open "+containerType+" for mutation", err)
 	}
@@ -117,7 +117,7 @@ func translateEnumeration(ctx *ExecContext, stmt *ast.TranslateStmt) error {
 			return mdlerrors.NewValidationf(
 				"invalid enumeration path %q: expected ValueName.caption", op.Path)
 		}
-		if err := ctx.Backend.SetEnumerationTranslation(
+		if err := ctx.SettingsWriter.SetEnumerationTranslation(
 			stmt.QName.String(), valueName, stmt.Lang, op.Text); err != nil {
 			return mdlerrors.NewBackend("translate enumeration value "+valueName, err)
 		}
@@ -146,7 +146,7 @@ func translateMicroflowStmt(ctx *ExecContext, stmt *ast.TranslateMicroflowStmt) 
 
 	docQN := stmt.QName.String()
 	for _, op := range stmt.Ops {
-		if err := ctx.Backend.SetMicroflowActionTranslation(
+		if err := ctx.SettingsWriter.SetMicroflowActionTranslation(
 			docQN, op.ActionType, op.Index, op.Property, stmt.Lang, op.Text); err != nil {
 			return mdlerrors.NewBackend(
 				fmt.Sprintf("translate %s[%d].%s", op.ActionType, op.Index, op.Property), err)
@@ -195,7 +195,7 @@ func translateNavigation(ctx *ExecContext, stmt *ast.TranslateStmt) error {
 				"invalid navigation property %q: only 'caption' is supported", property)
 		}
 		menuPath := strings.Split(op.Path[:lastDot], ".")
-		if err := ctx.Backend.SetNavigationCaptionTranslation(profileName, menuPath, stmt.Lang, op.Text); err != nil {
+		if err := ctx.SettingsWriter.SetNavigationCaptionTranslation(profileName, menuPath, stmt.Lang, op.Text); err != nil {
 			return mdlerrors.NewBackend("translate navigation", err)
 		}
 	}

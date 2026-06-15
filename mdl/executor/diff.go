@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"reflect"
 	"strings"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
@@ -145,24 +146,26 @@ func (e *Executor) DiffProgram(prog *ast.Program, opts DiffOptions) error {
 	return diffProgram(e.newExecContext(context.Background()), prog, opts)
 }
 
+// diffHandler is a function that computes a diff for a specific statement type.
+type diffHandler func(ctx *ExecContext, stmt ast.Statement) (*DiffResult, error)
+
+// diffDispatch maps concrete statement types to their diff functions.
+var diffDispatch = map[reflect.Type]diffHandler{
+	reflect.TypeOf(&ast.CreateEntityStmt{}):      func(ctx *ExecContext, stmt ast.Statement) (*DiffResult, error) { return diffEntity(ctx, stmt.(*ast.CreateEntityStmt)) },
+	reflect.TypeOf(&ast.CreateViewEntityStmt{}):  func(ctx *ExecContext, stmt ast.Statement) (*DiffResult, error) { return diffViewEntity(ctx, stmt.(*ast.CreateViewEntityStmt)) },
+	reflect.TypeOf(&ast.CreateEnumerationStmt{}): func(ctx *ExecContext, stmt ast.Statement) (*DiffResult, error) { return diffEnumeration(ctx, stmt.(*ast.CreateEnumerationStmt)) },
+	reflect.TypeOf(&ast.CreateAssociationStmt{}): func(ctx *ExecContext, stmt ast.Statement) (*DiffResult, error) { return diffAssociation(ctx, stmt.(*ast.CreateAssociationStmt)) },
+	reflect.TypeOf(&ast.CreateMicroflowStmt{}):   func(ctx *ExecContext, stmt ast.Statement) (*DiffResult, error) { return diffMicroflow(ctx, stmt.(*ast.CreateMicroflowStmt)) },
+	reflect.TypeOf(&ast.CreateNanoflowStmt{}):    func(ctx *ExecContext, stmt ast.Statement) (*DiffResult, error) { return diffNanoflow(ctx, stmt.(*ast.CreateNanoflowStmt)) },
+}
+
 // diffStatement generates a diff result for a single statement
 func diffStatement(ctx *ExecContext, stmt ast.Statement) (*DiffResult, error) {
-	switch s := stmt.(type) {
-	case *ast.CreateEntityStmt:
-		return diffEntity(ctx, s)
-	case *ast.CreateViewEntityStmt:
-		return diffViewEntity(ctx, s)
-	case *ast.CreateEnumerationStmt:
-		return diffEnumeration(ctx, s)
-	case *ast.CreateAssociationStmt:
-		return diffAssociation(ctx, s)
-	case *ast.CreateMicroflowStmt:
-		return diffMicroflow(ctx, s)
-	case *ast.CreateNanoflowStmt:
-		return diffNanoflow(ctx, s)
-	default:
+	h, ok := diffDispatch[reflect.TypeOf(stmt)]
+	if !ok {
 		return nil, nil // Skip unsupported statements
 	}
+	return h(ctx, stmt)
 }
 
 // diffEntity compares a CREATE ENTITY statement against the project

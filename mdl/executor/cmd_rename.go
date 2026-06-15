@@ -86,7 +86,7 @@ func execRenameEntity(ctx *ExecContext, s *ast.RenameStmt) error {
 	newQualifiedName := s.Name.Module + "." + s.NewName
 
 	// Scan for references
-	hits, err := ctx.Backend.RenameReferences(oldQualifiedName, newQualifiedName, s.DryRun)
+	hits, err := ctx.RenameManager.RenameReferences(oldQualifiedName, newQualifiedName, s.DryRun)
 	if err != nil {
 		return mdlerrors.NewBackend("scan references", err)
 	}
@@ -107,7 +107,7 @@ func execRenameEntity(ctx *ExecContext, s *ast.RenameStmt) error {
 			break
 		}
 	}
-	if err := ctx.Backend.UpdateDomainModelGen(dm); err != nil {
+	if err := ctx.DomainModelWriter.UpdateDomainModelGen(dm); err != nil {
 		return mdlerrors.NewBackend("update entity name", err)
 	}
 	setDomainModelGenCached(ctx, module.ID, dm)
@@ -134,13 +134,13 @@ func execRenameModule(ctx *ExecContext, s *ast.RenameStmt) error {
 
 	// Scan for all references with the old module prefix
 	// Module rename replaces "OldModule." with "NewModule." in all qualified names
-	hits, err := ctx.Backend.RenameReferences(oldModuleName+".", newModuleName+".", s.DryRun)
+	hits, err := ctx.RenameManager.RenameReferences(oldModuleName+".", newModuleName+".", s.DryRun)
 	if err != nil {
 		return mdlerrors.NewBackend("scan references", err)
 	}
 
 	// Also scan for exact module name matches (e.g., in navigation, security role refs)
-	exactHits, err := ctx.Backend.RenameReferences(oldModuleName, newModuleName, s.DryRun)
+	exactHits, err := ctx.RenameManager.RenameReferences(oldModuleName, newModuleName, s.DryRun)
 	if err != nil {
 		return mdlerrors.NewBackend("scan exact module references", err)
 	}
@@ -155,7 +155,7 @@ func execRenameModule(ctx *ExecContext, s *ast.RenameStmt) error {
 
 	// Update the module name
 	module.Name = newModuleName
-	if err := ctx.Backend.UpdateModule(module); err != nil {
+	if err := ctx.ModuleWriter.UpdateModule(module); err != nil {
 		return mdlerrors.NewBackend("update module name", err)
 	}
 
@@ -238,7 +238,7 @@ func execRenameDocument(ctx *ExecContext, s *ast.RenameStmt, docType string) err
 			}
 		}
 	case "constant":
-		cs, _ := ctx.Backend.ListConstants()
+		cs, _ := ctx.ConstantReader.ListConstants()
 		for _, c := range cs {
 			modID := h.FindModuleID(c.ContainerID)
 			if h.GetModuleName(modID) != s.Name.Module {
@@ -280,7 +280,7 @@ func execRenameDocument(ctx *ExecContext, s *ast.RenameStmt, docType string) err
 	// simple name (e.g., "OldName"), not the qualified name. So we need to
 	// handle it separately — the scanner updates cross-references, and we
 	// update the Name field directly.
-	hits, err := ctx.Backend.RenameReferences(oldQualifiedName, newQualifiedName, s.DryRun)
+	hits, err := ctx.RenameManager.RenameReferences(oldQualifiedName, newQualifiedName, s.DryRun)
 	if err != nil {
 		return mdlerrors.NewBackend("scan references", err)
 	}
@@ -291,7 +291,7 @@ func execRenameDocument(ctx *ExecContext, s *ast.RenameStmt, docType string) err
 	}
 
 	// Update the document's own Name field via the raw BSON name updater
-	if err := ctx.Backend.RenameDocumentByName(s.Name.Module, s.Name.Name, s.NewName); err != nil {
+	if err := ctx.RenameManager.RenameDocumentByName(s.Name.Module, s.Name.Name, s.NewName); err != nil {
 		return mdlerrors.NewBackend(fmt.Sprintf("rename %s", docType), err)
 	}
 
@@ -311,7 +311,7 @@ func execRenameEnumeration(ctx *ExecContext, s *ast.RenameStmt) error {
 	newQualifiedName := s.Name.Module + "." + s.NewName
 
 	// Verify it exists
-	enums, err := ctx.Backend.ListEnumerations()
+	enums, err := ctx.EnumerationReader.ListEnumerations()
 	if err != nil {
 		return mdlerrors.NewBackend("list enumerations", err)
 	}
@@ -339,7 +339,7 @@ func execRenameEnumeration(ctx *ExecContext, s *ast.RenameStmt) error {
 		return mdlerrors.NewValidationf("enumeration %s already exists in module %s", s.NewName, s.Name.Module)
 	}
 
-	hits, err := ctx.Backend.RenameReferences(oldQualifiedName, newQualifiedName, s.DryRun)
+	hits, err := ctx.RenameManager.RenameReferences(oldQualifiedName, newQualifiedName, s.DryRun)
 	if err != nil {
 		return mdlerrors.NewBackend("scan references", err)
 	}
@@ -350,12 +350,12 @@ func execRenameEnumeration(ctx *ExecContext, s *ast.RenameStmt) error {
 	}
 
 	// Update enumeration name via raw BSON
-	if err := ctx.Backend.RenameDocumentByName(s.Name.Module, s.Name.Name, s.NewName); err != nil {
+	if err := ctx.RenameManager.RenameDocumentByName(s.Name.Module, s.Name.Name, s.NewName); err != nil {
 		return mdlerrors.NewBackend("rename enumeration", err)
 	}
 
 	// Also update enumeration refs in domain models (attribute types store qualified enum names)
-	if err := ctx.Backend.UpdateEnumerationRefsInAllDomainModels(oldQualifiedName, newQualifiedName); err != nil {
+	if err := ctx.DomainModelWriter.UpdateEnumerationRefsInAllDomainModels(oldQualifiedName, newQualifiedName); err != nil {
 		fmt.Fprintf(ctx.Output, "Warning: failed to update enumeration references in domain models: %v\n", err)
 	}
 
@@ -407,7 +407,7 @@ func execRenameAssociation(ctx *ExecContext, s *ast.RenameStmt) error {
 		return mdlerrors.NewValidationf("association %s already exists in module %s", s.NewName, s.Name.Module)
 	}
 
-	hits, err := ctx.Backend.RenameReferences(oldQualifiedName, newQualifiedName, s.DryRun)
+	hits, err := ctx.RenameManager.RenameReferences(oldQualifiedName, newQualifiedName, s.DryRun)
 	if err != nil {
 		return mdlerrors.NewBackend("scan references", err)
 	}
@@ -428,7 +428,7 @@ func execRenameAssociation(ctx *ExecContext, s *ast.RenameStmt) error {
 			break
 		}
 	}
-	if err := ctx.Backend.UpdateDomainModelGen(dm); err != nil {
+	if err := ctx.DomainModelWriter.UpdateDomainModelGen(dm); err != nil {
 		return mdlerrors.NewBackend("update association name", err)
 	}
 	setDomainModelGenCached(ctx, module.ID, dm)
@@ -494,7 +494,7 @@ func execRenameJavaAction(ctx *ExecContext, s *ast.RenameStmt) error {
 		return mdlerrors.NewValidationf("java action %s already exists in module %s", s.NewName, s.Name.Module)
 	}
 
-	hits, err := ctx.Backend.RenameReferences(oldQualifiedName, newQualifiedName, s.DryRun)
+	hits, err := ctx.RenameManager.RenameReferences(oldQualifiedName, newQualifiedName, s.DryRun)
 	if err != nil {
 		return mdlerrors.NewBackend("scan references", err)
 	}
@@ -504,10 +504,10 @@ func execRenameJavaAction(ctx *ExecContext, s *ast.RenameStmt) error {
 		return nil
 	}
 
-	if err := ctx.Backend.RenameDocumentByName(s.Name.Module, s.Name.Name, s.NewName); err != nil {
+	if err := ctx.RenameManager.RenameDocumentByName(s.Name.Module, s.Name.Name, s.NewName); err != nil {
 		return mdlerrors.NewBackend("rename java action", err)
 	}
-	if err := ctx.Backend.RenameJavaSourceFile(s.Name.Module, s.Name.Name, s.NewName); err != nil {
+	if err := ctx.JavaActionWriter.RenameJavaSourceFile(s.Name.Module, s.Name.Name, s.NewName); err != nil {
 		return mdlerrors.NewBackend("rename java source file", err)
 	}
 

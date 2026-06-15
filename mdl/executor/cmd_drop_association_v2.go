@@ -36,7 +36,7 @@ func execDropAssociationGen(ctx *ExecContext, s *ast.DropAssociationStmt) error 
 		if !ok || assoc.Name() != s.Name.Name {
 			continue
 		}
-		if err := ctx.Backend.DeleteAssociation(model.ID(dm.ID()), model.ID(assoc.ID())); err != nil {
+		if err := ctx.DomainModelWriter.DeleteAssociation(model.ID(dm.ID()), model.ID(assoc.ID())); err != nil {
 			return mdlerrors.NewBackend("delete association", err)
 		}
 		invalidateDomainModelGenForModule(ctx, module.ID)
@@ -51,7 +51,7 @@ func execDropAssociationGen(ctx *ExecContext, s *ast.DropAssociationStmt) error 
 		if !ok || assoc.Name() != s.Name.Name {
 			continue
 		}
-		if err := ctx.Backend.DeleteCrossAssociation(model.ID(dm.ID()), model.ID(assoc.ID())); err != nil {
+		if err := ctx.DomainModelWriter.DeleteCrossAssociation(model.ID(dm.ID()), model.ID(assoc.ID())); err != nil {
 			return mdlerrors.NewBackend("delete cross-module association", err)
 		}
 		invalidateDomainModelGenForModule(ctx, module.ID)

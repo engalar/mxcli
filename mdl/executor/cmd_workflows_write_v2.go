@@ -27,6 +27,7 @@ package executor
 
 import (
 	"fmt"
+	"reflect"
 	"strings"
 	"unicode"
 
@@ -52,7 +53,7 @@ type wfBuildCtx struct {
 func newWfBuildCtx(ctx *ExecContext) *wfBuildCtx {
 	wbc := &wfBuildCtx{}
 	if ctx != nil && ctx.Connected() {
-		if rpv := ctx.Backend.ProjectVersion(); rpv != nil {
+		if rpv := ctx.ConnectionManager.ProjectVersion(); rpv != nil {
 			wbc.version = version.Parse(rpv.ProductVersion)
 		}
 	}
@@ -73,31 +74,32 @@ func buildWorkflowActivitiesGen(wbc *wfBuildCtx, nodes []ast.WorkflowActivityNod
 	return out
 }
 
+// wfActivityHandler is a gen-typed builder for a specific WorkflowActivityNode type.
+type wfActivityHandler func(wbc *wfBuildCtx, node ast.WorkflowActivityNode) element.Element
+
+var wfActivityDispatch map[reflect.Type]wfActivityHandler
+
+func init() {
+	wfActivityDispatch = map[reflect.Type]wfActivityHandler{
+		reflect.TypeOf(&ast.WorkflowJumpToNode{}):             func(wbc *wfBuildCtx, node ast.WorkflowActivityNode) element.Element { return buildJumpToGenActivity(node.(*ast.WorkflowJumpToNode)) },
+		reflect.TypeOf(&ast.WorkflowWaitForTimerNode{}):       func(wbc *wfBuildCtx, node ast.WorkflowActivityNode) element.Element { return buildWaitForTimerGenActivity(node.(*ast.WorkflowWaitForTimerNode)) },
+		reflect.TypeOf(&ast.WorkflowWaitForNotificationNode{}): func(wbc *wfBuildCtx, node ast.WorkflowActivityNode) element.Element { return buildWaitForNotificationGenActivity(wbc, node.(*ast.WorkflowWaitForNotificationNode)) },
+		reflect.TypeOf(&ast.WorkflowEndNode{}):                func(wbc *wfBuildCtx, node ast.WorkflowActivityNode) element.Element { return buildEndWorkflowGenActivity(node.(*ast.WorkflowEndNode)) },
+		reflect.TypeOf(&ast.WorkflowAnnotationActivityNode{}): func(wbc *wfBuildCtx, node ast.WorkflowActivityNode) element.Element { return buildAnnotationActivityGen(node.(*ast.WorkflowAnnotationActivityNode)) },
+		reflect.TypeOf(&ast.WorkflowUserTaskNode{}):           func(wbc *wfBuildCtx, node ast.WorkflowActivityNode) element.Element { return buildUserTaskGenActivity(wbc, node.(*ast.WorkflowUserTaskNode)) },
+		reflect.TypeOf(&ast.WorkflowCallMicroflowNode{}):      func(wbc *wfBuildCtx, node ast.WorkflowActivityNode) element.Element { return buildCallMicroflowGenActivity(wbc, node.(*ast.WorkflowCallMicroflowNode)) },
+		reflect.TypeOf(&ast.WorkflowCallWorkflowNode{}):       func(wbc *wfBuildCtx, node ast.WorkflowActivityNode) element.Element { return buildCallWorkflowGenActivity(wbc, node.(*ast.WorkflowCallWorkflowNode)) },
+		reflect.TypeOf(&ast.WorkflowDecisionNode{}):           func(wbc *wfBuildCtx, node ast.WorkflowActivityNode) element.Element { return buildExclusiveSplitGenActivity(wbc, node.(*ast.WorkflowDecisionNode)) },
+		reflect.TypeOf(&ast.WorkflowParallelSplitNode{}):      func(wbc *wfBuildCtx, node ast.WorkflowActivityNode) element.Element { return buildParallelSplitGenActivity(wbc, node.(*ast.WorkflowParallelSplitNode)) },
+	}
+}
+
 // buildWorkflowActivityGen dispatches a single AST node to its concrete
 // gen-typed builder. Composite builders (UserTask, CallMicroflow, …)
 // land in D1.b/c/d sub-commits; leaf cases are wired here in D1.a.
 func buildWorkflowActivityGen(wbc *wfBuildCtx, node ast.WorkflowActivityNode) element.Element {
-	switch n := node.(type) {
-	case *ast.WorkflowJumpToNode:
-		return buildJumpToGenActivity(n)
-	case *ast.WorkflowWaitForTimerNode:
-		return buildWaitForTimerGenActivity(n)
-	case *ast.WorkflowWaitForNotificationNode:
-		return buildWaitForNotificationGenActivity(wbc, n)
-	case *ast.WorkflowEndNode:
-		return buildEndWorkflowGenActivity(n)
-	case *ast.WorkflowAnnotationActivityNode:
-		return buildAnnotationActivityGen(n)
-	case *ast.WorkflowUserTaskNode:
-		return buildUserTaskGenActivity(wbc, n)
-	case *ast.WorkflowCallMicroflowNode:
-		return buildCallMicroflowGenActivity(wbc, n)
-	case *ast.WorkflowCallWorkflowNode:
-		return buildCallWorkflowGenActivity(wbc, n)
-	case *ast.WorkflowDecisionNode:
-		return buildExclusiveSplitGenActivity(wbc, n)
-	case *ast.WorkflowParallelSplitNode:
-		return buildParallelSplitGenActivity(wbc, n)
+	if h, ok := wfActivityDispatch[reflect.TypeOf(node)]; ok {
+		return h(wbc, node)
 	}
 	return nil
 }
@@ -848,12 +850,12 @@ func execCreateWorkflowGen(ctx *ExecContext, s *ast.CreateWorkflowStmt) error {
 		// In-place update: preserve UnitID so references and BSON git-diff
 		// stay stable.
 		wf.SetID(element.ID(existingID))
-		if err := ctx.Backend.UpdateWorkflowGen(wf); err != nil {
+		if err := ctx.WorkflowWriter.UpdateWorkflowGen(wf); err != nil {
 			return mdlerrors.NewBackend("update workflow", err)
 		}
 	} else {
 		// New unit: gen Create generates a fresh UnitID.
-		if err := ctx.Backend.CreateWorkflowGen(string(module.ID), "Documents", wf); err != nil {
+		if err := ctx.WorkflowWriter.CreateWorkflowGen(string(module.ID), "Documents", wf); err != nil {
 			return mdlerrors.NewBackend("create workflow", err)
 		}
 	}
@@ -1159,7 +1161,7 @@ func execDropWorkflowGen(ctx *ExecContext, s *ast.DropWorkflowStmt) error {
 		modID := h.FindModuleID(model.ID(p.ContainerID))
 		modName := h.GetModuleName(modID)
 		if modName == s.Name.Module && p.Elem.Name() == s.Name.Name {
-			if err := ctx.Backend.DeleteWorkflow(model.ID(p.Elem.ID())); err != nil {
+			if err := ctx.WorkflowWriter.DeleteWorkflow(model.ID(p.Elem.ID())); err != nil {
 				return mdlerrors.NewBackend("delete workflow", err)
 			}
 			invalidateHierarchy(ctx)

@@ -20,23 +20,16 @@ import (
 	"github.com/mendixlabs/mxcli/modelsdk/codec"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
 	genBE "github.com/mendixlabs/mxcli/modelsdk/gen/businessevents"
-	genConst "github.com/mendixlabs/mxcli/modelsdk/gen/constants"
 	genDBC "github.com/mendixlabs/mxcli/modelsdk/gen/databaseconnector"
 	genDTrans "github.com/mendixlabs/mxcli/modelsdk/gen/datatransformers"
 	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
-	genEnum "github.com/mendixlabs/mxcli/modelsdk/gen/enumerations"
-	genExpMap "github.com/mendixlabs/mxcli/modelsdk/gen/exportmappings"
-	genImpMap "github.com/mendixlabs/mxcli/modelsdk/gen/importmappings"
 	genJA "github.com/mendixlabs/mxcli/modelsdk/gen/javaactions"
 	genJSA "github.com/mendixlabs/mxcli/modelsdk/gen/javascriptactions"
-	genJson "github.com/mendixlabs/mxcli/modelsdk/gen/jsonstructures"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 	genPg "github.com/mendixlabs/mxcli/modelsdk/gen/pages"
 	genProj "github.com/mendixlabs/mxcli/modelsdk/gen/projects"
-	genSched "github.com/mendixlabs/mxcli/modelsdk/gen/scheduledevents"
 	genSec "github.com/mendixlabs/mxcli/modelsdk/gen/security"
 	genWf "github.com/mendixlabs/mxcli/modelsdk/gen/workflows"
-	"github.com/mendixlabs/mxcli/modelsdk/meta"
 	modelsdkmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
 	"github.com/mendixlabs/mxcli/modelsdk/mprread"
 	mdlversion "github.com/mendixlabs/mxcli/modelsdk/version"
@@ -67,18 +60,34 @@ type MprBackend struct {
 	// transactions; the whole script commits atomically via a single BatchWrite
 	// at the end — see backend.ScriptTransaction.
 	scriptBuf *ScriptBuffer
-
 	// unitBuf is non-nil when an ImportSession is active.
 	// writeUnitContents routes writes through the buffer instead of opening
 	// individual SQLite transactions. Reads are satisfied from the overlay.
 	unitBuf *unitstore.BufferedUnitStore
-
 	// widgetTypeCache is non-nil during a page build (BeginPageBuild..EndPageBuild).
 	// It maps widgetID → widgetTypeCacheEntry, enabling one CustomWidgets$CustomWidgetType
 	// schema to be shared across all instances of the same widget type on a page.
 	// This matches Studio Pro's canonical format and reduces page BSON size by up to 50%
 	// on pages with multiple same-type filter widgets.
 	widgetTypeCache map[string]*widgetTypeCacheEntry
+
+	// Domain-specific sub-backends. Populated lazily after Connect().
+	// These extract method groups into focused types as part of the
+	// MprBackend facade decomposition (Phase 3).
+	modules          *moduleBackend
+	microflows       *microflowBackend
+	workflows        *workflowBackend
+	pages            *pageBackend
+	java             *javaBackend
+	domainmodels     *domainModelBackend
+	security         *securityBackend
+	folders          *folderBackend
+	scheduledEvents  *scheduledEventBackend
+	enumerations     *enumerationBackend
+	constants        *constantBackend
+	rawUnits         *rawUnitBackend
+	metadata         *metadataBackend
+	mappings         *mappingBackend
 }
 
 // widgetTypeCacheEntry holds the per-page cached type schema for one widget type.
@@ -149,7 +158,82 @@ func (b *MprBackend) Connect(path string) error {
 	b.msdkReader = r
 	b.msdkWriter = mw
 	b.path = path
+	b.modules = newModuleBackend(r)
+	b.microflows = newMicroflowBackend(mw)
+	b.workflows = newWorkflowBackend(mw)
+	b.pages = newPageBackend(mw)
+	b.java = newJavaBackend(mw)
+	b.domainmodels = newDomainModelBackend(mw)
+	b.security = newSecurityBackend(mw)
+	b.folders = newFolderBackend(r)
+	b.scheduledEvents = newScheduledEventBackend(r)
+	b.enumerations = newEnumerationBackend(r)
+	b.constants = newConstantBackend(r)
+	b.rawUnits = newRawUnitBackend(r, mw)
+	b.metadata = newMetadataBackend(r)
+	b.mappings = newMappingBackend(r)
 	return nil
+}
+
+// initSubBackends lazily initialises domain-specific sub-backends.
+// Safe to call multiple times.
+func (b *MprBackend) initSubBackends() {
+	if b.reader != nil {
+		if b.modules == nil {
+			b.modules = newModuleBackend(b.reader)
+		}
+		if b.folders == nil {
+			b.folders = newFolderBackend(b.reader)
+		}
+		if b.scheduledEvents == nil {
+			b.scheduledEvents = newScheduledEventBackend(b.reader)
+		}
+		if b.enumerations == nil {
+			b.enumerations = newEnumerationBackend(b.reader)
+		}
+		if b.constants == nil {
+			b.constants = newConstantBackend(b.reader)
+		}
+		if b.rawUnits == nil && b.msdkWriter != nil {
+			b.rawUnits = newRawUnitBackend(b.reader, b.msdkWriter)
+		}
+		if b.metadata == nil {
+			b.metadata = newMetadataBackend(b.reader)
+		}
+		if b.mappings == nil {
+			b.mappings = newMappingBackend(b.reader)
+		}
+		if b.microflows == nil && b.msdkWriter != nil {
+			if w, ok := b.msdkWriter.(*modelsdkmpr.Writer); ok {
+				b.microflows = newMicroflowBackend(w)
+			}
+		}
+		if b.workflows == nil && b.msdkWriter != nil {
+			if w, ok := b.msdkWriter.(*modelsdkmpr.Writer); ok {
+				b.workflows = newWorkflowBackend(w)
+			}
+		}
+		if b.pages == nil && b.msdkWriter != nil {
+			if w, ok := b.msdkWriter.(*modelsdkmpr.Writer); ok {
+				b.pages = newPageBackend(w)
+			}
+		}
+		if b.java == nil && b.msdkWriter != nil {
+			if w, ok := b.msdkWriter.(*modelsdkmpr.Writer); ok {
+				b.java = newJavaBackend(w)
+			}
+		}
+		if b.domainmodels == nil && b.msdkWriter != nil {
+			if w, ok := b.msdkWriter.(*modelsdkmpr.Writer); ok {
+				b.domainmodels = newDomainModelBackend(w)
+			}
+		}
+		if b.security == nil && b.msdkWriter != nil {
+			if w, ok := b.msdkWriter.(*modelsdkmpr.Writer); ok {
+				b.security = newSecurityBackend(w)
+			}
+		}
+	}
 }
 
 func (b *MprBackend) Disconnect() error {
@@ -186,41 +270,20 @@ func (b *MprBackend) GetMendixVersion() (string, error) { return b.msdkReader.Ge
 func (b *MprBackend) Commit() error { return nil }
 
 // ---------------------------------------------------------------------------
-// ModuleBackend
+// ModuleBackend — reads delegate to moduleBackend, writes stay on MprBackend
 // ---------------------------------------------------------------------------
 
 func (b *MprBackend) ListModules() ([]*model.Module, error) {
-	units, err := mprread.ListModules(b.msdkReader)
-	if err != nil {
-		return nil, err
-	}
-	mods := moduleUnitsToModel(units)
-	mods = append(mods, buildSystemModuleForBackend())
-	return mods, nil
+	b.initSubBackends()
+	return b.modules.ListModules()
 }
 func (b *MprBackend) GetModule(id model.ID) (*model.Module, error) {
-	mods, err := b.ListModules()
-	if err != nil {
-		return nil, err
-	}
-	for _, m := range mods {
-		if m.ID == id {
-			return m, nil
-		}
-	}
-	return nil, fmt.Errorf("module not found: %s", id)
+	b.initSubBackends()
+	return b.modules.GetModule(id)
 }
 func (b *MprBackend) GetModuleByName(name string) (*model.Module, error) {
-	mods, err := b.ListModules()
-	if err != nil {
-		return nil, err
-	}
-	for _, m := range mods {
-		if m.Name == name {
-			return m, nil
-		}
-	}
-	return nil, fmt.Errorf("module not found: %s", name)
+	b.initSubBackends()
+	return b.modules.GetModuleByName(name)
 }
 func (b *MprBackend) CreateModule(module *model.Module) error {
 	return b.createModuleViaModelsdk(module)
@@ -265,11 +328,8 @@ func (b *MprBackend) UpdateModuleSettings(ms *types.ModuleSettings) error {
 // ---------------------------------------------------------------------------
 
 func (b *MprBackend) ListFolders() ([]*types.FolderInfo, error) {
-	units, err := mprread.ListFolders(b.msdkReader)
-	if err != nil {
-		return nil, err
-	}
-	return folderUnitsToTypes(units), nil
+	b.initSubBackends()
+	return b.folders.ListFolders()
 }
 func (b *MprBackend) CreateFolder(folder *model.Folder) error {
 	return b.createFolderViaModelsdk(folder)
@@ -310,6 +370,9 @@ func (b *MprBackend) DeleteViewEntitySourceDocument(id model.ID) error {
 func (b *MprBackend) DeleteViewEntitySourceDocumentByName(moduleName, docName string) error {
 	return b.deleteViewEntitySourceDocumentByNameViaModelsdk(moduleName, docName)
 }
+func (b *MprBackend) UpdateViewEntitySourceDocument(moduleName, docName, oqlQuery, documentation string) error {
+	return b.updateViewEntitySourceDocumentViaModelsdk(moduleName, docName, oqlQuery, documentation)
+}
 func (b *MprBackend) FindViewEntitySourceDocumentID(moduleName, docName string) (model.ID, error) {
 	return b.msdkReader.FindViewEntitySourceDocumentID(moduleName, docName)
 }
@@ -340,11 +403,8 @@ func (b *MprBackend) UpdateEnumerationRefsInAllDomainModels(oldQualifiedName, ne
 
 func (b *MprBackend) DeleteMicroflow(id model.ID) error { return b.deleteMicroflowViaModelsdk(id) }
 func (b *MprBackend) IsRule(qualifiedName string) (bool, error) {
-	repo := b.Microflows()
-	if repo == nil {
-		return false, fmt.Errorf("MprBackend.IsRule: microflow repo not initialized (backend not connected)")
-	}
-	return repo.IsRule(qualifiedName)
+	b.initSubBackends()
+	return b.microflows.IsRule(qualifiedName)
 }
 
 func (b *MprBackend) DeleteNanoflow(id model.ID) error { return b.deleteNanoflowViaModelsdk(id) }
@@ -353,21 +413,15 @@ func (b *MprBackend) DeleteNanoflow(id model.ID) error { return b.deleteNanoflow
 // (b.Microflows()), returning gen-typed values. Returns an error if the
 // modelsdk writer is unavailable (backend not connected).
 func (b *MprBackend) ListMicroflowsGen() ([]*genMf.Microflow, error) {
-	repo := b.Microflows()
-	if repo == nil {
-		return nil, fmt.Errorf("ListMicroflowsGen: modelsdk writer unavailable (backend not connected)")
-	}
-	return repo.ListAll()
+	b.initSubBackends()
+	return b.microflows.ListMicroflowsGen()
 }
 
 // ListNanoflowsGen routes through the modelsdk-native nanoflow repo
 // (b.Nanoflows()). Empty moduleID means "all modules".
 func (b *MprBackend) ListNanoflowsGen() ([]*genMf.Nanoflow, error) {
-	repo := b.Nanoflows()
-	if repo == nil {
-		return nil, fmt.Errorf("ListNanoflowsGen: modelsdk writer unavailable (backend not connected)")
-	}
-	return repo.List("")
+	b.initSubBackends()
+	return b.microflows.ListNanoflowsGen()
 }
 
 // GetMicroflowGen fetches a single microflow body by ID as a
@@ -376,11 +430,8 @@ func (b *MprBackend) ListNanoflowsGen() ([]*genMf.Nanoflow, error) {
 // the modelsdk writer is unavailable so callers can fall through to a
 // no-op rather than failing the entire build.
 func (b *MprBackend) GetMicroflowGen(id model.ID) (*genMf.Microflow, error) {
-	repo := b.Microflows()
-	if repo == nil {
-		return nil, nil
-	}
-	return repo.Get(id)
+	b.initSubBackends()
+	return b.microflows.GetMicroflowGen(id)
 }
 
 // ---------------------------------------------------------------------------
@@ -396,19 +447,13 @@ func (b *MprBackend) GetMicroflowGen(id model.ID) (*genMf.Microflow, error) {
 // were retired in Stage 3.3.5.E1.
 
 func (b *MprBackend) ListPagesGen() ([]*genPg.Page, error) {
-	w, ok := b.concreteWriter()
-	if !ok {
-		return nil, fmt.Errorf("ListPagesGen: no modelsdk writer")
-	}
-	return mprrepos.NewPageRepository(w).ListAll()
+	b.initSubBackends()
+	return b.pages.ListPagesGen()
 }
 
 func (b *MprBackend) GetPageGen(id model.ID) (*genPg.Page, error) {
-	w, ok := b.concreteWriter()
-	if !ok {
-		return nil, fmt.Errorf("GetPageGen: no modelsdk writer")
-	}
-	return mprrepos.NewPageRepository(w).Get(id)
+	b.initSubBackends()
+	return b.pages.GetPageGen(id)
 }
 
 func (b *MprBackend) CreatePageGen(parentUUID, containmentName string, page *genPg.Page) error {
@@ -434,19 +479,13 @@ func (b *MprBackend) UpdatePageGen(page *genPg.Page) error {
 }
 
 func (b *MprBackend) ListLayoutsGen() ([]*genPg.Layout, error) {
-	w, ok := b.concreteWriter()
-	if !ok {
-		return nil, fmt.Errorf("ListLayoutsGen: no modelsdk writer")
-	}
-	return mprrepos.NewLayoutRepository(w).ListAll()
+	b.initSubBackends()
+	return b.pages.ListLayoutsGen()
 }
 
 func (b *MprBackend) GetLayoutGen(id model.ID) (*genPg.Layout, error) {
-	w, ok := b.concreteWriter()
-	if !ok {
-		return nil, fmt.Errorf("GetLayoutGen: no modelsdk writer")
-	}
-	return mprrepos.NewLayoutRepository(w).Get(id)
+	b.initSubBackends()
+	return b.pages.GetLayoutGen(id)
 }
 
 func (b *MprBackend) CreateLayoutGen(parentUUID, containmentName string, layout *genPg.Layout) error {
@@ -472,19 +511,13 @@ func (b *MprBackend) UpdateLayoutGen(layout *genPg.Layout) error {
 }
 
 func (b *MprBackend) ListSnippetsGen() ([]*genPg.Snippet, error) {
-	w, ok := b.concreteWriter()
-	if !ok {
-		return nil, fmt.Errorf("ListSnippetsGen: no modelsdk writer")
-	}
-	return mprrepos.NewSnippetRepository(w).ListAll()
+	b.initSubBackends()
+	return b.pages.ListSnippetsGen()
 }
 
 func (b *MprBackend) GetSnippetGen(id model.ID) (*genPg.Snippet, error) {
-	w, ok := b.concreteWriter()
-	if !ok {
-		return nil, fmt.Errorf("GetSnippetGen: no modelsdk writer")
-	}
-	return mprrepos.NewSnippetRepository(w).Get(id)
+	b.initSubBackends()
+	return b.pages.GetSnippetGen(id)
 }
 
 func (b *MprBackend) CreateSnippetGen(parentUUID, containmentName string, snippet *genPg.Snippet) error {
@@ -514,11 +547,8 @@ func (b *MprBackend) UpdateSnippetGen(snippet *genPg.Snippet) error {
 // (and other callers without direct repo access) can resolve a Page's
 // parent container without re-implementing the SQL probe.
 func (b *MprBackend) GetPageContainerUUID(id model.ID) (model.ID, error) {
-	w, ok := b.concreteWriter()
-	if !ok {
-		return "", fmt.Errorf("GetPageContainerUUID: no modelsdk writer")
-	}
-	return mprrepos.NewPageRepository(w).GetContainerUUID(id)
+	b.initSubBackends()
+	return b.pages.GetPageContainerUUID(id)
 }
 
 // Stage 3.3.5.D5.c gen-typed delete + move surface. All four methods
@@ -635,26 +665,12 @@ func (b *MprBackend) MoveSnippetGen(id, containerID model.ID) error {
 // ---------------------------------------------------------------------------
 
 func (b *MprBackend) ListEnumerations() ([]*model.Enumeration, error) {
-	units, err := mprread.ListUnitsWithContainer[*genEnum.Enumeration](b.msdkReader)
-	if err != nil {
-		return nil, err
-	}
-	enums := enumUnitsToModel(units)
-	// Append built-in System enumerations (WorkflowState, WorkflowUserTaskState,
-	// etc.) which are baked into the Mendix runtime and not stored in the MPR.
-	return append(enums, builtinSystemEnumerations()...), nil
+	b.initSubBackends()
+	return b.enumerations.ListEnumerations()
 }
 func (b *MprBackend) GetEnumeration(id model.ID) (*model.Enumeration, error) {
-	enums, err := b.ListEnumerations()
-	if err != nil {
-		return nil, err
-	}
-	for _, e := range enums {
-		if e.ID == id {
-			return e, nil
-		}
-	}
-	return nil, fmt.Errorf("enumeration not found: %s", id)
+	b.initSubBackends()
+	return b.enumerations.GetEnumeration(id)
 }
 func (b *MprBackend) CreateEnumeration(enum *model.Enumeration) error {
 	return b.createEnumerationViaModelsdk(enum)
@@ -674,23 +690,12 @@ func (b *MprBackend) DeleteEnumeration(id model.ID) error {
 // ---------------------------------------------------------------------------
 
 func (b *MprBackend) ListConstants() ([]*model.Constant, error) {
-	units, err := mprread.ListUnitsWithContainer[*genConst.Constant](b.msdkReader)
-	if err != nil {
-		return nil, err
-	}
-	return constUnitsToModel(units), nil
+	b.initSubBackends()
+	return b.constants.ListConstants()
 }
 func (b *MprBackend) GetConstant(id model.ID) (*model.Constant, error) {
-	consts, err := b.ListConstants()
-	if err != nil {
-		return nil, err
-	}
-	for _, c := range consts {
-		if c.ID == id {
-			return c, nil
-		}
-	}
-	return nil, fmt.Errorf("constant not found: %s", id)
+	b.initSubBackends()
+	return b.constants.GetConstant(id)
 }
 func (b *MprBackend) CreateConstant(constant *model.Constant) error {
 	return b.createConstantViaModelsdk(constant)
@@ -710,7 +715,8 @@ func (b *MprBackend) DeleteConstant(id model.ID) error {
 // ---------------------------------------------------------------------------
 
 func (b *MprBackend) GetProjectSecurityGen() (*genSec.ProjectSecurity, error) {
-	return b.Security().Get()
+	b.initSubBackends()
+	return b.security.GetProjectSecurityGen()
 }
 func (b *MprBackend) SetProjectSecurityLevel(unitID model.ID, level string) error {
 	return b.setSecurityLevelViaModelsdk(unitID, level)
@@ -738,23 +744,12 @@ func (b *MprBackend) SetPasswordPolicy(unitID model.ID, minLength *int32, requir
 }
 
 func (b *MprBackend) GetModuleSecurityGen(moduleID model.ID) (*genSec.ModuleSecurity, error) {
-	return b.Security().GetModuleSecurity(moduleID)
+	b.initSubBackends()
+	return b.security.GetModuleSecurityGen(moduleID)
 }
 func (b *MprBackend) ListModuleSecurityGen() ([]*genSec.ModuleSecurity, error) {
-	modules, err := b.ListModules()
-	if err != nil {
-		return nil, err
-	}
-	repo := b.Security()
-	out := make([]*genSec.ModuleSecurity, 0, len(modules))
-	for _, m := range modules {
-		ms, err := repo.GetModuleSecurity(m.ID)
-		if err != nil || ms == nil {
-			continue
-		}
-		out = append(out, ms)
-	}
-	return out, nil
+	b.initSubBackends()
+	return b.security.ListModuleSecurityGen()
 }
 func (b *MprBackend) AddModuleRole(unitID model.ID, roleName, description string) error {
 	return b.addModuleRoleViaModelsdk(unitID, roleName, description)
@@ -937,24 +932,12 @@ func (b *MprBackend) DeleteDataTransformer(id model.ID) error {
 // ---------------------------------------------------------------------------
 
 func (b *MprBackend) ListImportMappings() ([]*model.ImportMapping, error) {
-	units, err := mprread.ListUnitsWithContainer[*genImpMap.ImportMapping](b.msdkReader)
-	if err != nil {
-		return nil, err
-	}
-	return importMappingUnitsToModel(units), nil
+	b.initSubBackends()
+	return b.mappings.ListImportMappings()
 }
 func (b *MprBackend) GetImportMappingByQualifiedName(moduleName, name string) (*model.ImportMapping, error) {
-	units, err := mprread.ListUnitsWithContainer[*genImpMap.ImportMapping](b.msdkReader)
-	if err != nil {
-		return nil, err
-	}
-	for _, u := range units {
-		if u.Element.Name() == name {
-			im := importMappingToModel(u)
-			return im, nil
-		}
-	}
-	return nil, nil
+	b.initSubBackends()
+	return b.mappings.GetImportMappingByQualifiedName(moduleName, name)
 }
 func (b *MprBackend) CreateImportMapping(im *model.ImportMapping) error {
 	return b.createImportMappingViaModelsdk(im)
@@ -970,23 +953,12 @@ func (b *MprBackend) MoveImportMapping(im *model.ImportMapping) error {
 }
 
 func (b *MprBackend) ListExportMappings() ([]*model.ExportMapping, error) {
-	units, err := mprread.ListUnitsWithContainer[*genExpMap.ExportMapping](b.msdkReader)
-	if err != nil {
-		return nil, err
-	}
-	return exportMappingUnitsToModel(units), nil
+	b.initSubBackends()
+	return b.mappings.ListExportMappings()
 }
 func (b *MprBackend) GetExportMappingByQualifiedName(moduleName, name string) (*model.ExportMapping, error) {
-	units, err := mprread.ListUnitsWithContainer[*genExpMap.ExportMapping](b.msdkReader)
-	if err != nil {
-		return nil, err
-	}
-	for _, u := range units {
-		if u.Element.Name() == name {
-			return exportMappingToModel(u), nil
-		}
-	}
-	return nil, nil
+	b.initSubBackends()
+	return b.mappings.GetExportMappingByQualifiedName(moduleName, name)
 }
 func (b *MprBackend) CreateExportMapping(em *model.ExportMapping) error {
 	return b.createExportMappingViaModelsdk(em)
@@ -1002,11 +974,8 @@ func (b *MprBackend) MoveExportMapping(em *model.ExportMapping) error {
 }
 
 func (b *MprBackend) ListJsonStructures() ([]*types.JsonStructure, error) {
-	units, err := mprread.ListUnitsWithContainer[*genJson.JsonStructure](b.msdkReader)
-	if err != nil {
-		return nil, err
-	}
-	return jsonStructureUnitsToTypes(units), nil
+	b.initSubBackends()
+	return b.mappings.ListJsonStructures()
 }
 func (b *MprBackend) GetJsonStructureByQualifiedName(moduleName, name string) (*types.JsonStructure, error) {
 	all, err := b.ListJsonStructures()
@@ -1104,19 +1073,13 @@ func (b *MprBackend) RenameJavaSourceFile(moduleName, oldName, newName string) e
 // existing path-based writer with gen-typed parameters.
 
 func (b *MprBackend) ListJavaActionsGen() ([]*genJA.JavaAction, error) {
-	w, ok := b.concreteWriter()
-	if !ok {
-		return nil, fmt.Errorf("ListJavaActionsGen: no modelsdk writer")
-	}
-	return mprrepos.NewJavaActionRepository(w).ListAll()
+	b.initSubBackends()
+	return b.java.ListJavaActionsGen()
 }
 
 func (b *MprBackend) ReadJavaActionByNameGen(qualifiedName string) (*genJA.JavaAction, error) {
-	w, ok := b.concreteWriter()
-	if !ok {
-		return nil, fmt.Errorf("ReadJavaActionByNameGen: no modelsdk writer")
-	}
-	return mprrepos.NewJavaActionRepository(w).FindByQualifiedName(qualifiedName)
+	b.initSubBackends()
+	return b.java.ReadJavaActionByNameGen(qualifiedName)
 }
 
 // CreateJavaActionGen writes a gen-typed JavaAction directly via the
@@ -1153,19 +1116,13 @@ func (b *MprBackend) WriteJavaSourceFileGen(moduleName, actionName string, javaC
 }
 
 func (b *MprBackend) ListJavaScriptActionsGen() ([]*genJSA.JavaScriptAction, error) {
-	w, ok := b.concreteWriter()
-	if !ok {
-		return nil, fmt.Errorf("ListJavaScriptActionsGen: no modelsdk writer")
-	}
-	return mprrepos.NewJavaScriptActionRepository(w).ListAll()
+	b.initSubBackends()
+	return b.java.ListJavaScriptActionsGen()
 }
 
 func (b *MprBackend) ReadJavaScriptActionByNameGen(qualifiedName string) (*genJSA.JavaScriptAction, error) {
-	w, ok := b.concreteWriter()
-	if !ok {
-		return nil, fmt.Errorf("ReadJavaScriptActionByNameGen: no modelsdk writer")
-	}
-	return mprrepos.NewJavaScriptActionRepository(w).FindByQualifiedName(qualifiedName)
+	b.initSubBackends()
+	return b.java.ReadJavaScriptActionByNameGen(qualifiedName)
 }
 
 func (b *MprBackend) UpdateJavaScriptActionGen(jsa *genJSA.JavaScriptAction) error {
@@ -1197,19 +1154,13 @@ func (b *MprBackend) DeleteWorkflow(id model.ID) error { return b.deleteWorkflow
 // pure-ID DeleteWorkflow remains alongside this gen-typed quartet.
 
 func (b *MprBackend) ListWorkflowsGen() ([]*genWf.Workflow, error) {
-	w, ok := b.concreteWriter()
-	if !ok {
-		return nil, fmt.Errorf("ListWorkflowsGen: no modelsdk writer")
-	}
-	return mprrepos.NewWorkflowRepository(w).ListAll()
+	b.initSubBackends()
+	return b.workflows.ListWorkflowsGen()
 }
 
 func (b *MprBackend) GetWorkflowGen(id model.ID) (*genWf.Workflow, error) {
-	w, ok := b.concreteWriter()
-	if !ok {
-		return nil, fmt.Errorf("GetWorkflowGen: no modelsdk writer")
-	}
-	return mprrepos.NewWorkflowRepository(w).Get(id)
+	b.initSubBackends()
+	return b.workflows.GetWorkflowGen(id)
 }
 
 func (b *MprBackend) CreateWorkflowGen(parentUUID, containmentName string, wf *genWf.Workflow) error {
@@ -1276,23 +1227,12 @@ func (b *MprBackend) MoveImageCollection(ic *types.ImageCollection) error {
 // ---------------------------------------------------------------------------
 
 func (b *MprBackend) ListScheduledEvents() ([]*model.ScheduledEvent, error) {
-	units, err := mprread.ListUnitsWithContainer[*genSched.ScheduledEvent](b.msdkReader)
-	if err != nil {
-		return nil, err
-	}
-	return schedEventUnitsToModel(units), nil
+	b.initSubBackends()
+	return b.scheduledEvents.ListScheduledEvents()
 }
 func (b *MprBackend) GetScheduledEvent(id model.ID) (*model.ScheduledEvent, error) {
-	events, err := b.ListScheduledEvents()
-	if err != nil {
-		return nil, err
-	}
-	for _, s := range events {
-		if s.ID == id {
-			return s, nil
-		}
-	}
-	return nil, fmt.Errorf("scheduled event not found: %s", id)
+	b.initSubBackends()
+	return b.scheduledEvents.GetScheduledEvent(id)
 }
 
 // ---------------------------------------------------------------------------
@@ -1314,28 +1254,32 @@ func (b *MprBackend) RenameDocumentByName(moduleName, oldName, newName string) e
 // ---------------------------------------------------------------------------
 
 func (b *MprBackend) GetRawUnit(id model.ID) (map[string]any, error) {
-	return b.msdkReader.GetRawUnit(id)
+	b.initSubBackends()
+	return b.rawUnits.GetRawUnit(id)
 }
 func (b *MprBackend) GetRawUnitBytes(id model.ID) ([]byte, error) {
-	return b.msdkReader.GetRawUnitBytes(string(id))
+	b.initSubBackends()
+	return b.rawUnits.GetRawUnitBytes(id)
 }
 func (b *MprBackend) ListRawUnitsByType(typePrefix string) ([]*types.RawUnit, error) {
-	return b.msdkReader.ListRawUnitsByType(typePrefix)
+	b.initSubBackends()
+	return b.rawUnits.ListRawUnitsByType(typePrefix)
 }
 func (b *MprBackend) ListRawUnits(objectType string) ([]*types.RawUnitInfo, error) {
-	return b.msdkReader.ListRawUnits(objectType)
+	b.initSubBackends()
+	return b.rawUnits.ListRawUnits(objectType)
 }
 func (b *MprBackend) GetRawUnitByName(objectType, qualifiedName string) (*types.RawUnitInfo, error) {
-	return b.msdkReader.GetRawUnitByName(objectType, qualifiedName)
+	b.initSubBackends()
+	return b.rawUnits.GetRawUnitByName(objectType, qualifiedName)
 }
 func (b *MprBackend) GetRawMicroflowByName(qualifiedName string) ([]byte, error) {
-	return b.msdkReader.GetRawMicroflowByName(qualifiedName)
+	b.initSubBackends()
+	return b.rawUnits.GetRawMicroflowByName(qualifiedName)
 }
 func (b *MprBackend) UpdateRawUnit(unitID string, contents []byte) error {
-	if b.msdkWriter == nil {
-		return fmt.Errorf("modelsdk writer not initialized")
-	}
-	return b.msdkWriter.UpdateRawUnit(unitID, contents)
+	b.initSubBackends()
+	return b.rawUnits.UpdateRawUnit(unitID, contents)
 }
 
 // ListTranslationNodes returns the translatable text fields of a document with
@@ -1345,21 +1289,34 @@ func (b *MprBackend) UpdateRawUnit(unitID string, contents []byte) error {
 // MetadataBackend
 // ---------------------------------------------------------------------------
 
-func (b *MprBackend) ListAllUnitIDs() ([]string, error) { return b.msdkReader.ListAllUnitIDs() }
+func (b *MprBackend) ListAllUnitIDs() ([]string, error) {
+	b.initSubBackends()
+	return b.metadata.ListAllUnitIDs()
+}
 func (b *MprBackend) ListUnits() ([]*types.UnitInfo, error) {
-	units, err := b.msdkReader.ListUnits()
-	if err != nil {
-		return nil, err
-	}
-	return msdkUnitInfoSliceToTypes(units), nil
+	b.initSubBackends()
+	return b.metadata.ListUnits()
 }
 func (b *MprBackend) ListUnitHashes() (map[string]string, error) {
-	return b.msdkReader.ListUnitHashes()
+	b.initSubBackends()
+	return b.metadata.ListUnitHashes()
 }
-func (b *MprBackend) GetUnitTypes() (map[string]int, error) { return b.msdkReader.GetUnitTypes() }
-func (b *MprBackend) GetProjectRootID() (string, error)     { return b.msdkReader.GetProjectRootID() }
-func (b *MprBackend) ContentsDir() string                   { return b.msdkReader.ContentsDir() }
-func (b *MprBackend) InvalidateCache()                      { b.msdkReader.InvalidateCache() }
+func (b *MprBackend) GetUnitTypes() (map[string]int, error) {
+	b.initSubBackends()
+	return b.metadata.GetUnitTypes()
+}
+func (b *MprBackend) GetProjectRootID() (string, error) {
+	b.initSubBackends()
+	return b.metadata.GetProjectRootID()
+}
+func (b *MprBackend) ContentsDir() string {
+	b.initSubBackends()
+	return b.metadata.ContentsDir()
+}
+func (b *MprBackend) InvalidateCache() {
+	b.initSubBackends()
+	b.metadata.InvalidateCache()
+}
 
 // ---------------------------------------------------------------------------
 // WidgetBackend
@@ -1522,48 +1479,18 @@ func serializeWorkflowActivityGenStandalone(a element.Element) (any, error) {
 // modelsdk-native gen DomainModel; bypasses the legacy sdk parser.
 
 func (b *MprBackend) ListDomainModelsGen() ([]*genDm.DomainModel, error) {
-	w, ok := b.concreteWriter()
-	if !ok {
-		return nil, fmt.Errorf("ListDomainModelsGen: no modelsdk writer")
-	}
-	dms, err := mprrepos.NewDomainModelRepository(w).List("")
-	if err != nil {
-		return nil, err
-	}
-	// Append the built-in System module domain model so that resolvers
-	// (resolveEntity, lookupEnumRefGen) can find System.* entities without
-	// any caller-side special casing.
-	return append(dms, builtinSystemDomainModel()), nil
+	b.initSubBackends()
+	return b.domainmodels.ListDomainModelsGen()
 }
 
 func (b *MprBackend) GetDomainModelGen(moduleID model.ID) (*genDm.DomainModel, error) {
-	// The System module's entities are baked into the Mendix runtime and not
-	// stored in the MPR file. Return the built-in virtual domain model so that
-	// entity lookups (page params, attribute resolution) work for System.* types
-	// without any caller-side special casing.
-	if string(moduleID) == meta.SystemModuleID {
-		return builtinSystemDomainModel(), nil
-	}
-	w, ok := b.concreteWriter()
-	if !ok {
-		return nil, fmt.Errorf("GetDomainModelGen: no modelsdk writer")
-	}
-	dms, err := mprrepos.NewDomainModelRepository(w).List(moduleID)
-	if err != nil {
-		return nil, err
-	}
-	if len(dms) == 0 {
-		return nil, nil
-	}
-	return dms[0], nil
+	b.initSubBackends()
+	return b.domainmodels.GetDomainModelGen(moduleID)
 }
 
 func (b *MprBackend) GetDomainModelByIDGen(id model.ID) (*genDm.DomainModel, error) {
-	w, ok := b.concreteWriter()
-	if !ok {
-		return nil, fmt.Errorf("GetDomainModelByIDGen: no modelsdk writer")
-	}
-	return mprrepos.NewDomainModelRepository(w).Get(id)
+	b.initSubBackends()
+	return b.domainmodels.GetDomainModelByIDGen(id)
 }
 
 func (b *MprBackend) UpdateDomainModelGen(dm *genDm.DomainModel) error {

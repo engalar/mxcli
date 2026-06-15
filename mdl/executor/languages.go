@@ -68,7 +68,7 @@ func listLanguagesFromSettings(ctx *ExecContext) (bool, error) {
 	if !ctx.Connected() {
 		return false, nil
 	}
-	ps, err := ctx.Backend.GetProjectSettings()
+	ps, err := ctx.SettingsReader.GetProjectSettings()
 	if err != nil {
 		// Settings unavailable — let the caller fall back to the catalog.
 		return false, nil
@@ -178,7 +178,7 @@ func alterLanguage(ctx *ExecContext, stmt *ast.AlterLanguageStmt) error {
 		))
 	}
 
-	ps, err := ctx.Backend.GetProjectSettings()
+	ps, err := ctx.SettingsReader.GetProjectSettings()
 	if err != nil {
 		return mdlerrors.NewBackend("read project settings", err)
 	}
@@ -216,7 +216,7 @@ func alterLanguageAdd(ctx *ExecContext, ps *model.ProjectSettings, stmt *ast.Alt
 		lang.CustomTimeFormat = stmt.TimeFormat
 	}
 	ps.Language.Languages = append(ps.Language.Languages, lang)
-	if err := ctx.Backend.UpdateProjectSettings(ps); err != nil {
+	if err := ctx.SettingsWriter.UpdateProjectSettings(ps); err != nil {
 		return mdlerrors.NewBackend("update project settings", err)
 	}
 	fmt.Fprintf(ctx.Output, "LANGUAGE %s added\n", stmt.Code)
@@ -242,7 +242,7 @@ func alterLanguageDrop(ctx *ExecContext, ps *model.ProjectSettings, stmt *ast.Al
 		fmt.Fprintf(ctx.Output, "LANGUAGE %s not registered\n", stmt.Code)
 		return nil
 	}
-	if err := ctx.Backend.UpdateProjectSettings(ps); err != nil {
+	if err := ctx.SettingsWriter.UpdateProjectSettings(ps); err != nil {
 		return mdlerrors.NewBackend("update project settings", err)
 	}
 	fmt.Fprintf(ctx.Output, "LANGUAGE %s dropped\n", stmt.Code)

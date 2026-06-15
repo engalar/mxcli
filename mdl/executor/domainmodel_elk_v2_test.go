@@ -13,7 +13,7 @@ import (
 // generalizations sections for a fixture module (Stage 3.3.4 B1).
 func TestDomainModelELKGen_RendersFixtureModule(t *testing.T) {
 	ctx := newDomainModelsTestContext(t)
-	mods, err := ctx.Backend.ListModules()
+	mods, err := ctx.ModuleLister.ListModules()
 	if err != nil || len(mods) == 0 {
 		t.Skip("fixture has no modules")
 	}
@@ -67,7 +67,7 @@ func TestDomainModelELKGen_RendersFixtureModule(t *testing.T) {
 // identical SVG).
 func TestDomainModelELKGen_ConsistentWithLegacy(t *testing.T) {
 	ctx := newDomainModelsTestContext(t)
-	mods, _ := ctx.Backend.ListModules()
+	mods, _ := ctx.ModuleLister.ListModules()
 	var modName string
 	for _, m := range mods {
 		if m.Name == "System" {

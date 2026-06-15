@@ -57,17 +57,17 @@ func execCreateOrModifyLayout(ctx *ExecContext, s *ast.CreateLayoutStmt) error {
 	// MODIFY/REPLACE: build the new layout first, then drop the old one so a
 	// build failure leaves the existing layout intact.
 	if existingID != "" {
-		if err := ctx.Backend.DeleteLayoutGen(existingID); err != nil {
+		if err := ctx.PageWriter.DeleteLayoutGen(existingID); err != nil {
 			return mdlerrors.NewBackend("delete existing layout", err)
 		}
 	}
 
-	containerID, err := ctx.Backend.GetContainerID(module.ID, s.Folder)
+	containerID, err := ctx.PageWriter.GetContainerID(module.ID, s.Folder)
 	if err != nil {
 		return mdlerrors.NewBackend("resolve container", err)
 	}
 
-	if err := ctx.Backend.CreateLayoutGen(string(containerID), "Documents", layout); err != nil {
+	if err := ctx.PageWriter.CreateLayoutGen(string(containerID), "Documents", layout); err != nil {
 		return mdlerrors.NewBackend("create layout", err)
 	}
 

@@ -39,7 +39,7 @@ func validateModuleRole(ctx *ExecContext, role ast.QualifiedName) (bool, error) 
 		return false, mdlerrors.NewBackend(fmt.Sprintf("read module for role %s.%s", role.Module, role.Name), err)
 	}
 
-	ms, err := ctx.Backend.GetModuleSecurityGen(module.ID)
+	ms, err := ctx.SecurityModuleManager.GetModuleSecurityGen(module.ID)
 	if err != nil {
 		return false, mdlerrors.NewBackend(fmt.Sprintf("read module security for %s", role.Module), err)
 	}

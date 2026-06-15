@@ -1,0 +1,79 @@
+-- ============================================================
+-- 模块 06：知识库 — 领域模型
+-- 前提：先运行模块 01 的 domain-model.mdl（HD 模块需存在）
+-- 运行：mxcli exec kb-domain.mdl -p MyProject.mpr
+-- ============================================================
+
+create module KB;
+
+-- ============================================================
+-- 枚举：文章状态
+-- ============================================================
+
+create or modify enumeration KB.ArticleStatus (
+  Draft     'Draft',
+  Published 'Published',
+  Archived  'Archived'
+);
+
+-- ============================================================
+-- 实体：分类（支持层级树：分类可以有父分类）
+-- ============================================================
+
+create or modify persistent entity KB.Category (
+  Name:        string(200) not null,
+  Description: string(500)
+);
+
+-- 自引用关联：子分类 → 父分类（可空，顶级分类无父）
+create or modify association KB.Category_Parent
+  from KB.Category to KB.Category
+  type reference
+  owner default;
+
+-- ============================================================
+-- 实体：标签（唯一约束：同名标签只能有一个）
+-- ============================================================
+
+create or modify persistent entity KB.Tag (
+  Name: string(100) not null unique
+);
+
+-- ============================================================
+-- 实体：文章
+-- index (Status)        快速按状态过滤（只看 Published）
+-- index (PublishedAt)   快速按发布时间排序
+-- ============================================================
+
+create or modify persistent entity KB.Article (
+  Title:       string(500) not null,
+  Content:     string,
+  Status:      KB.ArticleStatus default Draft,
+  PublishedAt: datetime,
+  ViewCount:   integer default 0
+)
+index (Status)
+index (PublishedAt);
+
+-- 文章 → 分类（多文章属于一个分类）
+create or modify association KB.Article_Category
+  from KB.Article to KB.Category
+  type reference
+  owner default;
+
+-- ============================================================
+-- 多对多：文章 ↔ 标签（通过中间表 ArticleTag）
+-- KB.ArticleTag 是纯关联实体，没有自己的属性
+-- ============================================================
+
+create or modify persistent entity KB.ArticleTag ();
+
+create or modify association KB.ArticleTag_Article
+  from KB.ArticleTag to KB.Article
+  type reference
+  owner default;
+
+create or modify association KB.ArticleTag_Tag
+  from KB.ArticleTag to KB.Tag
+  type reference
+  owner default;

@@ -41,7 +41,7 @@ func listDomainModelsWithContainerGen(ctx *ExecContext) ([]DomainModelGenWithCon
 	}
 
 	// Build module ID set for filtering (ContainerID of a DomainModel IS its module ID).
-	mods, err := ctx.Backend.ListModules()
+	mods, err := ctx.ModuleLister.ListModules()
 	if err != nil {
 		return nil, err
 	}
@@ -83,7 +83,7 @@ func findDomainModelGenByModule(ctx *ExecContext, moduleName string) (*genDm.Dom
 	if ctx == nil || ctx.Backend == nil {
 		return nil, nil
 	}
-	mods, err := ctx.Backend.ListModules()
+	mods, err := ctx.ModuleLister.ListModules()
 	if err != nil {
 		return nil, err
 	}
@@ -113,7 +113,7 @@ func cachedDomainModelsGen(ctx *ExecContext) ([]*genDm.DomainModel, error) {
 	if ctx.Cache != nil && ctx.Cache.domainModelsGen != nil {
 		return ctx.Cache.domainModelsGen, nil
 	}
-	list, err := ctx.Backend.ListDomainModelsGen()
+	list, err := ctx.DomainModelReader.ListDomainModelsGen()
 	if err != nil {
 		return nil, err
 	}

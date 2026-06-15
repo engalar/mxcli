@@ -100,7 +100,7 @@ func listEntitiesForModuleGen(ctx *ExecContext, moduleName string) ([]*genDm.Ent
 	if err != nil {
 		return nil, err
 	}
-	mods, err := ctx.Backend.ListModules()
+	mods, err := ctx.ModuleLister.ListModules()
 	if err != nil {
 		return nil, err
 	}
@@ -141,7 +141,7 @@ func listAssociationsForModuleGen(ctx *ExecContext, moduleName string) ([]*genDm
 	if err != nil {
 		return nil, err
 	}
-	mods, err := ctx.Backend.ListModules()
+	mods, err := ctx.ModuleLister.ListModules()
 	if err != nil {
 		return nil, err
 	}

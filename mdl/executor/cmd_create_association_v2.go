@@ -83,7 +83,7 @@ func execCreateAssociationGen(ctx *ExecContext, s *ast.CreateAssociationStmt) er
 		return mdlerrors.NewValidation("failed to build gen association from AST")
 	}
 
-	if err := ctx.Backend.CreateAssociationGen(model.ID(dm.ID()), assoc); err != nil {
+	if err := ctx.DomainModelWriter.CreateAssociationGen(model.ID(dm.ID()), assoc); err != nil {
 		return mdlerrors.NewBackend("create association (gen)", err)
 	}
 
@@ -91,14 +91,14 @@ func execCreateAssociationGen(ctx *ExecContext, s *ast.CreateAssociationStmt) er
 	invalidateHierarchy(ctx)
 	invalidateDomainModelsCache(ctx)
 
-	if err := ctx.Backend.RelayoutDomainModel(model.ID(dm.ID())); err != nil {
+	if err := ctx.DomainModelWriter.RelayoutDomainModel(model.ID(dm.ID())); err != nil {
 		fmt.Fprintf(ctx.Output, "warning: auto-layout failed: %v\n", err)
 	} else {
 		invalidateDomainModelGenForModule(ctx, module.ID)
 	}
 
 	if freshDM, err := getDomainModelGenCached(ctx, module.ID); err == nil && freshDM != nil {
-		if msgs, err := ctx.Backend.ReconcileMemberAccesses(model.ID(freshDM.ID()), module.Name); err == nil {
+		if msgs, err := ctx.SecurityEntityAccessManager.ReconcileMemberAccesses(model.ID(freshDM.ID()), module.Name); err == nil {
 			for _, msg := range msgs {
 				fmt.Fprintf(ctx.Output, "  reconciled: %s\n", msg)
 			}

@@ -1,0 +1,324 @@
+-- ============================================================
+-- Capstone 07：升级审批（domain + microflows + pages + 权限 + 导航）
+-- 前提：01-06 已执行
+-- ============================================================
+
+-- ============================================================
+-- 枚举：升级申请审批状态
+-- ============================================================
+
+create or modify enumeration HD.EscalationStatus (
+  Pending  'Pending',
+  Approved 'Approved',
+  Rejected 'Rejected'
+);
+
+-- ============================================================
+-- 实体：升级申请
+-- RejectionReason 直接承载拒绝原因（在拒绝表单里编辑），
+-- 因此无需额外的非持久化"拒绝表单"实体。
+-- ============================================================
+
+create or modify persistent entity HD.EscalationRequest (
+  Reason:           string(1000) not null,
+  RequestedAt:      datetime,
+  ApprovalStatus:   HD.EscalationStatus default Pending,
+  RejectionReason:  string(1000)
+);
+
+-- 升级申请 → 工单（一个申请对应一张工单）
+create or modify association HD.EscalationRequest_Ticket
+  from HD.EscalationRequest to HD.Ticket
+  type reference
+  owner default;
+
+-- ============================================================
+-- 发起升级申请（参数版，供后台/测试直接调用）
+-- 前置：工单必须是 InProgress 状态
+-- ============================================================
+
+create or modify microflow HD.ACT_StartEscalation
+  ($Ticket: HD.Ticket, $Reason: string)
+  returns boolean as $Success
+  folder 'Escalation'
+{
+  if $Ticket/Status != HD.TicketStatus.InProgress {
+    show message 'Only In Progress tickets can be escalated.' type warning;
+    return false;
+  }
+  $ER = create HD.EscalationRequest (
+    Reason                        = $Reason,
+    RequestedAt                   = '[%CurrentDateTime%]',
+    ApprovalStatus                = HD.EscalationStatus.Pending,
+    HD.EscalationRequest_Ticket   = $Ticket
+  );
+  commit $ER;
+  return true;
+}
+/
+
+-- ============================================================
+-- 打开"发起升级"弹窗
+-- 先校验工单状态，再创建空的 EscalationRequest 并关联工单，
+-- 最后把对象作为参数传给弹窗页面（避免 datasource: new 无效语法）。
+-- ============================================================
+
+create or modify microflow HD.ACT_OpenEscalationForm
+  ($Ticket: HD.Ticket)
+  returns nothing
+  folder 'Escalation'
+{
+  if $Ticket/Status != HD.TicketStatus.InProgress {
+    show message 'Only In Progress tickets can be escalated.' type warning;
+    return;
+  }
+  $NewER = create HD.EscalationRequest (
+    RequestedAt                  = '[%CurrentDateTime%]',
+    ApprovalStatus               = HD.EscalationStatus.Pending,
+    HD.EscalationRequest_Ticket  = $Ticket
+  );
+  show page HD.EscalationStart_Form (EscalationRequest: $NewER);
+}
+/
+
+-- ============================================================
+-- 提交升级申请（弹窗保存调用）
+-- 对象已在 ACT_OpenEscalationForm 中创建并关联好工单，
+-- Reason 由表单写入，这里 commit 即可。
+-- ============================================================
+
+create or modify microflow HD.ACT_StartEscalation_FromObject
+  ($EscalationRequest: HD.EscalationRequest)
+  returns boolean as $Success
+  folder 'Escalation'
+{
+  if $EscalationRequest/Reason = '' or $EscalationRequest/Reason = empty {
+    validation feedback $EscalationRequest/Reason message 'Please provide a reason for escalation.';
+    return false;
+  }
+  commit $EscalationRequest;
+  return true;
+}
+/
+
+-- ============================================================
+-- 批准升级申请
+-- 效果：ApprovalStatus → Approved；工单 Priority → Critical
+-- ============================================================
+
+create or modify microflow HD.ACT_Escalation_Approve
+  ($EscalationRequest: HD.EscalationRequest)
+  returns boolean as $Success
+  folder 'Escalation'
+{
+  change $EscalationRequest (ApprovalStatus = HD.EscalationStatus.Approved);
+  commit $EscalationRequest;
+
+  retrieve $Ticket from $EscalationRequest/HD.EscalationRequest_Ticket;
+  if $Ticket != empty {
+    change $Ticket (Priority = HD.TicketPriority.Critical);
+    commit $Ticket;
+  }
+  return true;
+}
+/
+
+-- ============================================================
+-- 拒绝升级申请（参数版，供后台/测试直接调用）
+-- ============================================================
+
+create or modify microflow HD.ACT_Escalation_Reject
+  ($EscalationRequest: HD.EscalationRequest, $Reason: string)
+  returns boolean as $Success
+  folder 'Escalation'
+{
+  change $EscalationRequest (
+    ApprovalStatus  = HD.EscalationStatus.Rejected,
+    RejectionReason = $Reason
+  );
+  commit $EscalationRequest;
+  return true;
+}
+/
+
+-- ============================================================
+-- 打开"拒绝升级"弹窗
+-- 直接把待拒绝的申请传给表单，表单编辑其 RejectionReason 字段。
+-- ============================================================
+
+create or modify microflow HD.ACT_OpenRejectForm
+  ($EscalationRequest: HD.EscalationRequest)
+  returns nothing
+  folder 'Escalation'
+{
+  show page HD.EscalationReject_Form (EscalationRequest: $EscalationRequest);
+}
+/
+
+-- ============================================================
+-- 确认拒绝（弹窗保存调用）
+-- RejectionReason 已由表单写入对象，这里设置状态并 commit。
+-- ============================================================
+
+create or modify microflow HD.ACT_Escalation_Reject_FromObject
+  ($EscalationRequest: HD.EscalationRequest)
+  returns boolean as $Success
+  folder 'Escalation'
+{
+  if $EscalationRequest/RejectionReason = '' or $EscalationRequest/RejectionReason = empty {
+    validation feedback $EscalationRequest/RejectionReason message 'Please provide a rejection reason.';
+    return false;
+  }
+  change $EscalationRequest (ApprovalStatus = HD.EscalationStatus.Rejected);
+  commit $EscalationRequest;
+  return true;
+}
+/
+
+-- ============================================================
+-- 数据源：当前经理可见的待审批升级申请
+-- ============================================================
+
+create or modify microflow HD.DS_PendingEscalations
+  ()
+  returns list of HD.EscalationRequest as $List
+  folder 'Escalation'
+{
+  retrieve $List from HD.EscalationRequest
+    where [ApprovalStatus = 'Pending']
+    sort by RequestedAt asc
+    limit 0;
+  return $List;
+}
+/
+
+-- ============================================================
+-- 弹窗：发起升级申请（客服使用）
+-- 由 HD.ACT_OpenEscalationForm 创建对象并传入
+-- ============================================================
+
+create or replace page HD.EscalationStart_Form
+(
+  title:  'Request Escalation',
+  layout: Atlas_Core.PopupLayout,
+  folder: 'Escalation',
+  params: { $EscalationRequest: HD.EscalationRequest }
+)
+{
+  dataview dvForm (datasource: $EscalationRequest) {
+    textarea taReason (label: 'Reason for Escalation', attribute: Reason)
+    footer ftrButtons {
+      actionbutton btnSubmit (
+        caption:     'Submit Request',
+        action:      microflow HD.ACT_StartEscalation_FromObject (EscalationRequest: $currentObject) close_page,
+        buttonstyle: primary
+      )
+      actionbutton btnCancel (caption: 'Cancel', action: cancel_changes close_page)
+    }
+  }
+};
+
+-- ============================================================
+-- 升级审批概览（经理首页）
+-- ============================================================
+
+create or replace page HD.EscalationWorkflow_Overview
+(
+  title:  'Escalation Requests',
+  layout: Atlas_Core.Atlas_Default,
+  folder: 'Escalation'
+)
+{
+  layoutgrid lgMain {
+    row rHeader {
+      column cTitle (desktopwidth: 12) {
+        dynamictext txtTitle (content: 'Pending Escalation Requests', rendermode: H2)
+      }
+    }
+    row rMain {
+      column cMain (desktopwidth: 12) {
+        datagrid dgEscalations (
+          datasource: microflow HD.DS_PendingEscalations,
+          PageSize:   20
+        ) {
+          column colReason    (attribute: Reason,          caption: 'Reason')
+          column colStatus    (attribute: ApprovalStatus,  caption: 'Status',      ColumnWidth: manual, Size: 110)
+          column colRequested (attribute: RequestedAt,     caption: 'Requested At', ColumnWidth: manual, Size: 140)
+          column colActions (caption: 'Actions', ShowContentAs: customContent, ColumnWidth: manual, Size: 160) {
+            actionbutton btnApprove (
+              caption:     'Approve',
+              action:      microflow HD.ACT_Escalation_Approve (EscalationRequest: $currentObject),
+              buttonstyle: primary
+            )
+            actionbutton btnReject (
+              caption:     'Reject',
+              action:      microflow HD.ACT_OpenRejectForm (EscalationRequest: $currentObject),
+              buttonstyle: default
+            )
+          }
+        }
+      }
+    }
+  }
+};
+
+-- ============================================================
+-- 弹窗：填写拒绝原因（经理使用）
+-- 直接编辑 EscalationRequest 自带的 RejectionReason 字段
+-- ============================================================
+
+create or replace page HD.EscalationReject_Form
+(
+  title:  'Reject Escalation',
+  layout: Atlas_Core.PopupLayout,
+  folder: 'Escalation',
+  params: { $EscalationRequest: HD.EscalationRequest }
+)
+{
+  dataview dvForm (datasource: $EscalationRequest) {
+    textarea taReason (label: 'Rejection Reason', attribute: RejectionReason)
+    footer ftrButtons {
+      actionbutton btnReject (
+        caption:     'Confirm Reject',
+        action:      microflow HD.ACT_Escalation_Reject_FromObject (EscalationRequest: $currentObject) close_page,
+        buttonstyle: danger
+      )
+      actionbutton btnCancel (caption: 'Cancel', action: cancel_changes close_page)
+    }
+  }
+};
+
+-- ============================================================
+-- 升级功能权限
+-- HD.ManagerRole / HD.AgentRole 已在 05-security.mdl 创建
+-- ============================================================
+
+grant HD.AgentRole   on HD.EscalationRequest (create, read *);
+grant HD.ManagerRole on HD.EscalationRequest (create, read *, write *, delete);
+
+grant execute on microflow HD.ACT_StartEscalation              to HD.AgentRole, HD.ManagerRole;
+grant execute on microflow HD.ACT_OpenEscalationForm           to HD.AgentRole, HD.ManagerRole;
+grant execute on microflow HD.ACT_StartEscalation_FromObject   to HD.AgentRole, HD.ManagerRole;
+grant execute on microflow HD.ACT_Escalation_Approve           to HD.ManagerRole;
+grant execute on microflow HD.ACT_Escalation_Reject            to HD.ManagerRole;
+grant execute on microflow HD.ACT_OpenRejectForm               to HD.ManagerRole;
+grant execute on microflow HD.ACT_Escalation_Reject_FromObject to HD.ManagerRole;
+grant execute on microflow HD.DS_PendingEscalations            to HD.ManagerRole;
+
+grant view on page HD.EscalationStart_Form          to HD.AgentRole, HD.ManagerRole;
+grant view on page HD.EscalationWorkflow_Overview   to HD.ManagerRole;
+grant view on page HD.EscalationReject_Form         to HD.ManagerRole;
+
+-- 更新导航：经理首页指向升级审批页面
+create or replace navigation Responsive
+  home page HD.MyTickets_Overview           for Customer
+  home page HD.Ticket_Overview              for Agent
+  home page HD.EscalationWorkflow_Overview  for Manager
+  home page MyFirstModule.Home_Web
+  login page Administration.login
+  menu (
+    menu item 'My Tickets'       page HD.MyTickets_Overview;
+    menu item 'All Tickets'      page HD.Ticket_Overview;
+    menu item 'Knowledge Base'   page KB.Article_Overview;
+    menu item 'Escalations'      page HD.EscalationWorkflow_Overview;
+  );

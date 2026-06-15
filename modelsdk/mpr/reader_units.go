@@ -136,13 +136,19 @@ func (r *Reader) listUnitsByTypeV2(typePrefix string) ([]rawUnit, error) {
 		}
 	}
 
-	// Filter by type using cache, only read contents for matching units.
+	// Filter by type using cache; use cached Contents directly.
 	var units []rawUnit
 	for _, cu := range r.unitCache {
 		if typePrefix == "" || strings.HasPrefix(cu.Type, typePrefix) {
-			contents, err := r.readMprContents(cu.ID)
-			if err != nil {
-				continue
+			contents := cu.Contents
+			// Fall back to file read if contents were not cached (should not happen
+			// after buildUnitCache, but kept for safety).
+			if len(contents) == 0 {
+				var err error
+				contents, err = r.readMprContents(cu.ID)
+				if err != nil {
+					continue
+				}
 			}
 			units = append(units, rawUnit{
 				ID:              cu.ID,
@@ -157,9 +163,12 @@ func (r *Reader) listUnitsByTypeV2(typePrefix string) ([]rawUnit, error) {
 }
 
 // buildUnitCache reads all unit metadata once and caches it.
+// On first build all files are read. On rebuild (after InvalidateCache),
+// units whose ContentsHash matches the previous cache are reused without
+// re-reading the file, so only modified units incur file I/O.
 func (r *Reader) buildUnitCache() error {
 	rows, err := r.db.Query(`
-		SELECT UnitID, ContainerID, ContainmentName
+		SELECT UnitID, ContainerID, ContainmentName, ContentsHash
 		FROM Unit
 	`)
 	if err != nil {
@@ -167,54 +176,75 @@ func (r *Reader) buildUnitCache() error {
 	}
 	defer rows.Close()
 
-	r.unitCache = nil
+	// Index existing cache by unit ID for fast lookup during rebuild.
+	prevByID := make(map[string]cachedUnit, len(r.unitCache))
+	for _, cu := range r.unitCache {
+		prevByID[cu.ID] = cu
+	}
+
+	newCache := make([]cachedUnit, 0, len(r.unitCache)+10)
 	for rows.Next() {
 		var unitID, containerID []byte
 		var containmentName string
+		var contentsHash string
 
-		if err := rows.Scan(&unitID, &containerID, &containmentName); err != nil {
+		if err := rows.Scan(&unitID, &containerID, &containmentName, &contentsHash); err != nil {
 			return fmt.Errorf("failed to scan unit row: %w", err)
 		}
 
 		unitUUID := blobToUUID(unitID)
-		contents, err := r.readMprContents(unitUUID)
-		if err != nil {
-			continue
-		}
-
-		typeName := getTypeFromContents(contents)
-		r.unitCache = append(r.unitCache, cachedUnit{
-			ID:              blobToUUID(unitID),
+		cu := cachedUnit{
+			ID:              unitUUID,
 			ContainerID:     blobToUUID(containerID),
 			ContainmentName: containmentName,
-			Type:            typeName,
-		})
+		}
+
+		// If the previous cache has this unit with the same ContentsHash,
+		// reuse its Contents and Type without re-reading the file.
+		if prev, ok := prevByID[unitUUID]; ok && prev.ContentsHash == contentsHash && prev.ContentsHash != "" {
+			cu.Type = prev.Type
+			cu.Contents = prev.Contents
+			cu.ContentsHash = prev.ContentsHash
+		} else {
+			// Hash changed or new unit: evict stale contentCache entry,
+			// then read fresh from disk (populates cache with new data).
+			if r.contentCache != nil {
+				delete(r.contentCache, unitUUID)
+			}
+			contents, err := r.readMprContents(unitUUID)
+			if err != nil {
+				continue
+			}
+			cu.Type = getTypeFromContents(contents)
+			cu.Contents = contents
+			cu.ContentsHash = contentsHash
+		}
+		newCache = append(newCache, cu)
 	}
 
 	// Merge buffered script inserts so reads within EXECUTE SCRIPT see new units.
 	for _, e := range r.scriptInserts {
 		typeName := getTypeFromContents(e.Contents)
-		r.unitCache = append(r.unitCache, cachedUnit{
+		newCache = append(newCache, cachedUnit{
 			ID:              e.ID,
 			ContainerID:     e.ContainerID,
 			ContainmentName: e.ContainmentName,
 			Type:            typeName,
+			Contents:        e.Contents,
 		})
 	}
 
+	r.unitCache = newCache
 	r.unitCacheValid = true
 	return nil
 }
 
-// InvalidateCache marks the unit cache as invalid and clears content cache entries.
-// Should be called after any write operation.
+// InvalidateCache marks the unit metadata cache as invalid so the next
+// ListUnitsByType / ListModules rebuilds it from SQLite + disk. The
+// contentCache is NOT cleared — writers push updated content to it after
+// each write, so subsequent reads hit memory instead of disk.
 func (r *Reader) InvalidateCache() {
 	r.unitCacheValid = false
-	// Clear content cache entries but keep the map non-nil so caching stays active.
-	// If contentCache is nil (per-request mode), remain disabled.
-	if r.contentCache != nil {
-		clear(r.contentCache)
-	}
 }
 
 // EnableContentCache activates the in-memory content cache for this reader.
@@ -241,11 +271,13 @@ func (r *Reader) readMprContents(unitUUID string) ([]byte, error) {
 		return nil, fmt.Errorf("invalid unit UUID: %s", unitUUID)
 	}
 
-	// Fast path: content cache hit (persistent daemon only).
+	// Fast path: content cache hit.
 	if r.contentCache != nil {
 		if data, ok := r.contentCache[unitUUID]; ok {
 			return data, nil
 		}
+	} else {
+		r.contentCache = make(map[string][]byte)
 	}
 
 	// Build path: mprcontents/XX/YY/UUID.mxunit
@@ -260,10 +292,8 @@ func (r *Reader) readMprContents(unitUUID string) ([]byte, error) {
 		return nil, err
 	}
 
-	// Populate cache (persistent daemon only).
-	if r.contentCache != nil {
-		r.contentCache[unitUUID] = data
-	}
+	// Populate cache.
+	r.contentCache[unitUUID] = data
 	return data, nil
 }
 

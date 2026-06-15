@@ -307,7 +307,7 @@ func alterStylingOnPage(ctx *ExecContext, s *ast.AlterStylingStmt, h *ContainerH
 	}
 
 	// Save the page via gen path
-	if err := ctx.Backend.UpdatePageGen(page); err != nil {
+	if err := ctx.PageWriter.UpdatePageGen(page); err != nil {
 		return mdlerrors.NewBackend("save page", err)
 	}
 
@@ -358,7 +358,7 @@ func alterStylingOnSnippet(ctx *ExecContext, s *ast.AlterStylingStmt, h *Contain
 	}
 
 	// Save the snippet via gen path
-	if err := ctx.Backend.UpdateSnippetGen(snippet); err != nil {
+	if err := ctx.PageWriter.UpdateSnippetGen(snippet); err != nil {
 		return mdlerrors.NewBackend("save snippet", err)
 	}
 

@@ -16,7 +16,7 @@ import (
 // listPublishedRestServices handles SHOW PUBLISHED REST SERVICES [IN module] command.
 func listPublishedRestServices(ctx *ExecContext, moduleName string) error {
 
-	services, err := ctx.Backend.ListPublishedRestServices()
+	services, err := ctx.ServiceLister.ListPublishedRestServices()
 	if err != nil {
 		return mdlerrors.NewBackend("list published rest services", err)
 	}
@@ -79,7 +79,7 @@ func listPublishedRestServices(ctx *ExecContext, moduleName string) error {
 // describePublishedRestService handles DESCRIBE PUBLISHED REST SERVICE command.
 func describePublishedRestService(ctx *ExecContext, name ast.QualifiedName) error {
 
-	services, err := ctx.Backend.ListPublishedRestServices()
+	services, err := ctx.ServiceLister.ListPublishedRestServices()
 	if err != nil {
 		return mdlerrors.NewBackend("list published rest services", err)
 	}
@@ -160,7 +160,7 @@ func describePublishedRestService(ctx *ExecContext, name ast.QualifiedName) erro
 // findPublishedRestService looks up a published REST service by module and name.
 func findPublishedRestService(ctx *ExecContext, moduleName, name string) (*model.PublishedRestService, error) {
 
-	services, err := ctx.Backend.ListPublishedRestServices()
+	services, err := ctx.ServiceLister.ListPublishedRestServices()
 	if err != nil {
 		return nil, err
 	}
@@ -245,14 +245,14 @@ func execCreatePublishedRestService(ctx *ExecContext, s *ast.CreatePublishedRest
 	}
 
 	if existing != nil {
-		if err := ctx.Backend.UpdatePublishedRestService(svc); err != nil {
+		if err := ctx.ServiceWriter.UpdatePublishedRestService(svc); err != nil {
 			return mdlerrors.NewBackend("update published rest service", err)
 		}
 		if !ctx.Quiet {
 			fmt.Fprintf(ctx.Output, "Modified published rest service %s.%s\n", s.Name.Module, s.Name.Name)
 		}
 	} else {
-		if err := ctx.Backend.CreatePublishedRestService(svc); err != nil {
+		if err := ctx.ServiceWriter.CreatePublishedRestService(svc); err != nil {
 			return mdlerrors.NewBackend("create published rest service", err)
 		}
 		if !ctx.Quiet {
@@ -268,7 +268,7 @@ func execDropPublishedRestService(ctx *ExecContext, s *ast.DropPublishedRestServ
 		return mdlerrors.NewNotConnectedWrite()
 	}
 
-	services, err := ctx.Backend.ListPublishedRestServices()
+	services, err := ctx.ServiceLister.ListPublishedRestServices()
 	if err != nil {
 		return mdlerrors.NewBackend("list published rest services", err)
 	}
@@ -282,7 +282,7 @@ func execDropPublishedRestService(ctx *ExecContext, s *ast.DropPublishedRestServ
 		modID := h.FindModuleID(svc.ContainerID)
 		modName := h.GetModuleName(modID)
 		if modName == s.Name.Module && svc.Name == s.Name.Name {
-			if err := ctx.Backend.DeletePublishedRestService(svc.ID); err != nil {
+			if err := ctx.ServiceWriter.DeletePublishedRestService(svc.ID); err != nil {
 				return mdlerrors.NewBackend("drop published rest service", err)
 			}
 			if !ctx.Quiet {
@@ -371,7 +371,7 @@ func execAlterPublishedRestService(ctx *ExecContext, s *ast.AlterPublishedRestSe
 		}
 	}
 
-	if err := ctx.Backend.UpdatePublishedRestService(svc); err != nil {
+	if err := ctx.ServiceWriter.UpdatePublishedRestService(svc); err != nil {
 		return mdlerrors.NewBackend("alter published rest service", err)
 	}
 

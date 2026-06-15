@@ -15,7 +15,7 @@ import (
 
 // listConstants handles SHOW CONSTANTS command.
 func listConstants(ctx *ExecContext, moduleName string) error {
-	constants, err := ctx.Backend.ListConstants()
+	constants, err := ctx.ConstantReader.ListConstants()
 	if err != nil {
 		return mdlerrors.NewBackend("list constants", err)
 	}
@@ -82,7 +82,7 @@ func listConstants(ctx *ExecContext, moduleName string) error {
 
 // describeConstant handles DESCRIBE CONSTANT command.
 func describeConstant(ctx *ExecContext, name ast.QualifiedName) error {
-	constants, err := ctx.Backend.ListConstants()
+	constants, err := ctx.ConstantReader.ListConstants()
 	if err != nil {
 		return mdlerrors.NewBackend("list constants", err)
 	}
@@ -279,7 +279,7 @@ func createConstant(ctx *ExecContext, stmt *ast.CreateConstantStmt) error {
 	}
 
 	// Check if constant already exists in this module
-	existingConstants, err := ctx.Backend.ListConstants()
+	existingConstants, err := ctx.ConstantReader.ListConstants()
 	if err == nil {
 		h, _ := getHierarchy(ctx)
 		for _, c := range existingConstants {
@@ -296,7 +296,7 @@ func createConstant(ctx *ExecContext, stmt *ast.CreateConstantStmt) error {
 					c.Type = constType
 					c.DefaultValue = defaultValue
 					c.ExposedToClient = stmt.ExposedToClient
-					if err := ctx.Backend.UpdateConstant(c); err != nil {
+					if err := ctx.ConstantWriter.UpdateConstant(c); err != nil {
 						return mdlerrors.NewBackend("update constant", err)
 					}
 					invalidateHierarchy(ctx)
@@ -332,7 +332,7 @@ func createConstant(ctx *ExecContext, stmt *ast.CreateConstantStmt) error {
 		ExposedToClient: stmt.ExposedToClient,
 	}
 
-	if err := ctx.Backend.CreateConstant(constant); err != nil {
+	if err := ctx.ConstantWriter.CreateConstant(constant); err != nil {
 		return mdlerrors.NewBackend("create constant", err)
 	}
 	invalidateHierarchy(ctx)
@@ -343,12 +343,12 @@ func createConstant(ctx *ExecContext, stmt *ast.CreateConstantStmt) error {
 // listConstantValues handles SHOW CONSTANT VALUES command.
 // Displays one row per constant per configuration for easy comparison.
 func listConstantValues(ctx *ExecContext, moduleName string) error {
-	constants, err := ctx.Backend.ListConstants()
+	constants, err := ctx.ConstantReader.ListConstants()
 	if err != nil {
 		return mdlerrors.NewBackend("list constants", err)
 	}
 
-	ps, err := ctx.Backend.GetProjectSettings()
+	ps, err := ctx.SettingsReader.GetProjectSettings()
 	if err != nil {
 		return mdlerrors.NewBackend("read project settings", err)
 	}
@@ -441,7 +441,7 @@ func dropConstant(ctx *ExecContext, stmt *ast.DropConstantStmt) error {
 		return mdlerrors.NewNotConnectedWrite()
 	}
 
-	constants, err := ctx.Backend.ListConstants()
+	constants, err := ctx.ConstantReader.ListConstants()
 	if err != nil {
 		return mdlerrors.NewBackend("list constants", err)
 	}
@@ -457,7 +457,7 @@ func dropConstant(ctx *ExecContext, stmt *ast.DropConstantStmt) error {
 		modID := h.FindModuleID(c.ContainerID)
 		modName := h.GetModuleName(modID)
 		if strings.EqualFold(modName, stmt.Name.Module) && strings.EqualFold(c.Name, stmt.Name.Name) {
-			if err := ctx.Backend.DeleteConstant(c.ID); err != nil {
+			if err := ctx.ConstantWriter.DeleteConstant(c.ID); err != nil {
 				return mdlerrors.NewBackend("drop constant", err)
 			}
 			invalidateHierarchy(ctx)

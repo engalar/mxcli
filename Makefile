@@ -565,3 +565,10 @@ roundtrip:
 .PHONY: expr-hints-md
 expr-hints-md:
 	GOPROXY=https://goproxy.cn,direct go run ./cmd/expr-hints-md
+
+# release-audit — 检查三个发布项目自上一个 tag 以来的代码变更。
+# 用法: make release-audit [REF=<ref>]
+# 输出结构化 Markdown 指引 AI 决定是否需要为新功能/修复创建 Release。
+.PHONY: release-audit
+release-audit:
+	@scripts/release-audit.sh $(if $(REF),$(REF),HEAD)

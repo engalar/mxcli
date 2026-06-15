@@ -60,7 +60,7 @@ func execDropFolder(ctx *ExecContext, s *ast.DropFolderStmt) error {
 		return mdlerrors.NewNotFound("module", s.Module)
 	}
 
-	folders, err := ctx.Backend.ListFolders()
+	folders, err := ctx.FolderManager.ListFolders()
 	if err != nil {
 		return mdlerrors.NewBackend("list folders", err)
 	}
@@ -70,7 +70,7 @@ func execDropFolder(ctx *ExecContext, s *ast.DropFolderStmt) error {
 		return fmt.Errorf("%w in %s", err, s.Module)
 	}
 
-	if err := ctx.Backend.DeleteFolder(folderID); err != nil {
+	if err := ctx.FolderManager.DeleteFolder(folderID); err != nil {
 		return mdlerrors.NewBackend(fmt.Sprintf("delete folder '%s'", s.FolderPath), err)
 	}
 
@@ -92,7 +92,7 @@ func execMoveFolder(ctx *ExecContext, s *ast.MoveFolderStmt) error {
 	}
 
 	// Find the source folder
-	folders, err := ctx.Backend.ListFolders()
+	folders, err := ctx.FolderManager.ListFolders()
 	if err != nil {
 		return mdlerrors.NewBackend("list folders", err)
 	}
@@ -125,7 +125,7 @@ func execMoveFolder(ctx *ExecContext, s *ast.MoveFolderStmt) error {
 	}
 
 	// Move the folder
-	if err := ctx.Backend.MoveFolder(folderID, targetContainerID); err != nil {
+	if err := ctx.FolderManager.MoveFolder(folderID, targetContainerID); err != nil {
 		return mdlerrors.NewBackend("move folder", err)
 	}
 

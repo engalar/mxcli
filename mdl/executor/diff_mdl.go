@@ -526,7 +526,7 @@ func crossAssociationToMDLGen(ctx *ExecContext, moduleName string, assoc *genDm.
 
 	entityNames := make(map[model.ID]string)
 	moduleNames := make(map[model.ID]string)
-	if mods, err := ctx.Backend.ListModules(); err == nil {
+	if mods, err := ctx.ModuleLister.ListModules(); err == nil {
 		for _, m := range mods {
 			moduleNames[m.ID] = m.Name
 		}

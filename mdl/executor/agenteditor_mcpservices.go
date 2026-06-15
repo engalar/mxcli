@@ -23,7 +23,7 @@ func listAgentEditorConsumedMCPServices(ctx *ExecContext, moduleName string) err
 		return mdlerrors.NewNotConnected()
 	}
 
-	svcs, err := ctx.Backend.ListAgentEditorConsumedMCPServices()
+	svcs, err := ctx.AgentEditorOperator.ListAgentEditorConsumedMCPServices()
 	if err != nil {
 		return mdlerrors.NewBackend("list consumed mcp services", err)
 	}
@@ -111,7 +111,7 @@ func describeAgentEditorConsumedMCPService(ctx *ExecContext, name ast.QualifiedN
 
 // findAgentEditorConsumedMCPService looks up an MCP service by module and name.
 func findAgentEditorConsumedMCPService(ctx *ExecContext, moduleName, svcName string) *types.ConsumedMCPService {
-	svcs, err := ctx.Backend.ListAgentEditorConsumedMCPServices()
+	svcs, err := ctx.AgentEditorOperator.ListAgentEditorConsumedMCPServices()
 	if err != nil {
 		return nil
 	}

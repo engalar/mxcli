@@ -69,6 +69,31 @@ func (fb *flowBuilderGen) addCreateVariableActionGen(s *ast.DeclareStmt) element
 		}
 	}
 
+	// List type: emit CreateListAction instead of CreateVariableAction.
+	// Mendix's BSON requires a dedicated Microflows$CreateListAction for
+	// list-typed variables; CreateVariableAction with a ListType child is
+	// not valid (the mx check tool reports CE0053 / CE1613).
+	if declType.Kind == ast.TypeListOf {
+		entityQN := ""
+		if declType.EntityRef != nil {
+			entityQN = declType.EntityRef.Module + "." + declType.EntityRef.Name
+		}
+		if entityQN != "" && fb.isNonPersistentEntity(entityQN) {
+			fb.addError("cannot create list of non-persistent entity '%s' (CE0053): "+
+				"Mendix does not allow list variables for non-persistent entities; "+
+				"pass the list as a microflow parameter instead", entityQN)
+			return ""
+		}
+		if fb.varTypes != nil && entityQN != "" {
+			fb.varTypes[s.Variable] = "List of " + entityQN
+		}
+		action := genMf.NewCreateListAction()
+		assignFreshID(action)
+		action.SetOutputVariableName(s.Variable)
+		action.SetEntityQualifiedName(entityQN)
+		return fb.genActivityWrap(action, nil, "")
+	}
+
 	// Populate varTypes for entity-typed declared variables so that
 	// downstream helpers (classifyValidationTarget, retrieve, etc.) can
 	// build fully-qualified attribute names (CE0639 prevention).

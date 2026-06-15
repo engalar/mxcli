@@ -80,3 +80,5 @@ vscode-mdl/
 node_modules
 node_modules/
 .superpowers/
+
+graphify-out

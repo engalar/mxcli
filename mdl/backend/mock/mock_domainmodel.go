@@ -64,6 +64,13 @@ func (m *MockBackend) DeleteViewEntitySourceDocumentByName(moduleName, docName s
 	return nil
 }
 
+func (m *MockBackend) UpdateViewEntitySourceDocument(moduleName, docName, oqlQuery, documentation string) error {
+	if m.UpdateViewEntitySourceDocumentFunc != nil {
+		return m.UpdateViewEntitySourceDocumentFunc(moduleName, docName, oqlQuery, documentation)
+	}
+	return nil
+}
+
 func (m *MockBackend) FindViewEntitySourceDocumentID(moduleName, docName string) (model.ID, error) {
 	if m.FindViewEntitySourceDocumentIDFunc != nil {
 		return m.FindViewEntitySourceDocumentIDFunc(moduleName, docName)

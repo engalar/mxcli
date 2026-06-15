@@ -16,7 +16,7 @@ func getModuleNames(ctx *ExecContext) []string {
 	if !ctx.Connected() {
 		return nil
 	}
-	modules, err := ctx.Backend.ListModules()
+	modules, err := ctx.ModuleLister.ListModules()
 	if err != nil {
 		return nil
 	}
@@ -176,7 +176,7 @@ func getEnumerationNamesAC(ctx *ExecContext, moduleFilter string) []string {
 	if err != nil {
 		return nil
 	}
-	enums, err := ctx.Backend.ListEnumerations()
+	enums, err := ctx.EnumerationReader.ListEnumerations()
 	if err != nil {
 		return nil
 	}
@@ -252,7 +252,7 @@ func getODataClientNamesAC(ctx *ExecContext, moduleFilter string) []string {
 	if err != nil {
 		return nil
 	}
-	services, err := ctx.Backend.ListConsumedODataServices()
+	services, err := ctx.ServiceLister.ListConsumedODataServices()
 	if err != nil {
 		return nil
 	}
@@ -276,7 +276,7 @@ func getODataServiceNamesAC(ctx *ExecContext, moduleFilter string) []string {
 	if err != nil {
 		return nil
 	}
-	services, err := ctx.Backend.ListPublishedODataServices()
+	services, err := ctx.ServiceLister.ListPublishedODataServices()
 	if err != nil {
 		return nil
 	}
@@ -300,7 +300,7 @@ func getRestClientNamesAC(ctx *ExecContext, moduleFilter string) []string {
 	if err != nil {
 		return nil
 	}
-	services, err := ctx.Backend.ListConsumedRestServices()
+	services, err := ctx.ServiceLister.ListConsumedRestServices()
 	if err != nil {
 		return nil
 	}
@@ -324,7 +324,7 @@ func getDatabaseConnectionNamesAC(ctx *ExecContext, moduleFilter string) []strin
 	if err != nil {
 		return nil
 	}
-	connections, err := ctx.Backend.ListDatabaseConnections()
+	connections, err := ctx.ServiceLister.ListDatabaseConnections()
 	if err != nil {
 		return nil
 	}
@@ -348,7 +348,7 @@ func getBusinessEventServiceNamesAC(ctx *ExecContext, moduleFilter string) []str
 	if err != nil {
 		return nil
 	}
-	services, err := ctx.Backend.ListBusinessEventServices()
+	services, err := ctx.ServiceLister.ListBusinessEventServices()
 	if err != nil {
 		return nil
 	}
@@ -372,7 +372,7 @@ func getJsonStructureNamesAC(ctx *ExecContext, moduleFilter string) []string {
 	if err != nil {
 		return nil
 	}
-	structures, err := ctx.Backend.ListJsonStructures()
+	structures, err := ctx.MappingReader.ListJsonStructures()
 	if err != nil {
 		return nil
 	}

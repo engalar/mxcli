@@ -1,0 +1,28 @@
+-- ============================================================
+-- 练习 01：客户角色授权
+-- 前提：先运行模块 01 和 05 参考实现
+-- 目标：补全 CustomerRole 的实体访问规则（含 XPath 行级过滤）
+-- ============================================================
+
+-- 已定义好模块角色（不需要修改）
+create module role HD.CustomerRole;
+
+-- TODO 1：为 HD.Ticket 配置 CustomerRole 的访问规则
+-- 要求：
+--   操作：create, read（Subject/Description/Status/Priority/SLADueAt/ResolvedAt/IsOverSLA/关联字段), write（Subject/Description）
+--   行级过滤（XPath）：只能看到自己提交的工单
+--   提示：where '[HD.Ticket_Customer/HD.Customer/System.owner=''[%CurrentUser%]'']'
+
+-- 你的代码写在这里：
+
+
+-- TODO 2：为 HD.TicketComment 配置 CustomerRole 的访问规则
+-- 要求：create + read，只看 IsInternal = false 的评论
+-- 提示：where '[IsInternal = false]'
+
+-- 你的代码写在这里：
+
+
+-- 验证命令：
+--   mxcli check 练习01-客户角色授权.mdl
+--   mxcli exec  练习01-客户角色授权.mdl -p MyProject.mpr

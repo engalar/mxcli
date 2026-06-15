@@ -68,12 +68,14 @@ type Reader struct {
 	overlay map[string][]byte
 }
 
-// cachedUnit stores metadata about a unit for fast filtering.
+// cachedUnit stores metadata and content about a unit for fast filtering.
 type cachedUnit struct {
 	ID              string
 	ContainerID     string
 	ContainmentName string
 	Type            string
+	Contents        []byte
+	ContentsHash    string
 }
 
 // OpenOptions configures how the MPR file is opened.
@@ -94,8 +96,9 @@ func OpenWithOptions(path string, opts OpenOptions) (*Reader, error) {
 	}
 
 	r := &Reader{
-		path:     path,
-		readOnly: opts.ReadOnly,
+		path:         path,
+		readOnly:     opts.ReadOnly,
+		contentCache: make(map[string][]byte),
 	}
 
 	// Check for MPR v2 (mprcontents folder)

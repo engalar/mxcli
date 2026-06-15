@@ -1,0 +1,32 @@
+-- ============================================================
+-- 练习 02：解决工单与 SLA 逾期计算
+-- 前提：先运行练习01（或参考实现）
+-- 目标：实现 ACT_Ticket_Resolve 微流
+-- ============================================================
+
+create or modify microflow HD.ACT_Ticket_Resolve
+  ($Ticket: HD.Ticket)
+  returns boolean as $Success
+  folder 'Ticket'
+{
+  -- TODO 1：前置状态检查
+  -- 如果 Status 不是 InProgress，直接 return false
+
+  -- TODO 2：用 declare 声明当前时间变量
+  -- declare $Now: datetime = '[%CurrentDateTime%]';
+
+  -- TODO 3：用 declare 计算是否逾期
+  -- declare $IsOver: boolean = ...
+  -- 逾期条件：当前时间 > SLA 截止时间，且 SLA 截止时间不为空
+
+  -- TODO 4：change $Ticket 更新三个字段：Status, ResolvedAt, IsOverSLA
+
+  -- TODO 5：commit 并 return true
+
+  return false; -- 占位，完成上方 TODO 后删除此行
+}
+/
+
+-- 验证命令：
+--   mxcli check 练习02-解决与SLA.mdl
+--   mxcli exec  练习02-解决与SLA.mdl -p MyProject.mpr

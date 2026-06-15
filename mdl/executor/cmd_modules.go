@@ -23,7 +23,7 @@ func execCreateModule(ctx *ExecContext, s *ast.CreateModuleStmt) error {
 	}
 
 	// Check if module already exists
-	modules, err := ctx.Backend.ListModules()
+	modules, err := ctx.ModuleLister.ListModules()
 	if err != nil {
 		return mdlerrors.NewBackend("list modules", err)
 	}
@@ -40,7 +40,7 @@ func execCreateModule(ctx *ExecContext, s *ast.CreateModuleStmt) error {
 		Name: s.Name,
 	}
 
-	if err := ctx.Backend.CreateModule(module); err != nil {
+	if err := ctx.ModuleWriter.CreateModule(module); err != nil {
 		return mdlerrors.NewBackend("create module", err)
 	}
 
@@ -66,7 +66,7 @@ func execDropModule(ctx *ExecContext, s *ast.DropModuleStmt) error {
 	}
 
 	// Find the module
-	modules, err := ctx.Backend.ListModules()
+	modules, err := ctx.ModuleLister.ListModules()
 	if err != nil {
 		return mdlerrors.NewBackend("list modules", err)
 	}
@@ -90,10 +90,10 @@ func execDropModule(ctx *ExecContext, s *ast.DropModuleStmt) error {
 	var nEnums, nEntities, nAssocs, nMicroflows, nNanoflows, nPages, nSnippets, nLayouts, nConstants, nJavaActions, nServices, nBizEvents, nDbConns int
 
 	// Delete enumerations in this module
-	if enums, err := ctx.Backend.ListEnumerations(); err == nil {
+	if enums, err := ctx.EnumerationReader.ListEnumerations(); err == nil {
 		for _, enum := range enums {
 			if moduleContainers[enum.ContainerID] {
-				if err := ctx.Backend.DeleteEnumeration(enum.ID); err != nil {
+				if err := ctx.EnumerationWriter.DeleteEnumeration(enum.ID); err != nil {
 					fmt.Fprintf(ctx.Output, "Warning: failed to delete enumeration %s: %v\n", enum.Name, err)
 				} else {
 					nEnums++
@@ -120,7 +120,7 @@ func execDropModule(ctx *ExecContext, s *ast.DropModuleStmt) error {
 				if !ok {
 					continue
 				}
-				if err := ctx.Backend.DeleteAssociation(dmID, model.ID(assoc.ID())); err != nil {
+				if err := ctx.DomainModelWriter.DeleteAssociation(dmID, model.ID(assoc.ID())); err != nil {
 					fmt.Fprintf(ctx.Output, "Warning: failed to delete association %s: %v\n", assoc.Name(), err)
 				} else {
 					nAssocs++
@@ -132,7 +132,7 @@ func execDropModule(ctx *ExecContext, s *ast.DropModuleStmt) error {
 				if !ok {
 					continue
 				}
-				if err := ctx.Backend.DeleteEntity(dmID, model.ID(entity.ID())); err != nil {
+				if err := ctx.DomainModelWriter.DeleteEntity(dmID, model.ID(entity.ID())); err != nil {
 					fmt.Fprintf(ctx.Output, "Warning: failed to delete entity %s: %v\n", entity.Name(), err)
 				} else {
 					nEntities++
@@ -172,7 +172,7 @@ func execDropModule(ctx *ExecContext, s *ast.DropModuleStmt) error {
 		for _, pair := range pagePairs {
 			pg := pair.Elem
 			if moduleContainers[model.ID(pair.ContainerID)] {
-				if err := ctx.Backend.DeletePageGen(model.ID(pg.ID())); err != nil {
+				if err := ctx.PageWriter.DeletePageGen(model.ID(pg.ID())); err != nil {
 					fmt.Fprintf(ctx.Output, "Warning: failed to delete page %s: %v\n", pg.Name(), err)
 				} else {
 					nPages++
@@ -186,7 +186,7 @@ func execDropModule(ctx *ExecContext, s *ast.DropModuleStmt) error {
 		for _, pair := range snippetPairs {
 			snippet := pair.Elem
 			if moduleContainers[model.ID(pair.ContainerID)] {
-				if err := ctx.Backend.DeleteSnippetGen(model.ID(snippet.ID())); err != nil {
+				if err := ctx.PageWriter.DeleteSnippetGen(model.ID(snippet.ID())); err != nil {
 					fmt.Fprintf(ctx.Output, "Warning: failed to delete snippet %s: %v\n", snippet.Name(), err)
 				} else {
 					nSnippets++
@@ -196,10 +196,10 @@ func execDropModule(ctx *ExecContext, s *ast.DropModuleStmt) error {
 	}
 
 	// Delete constants in this module
-	if constants, err := ctx.Backend.ListConstants(); err == nil {
+	if constants, err := ctx.ConstantReader.ListConstants(); err == nil {
 		for _, c := range constants {
 			if moduleContainers[c.ContainerID] {
-				if err := ctx.Backend.DeleteConstant(c.ID); err != nil {
+				if err := ctx.ConstantWriter.DeleteConstant(c.ID); err != nil {
 					fmt.Fprintf(ctx.Output, "Warning: failed to delete constant %s: %v\n", c.Name, err)
 				} else {
 					nConstants++
@@ -213,7 +213,7 @@ func execDropModule(ctx *ExecContext, s *ast.DropModuleStmt) error {
 		for _, pair := range layoutPairs {
 			l := pair.Elem
 			if moduleContainers[model.ID(pair.ContainerID)] {
-				if err := ctx.Backend.DeleteLayoutGen(model.ID(l.ID())); err != nil {
+				if err := ctx.PageWriter.DeleteLayoutGen(model.ID(l.ID())); err != nil {
 					fmt.Fprintf(ctx.Output, "Warning: failed to delete layout %s: %v\n", l.Name(), err)
 				} else {
 					nLayouts++
@@ -229,7 +229,7 @@ func execDropModule(ctx *ExecContext, s *ast.DropModuleStmt) error {
 				continue
 			}
 			if moduleContainers[model.ID(p.ContainerID)] {
-				if err := ctx.Backend.DeleteJavaAction(model.ID(p.Elem.ID())); err != nil {
+				if err := ctx.JavaActionWriter.DeleteJavaAction(model.ID(p.Elem.ID())); err != nil {
 					fmt.Fprintf(ctx.Output, "Warning: failed to delete Java action %s: %v\n", p.Elem.Name(), err)
 				} else {
 					nJavaActions++
@@ -239,10 +239,10 @@ func execDropModule(ctx *ExecContext, s *ast.DropModuleStmt) error {
 	}
 
 	// Delete business event services in this module
-	if services, err := ctx.Backend.ListBusinessEventServices(); err == nil {
+	if services, err := ctx.ServiceLister.ListBusinessEventServices(); err == nil {
 		for _, svc := range services {
 			if moduleContainers[svc.ContainerID] {
-				if err := ctx.Backend.DeleteBusinessEventService(svc.ID); err != nil {
+				if err := ctx.ServiceWriter.DeleteBusinessEventService(svc.ID); err != nil {
 					fmt.Fprintf(ctx.Output, "Warning: failed to delete business event service %s: %v\n", svc.Name, err)
 				} else {
 					nBizEvents++
@@ -252,10 +252,10 @@ func execDropModule(ctx *ExecContext, s *ast.DropModuleStmt) error {
 	}
 
 	// Delete database connections in this module
-	if conns, err := ctx.Backend.ListDatabaseConnections(); err == nil {
+	if conns, err := ctx.ServiceLister.ListDatabaseConnections(); err == nil {
 		for _, conn := range conns {
 			if moduleContainers[conn.ContainerID] {
-				if err := ctx.Backend.DeleteDatabaseConnection(conn.ID); err != nil {
+				if err := ctx.ServiceWriter.DeleteDatabaseConnection(conn.ID); err != nil {
 					fmt.Fprintf(ctx.Output, "Warning: failed to delete database connection %s: %v\n", conn.Name, err)
 				} else {
 					nDbConns++
@@ -265,10 +265,10 @@ func execDropModule(ctx *ExecContext, s *ast.DropModuleStmt) error {
 	}
 
 	// Delete consumed OData services (clients) in this module
-	if services, err := ctx.Backend.ListConsumedODataServices(); err == nil {
+	if services, err := ctx.ServiceLister.ListConsumedODataServices(); err == nil {
 		for _, svc := range services {
 			if moduleContainers[svc.ContainerID] {
-				if err := ctx.Backend.DeleteConsumedODataService(svc.ID); err != nil {
+				if err := ctx.ServiceWriter.DeleteConsumedODataService(svc.ID); err != nil {
 					fmt.Fprintf(ctx.Output, "Warning: failed to delete OData client %s: %v\n", svc.Name, err)
 				} else {
 					nServices++
@@ -278,10 +278,10 @@ func execDropModule(ctx *ExecContext, s *ast.DropModuleStmt) error {
 	}
 
 	// Delete published OData services in this module
-	if services, err := ctx.Backend.ListPublishedODataServices(); err == nil {
+	if services, err := ctx.ServiceLister.ListPublishedODataServices(); err == nil {
 		for _, svc := range services {
 			if moduleContainers[svc.ContainerID] {
-				if err := ctx.Backend.DeletePublishedODataService(svc.ID); err != nil {
+				if err := ctx.ServiceWriter.DeletePublishedODataService(svc.ID); err != nil {
 					fmt.Fprintf(ctx.Output, "Warning: failed to delete OData service %s: %v\n", svc.Name, err)
 				} else {
 					nServices++
@@ -291,15 +291,15 @@ func execDropModule(ctx *ExecContext, s *ast.DropModuleStmt) error {
 	}
 
 	// Remove module roles from user roles in ProjectSecurity
-	if ms, err := ctx.Backend.GetModuleSecurityGen(targetModule.ID); err == nil && ms != nil {
-		if ps, err := ctx.Backend.GetProjectSecurityGen(); err == nil && ps != nil {
+	if ms, err := ctx.SecurityModuleManager.GetModuleSecurityGen(targetModule.ID); err == nil && ms != nil {
+		if ps, err := ctx.SecurityProjectManager.GetProjectSecurityGen(); err == nil && ps != nil {
 			for _, mrItem := range ms.ModuleRolesItems() {
 				mr, ok := mrItem.(*genSec.ModuleRole)
 				if !ok {
 					continue
 				}
 				qualifiedRole := s.Name + "." + mr.Name()
-				if n, err := ctx.Backend.RemoveModuleRoleFromAllUserRoles(model.ID(ps.ID()), qualifiedRole); err == nil && n > 0 {
+				if n, err := ctx.SecurityModuleManager.RemoveModuleRoleFromAllUserRoles(model.ID(ps.ID()), qualifiedRole); err == nil && n > 0 {
 					fmt.Fprintf(ctx.Output, "Removed %s from %d user role(s)\n", qualifiedRole, n)
 				}
 			}
@@ -310,7 +310,7 @@ func execDropModule(ctx *ExecContext, s *ast.DropModuleStmt) error {
 	}
 
 	// Delete the module itself (and clean up themesource directory)
-	if err := ctx.Backend.DeleteModuleWithCleanup(targetModule.ID, s.Name); err != nil {
+	if err := ctx.ModuleWriter.DeleteModuleWithCleanup(targetModule.ID, s.Name); err != nil {
 		return mdlerrors.NewBackend("delete module", err)
 	}
 
@@ -373,7 +373,7 @@ func getModuleContainers(ctx *ExecContext, moduleID model.ID) map[model.ID]bool 
 	containers[moduleID] = true
 
 	// Build parent -> children map from units
-	units, err := ctx.Backend.ListUnits()
+	units, err := ctx.MetadataReader.ListUnits()
 	if err != nil {
 		return containers
 	}
@@ -384,7 +384,7 @@ func getModuleContainers(ctx *ExecContext, moduleID model.ID) map[model.ID]bool 
 	}
 
 	// Also include folders
-	folders, _ := ctx.Backend.ListFolders()
+	folders, _ := ctx.FolderManager.ListFolders()
 	for _, f := range folders {
 		childrenOf[f.ContainerID] = append(childrenOf[f.ContainerID], f.ID)
 	}
@@ -425,7 +425,7 @@ func listModules(ctx *ExecContext) error {
 	}
 
 	// Get units for type-based counting
-	units, err := ctx.Backend.ListUnits()
+	units, err := ctx.MetadataReader.ListUnits()
 	if err != nil {
 		return mdlerrors.NewBackend("list units", err)
 	}
@@ -571,7 +571,7 @@ func describeModule(ctx *ExecContext, moduleName string, withAll bool) error {
 	}
 
 	// Find the module
-	modules, err := ctx.Backend.ListModules()
+	modules, err := ctx.ModuleLister.ListModules()
 	if err != nil {
 		return mdlerrors.NewBackend("list modules", err)
 	}
@@ -603,7 +603,7 @@ func describeModule(ctx *ExecContext, moduleName string, withAll bool) error {
 	fmt.Fprintln(ctx.Output)
 
 	// Output enumerations in this module (no dependencies between enums)
-	if enums, err := ctx.Backend.ListEnumerations(); err == nil {
+	if enums, err := ctx.EnumerationReader.ListEnumerations(); err == nil {
 		for _, enum := range enums {
 			if moduleContainers[enum.ContainerID] {
 				if err := describeEnumeration(ctx, ast.QualifiedName{Module: moduleName, Name: enum.Name}); err == nil {
@@ -614,7 +614,7 @@ func describeModule(ctx *ExecContext, moduleName string, withAll bool) error {
 	}
 
 	// Output constants (may reference enumerations)
-	if constants, err := ctx.Backend.ListConstants(); err == nil {
+	if constants, err := ctx.ConstantReader.ListConstants(); err == nil {
 		for _, c := range constants {
 			if moduleContainers[c.ContainerID] {
 				if err := outputConstantMDL(ctx, c, moduleName); err == nil {
@@ -704,7 +704,7 @@ func describeModule(ctx *ExecContext, moduleName string, withAll bool) error {
 	}
 
 	// Output database connections
-	if conns, err := ctx.Backend.ListDatabaseConnections(); err == nil {
+	if conns, err := ctx.ServiceLister.ListDatabaseConnections(); err == nil {
 		for _, conn := range conns {
 			if moduleContainers[conn.ContainerID] {
 				if err := outputDatabaseConnectionMDL(ctx, conn, moduleName); err == nil {
@@ -715,7 +715,7 @@ func describeModule(ctx *ExecContext, moduleName string, withAll bool) error {
 	}
 
 	// Output business event services
-	if services, err := ctx.Backend.ListBusinessEventServices(); err == nil {
+	if services, err := ctx.ServiceLister.ListBusinessEventServices(); err == nil {
 		for _, svc := range services {
 			if moduleContainers[svc.ContainerID] {
 				if err := describeBusinessEventService(ctx, ast.QualifiedName{Module: moduleName, Name: svc.Name}); err == nil {
@@ -729,7 +729,7 @@ func describeModule(ctx *ExecContext, moduleName string, withAll bool) error {
 	h, _ := getHierarchy(ctx)
 
 	// Output consumed OData services (clients)
-	if services, err := ctx.Backend.ListConsumedODataServices(); err == nil {
+	if services, err := ctx.ServiceLister.ListConsumedODataServices(); err == nil {
 		for _, svc := range services {
 			if moduleContainers[svc.ContainerID] {
 				folderPath := ""
@@ -744,7 +744,7 @@ func describeModule(ctx *ExecContext, moduleName string, withAll bool) error {
 	}
 
 	// Output published OData services
-	if services, err := ctx.Backend.ListPublishedODataServices(); err == nil {
+	if services, err := ctx.ServiceLister.ListPublishedODataServices(); err == nil {
 		for _, svc := range services {
 			if moduleContainers[svc.ContainerID] {
 				folderPath := ""
@@ -762,7 +762,7 @@ func describeModule(ctx *ExecContext, moduleName string, withAll bool) error {
 	// Model / KnowledgeBase / ConsumedMCPService first (leaves), Agent last
 	// (may reference the others via its TOOL / KNOWLEDGE BASE / MCP SERVICE
 	// blocks).
-	if models, err := ctx.Backend.ListAgentEditorModels(); err == nil {
+	if models, err := ctx.AgentEditorOperator.ListAgentEditorModels(); err == nil {
 		for _, m := range models {
 			if moduleContainers[m.ContainerID] {
 				if err := describeAgentEditorModel(ctx, ast.QualifiedName{Module: moduleName, Name: m.Name}); err == nil {
@@ -771,7 +771,7 @@ func describeModule(ctx *ExecContext, moduleName string, withAll bool) error {
 			}
 		}
 	}
-	if kbs, err := ctx.Backend.ListAgentEditorKnowledgeBases(); err == nil {
+	if kbs, err := ctx.AgentEditorOperator.ListAgentEditorKnowledgeBases(); err == nil {
 		for _, kb := range kbs {
 			if moduleContainers[kb.ContainerID] {
 				if err := describeAgentEditorKnowledgeBase(ctx, ast.QualifiedName{Module: moduleName, Name: kb.Name}); err == nil {
@@ -780,7 +780,7 @@ func describeModule(ctx *ExecContext, moduleName string, withAll bool) error {
 			}
 		}
 	}
-	if svcs, err := ctx.Backend.ListAgentEditorConsumedMCPServices(); err == nil {
+	if svcs, err := ctx.AgentEditorOperator.ListAgentEditorConsumedMCPServices(); err == nil {
 		for _, svc := range svcs {
 			if moduleContainers[svc.ContainerID] {
 				if err := describeAgentEditorConsumedMCPService(ctx, ast.QualifiedName{Module: moduleName, Name: svc.Name}); err == nil {
@@ -789,7 +789,7 @@ func describeModule(ctx *ExecContext, moduleName string, withAll bool) error {
 			}
 		}
 	}
-	if agents, err := ctx.Backend.ListAgentEditorAgents(); err == nil {
+	if agents, err := ctx.AgentEditorOperator.ListAgentEditorAgents(); err == nil {
 		for _, a := range agents {
 			if moduleContainers[a.ContainerID] {
 				if err := describeAgentEditorAgent(ctx, ast.QualifiedName{Module: moduleName, Name: a.Name}); err == nil {
@@ -813,7 +813,7 @@ func execListJarDependencies(ctx *ExecContext, inModule string) error {
 		return mdlerrors.NewNotConnected()
 	}
 
-	modules, err := ctx.Backend.ListModules()
+	modules, err := ctx.ModuleLister.ListModules()
 	if err != nil {
 		return mdlerrors.NewBackend("list modules", err)
 	}
@@ -834,7 +834,7 @@ func execListJarDependencies(ctx *ExecContext, inModule string) error {
 		if inModule != "" && m.Name != inModule {
 			continue
 		}
-		ms, err := ctx.Backend.GetModuleSettings(m.ID)
+		ms, err := ctx.ModuleSettingsReader.GetModuleSettings(m.ID)
 		if err != nil {
 			continue // module may have no settings unit yet
 		}
@@ -888,12 +888,12 @@ func execDescribeJarDependency(ctx *ExecContext, moduleName, coordinate string) 
 		return mdlerrors.NewNotConnected()
 	}
 
-	module, err := ctx.Backend.GetModuleByName(moduleName)
+	module, err := ctx.ModuleLister.GetModuleByName(moduleName)
 	if err != nil {
 		return fmt.Errorf("module '%s' not found: %w", moduleName, err)
 	}
 
-	ms, err := ctx.Backend.GetModuleSettings(module.ID)
+	ms, err := ctx.ModuleSettingsReader.GetModuleSettings(module.ID)
 	if err != nil {
 		return fmt.Errorf("failed to read module settings: %w", err)
 	}
@@ -930,12 +930,12 @@ func execAlterModuleJarDep(ctx *ExecContext, s *ast.AlterModuleJarDepStmt) error
 		return mdlerrors.NewNotConnected()
 	}
 
-	module, err := ctx.Backend.GetModuleByName(s.ModuleName)
+	module, err := ctx.ModuleLister.GetModuleByName(s.ModuleName)
 	if err != nil {
 		return fmt.Errorf("module '%s' not found: %w", s.ModuleName, err)
 	}
 
-	ms, err := ctx.Backend.GetModuleSettings(module.ID)
+	ms, err := ctx.ModuleSettingsReader.GetModuleSettings(module.ID)
 	if err != nil {
 		return fmt.Errorf("failed to read module settings: %w", err)
 	}
@@ -946,7 +946,7 @@ func execAlterModuleJarDep(ctx *ExecContext, s *ast.AlterModuleJarDepStmt) error
 		}
 	}
 
-	if err := ctx.Backend.UpdateModuleSettings(ms); err != nil {
+	if err := ctx.ModuleSettingsWriter.UpdateModuleSettings(ms); err != nil {
 		return mdlerrors.NewBackend("update module settings", err)
 	}
 

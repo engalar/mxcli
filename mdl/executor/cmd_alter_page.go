@@ -65,7 +65,7 @@ func execAlterPage(ctx *ExecContext, s *ast.AlterPageStmt) error {
 	}
 
 	// Open the page for mutation via the backend
-	mutator, err := ctx.Backend.OpenPageForMutation(unitID)
+	mutator, err := ctx.PageMutationOperator.OpenPageForMutation(unitID)
 	if err != nil {
 		return mdlerrors.NewBackend("open "+strings.ToLower(containerType)+" for mutation", err)
 	}
@@ -280,8 +280,8 @@ func buildWidgetsFromASTGen(ctx *ExecContext, widgets []*ast.WidgetV3, moduleNam
 		delete(widgetScope, name)
 	}
 
-	ctx.Backend.BeginPageBuild()
-	defer ctx.Backend.EndPageBuild()
+	ctx.WidgetBuilder.BeginPageBuild()
+	defer ctx.WidgetBuilder.EndPageBuild()
 	pb := &pageBuilder{
 		backend:          ctx.Backend,
 		moduleID:         moduleID,

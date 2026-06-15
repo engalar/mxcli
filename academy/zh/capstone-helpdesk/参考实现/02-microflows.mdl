@@ -1,0 +1,144 @@
+-- ============================================================
+-- 模块 02：微流业务逻辑 — 参考实现
+-- 前提：先运行 01-领域建模/参考实现/domain-model.mdl
+-- 运行：mxcli exec microflows.mdl -p MyProject.mpr
+-- ============================================================
+
+-- ============================================================
+-- 提交工单：Draft → Open，计算 SLA 截止时间
+-- ============================================================
+
+create or modify microflow HD.ACT_Ticket_Submit
+  ($Ticket: HD.Ticket)
+  returns boolean as $Success
+  folder 'Ticket'
+{
+  if $Ticket/Subject = '' {
+    validation feedback $Ticket/Subject message 'Subject is required.';
+    return false;
+  }
+
+  if $Ticket/Priority = HD.TicketPriority.Critical {
+    change $Ticket (
+      Status   = HD.TicketStatus.Open,
+      SLADueAt = addHours('[%CurrentDateTime%]', @HD.SLA_CRITICAL_HOURS)
+    );
+  } else {
+    if $Ticket/Priority = HD.TicketPriority.High {
+      change $Ticket (
+        Status   = HD.TicketStatus.Open,
+        SLADueAt = addHours('[%CurrentDateTime%]', @HD.SLA_HIGH_HOURS)
+      );
+    } else {
+      change $Ticket (
+        Status   = HD.TicketStatus.Open,
+        SLADueAt = addHours('[%CurrentDateTime%]', 24)
+      );
+    }
+  }
+  commit $Ticket;
+  return true;
+}
+/
+
+-- ============================================================
+-- 指派客服：Open → InProgress
+-- ============================================================
+
+create or modify microflow HD.ACT_Ticket_Assign
+  ($Ticket: HD.Ticket, $Agent: HD.Agent)
+  returns boolean as $Success
+  folder 'Ticket'
+{
+  if $Ticket/Status != HD.TicketStatus.Open {
+    show message 'Only Open tickets can be assigned.' type warning;
+    return false;
+  }
+  change $Ticket (
+    Status         = HD.TicketStatus.InProgress,
+    HD.Ticket_Agent = $Agent
+  );
+  commit $Ticket;
+  return true;
+}
+/
+
+-- ============================================================
+-- 解决工单：InProgress → Resolved，计算是否逾期
+-- ============================================================
+
+create or modify microflow HD.ACT_Ticket_Resolve
+  ($Ticket: HD.Ticket)
+  returns boolean as $Success
+  folder 'Ticket'
+{
+  if $Ticket/Status != HD.TicketStatus.InProgress {
+    return false;
+  }
+  declare $Now: datetime    = '[%CurrentDateTime%]';
+  declare $IsOver: boolean = $Now > $Ticket/SLADueAt and $Ticket/SLADueAt != empty;
+  change $Ticket (
+    Status     = HD.TicketStatus.Resolved,
+    ResolvedAt = $Now,
+    IsOverSLA  = $IsOver
+  );
+  commit $Ticket;
+  return true;
+}
+/
+
+-- ============================================================
+-- 重开工单：Resolved/Closed → Open，清除解决时间
+-- ============================================================
+
+create or modify microflow HD.ACT_Ticket_Reopen
+  ($Ticket: HD.Ticket)
+  returns boolean as $Success
+  folder 'Ticket'
+{
+  if $Ticket/Status != HD.TicketStatus.Resolved
+     and $Ticket/Status != HD.TicketStatus.Closed {
+    return false;
+  }
+  change $Ticket (
+    Status     = HD.TicketStatus.Open,
+    ResolvedAt = empty
+  );
+  commit $Ticket;
+  return true;
+}
+/
+
+-- ============================================================
+-- 关闭工单：Resolved → Closed（终态）
+-- ============================================================
+
+create or modify microflow HD.ACT_Ticket_Close
+  ($Ticket: HD.Ticket)
+  returns boolean as $Success
+  folder 'Ticket'
+{
+  if $Ticket/Status != HD.TicketStatus.Resolved {
+    return false;
+  }
+  change $Ticket (Status = HD.TicketStatus.Closed);
+  commit $Ticket;
+  return true;
+}
+/
+
+-- ============================================================
+-- 数据源：当前用户的工单（用于 My Tickets 页面）
+-- ============================================================
+
+create or modify microflow HD.DS_MyTickets
+  ()
+  returns list of HD.Ticket as $Tickets
+  folder 'Ticket'
+{
+  retrieve $Tickets from HD.Ticket
+    where [System.owner = '[%CurrentUser%]']
+    limit 0;
+  return $Tickets;
+}
+/

@@ -10,7 +10,7 @@ import (
 
 func TestDomainModelToMermaidGen_RendersFixtureModule(t *testing.T) {
 	ctx := newDomainModelsTestContext(t)
-	mods, _ := ctx.Backend.ListModules()
+	mods, _ := ctx.ModuleLister.ListModules()
 	var modName string
 	for _, m := range mods {
 		if m.Name == "System" {
@@ -44,7 +44,7 @@ func TestDomainModelToMermaidGen_RendersFixtureModule(t *testing.T) {
 
 func TestDomainModelToMermaidGen_UsedByDescribeMermaid(t *testing.T) {
 	ctx := newDomainModelsTestContext(t)
-	mods, _ := ctx.Backend.ListModules()
+	mods, _ := ctx.ModuleLister.ListModules()
 	var modName string
 	for _, m := range mods {
 		if m.Name == "System" {

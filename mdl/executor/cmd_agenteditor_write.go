@@ -44,7 +44,7 @@ func execCreateConsumedMCPService(ctx *ExecContext, s *ast.CreateConsumedMCPServ
 
 	if existing != nil {
 		c.ID = existing.ID
-		if err := ctx.Backend.UpdateAgentEditorConsumedMCPService(c); err != nil {
+		if err := ctx.AgentEditorOperator.UpdateAgentEditorConsumedMCPService(c); err != nil {
 			return mdlerrors.NewBackend("update consumed mcp service", err)
 		}
 		invalidateHierarchy(ctx)
@@ -52,7 +52,7 @@ func execCreateConsumedMCPService(ctx *ExecContext, s *ast.CreateConsumedMCPServ
 		return nil
 	}
 
-	if err := ctx.Backend.CreateAgentEditorConsumedMCPService(c); err != nil {
+	if err := ctx.AgentEditorOperator.CreateAgentEditorConsumedMCPService(c); err != nil {
 		return mdlerrors.NewBackend("create consumed mcp service", err)
 	}
 	invalidateHierarchy(ctx)
@@ -68,7 +68,7 @@ func execDropConsumedMCPService(ctx *ExecContext, s *ast.DropConsumedMCPServiceS
 	if c == nil {
 		return mdlerrors.NewNotFound("consumed mcp service", s.Name.String())
 	}
-	if err := ctx.Backend.DeleteAgentEditorConsumedMCPService(string(c.ID)); err != nil {
+	if err := ctx.AgentEditorOperator.DeleteAgentEditorConsumedMCPService(string(c.ID)); err != nil {
 		return mdlerrors.NewBackend("delete consumed mcp service", err)
 	}
 	fmt.Fprintf(ctx.Output, "Dropped consumed mcp service: %s\n", s.Name)
@@ -123,7 +123,7 @@ func execCreateKnowledgeBase(ctx *ExecContext, s *ast.CreateKnowledgeBaseStmt) e
 
 	if existing != nil {
 		k.ID = existing.ID
-		if err := ctx.Backend.UpdateAgentEditorKnowledgeBase(k); err != nil {
+		if err := ctx.AgentEditorOperator.UpdateAgentEditorKnowledgeBase(k); err != nil {
 			return mdlerrors.NewBackend("update knowledge base", err)
 		}
 		invalidateHierarchy(ctx)
@@ -131,7 +131,7 @@ func execCreateKnowledgeBase(ctx *ExecContext, s *ast.CreateKnowledgeBaseStmt) e
 		return nil
 	}
 
-	if err := ctx.Backend.CreateAgentEditorKnowledgeBase(k); err != nil {
+	if err := ctx.AgentEditorOperator.CreateAgentEditorKnowledgeBase(k); err != nil {
 		return mdlerrors.NewBackend("create knowledge base", err)
 	}
 	invalidateHierarchy(ctx)
@@ -147,7 +147,7 @@ func execDropKnowledgeBase(ctx *ExecContext, s *ast.DropKnowledgeBaseStmt) error
 	if k == nil {
 		return mdlerrors.NewNotFound("knowledge base", s.Name.String())
 	}
-	if err := ctx.Backend.DeleteAgentEditorKnowledgeBase(string(k.ID)); err != nil {
+	if err := ctx.AgentEditorOperator.DeleteAgentEditorKnowledgeBase(string(k.ID)); err != nil {
 		return mdlerrors.NewBackend("delete knowledge base", err)
 	}
 	fmt.Fprintf(ctx.Output, "Dropped knowledge base: %s\n", s.Name)
@@ -262,7 +262,7 @@ func execCreateAgent(ctx *ExecContext, s *ast.CreateAgentStmt) error {
 
 	if existingAgent != nil {
 		a.ID = existingAgent.ID
-		if err := ctx.Backend.UpdateAgentEditorAgent(a); err != nil {
+		if err := ctx.AgentEditorOperator.UpdateAgentEditorAgent(a); err != nil {
 			return mdlerrors.NewBackend("update agent", err)
 		}
 		invalidateHierarchy(ctx)
@@ -270,7 +270,7 @@ func execCreateAgent(ctx *ExecContext, s *ast.CreateAgentStmt) error {
 		return nil
 	}
 
-	if err := ctx.Backend.CreateAgentEditorAgent(a); err != nil {
+	if err := ctx.AgentEditorOperator.CreateAgentEditorAgent(a); err != nil {
 		return mdlerrors.NewBackend("create agent", err)
 	}
 	invalidateHierarchy(ctx)
@@ -286,7 +286,7 @@ func execDropAgent(ctx *ExecContext, s *ast.DropAgentStmt) error {
 	if a == nil {
 		return mdlerrors.NewNotFound("agent", s.Name.String())
 	}
-	if err := ctx.Backend.DeleteAgentEditorAgent(string(a.ID)); err != nil {
+	if err := ctx.AgentEditorOperator.DeleteAgentEditorAgent(string(a.ID)); err != nil {
 		return mdlerrors.NewBackend("delete agent", err)
 	}
 	fmt.Fprintf(ctx.Output, "Dropped agent: %s\n", s.Name)

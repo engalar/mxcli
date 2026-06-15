@@ -1,0 +1,44 @@
+-- ============================================================
+-- 模块 08：调用 Java Action — 参考实现
+-- 前提：
+--   1. 在 Studio Pro 中已创建 HD.JA_HashPassword（返回 String）
+--   2. 在 Studio Pro 中已创建 HD.JA_VerifyPassword（返回 Boolean）
+--   3. 先运行模块 01–05 的参考实现
+-- 运行：mxcli exec call-java-action.mdl -p MyProject.mpr
+-- ============================================================
+
+-- ============================================================
+-- 密码哈希：调用 Java Action 返回哈希字符串
+-- 实际应用：在修改密码前调用此微流
+-- ============================================================
+
+create or modify microflow HD.ACT_HashPassword
+  ($Password: string)
+  returns string as $Hash
+  folder 'Security'
+begin
+  if $Password = '' or length($Password) < 8 then
+    show message 'Password must be at least 8 characters.' type warning;
+    return '';
+  end if;
+  $Hash = call java action HD.JA_HashPassword(Password = $Password);
+  return $Hash;
+end;
+/
+
+-- ============================================================
+-- 密码验证：输入明文 + 哈希，返回 true/false
+-- ============================================================
+
+create or modify microflow HD.ACT_VerifyPassword
+  ($Password: string, $HashedPassword: string)
+  returns boolean as $IsValid
+  folder 'Security'
+begin
+  $IsValid = call java action HD.JA_VerifyPassword(
+    Password       = $Password,
+    HashedPassword = $HashedPassword
+  );
+  return $IsValid;
+end;
+/

@@ -13,7 +13,7 @@ import (
 
 // listDataTransformers handles LIST DATA TRANSFORMERS [IN module].
 func listDataTransformers(ctx *ExecContext, moduleName string) error {
-	transformers, err := ctx.Backend.ListDataTransformers()
+	transformers, err := ctx.ServiceLister.ListDataTransformers()
 	if err != nil {
 		return mdlerrors.NewBackend("list data transformers", err)
 	}
@@ -56,7 +56,7 @@ func listDataTransformers(ctx *ExecContext, moduleName string) error {
 
 // describeDataTransformer handles DESCRIBE DATA TRANSFORMER Module.Name.
 func describeDataTransformer(ctx *ExecContext, name ast.QualifiedName) error {
-	transformers, err := ctx.Backend.ListDataTransformers()
+	transformers, err := ctx.ServiceLister.ListDataTransformers()
 	if err != nil {
 		return mdlerrors.NewBackend("list data transformers", err)
 	}
@@ -141,7 +141,7 @@ func execCreateDataTransformer(ctx *ExecContext, s *ast.CreateDataTransformerStm
 
 	if existingID != "" {
 		dt.ID = existingID
-		if err := ctx.Backend.UpdateDataTransformer(dt); err != nil {
+		if err := ctx.ServiceWriter.UpdateDataTransformer(dt); err != nil {
 			return mdlerrors.NewBackend("update data transformer", err)
 		}
 		if !ctx.Quiet {
@@ -151,7 +151,7 @@ func execCreateDataTransformer(ctx *ExecContext, s *ast.CreateDataTransformerStm
 		return nil
 	}
 
-	if err := ctx.Backend.CreateDataTransformer(dt); err != nil {
+	if err := ctx.ServiceWriter.CreateDataTransformer(dt); err != nil {
 		return mdlerrors.NewBackend("create data transformer", err)
 	}
 
@@ -164,7 +164,7 @@ func execCreateDataTransformer(ctx *ExecContext, s *ast.CreateDataTransformerStm
 
 // findDataTransformer looks up a data transformer by module and name, returning the struct and its ID.
 func findDataTransformer(ctx *ExecContext, moduleName, name string) (*model.DataTransformer, model.ID) {
-	transformers, err := ctx.Backend.ListDataTransformers()
+	transformers, err := ctx.ServiceLister.ListDataTransformers()
 	if err != nil {
 		return nil, ""
 	}
@@ -188,7 +188,7 @@ func execDropDataTransformer(ctx *ExecContext, s *ast.DropDataTransformerStmt) e
 		return mdlerrors.NewNotConnectedWrite()
 	}
 
-	transformers, err := ctx.Backend.ListDataTransformers()
+	transformers, err := ctx.ServiceLister.ListDataTransformers()
 	if err != nil {
 		return mdlerrors.NewBackend("list data transformers", err)
 	}
@@ -202,7 +202,7 @@ func execDropDataTransformer(ctx *ExecContext, s *ast.DropDataTransformerStmt) e
 		modID := h.FindModuleID(dt.ContainerID)
 		modName := h.GetModuleName(modID)
 		if modName == s.Name.Module && dt.Name == s.Name.Name {
-			if err := ctx.Backend.DeleteDataTransformer(dt.ID); err != nil {
+			if err := ctx.ServiceWriter.DeleteDataTransformer(dt.ID); err != nil {
 				return mdlerrors.NewBackend("drop data transformer", err)
 			}
 			if !ctx.Quiet {

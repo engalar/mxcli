@@ -336,7 +336,7 @@ func ensureMendixDBConnection(ctx *ExecContext) (*sqllib.Connection, error) {
 	}
 
 	// Read project settings to get DB configuration
-	ps, err := ctx.Backend.GetProjectSettings()
+	ps, err := ctx.SettingsReader.GetProjectSettings()
 	if err != nil {
 		return nil, mdlerrors.NewBackend("read project settings", err)
 	}

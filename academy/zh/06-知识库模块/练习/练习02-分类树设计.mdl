@@ -1,0 +1,39 @@
+-- ============================================================
+-- 练习 02：分类树与多对多关联
+-- 前提：先运行 参考实现/kb-domain.mdl（已有 KB.Article）
+-- 目标：
+--   1. 创建 KB.Category 实体（已有基础，添加自引用关联）
+--   2. 创建 KB.Tag 实体（unique 约束）
+--   3. 创建 KB.ArticleTag 中间表（多对多）
+-- ============================================================
+
+-- KB.Category 分类实体已给出，请添加自引用关联
+create or modify persistent entity KB.Category (
+  Name:        string(200) not null,
+  Description: string(500)
+);
+
+-- TODO 1：创建 KB.Category_Parent 关联
+-- 要求：from KB.Category to KB.Category，type reference，owner default
+-- 语义：子分类 → 父分类
+
+-- 你的代码：
+
+
+-- TODO 2：创建 KB.Tag 实体
+-- 要求：Name 属性（string, 100 字符, not null, unique）
+
+-- 你的代码：
+
+
+-- TODO 3：创建 KB.ArticleTag 中间表（空实体）
+-- 然后创建两个关联：
+--   KB.ArticleTag_Article: from KB.ArticleTag to KB.Article
+--   KB.ArticleTag_Tag:     from KB.ArticleTag to KB.Tag
+
+-- 你的代码：
+
+
+-- 验证命令：
+--   mxcli check 练习02-分类树设计.mdl
+--   mxcli exec  练习02-分类树设计.mdl -p MyProject.mpr

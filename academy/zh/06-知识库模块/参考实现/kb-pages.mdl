@@ -1,0 +1,133 @@
+-- ============================================================
+-- 模块 06：知识库 — 页面
+-- 前提：先运行 kb-domain.mdl, kb-microflows.mdl
+-- 运行：mxcli exec kb-pages.mdl -p MyProject.mpr
+-- ============================================================
+
+-- ============================================================
+-- 知识库首页：所有已发布文章（含标题过滤器）
+-- ============================================================
+
+create or replace page KB.Article_Overview
+(
+  title:  'Knowledge Base',
+  layout: Atlas_Core.Atlas_Default,
+  folder: 'Article'
+)
+{
+  layoutgrid lgMain {
+    row rHeader {
+      column cTitle (desktopwidth: 12) {
+        dynamictext txtTitle (content: 'Knowledge Base', rendermode: H2)
+      }
+    }
+    row rMain {
+      column cMain (desktopwidth: 12) {
+        datagrid dgArticles (
+          datasource:     database from KB.Article sort by PublishedAt desc,
+          PageSize:       20,
+          PagingPosition: both
+        ) {
+          controlbar cb {
+            actionbutton btnNew (
+              caption:     'New Article',
+              action:      create_object KB.Article then show_page KB.Article_NewEdit,
+              buttonstyle: primary
+            )
+          }
+          column colTitle  (attribute: Title,       caption: 'Title') {
+            textfilter fTitle
+          }
+          column colStatus (attribute: Status,      caption: 'Status',    ColumnWidth: manual, Size: 100) {
+            dropdownfilter fStatus
+          }
+          column colDate   (attribute: PublishedAt, caption: 'Published', ColumnWidth: manual, Size: 140)
+          column colViews  (attribute: ViewCount,   caption: 'Views',     ColumnWidth: manual, Size: 70)
+          column colActions (caption: 'Actions', ShowContentAs: customContent, ColumnWidth: manual, Size: 80) {
+            actionbutton btnRead (
+              caption:     'Read',
+              action:      show_page KB.Article_Detail (Article: $currentObject),
+              buttonstyle: link
+            )
+          }
+        }
+      }
+    }
+  }
+};
+
+-- ============================================================
+-- 文章详情：2 列布局（左内容，右操作）
+-- ============================================================
+
+create or replace page KB.Article_Detail
+(
+  title:  'Article',
+  layout: Atlas_Core.Atlas_Default,
+  folder: 'Article',
+  params: { $Article: KB.Article }
+)
+{
+  layoutgrid lgMain {
+    row rContent {
+      column cInfo (desktopwidth: 8) {
+        dataview dvArticle (datasource: $Article) {
+          dynamictext txtTitle    (content: '{1}', contentparams: [{1} = Title],       rendermode: H2)
+          dynamictext txtStatus   (content: 'Status: {1}',    contentparams: [{1} = Status])
+          dynamictext txtDate     (content: 'Published: {1}', contentparams: [{1} = PublishedAt])
+          dynamictext txtViews    (content: 'Views: {1}',     contentparams: [{1} = ViewCount])
+          dynamictext txtContent  (content: '{1}',            contentparams: [{1} = Content])
+        }
+      }
+      column cActions (desktopwidth: 4) {
+        dataview dvActions (datasource: $Article) {
+          footer ftrActions {
+            actionbutton btnPublish (
+              caption:     'Publish',
+              action:      microflow KB.ACT_Article_Publish (Article: $currentObject),
+              buttonstyle: primary
+            )
+            actionbutton btnArchive (
+              caption:     'Archive',
+              action:      microflow KB.ACT_Article_Archive (Article: $currentObject),
+              buttonstyle: default
+            )
+            actionbutton btnEdit (
+              caption:     'Edit',
+              action:      show_page KB.Article_NewEdit (Article: $currentObject),
+              buttonstyle: default
+            )
+          }
+        }
+      }
+    }
+  }
+};
+
+-- ============================================================
+-- 文章编辑表单
+-- ============================================================
+
+create or replace page KB.Article_NewEdit
+(
+  title:  'New / Edit Article',
+  layout: Atlas_Core.Atlas_Default,
+  folder: 'Article',
+  params: { $Article: KB.Article }
+)
+{
+  layoutgrid lgMain {
+    row rMain {
+      column cMain (desktopwidth: 8) {
+        dataview dvForm (datasource: $Article) {
+          textbox  tbTitle   (label: 'Title',   attribute: Title)
+          textarea taContent (label: 'Content', attribute: Content)
+          footer ftrButtons {
+            actionbutton btnSave   (caption: 'Save',   action: save_changes close_page, buttonstyle: primary)
+            actionbutton btnCancel (caption: 'Cancel', action: cancel_changes close_page)
+          }
+        }
+      }
+    }
+  }
+};

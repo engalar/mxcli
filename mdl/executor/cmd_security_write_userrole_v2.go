@@ -58,10 +58,10 @@ func execCreateUserRoleGen(ctx *ExecContext, s *ast.CreateUserRoleStmt) error {
 			// Replace: remove existing module roles not in the new list, then add new ones.
 			// This makes "create or modify user role" idempotent (replace semantics, not additive).
 			existing := ur.ModuleRolesQualifiedNames()
-			if err := ctx.Backend.AlterUserRoleModuleRoles(model.ID(ps.ID()), s.Name, false, existing); err != nil {
+			if err := ctx.SecurityProjectManager.AlterUserRoleModuleRoles(model.ID(ps.ID()), s.Name, false, existing); err != nil {
 				return mdlerrors.NewBackend("clear user role module roles", err)
 			}
-			if err := ctx.Backend.AlterUserRoleModuleRoles(model.ID(ps.ID()), s.Name, true, moduleRoleNames); err != nil {
+			if err := ctx.SecurityProjectManager.AlterUserRoleModuleRoles(model.ID(ps.ID()), s.Name, true, moduleRoleNames); err != nil {
 				return mdlerrors.NewBackend("update user role", err)
 			}
 			invalidateProjectSecurityCache(ctx)
@@ -70,7 +70,7 @@ func execCreateUserRoleGen(ctx *ExecContext, s *ast.CreateUserRoleStmt) error {
 		}
 	}
 
-	if err := ctx.Backend.AddUserRole(model.ID(ps.ID()), s.Name, moduleRoleNames, s.ManageAllRoles); err != nil {
+	if err := ctx.SecurityProjectManager.AddUserRole(model.ID(ps.ID()), s.Name, moduleRoleNames, s.ManageAllRoles); err != nil {
 		return mdlerrors.NewBackend("create user role", err)
 	}
 	invalidateProjectSecurityCache(ctx)
@@ -117,7 +117,7 @@ func execAlterUserRoleGen(ctx *ExecContext, s *ast.AlterUserRoleStmt) error {
 		moduleRoleNames = append(moduleRoleNames, mr.Module+"."+mr.Name)
 	}
 
-	if err := ctx.Backend.AlterUserRoleModuleRoles(model.ID(ps.ID()), s.Name, s.Add, moduleRoleNames); err != nil {
+	if err := ctx.SecurityProjectManager.AlterUserRoleModuleRoles(model.ID(ps.ID()), s.Name, s.Add, moduleRoleNames); err != nil {
 		return mdlerrors.NewBackend("alter user role", err)
 	}
 	invalidateProjectSecurityCache(ctx)
@@ -163,7 +163,7 @@ func execDropUserRoleGen(ctx *ExecContext, s *ast.DropUserRoleStmt) error {
 		return mdlerrors.NewNotFound("user role", s.Name)
 	}
 
-	if err := ctx.Backend.RemoveUserRole(model.ID(ps.ID()), s.Name); err != nil {
+	if err := ctx.SecurityProjectManager.RemoveUserRole(model.ID(ps.ID()), s.Name); err != nil {
 		return mdlerrors.NewBackend("drop user role", err)
 	}
 	invalidateProjectSecurityCache(ctx)
