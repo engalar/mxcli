@@ -6,14 +6,6 @@ import (
 	"testing"
 
 	"github.com/mendixlabs/mxcli/internal/mxgraph"
-	_ "github.com/mendixlabs/mxcli/modelsdk/gen/datatypes"
-	_ "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
-	_ "github.com/mendixlabs/mxcli/modelsdk/gen/enumerations"
-	_ "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
-	_ "github.com/mendixlabs/mxcli/modelsdk/gen/nanoflows"
-	_ "github.com/mendixlabs/mxcli/modelsdk/gen/pages"
-	_ "github.com/mendixlabs/mxcli/modelsdk/gen/security"
-
 	"github.com/mendixlabs/mxcli/modelsdk"
 )
 

@@ -2,6 +2,7 @@ package mpr
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/mendixlabs/mxcli/internal/mxgraph"
@@ -113,4 +114,51 @@ func TestPageEnumAdapters_BuildRealMPR(t *testing.T) {
 
 	sNodes, _ := countNodes(&SecurityAdapter{Model: m})
 	t.Logf("security adapter nodes=%v", sNodes)
+}
+
+// TestDomainModelAdapter_EntityHasModuleAndQN verifies that Entity nodes built
+// from a real MPR carry the derived Module and QualifiedName props that
+// graphcatalog's FindNodes filters depend on.
+func TestDomainModelAdapter_EntityHasModuleAndQN(t *testing.T) {
+	mprPath := findTestMPR(t)
+	if mprPath == "" {
+		t.Skip("no test MPR found")
+	}
+	m, err := modelsdk.Open(mprPath)
+	if err != nil {
+		t.Fatalf("Open: %v", err)
+	}
+	defer m.Close()
+
+	mg := mxgraph.NewIndexManager()
+	mg.RegisterAdapter(&DomainModelAdapter{Model: m})
+	if err := mg.BuildAll(context.Background()); err != nil {
+		t.Fatalf("BuildAll: %v", err)
+	}
+
+	entities := mg.Query().FindNodes("Entity", nil)
+	if len(entities) == 0 {
+		t.Fatal("no Entity nodes in graph")
+	}
+
+	e := entities[0]
+	module, _ := e.Props["Module"].(string)
+	qn, _ := e.Props["QualifiedName"].(string)
+	t.Logf("sample Entity: Module=%q QualifiedName=%q", module, qn)
+
+	if module == "" {
+		t.Errorf("Entity node %s missing Module prop", e.ID)
+	}
+	if qn == "" || !strings.Contains(qn, ".") {
+		t.Errorf("Entity node %s QualifiedName=%q, want a dotted Module.Entity name", e.ID, qn)
+	}
+	if module != "" && qn != "" && !strings.HasPrefix(qn, module+".") {
+		t.Errorf("QualifiedName %q does not start with Module %q", qn, module)
+	}
+
+	// The derived Module prop must actually drive FindNodes filtering.
+	filtered := mg.Query().FindNodes("Entity", map[string]any{"Module": module})
+	if len(filtered) == 0 {
+		t.Errorf("FindNodes filtered by Module=%q returned 0, derived prop not indexed", module)
+	}
 }
