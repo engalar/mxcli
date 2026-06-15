@@ -17,7 +17,7 @@ func findTestMPR(t testing.TB) string {
 		"testdata/corpus-a/app.mpr",
 		"testdata/*/app.mpr",
 	}
-	root := filepath.Join("..", "..", "..", "..", "..")
+	root := filepath.Join("..", "..", "..", "..")
 	for _, p := range patterns {
 		matches, _ := filepath.Glob(filepath.Join(root, p))
 		if len(matches) > 0 {
@@ -48,7 +48,7 @@ func TestMprAdapterFindPath(t *testing.T) {
 	defer m.Close()
 
 	mg := mxgraph.NewIndexManager()
-	mg.RegisterAdapter(&Adapter{Model: m})
+	mg.RegisterAdapter(&DomainModelAdapter{Model: m})
 	ctx := context.Background()
 	if err := mg.BuildAll(ctx); err != nil {
 		t.Fatalf("BuildAll: %v", err)
@@ -101,7 +101,7 @@ func TestMprAdapterBuild(t *testing.T) {
 	}
 	defer m.Close()
 
-	a := &Adapter{Model: m}
+	a := &DomainModelAdapter{Model: m}
 	sink := &recordingSink{}
 
 	ctx := context.Background()
