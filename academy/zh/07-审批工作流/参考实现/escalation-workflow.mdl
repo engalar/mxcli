@@ -1,0 +1,190 @@
+-- ============================================================
+-- 模块 07：原生 Workflow — 参考实现
+-- 前提：先运行 escalation-domain.mdl 和 escalation-microflows.mdl
+-- 运行：mxcli exec escalation-workflow.mdl -p MyProject.mpr
+--
+-- 本文件演示 Mendix 原生 Workflow（WF_TicketEscalation），
+-- 包含：子工作流、用户任务、决策、并行分支、边界事件（定时器）
+-- ============================================================
+
+-- ============================================================
+-- 工作流辅助微流（WFS_ = Workflow Step）
+-- ============================================================
+
+create or modify microflow HD.WFS_Approve
+  ($EscalationRequest: HD.EscalationRequest)
+  folder 'Escalation'
+{
+  change $EscalationRequest (ApprovalStatus = HD.EscalationStatus.Approved);
+  commit $EscalationRequest;
+  retrieve $Ticket from HD.Ticket
+    where [HD.EscalationRequest_Ticket/HD.EscalationRequest = $EscalationRequest]
+    limit 1;
+  if $Ticket != empty {
+    change $Ticket (Priority = HD.TicketPriority.Critical);
+    commit $Ticket;
+  }
+  return;
+}
+/
+
+create or modify microflow HD.WFS_Reject
+  ($EscalationRequest: HD.EscalationRequest)
+  folder 'Escalation'
+{
+  change $EscalationRequest (ApprovalStatus = HD.EscalationStatus.Rejected);
+  commit $EscalationRequest;
+  return;
+}
+/
+
+-- 获取有权审批的用户列表
+-- Workflow 要求：返回 List of System.User，参数必须是 ($Workflow: System.Workflow, $Context: ContextEntity)
+create or modify microflow HD.WFA_GetManagerAssignees
+  ($workflow: System.Workflow, $EscalationRequest: HD.EscalationRequest)
+  returns list of System.User as $Users
+  folder 'Escalation'
+{
+  -- 简化实现：返回所有活跃用户（生产环境应按角色过滤）
+  retrieve $Users from System.User limit 10;
+  return $Users;
+}
+/
+
+-- 发送提醒通知（简化：记日志）
+create or modify microflow HD.WFS_SendReminder
+  ($EscalationRequest: HD.EscalationRequest)
+  folder 'Escalation'
+{
+  log info 'Reminder: escalation request ' + toString($EscalationRequest/Reason) + ' awaiting manager review';
+  return;
+}
+/
+
+-- ============================================================
+-- 审批页面（工作流用户任务使用）
+-- ============================================================
+
+-- Workflow 用户任务页面必须声明 System.WorkflowUserTask 类型参数（CE7412）
+create or replace page HD.EscalationReview_Form
+(
+  title:  'Review Escalation',
+  layout: Atlas_Core.Atlas_Default,
+  folder: 'Escalation',
+  params: { $WorkflowUserTask: System.WorkflowUserTask }
+)
+{
+  layoutgrid lgMain {
+    row rMain {
+      column cMain (desktopwidth: 12) {
+        dynamictext txtTitle (content: 'Manager Review — Escalation Request', rendermode: H2)
+      }
+    }
+  }
+};
+
+-- ============================================================
+-- 子工作流：经理审批（支持普通审批和多人投票升级）
+-- ============================================================
+
+create or replace workflow HD.WF_SUB_ManagerReview
+  parameter $WorkflowContext: HD.EscalationRequest
+  display 'Manager Review'
+  overview page HD.EscalationWorkflow_Overview
+begin
+  user task UT_PrimaryReview 'Primary Review'
+    page HD.EscalationReview_Form
+    targeting users microflow HD.WFA_GetManagerAssignees
+    description 'Review escalation request and decide: Approve or Escalate to senior board'
+    outcomes
+      'Approve' {
+        call microflow HD.WFS_Approve with (EscalationRequest = '$WorkflowContext');
+      }
+      'Escalate' {
+        multi user task UT_SeniorReview 'Senior Board Review'
+          page HD.EscalationReview_Form
+          targeting users microflow HD.WFA_GetManagerAssignees
+          completion method majority
+          outcomes
+            'Approve' { call microflow HD.WFS_Approve with (EscalationRequest = '$WorkflowContext'); }
+            'Reject'  { call microflow HD.WFS_Reject  with (EscalationRequest = '$WorkflowContext'); }
+          ;
+      }
+  ;
+end workflow;
+/
+
+-- ============================================================
+-- 父工作流：工单升级主流程
+-- 展示要素：决策、等待通知、调用子工作流、并行分支、边界事件
+-- ============================================================
+
+create or replace workflow HD.WF_TicketEscalation
+  parameter $WorkflowContext: HD.EscalationRequest
+  display 'Ticket Escalation'
+  overview page HD.EscalationWorkflow_Overview
+begin
+  decision '$WorkflowContext/Reason = empty'
+    outcomes
+      true -> {
+        call microflow HD.WFS_Reject with (EscalationRequest = '$WorkflowContext');
+      }
+      false -> {
+        wait for notification comment 'WaitForManagerAvailable';
+        call workflow HD.WF_SUB_ManagerReview;
+        parallel split
+          path 1 { call microflow HD.WFS_Approve with (EscalationRequest = '$WorkflowContext'); }
+          path 2 { call microflow HD.WFS_SendReminder with (EscalationRequest = '$WorkflowContext'); }
+        ;
+      }
+  ;
+end workflow;
+/
+
+-- 非中断型定时边界事件：12 小时后发送提醒
+alter workflow HD.WF_TicketEscalation
+  insert boundary event on WaitForManagerAvailable@1
+    non interrupting timer 'addHours([%CurrentDateTime%], 12)' {
+      call microflow HD.WFS_SendReminder with (EscalationRequest = '$WorkflowContext');
+    };
+
+-- 中断型定时边界事件：48 小时超时自动拒绝
+alter workflow HD.WF_TicketEscalation
+  insert boundary event on WF_SUB_ManagerReview@1
+    interrupting timer 'addHours([%CurrentDateTime%], 48)' {
+      call microflow HD.WFS_Reject with (EscalationRequest = '$WorkflowContext');
+    };
+
+-- ============================================================
+-- 触发器：从按钮调用 Workflow
+-- ============================================================
+
+create or modify microflow HD.ACT_StartEscalationWorkflow
+  ($Ticket: HD.Ticket, $Reason: string)
+  returns boolean as $Success
+  folder 'Escalation'
+{
+  if $Ticket/Status != HD.TicketStatus.InProgress {
+    show message 'Only In Progress tickets can be escalated.' type warning;
+    return false;
+  }
+  $ER = create HD.EscalationRequest (
+    Reason       = $Reason,
+    RequestedAt  = '[%CurrentDateTime%]',
+    ApprovalStatus = HD.EscalationStatus.Pending,
+    HD.EscalationRequest_Ticket = $Ticket
+  );
+  commit $ER;
+  call workflow HD.WF_TicketEscalation (EscalationRequest = $ER);
+  return true;
+}
+/
+
+-- 权限
+grant HD.AgentRole on HD.EscalationRequest (create, read *, write *);
+grant HD.ManagerRole on HD.EscalationRequest (create, delete, read *, write *);
+grant execute on microflow HD.WFS_Approve to HD.ManagerRole;
+grant execute on microflow HD.WFS_Reject to HD.ManagerRole;
+grant execute on microflow HD.WFA_GetManagerAssignees to HD.ManagerRole;
+grant execute on microflow HD.ACT_StartEscalationWorkflow to HD.AgentRole, HD.ManagerRole;
+grant view on page HD.EscalationReview_Form to HD.ManagerRole;
