@@ -12,15 +12,31 @@
 > 使用 `java-source/JA_HashPassword.java` 中提供的源码，在 Studio Pro 中创建同名 Java Action 后，
 > 将源码粘贴进去。或直接使用 Marketplace 中的 `CommunityCommons` 模块，它已内置 `BCrypt` 工具类。
 
-## 两种路径
+## 三种路径
 
-### 路径 A：使用 CommunityCommons（最快，推荐演示用）
+### 路径 A：纯 MDL 创建（推荐，无需 Studio Pro）
+
+两步即可在任意空应用上完成：
+
+```bash
+# 步骤 1：创建 Java Action（SHA-256 + salt，纯 JDK，无外部依赖）
+mxcli exec 参考实现/create-java-actions.mdl -p app.mpr
+
+# 步骤 2：创建调用微流
+mxcli exec 参考实现/call-java-action.mdl -p app.mpr
+```
+
+- 第一步生成 `JA_HashPassword` 和 `JA_VerifyPassword` 两个 Java Action
+- 第二步生成调用它们的业务微流 `ACT_HashPassword` / `ACT_VerifyPassword`
+- 生产场景可将 SHA-256 实现替换为 BCrypt（见路径 C）
+
+### 路径 B：使用 CommunityCommons（BCrypt，推荐生产用）
 
 1. 在 Studio Pro 中安装 CommunityCommons Marketplace 模块
 2. 在微流中调用 `CommunityCommons.BCryptHash` 和 `CommunityCommons.BCryptCheck`
 3. 对应 MDL（调用方式）见 `参考实现/call-java-action.mdl`
 
-### 路径 B：自己实现 Java Action（完整学习路径）
+### 路径 C：自己实现 BCrypt Java Action（完整学习路径）
 
 1. Studio Pro → App Explorer → 右键模块 HD → Add Java Action
 2. 命名：`JA_HashPassword`，添加参数 `Password`（String），返回类型 `String`

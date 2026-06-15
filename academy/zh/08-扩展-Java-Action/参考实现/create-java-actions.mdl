@@ -1,0 +1,97 @@
+-- ============================================================
+-- 模块 08：创建 Java Action — 参考实现
+-- 使用标准 JDK（无需外部依赖），可在空应用中直接运行
+--
+-- 运行：mxcli exec create-java-actions.mdl -p MyProject.mpr
+-- 然后运行：mxcli exec call-java-action.mdl -p MyProject.mpr
+-- ============================================================
+
+-- ============================================================
+-- 模块初始化
+-- ============================================================
+
+create or modify module HD;
+
+-- ============================================================
+-- JA_HashPassword
+-- 输入：明文密码（string）
+-- 输出：SHA-256 哈希 + 随机 salt（格式：<salt>$<hash>）
+--
+-- 生产建议：换用 BCrypt（需在 userlib/ 放入 bcrypt-*.jar）。
+-- 此处使用纯 JDK 实现，无需任何外部依赖，适合快速验证。
+-- ============================================================
+
+create or modify java action HD.JA_HashPassword (
+  Password: string not null
+) returns string
+imports $$
+import java.security.MessageDigest;
+import java.security.SecureRandom;
+import java.nio.charset.StandardCharsets;
+$$
+code $$
+if (Password == null || Password.isEmpty()) {
+    throw new IllegalArgumentException("Password cannot be empty");
+}
+// 生成 16 字节随机 salt
+SecureRandom rng = new SecureRandom();
+byte[] saltBytes = new byte[16];
+rng.nextBytes(saltBytes);
+StringBuilder saltHex = new StringBuilder();
+for (byte b : saltBytes) {
+    saltHex.append(String.format("%02x", b));
+}
+String salt = saltHex.toString();
+
+// SHA-256(salt + password)
+MessageDigest digest = MessageDigest.getInstance("SHA-256");
+byte[] hashBytes = digest.digest((salt + Password).getBytes(StandardCharsets.UTF_8));
+StringBuilder hashHex = new StringBuilder();
+for (byte b : hashBytes) {
+    hashHex.append(String.format("%02x", b));
+}
+
+// 格式：<salt>$<hash>，便于验证时分割
+return salt + "$" + hashHex.toString();
+$$;
+
+-- ============================================================
+-- JA_VerifyPassword
+-- 输入：明文密码 + 存储的哈希（格式：<salt>$<hash>）
+-- 输出：boolean — 验证成功返回 true
+-- ============================================================
+
+create or modify java action HD.JA_VerifyPassword (
+  Password: string not null,
+  HashedPassword: string not null
+) returns boolean
+imports $$
+import java.security.MessageDigest;
+import java.nio.charset.StandardCharsets;
+$$
+code $$
+if (Password == null || HashedPassword == null) {
+    return false;
+}
+// 分割 salt 和 hash
+int sep = HashedPassword.indexOf('$');
+if (sep < 0) {
+    return false;
+}
+String salt = HashedPassword.substring(0, sep);
+String storedHash = HashedPassword.substring(sep + 1);
+
+// 用相同 salt 重新计算哈希
+MessageDigest digest = MessageDigest.getInstance("SHA-256");
+byte[] hashBytes = digest.digest((salt + Password).getBytes(StandardCharsets.UTF_8));
+StringBuilder computed = new StringBuilder();
+for (byte b : hashBytes) {
+    computed.append(String.format("%02x", b));
+}
+
+// 时间恒定比较，防止时序攻击
+return MessageDigest.isEqual(
+    storedHash.getBytes(StandardCharsets.UTF_8),
+    computed.toString().getBytes(StandardCharsets.UTF_8)
+);
+$$;
