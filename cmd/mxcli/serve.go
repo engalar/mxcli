@@ -3,6 +3,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"html/template"
 	"math"
@@ -10,8 +11,14 @@ import (
 	"sort"
 	"strings"
 
-	mprbackend "github.com/mendixlabs/mxcli/mdl/backend/mpr"
-	"github.com/mendixlabs/mxcli/mdl/catalog"
+	"github.com/mendixlabs/mxcli/internal/mxgraph"
+	mpradapter "github.com/mendixlabs/mxcli/internal/mxgraph/adapter/mpr"
+	"github.com/mendixlabs/mxcli/mdl/graphcatalog"
+	"github.com/mendixlabs/mxcli/modelsdk"
+	_ "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
+	_ "github.com/mendixlabs/mxcli/modelsdk/gen/enumerations"
+	_ "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
+	_ "github.com/mendixlabs/mxcli/modelsdk/gen/pages"
 	"github.com/spf13/cobra"
 )
 
@@ -72,38 +79,33 @@ Examples:
 	},
 }
 
-func buildCatalog(projectPath string) (*catalog.Catalog, error) {
-	// Followup F1: catalog walks gen-typed microflows / nanoflows now,
-	// so route through MprBackend (which provides ListMicroflowsGen
-	// via the modelsdk-native repos) instead of an mpr.Reader.
-	be := mprbackend.New()
-	if err := be.Connect(projectPath); err != nil {
-		return nil, fmt.Errorf("failed to open project: %w", err)
-	}
-	defer be.Disconnect()
-
-	cat, err := catalog.New()
+func buildProjectGraph(projectPath string) (*graphcatalog.ProjectGraph, error) {
+	m, err := modelsdk.Open(projectPath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create catalog: %w", err)
+		return nil, fmt.Errorf("open project: %w", err)
 	}
+	defer m.Close()
 
-	builder := catalog.NewBuilder(cat, be)
-	if err := builder.Build(nil); err != nil {
-		return nil, fmt.Errorf("failed to build catalog: %w", err)
+	mgr := mxgraph.NewIndexManager()
+	mgr.RegisterAdapter(&mpradapter.DomainModelAdapter{Model: m})
+	mgr.RegisterAdapter(&mpradapter.MicroflowAdapter{Model: m})
+	mgr.RegisterAdapter(&mpradapter.PageAdapter{Model: m})
+	mgr.RegisterAdapter(&mpradapter.EnumerationAdapter{Model: m})
+
+	if err := mgr.BuildAll(context.Background()); err != nil {
+		return nil, fmt.Errorf("build graph: %w", err)
 	}
-
-	return cat, nil
+	return graphcatalog.NewProjectGraph(mgr), nil
 }
 
 func serveTreemap(w http.ResponseWriter, r *http.Request, projectPath string) {
-	cat, err := buildCatalog(projectPath)
+	pg, err := buildProjectGraph(projectPath)
 	if err != nil {
 		http.Error(w, err.Error(), 500)
 		return
 	}
-	defer cat.Close()
 
-	modules, err := getModuleStats(cat)
+	modules, err := getModuleStats(pg)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Failed to get module stats: %v", err), 500)
 		return
@@ -116,14 +118,13 @@ func serveTreemap(w http.ResponseWriter, r *http.Request, projectPath string) {
 }
 
 func serveSVG(w http.ResponseWriter, r *http.Request, projectPath string) {
-	cat, err := buildCatalog(projectPath)
+	pg, err := buildProjectGraph(projectPath)
 	if err != nil {
 		http.Error(w, err.Error(), 500)
 		return
 	}
-	defer cat.Close()
 
-	modules, err := getModuleStats(cat)
+	modules, err := getModuleStats(pg)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Failed to get module stats: %v", err), 500)
 		return
@@ -136,80 +137,38 @@ func serveSVG(w http.ResponseWriter, r *http.Request, projectPath string) {
 	renderSVG(w, rects, width, height)
 }
 
-func getModuleStats(cat *catalog.Catalog) ([]*ModuleStats, error) {
+func getModuleStats(pg *graphcatalog.ProjectGraph) ([]*ModuleStats, error) {
 	moduleMap := make(map[string]*ModuleStats)
 
-	// Helper to query counts by counting in Go (catalog doesn't support GROUP BY)
-	queryModuleCounts := func(table string) map[string]int {
-		counts := make(map[string]int)
-		result, err := cat.Query(fmt.Sprintf("SELECT ModuleName FROM %s", table))
-		if err != nil {
-			return counts
+	// "" module = all modules
+	statsFor := func(name string) *ModuleStats {
+		m := moduleMap[name]
+		if m == nil {
+			m = &ModuleStats{Name: name}
+			moduleMap[name] = m
 		}
-		// Find module name column index
-		moduleIdx := -1
-		for i, col := range result.Columns {
-			if col == "ModuleName" {
-				moduleIdx = i
-				break
-			}
-		}
-		if moduleIdx < 0 {
-			return counts
-		}
-		// Count occurrences of each module
-		for _, row := range result.Rows {
-			name := fmt.Sprintf("%v", row[moduleIdx])
-			counts[name]++
-		}
-		return counts
+		return m
 	}
 
-	// Query all document types (use lowercase table names as that's what SQLite uses)
-	entityCounts := queryModuleCounts("entities")
-	microflowCounts := queryModuleCounts("microflows")
-	nanoflowCounts := queryModuleCounts("nanoflows")
-	pageCounts := queryModuleCounts("pages")
-	snippetCounts := queryModuleCounts("snippets")
-	layoutCounts := queryModuleCounts("layouts")
-	enumCounts := queryModuleCounts("enumerations")
-
-	// Collect all module names
-	allModules := make(map[string]bool)
-	for name := range entityCounts {
-		allModules[name] = true
+	for _, e := range pg.Entities("") {
+		statsFor(e.Module).EntityCount++
 	}
-	for name := range microflowCounts {
-		allModules[name] = true
-	}
-	for name := range nanoflowCounts {
-		allModules[name] = true
-	}
-	for name := range pageCounts {
-		allModules[name] = true
-	}
-	for name := range snippetCounts {
-		allModules[name] = true
-	}
-	for name := range layoutCounts {
-		allModules[name] = true
-	}
-	for name := range enumCounts {
-		allModules[name] = true
-	}
-
-	// Build module stats
-	for name := range allModules {
-		moduleMap[name] = &ModuleStats{
-			Name:           name,
-			EntityCount:    entityCounts[name],
-			MicroflowCount: microflowCounts[name],
-			NanoflowCount:  nanoflowCounts[name],
-			PageCount:      pageCounts[name],
-			SnippetCount:   snippetCounts[name],
-			LayoutCount:    layoutCounts[name],
-			EnumCount:      enumCounts[name],
+	for _, mf := range pg.Microflows("") {
+		s := statsFor(mf.Module)
+		if mf.IsNanoflow {
+			s.NanoflowCount++
+		} else {
+			s.MicroflowCount++
 		}
+	}
+	for _, p := range pg.Pages("") {
+		statsFor(p.Module).PageCount++
+	}
+	for _, sn := range pg.Snippets("") {
+		statsFor(sn.Module).SnippetCount++
+	}
+	for _, en := range pg.Enumerations("") {
+		statsFor(en.Module).EnumCount++
 	}
 
 	// Calculate totals and assign colors
@@ -239,19 +198,6 @@ func getModuleStats(cat *catalog.Catalog) ([]*ModuleStats, error) {
 	}
 
 	return modules, nil
-}
-
-func toInt(v any) int {
-	switch val := v.(type) {
-	case int:
-		return val
-	case int64:
-		return int(val)
-	case float64:
-		return int(val)
-	default:
-		return 0
-	}
 }
 
 // generateTreemap creates a squarified treemap layout.
