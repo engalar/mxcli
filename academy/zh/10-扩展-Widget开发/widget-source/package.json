@@ -1,0 +1,15 @@
+{
+  "name": "ticket-status-badge",
+  "widgetName": "TicketStatusBadge",
+  "version": "1.0.0",
+  "description": "Colored status badge widget for Helpdesk tickets",
+  "packagePath": "helpdesk",
+  "dependencies": {},
+  "devDependencies": {
+    "@mendix/pluggable-widgets-tools": "^10.0.0"
+  },
+  "scripts": {
+    "build": "pluggable-widgets-tools build:prod",
+    "dev": "pluggable-widgets-tools start:web"
+  }
+}
