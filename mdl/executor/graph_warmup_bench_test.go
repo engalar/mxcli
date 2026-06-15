@@ -209,3 +209,53 @@ func TestExecConnect_AutoLoadsGraphSnapshot(t *testing.T) {
 		t.Errorf("entity name = %q, want Test.Entity1", cache.entityNames[model.ID("uuid-e1")])
 	}
 }
+
+// openBenchExecutorWithGraph 创建带预建 graph 的 Executor。
+// 用于测量 graph 加速路径的性能。
+func openBenchExecutorWithGraph(b *testing.B, mprPath string) *Executor {
+	b.Helper()
+	be := mpr.New()
+	if err := be.Connect(mprPath); err != nil {
+		b.Fatalf("backend.Connect: %v", err)
+	}
+	b.Cleanup(func() { _ = be.Disconnect() })
+	e := New(os.Stdout)
+	e.SetBackend(be)
+	e.mprPath = mprPath // buildGraph opens the project via modelsdk.Open(ctx.MprPath)
+
+	// 首次构建 graph（这是一次性开销，不计入 benchmark）
+	b.StopTimer()
+	if _, err := e.BuildGraph(); err != nil {
+		b.Fatalf("BuildGraph: %v", err)
+	}
+	b.StartTimer()
+	return e
+}
+
+// BenchmarkEntityNamesFromGraph 是性能红线：必须比 BenchmarkEntityNamesFromBackend 快 5x+。
+// 如果比值低于 5x，说明 warmCacheFromGraph 或 graph propIdx 出了问题。
+func BenchmarkEntityNamesFromGraph(b *testing.B) {
+	mprPath := findCorpusMPR(b)
+	e := openBenchExecutorWithGraph(b, mprPath)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		e.cache = nil // 重置 executorCache（但 graphCatalog 保留）
+		ctx := e.newExecContext(context.Background())
+		ctx.initRoles() // mirror the registry dispatch path that wires role interfaces
+		h := &ContainerHierarchy{}
+		_ = getEntityNames(ctx, h)
+	}
+}
+
+// BenchmarkMicroflowListFromGraph 测试图预热路径的微流列举。
+func BenchmarkMicroflowListFromGraph(b *testing.B) {
+	mprPath := findCorpusMPR(b)
+	e := openBenchExecutorWithGraph(b, mprPath)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		e.cache = nil
+		ctx := e.newExecContext(context.Background())
+		ctx.initRoles() // mirror the registry dispatch path that wires role interfaces
+		_, _ = listMicroflowsWithContainerGen(ctx)
+	}
+}
