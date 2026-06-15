@@ -156,7 +156,7 @@ func init() {
 		TypeName: "Microflows$AssociationRetrieveSource",
 		Properties: []codec.PropDesc{
 			{Name: "startVariableName", BSONKey: "StartVariableName", Kind: codec.PropKindString, RefType: ""},
-			{Name: "association", BSONKey: "Association", Kind: codec.PropKindByNameRef, RefType: "DomainModels$AssociationBase"},
+			{Name: "association", BSONKey: "AssociationId", Kind: codec.PropKindByNameRef, RefType: "DomainModels$AssociationBase"},
 		},
 	})
 	codec.DefaultDescRegistry.Register("Microflows$AuthenticationConfig", &codec.TypeDesc{

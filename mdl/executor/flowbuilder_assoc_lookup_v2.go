@@ -16,6 +16,7 @@ package executor
 import (
 	"strings"
 
+	"github.com/mendixlabs/mxcli/mdl/ast"
 	"github.com/mendixlabs/mxcli/mdl/backend"
 	"github.com/mendixlabs/mxcli/model"
 	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
@@ -101,6 +102,39 @@ func isEntityGen(b backend.FullBackend, moduleName, entityName string) bool {
 		}
 	}
 	return false
+}
+
+// resolveAmbiguousDataType resolves the TypeEnumeration vs TypeEntity
+// ambiguity for bare qualified names in both visitor contexts:
+//
+//   - In attribute context (buildDataType): visitor returns TypeEnumeration;
+//     if the name is actually an entity, upgrade to TypeEntity.
+//   - In microflow parameter context (buildMicroflowDataType): visitor always
+//     returns TypeEntity for bare QN; if the name is NOT a known entity,
+//     downgrade to TypeEnumeration (the QN must be an enum, constant, or
+//     similar non-entity type).
+//
+// Safe to call with any DataType; non-ambiguous kinds are returned unchanged.
+func resolveAmbiguousDataType(b backend.FullBackend, dt ast.DataType) ast.DataType {
+	switch dt.Kind {
+	case ast.TypeEnumeration:
+		// Attribute/general context: TypeEnumeration may actually be an entity.
+		if dt.EnumRef != nil && b != nil {
+			if isEntityGen(b, dt.EnumRef.Module, dt.EnumRef.Name) {
+				return ast.DataType{Kind: ast.TypeEntity, EntityRef: dt.EnumRef}
+			}
+		}
+	case ast.TypeEntity:
+		// Microflow parameter context: buildMicroflowDataType returns TypeEntity
+		// for any bare QN, including enumerations. If the QN is not a known
+		// entity, treat it as TypeEnumeration.
+		if dt.EntityRef != nil && b != nil {
+			if !isEntityGen(b, dt.EntityRef.Module, dt.EntityRef.Name) {
+				return ast.DataType{Kind: ast.TypeEnumeration, EnumRef: dt.EntityRef}
+			}
+		}
+	}
+	return dt
 }
 
 // lookupEnumRefGen returns the enumeration qualified name (e.g.,

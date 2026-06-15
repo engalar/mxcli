@@ -82,3 +82,9 @@ node_modules/
 .superpowers/
 
 graphify-out
+
+# Academy end-to-end test projects (created via mxcli new, not committed)
+HelpDeskE2E/
+HelpDeskE2EClean/
+HelpDeskFresh/
+HelpDeskFinal/

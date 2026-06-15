@@ -86,7 +86,9 @@ create or modify microflow HD.ACT_Escalation_Approve
   change $EscalationRequest (ApprovalStatus = HD.EscalationStatus.Approved);
   commit $EscalationRequest;
 
-  retrieve $Ticket from $EscalationRequest/HD.EscalationRequest_Ticket;
+  retrieve $Ticket from HD.Ticket
+    where [HD.EscalationRequest_Ticket/HD.EscalationRequest = $EscalationRequest]
+    limit 1;
   if $Ticket != empty {
     change $Ticket (Priority = HD.TicketPriority.Critical);
     commit $Ticket;
@@ -158,8 +160,25 @@ create or modify microflow HD.DS_PendingEscalations
 {
   retrieve $List from HD.EscalationRequest
     where [ApprovalStatus = 'Pending']
-    sort by RequestedAt asc
-    limit 0;
+    sort by RequestedAt asc;
   return $List;
 }
 /
+
+-- ============================================================
+-- 安全权限：升级相关微流的角色授权
+-- ============================================================
+
+grant execute on microflow HD.ACT_StartEscalation to HD.AgentRole, HD.ManagerRole;
+grant execute on microflow HD.ACT_OpenEscalationForm to HD.AgentRole, HD.ManagerRole;
+grant execute on microflow HD.ACT_StartEscalation_FromObject to HD.AgentRole, HD.ManagerRole;
+grant execute on microflow HD.ACT_Escalation_Approve to HD.ManagerRole;
+grant execute on microflow HD.ACT_Escalation_Reject to HD.ManagerRole;
+grant execute on microflow HD.ACT_OpenRejectForm to HD.ManagerRole;
+grant execute on microflow HD.ACT_Escalation_Reject_FromObject to HD.ManagerRole;
+grant execute on microflow HD.DS_PendingEscalations to HD.ManagerRole;
+grant view on page HD.EscalationStart_Form to HD.AgentRole, HD.ManagerRole;
+grant view on page HD.EscalationWorkflow_Overview to HD.ManagerRole;
+grant view on page HD.EscalationReject_Form to HD.ManagerRole;
+grant HD.AgentRole on HD.EscalationRequest (create, read *, write *);
+grant HD.ManagerRole on HD.EscalationRequest (create, delete, read *, write *);

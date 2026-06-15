@@ -84,6 +84,7 @@
     "EntityTypeParameterType.typeParameter": "TypeParameterPointer",
     "ParameterizedEntityType.typeParameter": "TypeParameterPointer",
     "GridControlBar.defaultButton": "DefaultButtonPointer",
+    "AssociationRetrieveSource.association": "AssociationId",
     "SequenceFlow.origin": "OriginPointer",
     "SequenceFlow.destination": "DestinationPointer",
     "AnnotationFlow.origin": "OriginPointer",

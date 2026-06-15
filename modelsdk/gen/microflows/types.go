@@ -1116,7 +1116,8 @@ func (o *AssociationRetrieveSource) SetAssociationQualifiedName(v string) {
 // NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *AssociationRetrieveSource) InitFromRaw(raw bson.Raw) {
 	o.startVariableName.Init(raw)
-	if val, err := raw.LookupErr("Association"); err == nil {
+	// BSONKey is "AssociationId" (not "Association") — confirmed from Studio Pro BSON.
+	if val, err := raw.LookupErr("AssociationId"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
 			o.association.SetFromDecode(s)
 		}

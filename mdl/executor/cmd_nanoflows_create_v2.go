@@ -165,7 +165,11 @@ func execCreateNanoflowGen(ctx *ExecContext, s *ast.CreateNanoflowStmt) error {
 		param.SetSize(layoutSize(ParameterWidth, ParameterHeight))
 		// Studio Pro stores the type exclusively in VariableType (a
 		// DataTypes child element). The Type() string field is never set.
-		if dt := convertASTToGenDataType(p.Type); dt != nil {
+		// Resolve TypeEnumeration vs TypeEntity ambiguity: a bare qualified
+		// name (e.g. HD.Ticket) is parsed as TypeEnumeration — check the
+		// backend to determine the true kind.
+		paramType := resolveAmbiguousDataType(ctx.Backend, p.Type)
+		if dt := convertASTToGenDataType(paramType); dt != nil {
 			param.SetParameterType(dt)
 		}
 		paramElements = append(paramElements, param)
