@@ -55,9 +55,9 @@ create or modify nanoflow HD.NF_CopyToClipboard
   ($Text: string)
   returns void
   folder 'UI'
-begin
+{
   call javascript action HD.JSA_CopyToClipboard(Text = $Text);
-end;
+}
 /
 
 -- 带返回值的示例：HD.JSA_FormatRelativeTime（参数 DateTime: DateTime，返回 string）
@@ -65,10 +65,10 @@ create or modify nanoflow HD.NF_FormatRelativeTime
   ($DateTime: datetime)
   returns string as $Result
   folder 'UI'
-begin
+{
   $Result = call javascript action HD.JSA_FormatRelativeTime(DateTime = $DateTime);
   return $Result;
-end;
+}
 /
 ```
 

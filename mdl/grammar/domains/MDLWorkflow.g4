@@ -20,7 +20,7 @@ createWorkflowStatement
       (EXPORT LEVEL (IDENTIFIER | API))?
       (OVERVIEW PAGE qualifiedName)?
       (DUE DATE_TYPE STRING_LITERAL)?
-      BEGIN workflowBody END WORKFLOW SEMICOLON? SLASH?
+      LBRACE workflowBody RBRACE SEMICOLON? SLASH?
     ;
 
 workflowBody

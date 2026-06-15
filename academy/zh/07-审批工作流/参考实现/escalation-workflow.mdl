@@ -91,7 +91,7 @@ create or replace workflow HD.WF_SUB_ManagerReview
   parameter $WorkflowContext: HD.EscalationRequest
   display 'Manager Review'
   overview page HD.EscalationWorkflow_Overview
-begin
+{
   user task UT_PrimaryReview 'Primary Review'
     page HD.EscalationReview_Form
     targeting users microflow HD.WFA_GetManagerAssignees
@@ -111,7 +111,7 @@ begin
           ;
       }
   ;
-end workflow;
+}
 /
 
 -- ============================================================
@@ -123,7 +123,7 @@ create or replace workflow HD.WF_TicketEscalation
   parameter $WorkflowContext: HD.EscalationRequest
   display 'Ticket Escalation'
   overview page HD.EscalationWorkflow_Overview
-begin
+{
   decision '$WorkflowContext/Reason = empty'
     outcomes
       true -> {
@@ -138,7 +138,7 @@ begin
         ;
       }
   ;
-end workflow;
+}
 /
 
 -- 非中断型定时边界事件：12 小时后发送提醒

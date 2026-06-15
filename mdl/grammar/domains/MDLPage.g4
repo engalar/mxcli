@@ -470,7 +470,7 @@ widgetBodyV3
 createNotebookStatement
     : NOTEBOOK qualifiedName
       notebookOptions?
-      BEGIN notebookPage* END
+      LBRACE notebookPage* RBRACE
     ;
 
 notebookOptions

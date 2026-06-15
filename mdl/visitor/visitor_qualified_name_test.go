@@ -12,10 +12,10 @@ func TestBuildQualifiedNameThreeParts(t *testing.T) {
 	// Bug #1: Module.Enum.Value was truncated to Module.Enum
 	// The WHERE clause should preserve all 3 parts of an enum value reference.
 	input := `CREATE MICROFLOW BST.Test ()
-BEGIN
+{
   RETRIEVE $Submissions FROM BST.ComplianceSubmission
     WHERE ComplianceResult = BST.ComplianceStatus.Rectified;
-END;`
+}`
 
 	prog, errs := Build(input)
 	if len(errs) > 0 {
@@ -64,10 +64,10 @@ END;`
 func TestBuildQualifiedNameTwoParts(t *testing.T) {
 	// Verify 2-part names still work correctly
 	input := `CREATE MICROFLOW BST.Test ()
-BEGIN
+{
   RETRIEVE $Items FROM BST.Item
     WHERE Status = BST.SomeAssoc;
-END;`
+}`
 
 	prog, errs := Build(input)
 	if len(errs) > 0 {
@@ -108,10 +108,10 @@ func TestQuotedIdentifierInWidgetAttribute(t *testing.T) {
 func TestShowPageWidgetStyleArgsInMicroflow(t *testing.T) {
 	// Widget-style Param: $value syntax should be accepted in microflow SHOW PAGE
 	input := `CREATE MICROFLOW Test.MF_ShowPage ()
-BEGIN
+{
   DECLARE $Item Test.Item;
   SHOW PAGE Test.EditPage(Item: $Item);
-END;`
+}`
 
 	prog, errs := Build(input)
 	if len(errs) > 0 {

@@ -15,12 +15,12 @@ import (
 func TestBuild_XPathWithQuotedAssoc_ReturnsError(t *testing.T) {
 	mdl := `CREATE MICROFLOW Mod.TestFlow ()
 RETURNS Boolean AS $r
-BEGIN
+{
     DECLARE $r Boolean = false;
     DECLARE $Other Mod.OtherEntity = empty;
     RETRIEVE $Obj FROM Mod.Entity WHERE ["Mod.Assoc" = $Other];
     RETURN $r;
-END;
+}
 `
 	_, errs := Build(mdl)
 	if len(errs) == 0 {
@@ -44,12 +44,12 @@ END;
 func TestBuild_XPathWithUnquotedAssoc_NoError(t *testing.T) {
 	mdl := `CREATE MICROFLOW Mod.TestFlow ()
 RETURNS Boolean AS $r
-BEGIN
+{
     DECLARE $r Boolean = false;
     DECLARE $Other Mod.OtherEntity = empty;
     RETRIEVE $Obj FROM Mod.Entity WHERE [Mod.Assoc = $Other];
     RETURN $r;
-END;
+}
 `
 	_, errs := Build(mdl)
 	for _, e := range errs {
@@ -67,11 +67,11 @@ END;
 func TestBuild_XPathStringLiteralValue_NoError(t *testing.T) {
 	mdl := `CREATE MICROFLOW Mod.TestFlow ()
 RETURNS Boolean AS $r
-BEGIN
+{
     DECLARE $r Boolean = false;
     RETRIEVE $Obj FROM Mod.Entity WHERE [Name = 'John'];
     RETURN $r;
-END;
+}
 `
 	_, errs := Build(mdl)
 	for _, e := range errs {

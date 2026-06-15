@@ -151,8 +151,7 @@ func microflowStmtToMDL(ctx *ExecContext, s *ast.CreateMicroflowStmt) string {
 		}
 	}
 
-	// BEGIN block
-	lines = append(lines, "begin")
+	lines = append(lines, "{")
 
 	// Body statements
 	for _, stmt := range s.Body {
@@ -160,7 +159,7 @@ func microflowStmtToMDL(ctx *ExecContext, s *ast.CreateMicroflowStmt) string {
 		lines = append(lines, stmtLines...)
 	}
 
-	lines = append(lines, "end;")
+	lines = append(lines, "}")
 	lines = append(lines, "/")
 
 	return strings.Join(lines, "\n")
@@ -226,8 +225,7 @@ func nanoflowStmtToMDL(ctx *ExecContext, s *ast.CreateNanoflowStmt) string {
 		}
 	}
 
-	// BEGIN block
-	lines = append(lines, "begin")
+	lines = append(lines, "{")
 
 	// Body statements
 	for _, stmt := range s.Body {
@@ -235,7 +233,7 @@ func nanoflowStmtToMDL(ctx *ExecContext, s *ast.CreateNanoflowStmt) string {
 		lines = append(lines, stmtLines...)
 	}
 
-	lines = append(lines, "end;")
+	lines = append(lines, "}")
 	lines = append(lines, "/")
 
 	return strings.Join(lines, "\n")

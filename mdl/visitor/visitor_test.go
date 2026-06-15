@@ -13,10 +13,10 @@ import (
 func TestMicroflowParsing(t *testing.T) {
 	input := `CREATE MICROFLOW MyModule.HelloWorld ()
 RETURNS String
-BEGIN
+{
   DECLARE $greeting String = 'Hello, World!'
   RETURN $greeting
-END;`
+}`
 
 	prog, errs := Build(input)
 	if len(errs) > 0 {
@@ -197,10 +197,10 @@ CREATE PERSISTENT ENTITY DmTest.Cars (
 func TestCallUnifiedParamSyntax(t *testing.T) {
 	// Test CALL with parameter names without $ prefix
 	input := `CREATE MICROFLOW TestModule.CallTest () RETURNS String
-	BEGIN
+	{
 		$Result = CALL MICROFLOW TestModule.OtherMf (Input = 'Hello', Quantity = 5);
 		RETURN $Result;
-	END;`
+	}`
 
 	prog, errs := Build(input)
 	if len(errs) > 0 {
@@ -245,10 +245,10 @@ func TestCallUnifiedParamSyntax(t *testing.T) {
 func TestCallWithDollarPrefix_BackwardCompat(t *testing.T) {
 	// Test CALL with parameter names with $ prefix (old syntax, should still work)
 	input := `CREATE MICROFLOW TestModule.CallTestOld () RETURNS String
-	BEGIN
+	{
 		$Result = CALL MICROFLOW TestModule.OtherMf ($Input = 'Hello');
 		RETURN $Result;
-	END;`
+	}`
 
 	prog, errs := Build(input)
 	if len(errs) > 0 {
@@ -275,10 +275,10 @@ func TestCallWithDollarPrefix_BackwardCompat(t *testing.T) {
 func TestLogWithTemplateSyntax(t *testing.T) {
 	// Test LOG with WITH template syntax
 	input := `CREATE MICROFLOW TestModule.LogTest ($OrderNumber: String) RETURNS Boolean
-	BEGIN
+	{
 		LOG INFO NODE 'OrderService' 'Processing order: {1}' WITH ({1} = $OrderNumber);
 		RETURN true;
-	END;`
+	}`
 
 	prog, errs := Build(input)
 	if len(errs) > 0 {
@@ -331,10 +331,10 @@ func TestLogWithTemplateSyntax(t *testing.T) {
 func TestLogWithMultipleParams(t *testing.T) {
 	// Test LOG with multiple template parameters
 	input := `CREATE MICROFLOW TestModule.LogMultiTest ($OrderNum: String, $Customer: String, $Total: Decimal) RETURNS Boolean
-	BEGIN
+	{
 		LOG INFO NODE 'OrderService' 'Order {1} for {2} totaling {3}' WITH ({1} = $OrderNum, {2} = $Customer, {3} = toString($Total));
 		RETURN true;
-	END;`
+	}`
 
 	prog, errs := Build(input)
 	if len(errs) > 0 {
@@ -372,10 +372,10 @@ func TestLogWithMultipleParams(t *testing.T) {
 
 func TestLogWithNodeExpressionConstant(t *testing.T) {
 	input := `CREATE MICROFLOW TestModule.LogNodeExprTest () RETURNS Boolean
-	BEGIN
+	{
 		LOG INFO NODE @TestModule.SecurityLogNode 'User added';
 		RETURN true;
-	END;`
+	}`
 
 	prog, errs := Build(input)
 	if len(errs) > 0 {
@@ -414,7 +414,7 @@ func TestLogWithNodeExpressionConstant(t *testing.T) {
 func TestIfThenWithMultipleActions(t *testing.T) {
 	input := `CREATE MICROFLOW Test.VAL_Test ($Product: Test.Product)
 RETURNS Boolean AS $IsValid
-BEGIN
+{
   DECLARE $IsValid Boolean = true;
 
   IF $Product/Name = '' THEN
@@ -423,7 +423,7 @@ BEGIN
   END IF;
 
   RETURN $IsValid;
-END;`
+}`
 
 	prog, errs := Build(input)
 	if len(errs) > 0 {
@@ -473,7 +473,7 @@ END;`
 func TestIfThenElse(t *testing.T) {
 	input := `CREATE MICROFLOW Test.TestIfElse ($Value: Integer)
 RETURNS String AS $Result
-BEGIN
+{
   DECLARE $Result String = '';
 
   IF $Value > 100 THEN
@@ -483,7 +483,7 @@ BEGIN
   END IF;
 
   RETURN $Result;
-END;`
+}`
 
 	prog, errs := Build(input)
 	if len(errs) > 0 {
@@ -545,13 +545,13 @@ END;`
 func TestIfThenEmptyElsePreservesElsePresence(t *testing.T) {
 	input := `create microflow Test.EmptyElse()
 returns String
-begin
+{
   if $latestHttpResponse != empty then
     return 'error';
   else
   end if;
   return empty;
-end;`
+}`
 
 	prog, errs := Build(input)
 	if len(errs) > 0 {
@@ -582,7 +582,7 @@ end;`
 func TestValidationFeedbackInsideIf(t *testing.T) {
 	input := `CREATE MICROFLOW Test.VAL_Product ($Product: Test.Product)
 RETURNS Boolean AS $IsValid
-BEGIN
+{
   DECLARE $IsValid Boolean = true;
 
   IF $Product/Name = '' THEN
@@ -591,7 +591,7 @@ BEGIN
   END IF;
 
   RETURN $IsValid;
-END;`
+}`
 
 	prog, errs := Build(input)
 	if len(errs) > 0 {
@@ -643,11 +643,11 @@ END;`
 func TestValidationFeedbackObjectAndAssociationTargets(t *testing.T) {
 	input := `CREATE MICROFLOW Sales.ValidateOrder ($OrderForm: Sales.OrderForm)
 RETURNS Boolean
-BEGIN
+{
   VALIDATION FEEDBACK $OrderForm MESSAGE 'Select a value';
   VALIDATION FEEDBACK $OrderForm/Sales.OrderForm_Customer MESSAGE 'Select a customer';
   RETURN false;
-END;`
+}`
 
 	prog, errs := Build(input)
 	if len(errs) > 0 {
@@ -700,10 +700,10 @@ END;`
 func TestSharedAttributePathKeepsQualifiedSlashSegment(t *testing.T) {
 	input := `CREATE MICROFLOW Sales.UpdateOrder ($Order: Sales.Order)
 RETURNS Boolean
-BEGIN
+{
   SET $Order/Sales.Order_Customer = empty;
   RETURN true;
-END;`
+}`
 
 	prog, errs := Build(input)
 	if len(errs) > 0 {
@@ -727,11 +727,11 @@ END;`
 func TestRollbackStatement(t *testing.T) {
 	input := `CREATE MICROFLOW Test.TestRollback ($Order: Test.Order)
 RETURNS Boolean AS $Success
-BEGIN
+{
   CHANGE $Order (Status = 'Modified');
   ROLLBACK $Order;
   RETURN true;
-END;`
+}`
 
 	prog, errs := Build(input)
 	if len(errs) > 0 {
@@ -770,10 +770,10 @@ END;`
 func TestRollbackWithRefresh(t *testing.T) {
 	input := `CREATE MICROFLOW Test.TestRollback ($Order: Test.Order)
 RETURNS Boolean AS $Success
-BEGIN
+{
   ROLLBACK $Order REFRESH;
   RETURN true;
-END;`
+}`
 
 	prog, errs := Build(input)
 	if len(errs) > 0 {
@@ -811,10 +811,10 @@ END;`
 func TestCommitWithRefresh(t *testing.T) {
 	input := `CREATE MICROFLOW Test.TestCommit ($Order: Test.Order)
 RETURNS Boolean AS $Success
-BEGIN
+{
   COMMIT $Order REFRESH;
   RETURN true;
-END;`
+}`
 
 	prog, errs := Build(input)
 	if len(errs) > 0 {
@@ -853,10 +853,10 @@ END;`
 func TestCommitWithEventsAndRefresh(t *testing.T) {
 	input := `CREATE MICROFLOW Test.TestCommit ($Order: Test.Order)
 RETURNS Boolean AS $Success
-BEGIN
+{
   COMMIT $Order WITH EVENTS REFRESH;
   RETURN true;
-END;`
+}`
 
 	prog, errs := Build(input)
 	if len(errs) > 0 {
@@ -895,7 +895,7 @@ END;`
 func TestNestedIfStatements(t *testing.T) {
 	input := `CREATE MICROFLOW Test.TestNested ($Value: Integer)
 RETURNS String AS $Result
-BEGIN
+{
   DECLARE $Result String = '';
 
   IF $Value > 0 THEN
@@ -909,7 +909,7 @@ BEGIN
   END IF;
 
   RETURN $Result;
-END;`
+}`
 
 	prog, errs := Build(input)
 	if len(errs) > 0 {
@@ -964,11 +964,11 @@ END;`
 func TestRetrieveWithLimit(t *testing.T) {
 	input := `CREATE MICROFLOW Test.TestRetrieve ()
 RETURNS Boolean AS $Success
-BEGIN
+{
   DECLARE $Product Test.Product;
   RETRIEVE $Product FROM Test.Product WHERE IsActive = true LIMIT 1;
   RETURN true;
-END;`
+}`
 
 	prog, errs := Build(input)
 	if len(errs) > 0 {
@@ -1003,11 +1003,11 @@ END;`
 func TestDeclareEntityWithoutAS(t *testing.T) {
 	input := `CREATE MICROFLOW Test.TestDeclare ()
 RETURNS Boolean AS $Success
-BEGIN
+{
   DECLARE $Product Test.Product;
   DECLARE $List List of Test.Product = empty;
   RETURN true;
-END;`
+}`
 
 	prog, errs := Build(input)
 	if len(errs) > 0 {
@@ -1251,10 +1251,10 @@ func TestParseError_UnescapedApostrophe(t *testing.T) {
 	// The parser should produce an error with an apostrophe hint.
 	input := `CREATE MICROFLOW MyModule.Test ()
 RETURNS String
-BEGIN
+{
   DECLARE $msg String = 'it's broken';
   RETURN $msg;
-END;`
+}`
 
 	_, errs := Build(input)
 	if len(errs) == 0 {
@@ -1711,12 +1711,12 @@ func TestCalculatedAttributeOnNonPersistentEntity(t *testing.T) {
 func TestAnnotationBeforePositionIsFreeFloating(t *testing.T) {
 	input := `CREATE MICROFLOW Synthetic.Check ()
 RETURNS Boolean AS $Success
-BEGIN
+{
   @annotation 'free note'
   @position(100, 200)
   LOG INFO NODE 'SyntheticLog' 'message';
   RETURN true;
-END;`
+}`
 
 	prog, errs := Build(input)
 	if len(errs) > 0 {
@@ -1742,14 +1742,14 @@ END;`
 func TestMultipleAnnotationsBeforePositionStayFreeFloating(t *testing.T) {
 	input := `CREATE MICROFLOW Synthetic.Check ()
 RETURNS Boolean AS $Success
-BEGIN
+{
   @annotation 'first free note'
   @annotation 'second free note'
   @annotation 'third free note'
   @position(100, 200)
   LOG INFO NODE 'SyntheticLog' 'message';
   RETURN true;
-END;`
+}`
 
 	prog, errs := Build(input)
 	if len(errs) > 0 {
@@ -1776,12 +1776,12 @@ END;`
 func TestAnnotationAfterPositionStaysAttached(t *testing.T) {
 	input := `CREATE MICROFLOW Synthetic.Check ()
 RETURNS Boolean AS $Success
-BEGIN
+{
   @position(100, 200)
   @annotation 'attached note'
   LOG INFO NODE 'SyntheticLog' 'message';
   RETURN true;
-END;`
+}`
 
 	prog, errs := Build(input)
 	if len(errs) > 0 {
@@ -1806,10 +1806,10 @@ END;`
 
 func TestMicroflowPositionAnnotationAcceptsNegativeCoordinates(t *testing.T) {
 	input := `CREATE MICROFLOW Synthetic.Check ()
-BEGIN
+{
   @position(-150, -210)
   LOG INFO NODE 'SyntheticLog' 'message';
-END;`
+}`
 
 	prog, errs := Build(input)
 	if len(errs) > 0 {
@@ -1832,10 +1832,10 @@ END;`
 func TestCallJavaActionAcceptsEmptyArguments(t *testing.T) {
 	input := `CREATE MICROFLOW Synthetic.Check ()
 RETURNS Boolean AS $Success
-BEGIN
+{
   $Total = CALL JAVA ACTION Synthetic.Recalculate(CompanyId = empty, RecalculateAll = true, ItemList = empty);
   RETURN true;
-END;`
+}`
 
 	prog, errs := Build(input)
 	if len(errs) > 0 {
@@ -1861,7 +1861,7 @@ END;`
 func TestDeclareAndLogTemplatePreserveMultilineSourceWhitespace(t *testing.T) {
 	input := `CREATE MICROFLOW Synthetic.Check ()
 RETURNS Boolean AS $Success
-BEGIN
+{
   DECLARE $Endpoint String = @Synthetic.Endpoint
 + '/items?page=' + toString($Page)
 + '&token=' + (if $Token!=empty then $Token/Value
@@ -1871,7 +1871,7 @@ else
 
 , {2} = $Endpoint);
   RETURN true;
-END;`
+}`
 
 	prog, errs := Build(input)
 	if len(errs) > 0 {
@@ -1914,7 +1914,7 @@ func TestActionExpressionSlotsPreserveSourceWhitespace(t *testing.T) {
   $OtherFlag: Boolean
 )
 RETURNS Boolean AS $Result
-BEGIN
+{
   $Created = CREATE Synthetic.Entity (Name = if $Count=0 then 'zero'
 else 'many'
 , Description = 'sample');
@@ -1930,7 +1930,7 @@ else 'disabled'
   RETURN $Flag
 and
 $OtherFlag;
-END;`
+}`
 
 	prog, errs := Build(input)
 	if len(errs) > 0 {
@@ -1984,10 +1984,10 @@ END;`
 
 func TestRetrieveXPathPreservesOriginalPathSpacing(t *testing.T) {
 	input := `CREATE MICROFLOW Synthetic.PreserveXPathPathSpacing ()
-BEGIN
+{
   RETRIEVE $Items FROM Synthetic.Item
     WHERE Synthetic.Item_Group/Synthetic.Group/Synthetic.Group_Company = $Company;
-END;`
+}`
 
 	prog, errs := Build(input)
 	if len(errs) > 0 {
@@ -2010,12 +2010,12 @@ func TestRetrieveMultipleXPathPredicatesPreservePredicateBoundaries(t *testing.T
 	input := `CREATE MICROFLOW Synthetic.PreserveXPathPredicates (
   $Token: Synthetic.Token
 )
-BEGIN
+{
   RETRIEVE $Items FROM Synthetic.Item
     WHERE [CreatedAt > $Token/CreatedAt or (CreatedAt = $Token/CreatedAt and ItemId > $Token/ItemId)]
     [CreatedAt < '[%CurrentDateTime%]']
     [ExternalId != empty];
-END;`
+}`
 
 	prog, errs := Build(input)
 	if len(errs) > 0 {
@@ -2039,7 +2039,7 @@ func TestTrailingExpressionWhitespacePreservedForRoundtripSlots(t *testing.T) {
   $Object: Synthetic.Entity
 )
 RETURNS Boolean AS $Result
-BEGIN
+{
   DECLARE $Prefix String = 'Hello'
 ;
   SET $Prefix = substring($Prefix, 0, 1)
@@ -2048,7 +2048,7 @@ BEGIN
   LOG INFO NODE @Synthetic.LogNode
  'Processed {1}' WITH ({1} = $Prefix );
   RETURN true;
-END;`
+}`
 
 	prog, errs := Build(input)
 	if len(errs) > 0 {
@@ -2097,7 +2097,7 @@ func TestRetrieveRangeExpressionsPreserveTrailingWhitespace(t *testing.T) {
   $PageNumber: Integer
 )
 RETURNS List OF Synthetic.Entity
-BEGIN
+{
   RETRIEVE $Items FROM Synthetic.Entity
     LIMIT $PageSize
 
@@ -2106,7 +2106,7 @@ ELSE
 $PageSize * ($PageNumber - 1)
 ;
   RETURN $Items;
-END;`
+}`
 
 	prog, errs := Build(input)
 	if len(errs) > 0 {

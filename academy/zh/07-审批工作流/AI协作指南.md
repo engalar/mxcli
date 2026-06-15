@@ -89,9 +89,9 @@ Mendix 的 dataview **不能**用 `datasource: new HD.Entity` 这种语法。
 ```mdl
 create or replace workflow HD.WF_TicketEscalation
   parameter $WorkflowContext: HD.EscalationRequest
-begin
+{
   ...
-end;
+}
 ```
 
 `$WorkflowContext` 是 Workflow 贯穿始终的上下文对象，所有活动都可以访问它。

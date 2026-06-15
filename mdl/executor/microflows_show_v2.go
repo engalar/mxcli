@@ -45,7 +45,7 @@ var mdlReservedWords = func() map[string]struct{} {
 		"list", "row", "item", "filter",
 		"select", "from", "where", "group", "order", "join",
 		"create", "alter", "drop", "insert", "delete", "update",
-		"return", "returns", "begin", "end", "if", "else", "then",
+		"return", "returns", "end", "if", "else", "then",
 		"call", "declare", "commit", "rollback", "loop",
 		"module", "entity", "association", "enumeration",
 	}

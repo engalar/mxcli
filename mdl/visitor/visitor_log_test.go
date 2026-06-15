@@ -14,9 +14,9 @@ import (
 // NUMBER_LITERAL token, which caused `NUMBER_LITERAL().GetText()` to panic.
 // The fix guards against nil NUMBER_LITERAL with an explicit nil check.
 func TestLogStatement_EmptyWithClause(t *testing.T) {
-	src := `create microflow MfTest.M () begin
+	src := `create microflow MfTest.M () {
   log info node 'App' 'msg' with ();
-end;`
+}`
 	// Build must not panic — parse errors are acceptable, but a nil-pointer
 	// dereference is not. We recover from any panic and report it as a failure.
 	defer func() {

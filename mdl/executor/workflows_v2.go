@@ -331,11 +331,11 @@ func describeWorkflowToStringGen(ctx *ExecContext, name ast.QualifiedName) (stri
 
 	lines = append(lines, "")
 
-	lines = append(lines, "begin")
+	lines = append(lines, "{")
 	if flow, ok := target.Flow().(*genWf.Flow); ok {
 		lines = append(lines, formatWorkflowActivitiesGen(flow, "  ")...)
 	}
-	lines = append(lines, "end workflow")
+	lines = append(lines, "}")
 	lines = append(lines, "/")
 
 	return strings.Join(lines, "\n"), nil, nil

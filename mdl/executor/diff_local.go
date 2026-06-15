@@ -698,9 +698,9 @@ func pageBsonToMDL(_ *ExecContext, raw map[string]any, qualifiedName string) str
 		}
 	}
 
-	lines = append(lines, "begin")
+	lines = append(lines, "{")
 	lines = append(lines, "  -- (page widgets)")
-	lines = append(lines, "end;")
+	lines = append(lines, "}")
 	lines = append(lines, "/")
 
 	return strings.Join(lines, "\n")
@@ -717,9 +717,9 @@ func snippetBsonToMDL(_ *ExecContext, raw map[string]any, qualifiedName string) 
 	}
 
 	lines = append(lines, fmt.Sprintf("create snippet %s ()", qualifiedName))
-	lines = append(lines, "begin")
+	lines = append(lines, "{")
 	lines = append(lines, "  -- (snippet widgets)")
-	lines = append(lines, "end;")
+	lines = append(lines, "}")
 	lines = append(lines, "/")
 
 	return strings.Join(lines, "\n")
@@ -736,9 +736,9 @@ func layoutBsonToMDL(_ *ExecContext, raw map[string]any, qualifiedName string) s
 	}
 
 	lines = append(lines, fmt.Sprintf("create layout %s ()", qualifiedName))
-	lines = append(lines, "begin")
+	lines = append(lines, "{")
 	lines = append(lines, "  -- (layout structure)")
-	lines = append(lines, "end;")
+	lines = append(lines, "}")
 	lines = append(lines, "/")
 
 	return strings.Join(lines, "\n")

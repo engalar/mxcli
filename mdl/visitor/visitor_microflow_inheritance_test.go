@@ -11,7 +11,7 @@ import (
 func TestMicroflowParsing_InheritanceSplitAndCastAction(t *testing.T) {
 	input := `CREATE MICROFLOW Sample.Route ($Input: Sample.BaseInput)
 RETURNS Boolean
-BEGIN
+{
   SPLIT TYPE $Input
   CASE Sample.SpecializedInput
     CAST $SpecificInput;
@@ -19,7 +19,7 @@ BEGIN
   ELSE
     RETURN false;
   END SPLIT;
-END;`
+}`
 
 	prog, errs := Build(input)
 	if len(errs) > 0 {
@@ -55,7 +55,7 @@ END;`
 func TestMicroflowParsing_InheritanceSplitModernBraces(t *testing.T) {
 	input := `CREATE MICROFLOW Sample.Route ($Input: Sample.BaseInput)
 RETURNS Boolean
-BEGIN
+{
   SPLIT TYPE $Input {
     CASE Sample.SpecializedInput {
       CAST $SpecificInput;
@@ -65,7 +65,7 @@ BEGIN
       RETURN false;
     }
   }
-END;`
+}`
 
 	prog, errs := Build(input)
 	if len(errs) > 0 {
@@ -93,9 +93,9 @@ END;`
 
 func TestMicroflowParsing_CastWithSourceVariable(t *testing.T) {
 	input := `CREATE MICROFLOW Sample.Cast ($Input: Sample.BaseInput)
-BEGIN
+{
   $SpecificInput = CAST $Input;
-END;`
+}`
 
 	prog, errs := Build(input)
 	if len(errs) > 0 {

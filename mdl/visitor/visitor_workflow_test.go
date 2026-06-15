@@ -10,11 +10,11 @@ import (
 
 func TestWorkflowVisitor_BoundaryEventInterrupting(t *testing.T) {
 	input := `CREATE WORKFLOW M.TestWF
-BEGIN
+{
   USER TASK act1 'Caption'
     OUTCOMES 'Done' { }
     BOUNDARY EVENT INTERRUPTING TIMER '${PT1H}';
-END WORKFLOW;`
+}`
 
 	prog, errs := Build(input)
 	if len(errs) > 0 {
@@ -61,13 +61,13 @@ END WORKFLOW;`
 // accepted bare IDENTIFIER tokens.
 func TestWorkflowVisitor_UserTask_QuotedIdentifier(t *testing.T) {
 	input := `CREATE WORKFLOW Module.WF_Test
-BEGIN
+{
   USER TASK "ut1" 'Review'
     PAGE Module.Page
   OUTCOMES
     'Approve' { }
     'Reject' { };
-END WORKFLOW;`
+}`
 
 	prog, errs := Build(input)
 	if len(errs) > 0 {
@@ -108,11 +108,11 @@ END WORKFLOW;`
 // the JUMP TO "name" variant of the same underlying issue.
 func TestWorkflowVisitor_JumpTo_QuotedIdentifier(t *testing.T) {
 	input := `CREATE WORKFLOW Module.WF_Test
-BEGIN
+{
   USER TASK "target" 'Target task'
     OUTCOMES 'Done' { };
   JUMP TO "target";
-END WORKFLOW;`
+}`
 
 	prog, errs := Build(input)
 	if len(errs) > 0 {
@@ -146,11 +146,11 @@ END WORKFLOW;`
 
 func TestWorkflowVisitor_BoundaryEventNonInterrupting(t *testing.T) {
 	input := `CREATE WORKFLOW M.TestWF
-BEGIN
+{
   USER TASK act1 'Caption'
     OUTCOMES 'Done' { }
     BOUNDARY EVENT NON INTERRUPTING TIMER '${PT2H}';
-END WORKFLOW;`
+}`
 
 	prog, errs := Build(input)
 	if len(errs) > 0 {
@@ -178,11 +178,11 @@ END WORKFLOW;`
 
 func TestWorkflowVisitor_BoundaryEventTimerBare(t *testing.T) {
 	input := `CREATE WORKFLOW M.TestWF
-BEGIN
+{
   USER TASK act1 'Caption'
     OUTCOMES 'Done' { }
     BOUNDARY EVENT TIMER;
-END WORKFLOW;`
+}`
 
 	prog, errs := Build(input)
 	if len(errs) > 0 {
@@ -210,11 +210,11 @@ END WORKFLOW;`
 
 func TestWorkflowVisitor_AnnotationRoundTrip(t *testing.T) {
 	input := `CREATE WORKFLOW M.TestWF
-BEGIN
+{
   ANNOTATION 'This is a test note';
   USER TASK act1 'Do something'
     OUTCOMES 'Done' { };
-END WORKFLOW;`
+}`
 
 	prog, errs := Build(input)
 	if len(errs) > 0 {
@@ -240,12 +240,12 @@ END WORKFLOW;`
 
 func TestWorkflowVisitor_BoundaryEventWithSubFlow(t *testing.T) {
 	input := `CREATE WORKFLOW M.TestWF
-BEGIN
+{
   WAIT FOR NOTIFICATION
     BOUNDARY EVENT INTERRUPTING TIMER '${PT1H}' {
       CALL MICROFLOW M.HandleTimeout;
     };
-END WORKFLOW;`
+}`
 
 	prog, errs := Build(input)
 	if len(errs) > 0 {
@@ -290,11 +290,11 @@ END WORKFLOW;`
 
 func TestWorkflowVisitor_MultiUserTask(t *testing.T) {
 	input := `CREATE WORKFLOW M.TestWF
-BEGIN
+{
   MULTI USER TASK act1 'Caption'
     PAGE M.ReviewPage
     OUTCOMES 'Approve' { };
-END WORKFLOW;`
+}`
 
 	prog, errs := Build(input)
 	if len(errs) > 0 {
@@ -325,13 +325,13 @@ END WORKFLOW;`
 
 func TestWorkflowVisitor_ParameterMappingWith(t *testing.T) {
 	input := `CREATE WORKFLOW M.TestWF
-BEGIN
+{
   CALL MICROFLOW M.CalcDiscount
     WITH (Amount = '$WorkflowContext/Amount')
     OUTCOMES
       TRUE -> { }
       FALSE -> { };
-END WORKFLOW;`
+}`
 
 	prog, errs := Build(input)
 	if len(errs) > 0 {
@@ -367,9 +367,9 @@ END WORKFLOW;`
 
 func TestWorkflowVisitor_CallWorkflowWithParams(t *testing.T) {
 	input := `CREATE WORKFLOW M.TestWF
-BEGIN
+{
   CALL WORKFLOW M.SubWorkflow COMMENT 'Call sub' WITH (WorkflowContext = '$WorkflowContext');
-END WORKFLOW;`
+}`
 
 	prog, errs := Build(input)
 	if len(errs) > 0 {
@@ -409,12 +409,12 @@ END WORKFLOW;`
 
 func TestWorkflowVisitor_UserTaskDueDate(t *testing.T) {
 	input := `CREATE WORKFLOW M.TestWF
-BEGIN
+{
   USER TASK task1 'My Task'
     ENTITY M.TaskContext
     DUE DATE 'PT24H'
     OUTCOMES 'Done' { };
-END WORKFLOW;`
+}`
 
 	prog, errs := Build(input)
 	if len(errs) > 0 {
@@ -437,13 +437,13 @@ END WORKFLOW;`
 
 func TestWorkflowVisitor_UserTaskDueDateWithXPath(t *testing.T) {
 	input := `CREATE WORKFLOW M.TestWF
-BEGIN
+{
   USER TASK task1 'My Task'
     TARGETING XPATH '[Assignee = $currentUser]'
     ENTITY M.TaskContext
     DUE DATE 'PT48H'
     OUTCOMES 'Done' { };
-END WORKFLOW;`
+}`
 
 	prog, errs := Build(input)
 	if len(errs) > 0 {
@@ -469,9 +469,9 @@ END WORKFLOW;`
 
 func TestWorkflowVisitor_Annotation(t *testing.T) {
 	input := `CREATE WORKFLOW M.TestWF
-BEGIN
+{
   ANNOTATION 'This is a workflow note';
-END WORKFLOW;`
+}`
 
 	prog, errs := Build(input)
 	if len(errs) > 0 {
@@ -503,8 +503,8 @@ func TestWorkflowVisitor_DisplayDescriptionExportLevel(t *testing.T) {
   DISPLAY 'My Display Name'
   DESCRIPTION 'My description'
   EXPORT LEVEL Hidden
-BEGIN
-END WORKFLOW`
+{
+}`
 
 	prog, errs := Build(input)
 	if len(errs) > 0 {
@@ -537,8 +537,8 @@ END WORKFLOW`
 func TestWorkflowVisitor_DisplayOnly(t *testing.T) {
 	input := `CREATE WORKFLOW Module.Test
   DISPLAY 'Just a display name'
-BEGIN
-END WORKFLOW`
+{
+}`
 
 	prog, errs := Build(input)
 	if len(errs) > 0 {
@@ -564,8 +564,8 @@ END WORKFLOW`
 func TestWorkflowVisitor_DescriptionWithoutDisplay(t *testing.T) {
 	input := `CREATE WORKFLOW Module.Test
   DESCRIPTION 'Only description'
-BEGIN
-END WORKFLOW`
+{
+}`
 
 	prog, errs := Build(input)
 	if len(errs) > 0 {
@@ -588,8 +588,8 @@ END WORKFLOW`
 func TestWorkflowVisitor_ExportLevelAPI(t *testing.T) {
 	input := `CREATE WORKFLOW Module.Test
   EXPORT LEVEL API
-BEGIN
-END WORKFLOW`
+{
+}`
 
 	prog, errs := Build(input)
 	if len(errs) > 0 {
@@ -613,8 +613,8 @@ func TestWorkflowVisitor_AllMetadataWithDueDate(t *testing.T) {
   DESCRIPTION 'Handles the approval process'
   EXPORT LEVEL Hidden
   DUE DATE 'addDays([%%CurrentDateTime%%], 7)'
-BEGIN
-END WORKFLOW`
+{
+}`
 
 	prog, errs := Build(input)
 	if len(errs) > 0 {
@@ -642,12 +642,12 @@ END WORKFLOW`
 
 func TestWorkflowVisitor_UserTaskDescription(t *testing.T) {
 	input := `CREATE WORKFLOW M.TestWF
-BEGIN
+{
   USER TASK review 'Review'
     PAGE M.ReviewPage
     DESCRIPTION 'Please review carefully'
     OUTCOMES 'Done' { };
-END WORKFLOW;`
+}`
 
 	prog, errs := Build(input)
 	if len(errs) > 0 {
@@ -1233,10 +1233,10 @@ func TestAlterWorkflow_SetActivityDueDate(t *testing.T) {
 func TestNotifyWorkflowStatement_WithActivity(t *testing.T) {
 	input := `create microflow HD.ACT_Notify ($Workflow: System.Workflow)
 returns boolean as $IsReceived
-begin
+{
   $IsReceived = notify workflow $Workflow activity HD.WF_TicketEscalation.WaitForManagerAvailable;
   return $IsReceived;
-end;`
+}`
 
 	prog, errs := Build(input)
 	if len(errs) > 0 {
@@ -1269,10 +1269,10 @@ end;`
 
 func TestNotifyWorkflowStatement_WithoutActivity(t *testing.T) {
 	input := `create microflow M.F ($Wf: System.Workflow)
-begin
+{
   notify workflow $Wf;
   return;
-end;`
+}`
 
 	prog, errs := Build(input)
 	if len(errs) > 0 {

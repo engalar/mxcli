@@ -546,7 +546,7 @@ keyword
     // keywords in actionExprV3 and must not match as identifiers/qualifiedNames inside
     // widgetPropertyV3, where they would create ambiguity with propertyValueV3.
     | MICROFLOWS | NANOFLOWS
-    | BEGIN | END | IF | ELSE | ELSIF | ELSEIF | THEN | WHILE | LOOP
+    | END | IF | ELSE | ELSIF | ELSEIF | THEN | WHILE | LOOP
     | BREAK | CONTINUE | THROW | RAISE | CASE | WHEN | SYNCHRONIZE
     | CALL | LOG | TRACE | WITH | FOR | TO | OF | RETURNING | RETURNS
     | NOTHING | EXPRESSION | JAVASCRIPT | PLATFORM
@@ -564,7 +564,7 @@ keyword
     | LIST_OF | LIST_KW | EQUALS_OP
 
     // Control flow / microflow statements
-    | BEGIN | END | IF | ELSE | ELSIF | THEN | WHILE | LOOP
+    | END | IF | ELSE | ELSIF | THEN | WHILE | LOOP
     | DECLARE | SET | CHANGE | RETRIEVE | DELETE | COMMIT | RETURN
     | CALL | LOG | WITH | FOR | TO | OF
     | DESCRIBE | CLOSE | REPLACE | UPDATE | REFRESH | EXECUTE

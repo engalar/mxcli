@@ -12,11 +12,11 @@ func TestBuildExpression_WrapsWithSource(t *testing.T) {
 	src := `
 CREATE MICROFLOW M.F ()
 RETURNS Boolean AS $r
-BEGIN
+{
     DECLARE $r Boolean = false;
     IF $r = true THEN SET $r = false; END IF;
     RETURN $r;
-END;
+}
 `
 	prog, errs := Build(src)
 	if len(errs) > 0 {

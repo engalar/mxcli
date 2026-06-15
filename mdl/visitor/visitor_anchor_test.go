@@ -14,7 +14,7 @@ import (
 
 func firstStatement(t *testing.T, src string) ast.MicroflowStatement {
 	t.Helper()
-	input := "create microflow MfTest.M () begin\n" + src + "\nend;"
+	input := "create microflow MfTest.M () {\n" + src + "\n}"
 	prog, errs := Build(input)
 	if len(errs) > 0 {
 		for _, e := range errs {
@@ -138,10 +138,10 @@ func TestAnchorAnnotation_MissingLeavesUnset(t *testing.T) {
 func TestAnchorAnnotation_LoopIteratorAndTail(t *testing.T) {
 	src := `retrieve $items from MfTest.Entity;
 @anchor(iterator: (from: bottom, to: top), tail: (from: right, to: bottom))
-loop $item in $items begin
+loop $item in $items {
   log info node 'App' 'step';
-end loop;`
-	prog, errs := Build("create microflow MfTest.M () begin\n" + src + "\nend;")
+}`
+	prog, errs := Build("create microflow MfTest.M () {\n" + src + "\n}")
 	if len(errs) > 0 {
 		for _, e := range errs {
 			t.Errorf("parse: %v", e)
@@ -180,10 +180,10 @@ end loop;`
 
 func TestAnchorAnnotation_WhileIteratorAndTail(t *testing.T) {
 	src := `@anchor(iterator: (from: top, to: left), tail: (from: bottom, to: right))
-while true begin
+while true {
   log info node 'App' 'tick';
-end while;`
-	prog, errs := Build("create microflow MfTest.M () begin\n" + src + "\nend;")
+}`
+	prog, errs := Build("create microflow MfTest.M () {\n" + src + "\n}")
 	if len(errs) > 0 {
 		for _, e := range errs {
 			t.Errorf("parse: %v", e)
@@ -220,10 +220,10 @@ func TestAnchorAnnotation_LoopIteratorOnly(t *testing.T) {
 	// Only iterator is provided — tail stays nil.
 	src := `retrieve $items from MfTest.Entity;
 @anchor(iterator: (from: top, to: left))
-loop $item in $items begin
+loop $item in $items {
   log info node 'App' 'step';
-end loop;`
-	prog, errs := Build("create microflow MfTest.M () begin\n" + src + "\nend;")
+}`
+	prog, errs := Build("create microflow MfTest.M () {\n" + src + "\n}")
 	if len(errs) > 0 {
 		for _, e := range errs {
 			t.Errorf("parse: %v", e)

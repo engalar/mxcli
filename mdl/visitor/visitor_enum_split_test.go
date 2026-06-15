@@ -11,7 +11,7 @@ import (
 func TestEnumSplitParsesCasesAndElse(t *testing.T) {
 	input := `CREATE MICROFLOW Orders.RouteStatus ($Status: enum Orders.Status)
 RETURNS Boolean
-BEGIN
+{
   CASE $Status
     WHEN Open, Pending THEN
       RETURN true;
@@ -20,7 +20,7 @@ BEGIN
     ELSE
       RETURN false;
   END CASE;
-END;`
+}`
 
 	prog, errs := Build(input)
 	if len(errs) > 0 {

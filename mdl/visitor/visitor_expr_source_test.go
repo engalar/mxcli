@@ -48,10 +48,10 @@ func exprSourceOf(t *testing.T, mdlSrc string) string {
 func TestExprSource_DivVarVar(t *testing.T) {
 	src := `create module T;
 create microflow T.F ($x: decimal, $y: decimal) returns decimal as $r
-begin
+{
   declare $r: decimal = $x div $y;
   return $r;
-end;
+}
 /`
 	source := exprSourceOf(t, src)
 	if !strings.Contains(source, " ") {
@@ -66,10 +66,10 @@ end;
 func TestExprSource_ModVarVar(t *testing.T) {
 	src := `create module T;
 create microflow T.F ($x: integer, $y: integer) returns integer as $r
-begin
+{
   declare $r: integer = $x mod $y;
   return $r;
-end;
+}
 /`
 	source := exprSourceOf(t, src)
 	if !strings.Contains(source, " ") {
@@ -86,10 +86,10 @@ end;
 func TestExprSource_IfThenElse(t *testing.T) {
 	src := `create module T;
 create microflow T.F ($w: decimal) returns decimal as $fee
-begin
+{
   declare $fee: decimal = if $w < 1.0 then 0.0 else 5.0;
   return $fee;
-end;
+}
 /`
 	source := exprSourceOf(t, src)
 	if !strings.Contains(source, "then") {

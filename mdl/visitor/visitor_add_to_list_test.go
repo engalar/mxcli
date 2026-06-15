@@ -11,11 +11,11 @@ import (
 func TestAddToListAcceptsExpressionValue(t *testing.T) {
 	input := `CREATE MICROFLOW Sales.CollectLabels ($Order: Sales.Order)
 RETURNS Boolean
-BEGIN
+{
   DECLARE $Labels List of String = empty;
   ADD $Order/Number TO $Labels;
   RETURN true;
-END;`
+}`
 
 	prog, errs := Build(input)
 	if len(errs) > 0 {
@@ -45,11 +45,11 @@ END;`
 func TestAddToListKeepsSimpleVariableCompatibility(t *testing.T) {
 	input := `CREATE MICROFLOW Sales.CollectOrders ($Order: Sales.Order)
 RETURNS Boolean
-BEGIN
+{
   DECLARE $Orders List of Sales.Order = empty;
   ADD $Order TO $Orders;
   RETURN true;
-END;`
+}`
 
 	prog, errs := Build(input)
 	if len(errs) > 0 {

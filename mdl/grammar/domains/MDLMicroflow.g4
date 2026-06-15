@@ -18,9 +18,7 @@ createMicroflowStatement
       LPAREN microflowParameterList? RPAREN
       microflowReturnType?
       microflowOptions?
-      ( BEGIN microflowBody END
-      | LBRACE microflowBody RBRACE
-      ) SEMICOLON? SLASH?
+      LBRACE microflowBody RBRACE SEMICOLON? SLASH?
     ;
 
 /**
@@ -31,9 +29,7 @@ createNanoflowStatement
       LPAREN microflowParameterList? RPAREN
       microflowReturnType?
       microflowOptions?
-      ( BEGIN microflowBody END
-      | LBRACE microflowBody RBRACE
-      ) SEMICOLON? SLASH?
+      LBRACE microflowBody RBRACE SEMICOLON? SLASH?
     ;
 
 /**
@@ -308,19 +304,14 @@ ifStatement
       )
     ;
 
-// LOOP $Product IN $ProductList BEGIN ... END LOOP;
 loopStatement
     : LOOP VARIABLE IN (VARIABLE | attributePath)
-      ( BEGIN microflowBody END LOOP
-      | LBRACE microflowBody RBRACE
-      )
+      LBRACE microflowBody RBRACE
     ;
 
 whileStatement
     : WHILE expression
-      ( BEGIN? microflowBody END WHILE?
-      | LBRACE microflowBody RBRACE
-      )
+      LBRACE microflowBody RBRACE
     ;
 
 continueStatement

@@ -18,9 +18,9 @@ create or modify nanoflow HD.NF_CopyToClipboard
   ($Text: string)
   returns void
   folder 'UI'
-begin
+{
   call javascript action HD.JSA_CopyToClipboard(Text = $Text);
-end;
+}
 /
 
 -- ============================================================
@@ -31,9 +31,9 @@ create or modify nanoflow HD.NF_NotifyHighPriority
   ($Subject: string)
   returns void
   folder 'UI'
-begin
+{
   call javascript action HD.JSA_NotifyHighPriority(Subject = $Subject);
-end;
+}
 /
 
 -- ============================================================
@@ -44,8 +44,8 @@ create or modify nanoflow HD.NF_FormatRelativeTime
   ($DateTime: datetime)
   returns string as $Result
   folder 'UI'
-begin
+{
   $Result = call javascript action HD.JSA_FormatRelativeTime(DateTime = $DateTime);
   return $Result;
-end;
+}
 /

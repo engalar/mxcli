@@ -171,7 +171,6 @@ ANCHOR: A N C H O R;
 // MICROFLOW KEYWORDS
 // =============================================================================
 
-BEGIN: B E G I N;
 DECLARE: D E C L A R E;
 CHANGE: C H A N G E;
 RETRIEVE: R E T R I E V E;

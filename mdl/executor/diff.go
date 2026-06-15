@@ -605,11 +605,11 @@ func countBodyStatements(_ *ExecContext, mdl string) int {
 	inBody := false
 	for line := range strings.SplitSeq(mdl, "\n") {
 		line = strings.TrimSpace(line)
-		if line == "begin" {
+		if line == "{" {
 			inBody = true
 			continue
 		}
-		if line == "end;" {
+		if line == "}" {
 			break
 		}
 		if inBody && line != "" && !strings.HasPrefix(line, "--") {

@@ -13,7 +13,7 @@ options { tokenVocab = MDLLexer; }
 createDatabaseConnectionStatement
     : DATABASE CONNECTION qualifiedName
       databaseConnectionOption+
-      (BEGIN databaseQuery* END)?
+      (LBRACE databaseQuery* RBRACE)?
     ;
 
 databaseConnectionOption

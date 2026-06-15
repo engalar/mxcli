@@ -11,10 +11,10 @@ import (
 func TestChangeObjectParsesRefreshModifier(t *testing.T) {
 	input := `CREATE MICROFLOW Sales.UpdateCustomer ($Customer: Sales.Customer)
 RETURNS Boolean
-BEGIN
+{
   CHANGE $Customer (Name = 'Jane') REFRESH;
   RETURN true;
-END;`
+}`
 
 	prog, errs := Build(input)
 	if len(errs) > 0 {
@@ -40,10 +40,10 @@ END;`
 func TestChangeObjectParsesRefreshModifierWithoutMembers(t *testing.T) {
 	input := `CREATE MICROFLOW Sales.RefreshCustomer ($Customer: Sales.Customer)
 RETURNS Boolean
-BEGIN
+{
   CHANGE $Customer REFRESH;
   RETURN true;
-END;`
+}`
 
 	prog, errs := Build(input)
 	if len(errs) > 0 {

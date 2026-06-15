@@ -16,13 +16,13 @@ import (
 // roundtrip for microflows whose ExclusiveSplit uses a RuleSplitCondition.
 func TestQualifiedCallInIfCondition(t *testing.T) {
 	input := `CREATE OR MODIFY MICROFLOW SyntheticQualifiedCall.Test ($S: String) returns Boolean
-BEGIN
+{
   IF SyntheticRules.Strings.IsNotEmpty(String = $S) THEN
     RETURN true;
   ELSE
     RETURN false;
   END IF;
-END`
+}`
 
 	prog, errs := Build(input)
 	if len(errs) > 0 {
@@ -75,13 +75,13 @@ END`
 // a single entity / list argument and appear as the IF condition.
 func TestQualifiedCallPositionalArgs(t *testing.T) {
 	input := `CREATE OR MODIFY MICROFLOW M.Test ($L: list of M.Item) returns Boolean
-BEGIN
+{
   IF M.HasItems($L) THEN
     RETURN true;
   ELSE
     RETURN false;
   END IF;
-END`
+}`
 
 	prog, errs := Build(input)
 	if len(errs) > 0 {

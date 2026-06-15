@@ -223,7 +223,7 @@ func outputDatabaseConnectionMDL(ctx *ExecContext, conn *model.DatabaseConnectio
 
 	// Queries
 	if len(conn.Queries) > 0 {
-		fmt.Fprintln(ctx.Output, "begin")
+		fmt.Fprintln(ctx.Output, "{")
 		for _, q := range conn.Queries {
 			fmt.Fprintf(ctx.Output, "  query %s\n", q.Name)
 
@@ -271,7 +271,7 @@ func outputDatabaseConnectionMDL(ctx *ExecContext, conn *model.DatabaseConnectio
 			}
 			fmt.Fprintln(ctx.Output, "  ;")
 		}
-		fmt.Fprintln(ctx.Output, "end")
+		fmt.Fprintln(ctx.Output, "}")
 	}
 
 	fmt.Fprintln(ctx.Output, ";")

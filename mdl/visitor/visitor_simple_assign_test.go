@@ -12,10 +12,10 @@ import (
 // parsed and builds an MfSetStmt identical to SET $x = expr.
 func TestSimpleAssignStatement_Variable(t *testing.T) {
 	input := `create microflow Test.M () returns Nothing
-begin
+{
   declare $count: integer = 0;
   $count = $count + 1;
-end;`
+}`
 
 	prog, errs := Build(input)
 	if len(errs) > 0 {
@@ -40,9 +40,9 @@ end;`
 // TestSimpleAssignStatement_AttributePath verifies $obj/Attr = expr form.
 func TestSimpleAssignStatement_AttributePath(t *testing.T) {
 	input := `create microflow Test.M ($order: Test.Order) returns Nothing
-begin
+{
   $order/IsActive = true;
-end;`
+}`
 
 	prog, errs := Build(input)
 	if len(errs) > 0 {

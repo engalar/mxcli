@@ -13,10 +13,10 @@ func TestDownloadFileStatement(t *testing.T) {
   $GeneratedReport: System.FileDocument
 )
 returns Void
-begin
+{
   download file $GeneratedReport show in browser on error rollback;
   return;
-end;`
+}`
 
 	prog, errs := Build(input)
 	if len(errs) > 0 {
