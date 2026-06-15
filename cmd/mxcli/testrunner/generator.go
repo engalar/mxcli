@@ -21,7 +21,7 @@ func GenerateTestRunner(suite *TestSuite) string {
 
 	b.WriteString("CREATE OR REPLACE MICROFLOW MxTest.TestRunner ()\n")
 	b.WriteString("RETURNS Boolean AS $AllPassed\n")
-	b.WriteString("BEGIN\n")
+	b.WriteString("{\n")
 	b.WriteString("  DECLARE $AllPassed Boolean = true;\n")
 	b.WriteString("  DECLARE $TestFailed Boolean = false;\n")
 	b.WriteString("\n")
@@ -35,7 +35,7 @@ func GenerateTestRunner(suite *TestSuite) string {
 
 	b.WriteString(fmt.Sprintf("  LOG INFO NODE 'MXTEST' 'MXTEST:END:%s';\n", escapeMDLString(suite.Name)))
 	b.WriteString("  RETURN $AllPassed;\n")
-	b.WriteString("END;\n")
+	b.WriteString("}\n")
 	b.WriteString("/\n")
 
 	return b.String()
