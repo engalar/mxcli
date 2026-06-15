@@ -158,6 +158,83 @@ func TestDynamicPropertyReadWrite(t *testing.T) {
 	typed.SetName(origName)
 }
 
+// ── Benchmarks ──────────────────────────────────────────────────
+
+func entityForBench(b *testing.B) *domainmodels.Entity {
+	b.Helper()
+	mprPath := findTestMPR(b)
+	if mprPath == "" {
+		b.Skip("no test MPR found")
+	}
+	m, err := modelsdk.Open(mprPath)
+	if err != nil {
+		b.Fatalf("Open: %v", err)
+	}
+	b.Cleanup(func() { m.Close() })
+
+	dms := m.AllOfType("DomainModels$DomainModel")
+	for _, dm := range dms {
+		for _, prop := range dm.Properties() {
+			if prop.Name() == "Entities" {
+				if cl, ok := prop.(element.ChildListProperty); ok {
+					for _, child := range cl.ChildElements() {
+						if ent, ok := child.(*domainmodels.Entity); ok {
+							return ent
+						}
+					}
+				}
+			}
+		}
+	}
+	b.Skip("no Entity found")
+	return nil
+}
+
+func BenchmarkReadStringTyped(b *testing.B) {
+	e := entityForBench(b)
+	_ = e.Name()
+	b.ResetTimer()
+	var s string
+	for range b.N {
+		s = e.Name()
+	}
+	_ = s
+}
+
+func BenchmarkReadStringDynamic(b *testing.B) {
+	e := entityForBench(b)
+	de := dynamic.WrapElement(e)
+	_, _ = de.GetString("Name")
+	b.ResetTimer()
+	var s string
+	var ok bool
+	for range b.N {
+		s, ok = de.GetString("Name")
+	}
+	_, _ = s, ok
+}
+
+func BenchmarkWriteStringTyped(b *testing.B) {
+	e := entityForBench(b)
+	orig := e.Name()
+	b.ResetTimer()
+	for range b.N {
+		e.SetName("x")
+	}
+	e.SetName(orig)
+}
+
+func BenchmarkWriteStringDynamic(b *testing.B) {
+	e := entityForBench(b)
+	de := dynamic.WrapElement(e)
+	orig, _ := de.GetString("Name")
+	b.ResetTimer()
+	for range b.N {
+		de.SetString("Name", "x")
+	}
+	de.SetString("Name", orig)
+}
+
 // ── Helpers ──────────────────────────────────────────────────────
 
 func copyFile(t testing.TB, src, dst string) {
