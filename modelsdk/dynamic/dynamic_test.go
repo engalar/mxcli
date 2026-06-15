@@ -158,6 +158,48 @@ func TestDynamicPropertyReadWrite(t *testing.T) {
 	typed.SetName(origName)
 }
 
+func TestRawStringAccess(t *testing.T) {
+	mprPath := findTestMPR(t)
+	if mprPath == "" {
+		t.Skip("no test MPR found")
+	}
+	m, err := modelsdk.Open(mprPath)
+	if err != nil {
+		t.Fatalf("Open: %v", err)
+	}
+	defer m.Close()
+
+	entity := firstEntity(t, m)
+
+	name, ok := dynamic.RawString(entity, "Name")
+	if !ok {
+		t.Fatal("RawString(Name) failed")
+	}
+	typed := entity.(*domainmodels.Entity)
+	if name != typed.Name() {
+		t.Errorf("raw BSON name=%q, typed name=%q", name, typed.Name())
+	}
+}
+
+func TestRawBoolAccess(t *testing.T) {
+	mprPath := findTestMPR(t)
+	if mprPath == "" {
+		t.Skip("no test MPR found")
+	}
+	m, err := modelsdk.Open(mprPath)
+	if err != nil {
+		t.Fatalf("Open: %v", err)
+	}
+	defer m.Close()
+
+	entity := firstEntity(t, m)
+
+	_, ok := dynamic.RawBool(entity, "IsRemote")
+	if !ok {
+		t.Log("IsRemote field not present in raw BSON (expected for some entities)")
+	}
+}
+
 // ── Benchmarks ──────────────────────────────────────────────────
 
 func entityForBench(b *testing.B) *domainmodels.Entity {
@@ -210,6 +252,17 @@ func BenchmarkReadStringDynamic(b *testing.B) {
 	var ok bool
 	for range b.N {
 		s, ok = de.GetString("Name")
+	}
+	_, _ = s, ok
+}
+
+func BenchmarkReadStringRaw(b *testing.B) {
+	e := entityForBench(b)
+	b.ResetTimer()
+	var s string
+	var ok bool
+	for range b.N {
+		s, ok = dynamic.RawString(e, "Name")
 	}
 	_, _ = s, ok
 }
