@@ -75,6 +75,28 @@ func TestGraphApplyEvents(t *testing.T) {
 	}
 }
 
+func TestGraphRemoveNodeCleansAdjacency(t *testing.T) {
+	g := New()
+	g.AddNode("e1", "Entity", nil)
+	g.AddNode("a1", "Attribute", nil)
+	g.AddNode("a2", "Attribute", nil)
+	g.AddEdge("edge1", "e1", "a1", "HAS_ATTRIBUTE", nil)
+	g.AddEdge("edge2", "e1", "a2", "HAS_ATTRIBUTE", nil)
+
+	g.RemoveNode("e1")
+
+	// a1's inEdges should not contain e1 after removal
+	edges := g.Edges("a1", Inbound)
+	if len(edges) != 0 {
+		t.Errorf("a1 inbound edges after e1 removal: got %d, want 0", len(edges))
+	}
+	// a2's inEdges should not contain e1 after removal
+	edges = g.Edges("a2", Inbound)
+	if len(edges) != 0 {
+		t.Errorf("a2 inbound edges after e1 removal: got %d, want 0", len(edges))
+	}
+}
+
 func TestGraphFindNodesByLabel(t *testing.T) {
 	g := New()
 	g.AddNode("e1", "Entity", nil)

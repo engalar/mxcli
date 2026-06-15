@@ -35,6 +35,11 @@ func (g *Graph) GetNode(id NodeID) *Node {
 func (g *Graph) AddNode(id NodeID, label Label, props map[string]any) {
 	g.mu.Lock()
 	defer g.mu.Unlock()
+	// Clean up existing node with same ID to prevent index corruption
+	if existing := g.nodes[id]; existing != nil {
+		delete(g.byLabel[existing.Label], id)
+		g.unindexProps(existing)
+	}
 	n := &Node{ID: id, Label: label, Props: props}
 	g.nodes[id] = n
 	if g.byLabel[label] == nil {
@@ -66,16 +71,23 @@ func (g *Graph) RemoveNode(id NodeID) {
 	if n == nil {
 		return
 	}
+	// Dup check: if same ID already exists, clean old indexes first
+	if existing := g.nodes[id]; existing != nil && existing != n {
+		delete(g.byLabel[existing.Label], id)
+		g.unindexProps(existing)
+	}
 	delete(g.byLabel[n.Label], id)
+	// Outgoing: remove id from each target's inEdges
 	for rel, targets := range g.outEdges[id] {
 		for _, t := range targets {
-			g.removeEdgeFromIndex(t, id, rel)
+			g.removeInEdgeFromIndex(t, id, rel)
 		}
 	}
 	delete(g.outEdges, id)
+	// Incoming: remove id from each source's outEdges
 	for rel, sources := range g.inEdges[id] {
 		for _, s := range sources {
-			g.removeEdgeFromIndex(id, s, rel)
+			g.removeEdgeFromIndex(s, id, rel)
 		}
 	}
 	delete(g.inEdges, id)
@@ -94,6 +106,19 @@ func (g *Graph) removeEdgeFromIndex(from, to NodeID, rel RelType) {
 			for i, t := range targets {
 				if t == to {
 					edges[rel] = append(targets[:i], targets[i+1:]...)
+					break
+				}
+			}
+		}
+	}
+}
+
+func (g *Graph) removeInEdgeFromIndex(to, from NodeID, rel RelType) {
+	if edges, ok := g.inEdges[to]; ok {
+		if sources, ok := edges[rel]; ok {
+			for i, s := range sources {
+				if s == from {
+					edges[rel] = append(sources[:i], sources[i+1:]...)
 					break
 				}
 			}
@@ -199,16 +224,19 @@ func (g *Graph) FindNodes(label Label, props map[string]any) []*Node {
 	if len(props) > 0 {
 		var sets []map[NodeID]bool
 		for k, v := range props {
-			if idx, ok := g.propIdx[label]; ok {
-				if vals, ok := idx[k]; ok {
-					if nodes, ok := vals[v]; ok {
-						sets = append(sets, nodes)
-					}
-				}
+			idx, ok := g.propIdx[label]
+			if !ok {
+				return nil // label not indexed → no match
 			}
-		}
-		if len(sets) == 0 {
-			return nil
+			vals, ok := idx[k]
+			if !ok {
+				return nil // key not indexed → no match
+			}
+			nodes, ok := vals[v]
+			if !ok {
+				return nil // value not found → no match
+			}
+			sets = append(sets, nodes)
 		}
 		minIdx := 0
 		for i := 1; i < len(sets); i++ {
