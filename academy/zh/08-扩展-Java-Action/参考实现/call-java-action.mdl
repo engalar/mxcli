@@ -16,16 +16,14 @@ create or modify microflow HD.ACT_HashPassword
   ($Password: string)
   returns string as $Hash
   folder 'Security'
-{
-  if $Password = '' or length($Password) < 8 {
+begin
+  if $Password = '' or length($Password) < 8 then
     show message 'Password must be at least 8 characters.' type warning;
     return '';
-  }
-  declare $Hash: string = call java action HD.JA_HashPassword (
-    Password = $Password
-  );
+  end if;
+  $Hash = call java action HD.JA_HashPassword(Password = $Password);
   return $Hash;
-}
+end;
 /
 
 -- ============================================================
@@ -36,11 +34,11 @@ create or modify microflow HD.ACT_VerifyPassword
   ($Password: string, $HashedPassword: string)
   returns boolean as $IsValid
   folder 'Security'
-{
-  declare $IsValid: boolean = call java action HD.JA_VerifyPassword (
+begin
+  $IsValid = call java action HD.JA_VerifyPassword(
     Password       = $Password,
     HashedPassword = $HashedPassword
   );
   return $IsValid;
-}
+end;
 /

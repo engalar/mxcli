@@ -37,10 +37,9 @@ create or replace page HD.Ticket_Overview
           column colSubject  (attribute: Subject,  caption: 'Subject') {
             textfilter fSubject
           }
-          column colStatus (caption: 'Status', ShowContentAs: customContent, ColumnWidth: manual, Size: 130) {
-            PLUGGABLEWIDGET 'helpdesk.TicketStatusBadge' wdgStatus (
-              statusValue: attribute Status
-            )
+          -- TicketStatusBadge widget —属性绑定需在 Studio Pro 中设置（mxcli 负责注册 Widget）
+          column colStatus (attribute: Status, caption: 'Status', ShowContentAs: customContent, ColumnWidth: manual, Size: 130) {
+            PLUGGABLEWIDGET 'helpdesk.TicketStatusBadge' wdgStatus
           }
           column colPriority (attribute: Priority, caption: 'Priority', ColumnWidth: manual, Size: 100) {
             dropdownfilter fPriority
