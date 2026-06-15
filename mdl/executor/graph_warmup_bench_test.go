@@ -14,6 +14,32 @@ import (
 	"github.com/mendixlabs/mxcli/model"
 )
 
+// heavyBench gates real-MPR benchmarks behind MXCLI_BENCH_HEAVY=1.
+//
+// Default behaviour is to skip, printing the exact command needed to run.
+// This prevents accidental resource exhaustion on developer machines.
+//
+// Resource-safe invocation (copy-paste ready):
+//
+//	MXCLI_BENCH_HEAVY=1 GOMEMLIMIT=512MiB GOMAXPROCS=2 \
+//	  nice -n 19 \
+//	  go test ./mdl/executor/ -bench=<BenchmarkName> -benchtime=1x -count=3 -parallel 1
+func heavyBench(b *testing.B) bool {
+	b.Helper()
+	if os.Getenv("MXCLI_BENCH_HEAVY") != "1" {
+		b.Skipf("lightweight mode — skipping real-MPR benchmark to avoid resource exhaustion.\n"+
+			"\tTo run: MXCLI_BENCH_HEAVY=1 GOMEMLIMIT=512MiB GOMAXPROCS=2 nice -n 19 "+
+			"go test ./mdl/executor/ -bench=%s -benchtime=1x -count=3 -parallel 1", b.Name())
+		return false
+	}
+	// Hard cap: even with -benchtime=60s, never run more than 3 iterations.
+	// Each iteration opens real SQL connections; more than 3 rarely adds signal.
+	if b.N > 3 {
+		b.N = 3
+	}
+	return true
+}
+
 // findCorpusMPR 查找可用的测试 MPR 文件。
 // 如果找不到则跳过 benchmark（CI 无 testdata 时合理）。
 func findCorpusMPR(b *testing.B) string {
@@ -28,7 +54,7 @@ func findCorpusMPR(b *testing.B) string {
 			return abs
 		}
 	}
-	b.Skip("no test MPR found; set MXCLI_TEST_MPR to provide one")
+	b.Skip("no test MPR found")
 	return ""
 }
 
@@ -48,6 +74,9 @@ func openBenchExecutor(b *testing.B, mprPath string) *Executor {
 // BenchmarkEntityNamesFromBackend 测试冷缓存时 getEntityNames 的 backend 路径。
 // 这是我们要加速的操作。
 func BenchmarkEntityNamesFromBackend(b *testing.B) {
+	if !heavyBench(b) {
+		return
+	}
 	mprPath := findCorpusMPR(b)
 	e := openBenchExecutor(b, mprPath)
 	b.ResetTimer()
@@ -63,6 +92,9 @@ func BenchmarkEntityNamesFromBackend(b *testing.B) {
 
 // BenchmarkMicroflowListFromBackend 测试冷缓存时 listMicroflowsWithContainerGen 的 backend 路径。
 func BenchmarkMicroflowListFromBackend(b *testing.B) {
+	if !heavyBench(b) {
+		return
+	}
 	mprPath := findCorpusMPR(b)
 	e := openBenchExecutor(b, mprPath)
 	b.ResetTimer()
@@ -235,6 +267,9 @@ func openBenchExecutorWithGraph(b *testing.B, mprPath string) *Executor {
 // BenchmarkEntityNamesFromGraph 是性能红线：必须比 BenchmarkEntityNamesFromBackend 快 5x+。
 // 如果比值低于 5x，说明 warmCacheFromGraph 或 graph propIdx 出了问题。
 func BenchmarkEntityNamesFromGraph(b *testing.B) {
+	if !heavyBench(b) {
+		return
+	}
 	mprPath := findCorpusMPR(b)
 	e := openBenchExecutorWithGraph(b, mprPath)
 	b.ResetTimer()
@@ -249,6 +284,9 @@ func BenchmarkEntityNamesFromGraph(b *testing.B) {
 
 // BenchmarkMicroflowListFromGraph 测试图预热路径的微流列举。
 func BenchmarkMicroflowListFromGraph(b *testing.B) {
+	if !heavyBench(b) {
+		return
+	}
 	mprPath := findCorpusMPR(b)
 	e := openBenchExecutorWithGraph(b, mprPath)
 	b.ResetTimer()
