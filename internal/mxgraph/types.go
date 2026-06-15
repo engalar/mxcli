@@ -1,3 +1,6 @@
+// Package mxgraph provides an in-memory graph engine with adjacency indexes,
+// path schema discovery, event-driven adapter system, and gob-based persistence.
+// Adapters produce Event streams consumed by Graph.Apply to build and update the graph.
 package mxgraph
 
 type NodeID string

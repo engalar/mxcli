@@ -7,3 +7,9 @@ func TestDirectionValues(t *testing.T) {
 		t.Error("unexpected Direction iota values")
 	}
 }
+
+func TestEventTypeValues(t *testing.T) {
+	if NodeCreated != 0 || NodeUpdated != 1 || NodeDeleted != 2 || EdgeCreated != 3 || EdgeDeleted != 4 {
+		t.Error("unexpected EventType iota values")
+	}
+}
