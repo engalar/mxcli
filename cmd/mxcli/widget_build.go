@@ -375,5 +375,16 @@ func runWidgetBuild(cmd *cobra.Command, args []string) error {
 		size = fi.Size() / 1024
 	}
 	fmt.Printf("Built %s (%d widget(s), %d KB)\n", filepath.Base(mpkPath), len(infos), size)
+
+	install, _ := cmd.Flags().GetBool("install")
+	if install {
+		projectPath, _ := cmd.Flags().GetString("project")
+		if projectPath == "" {
+			return fmt.Errorf("--install requires -p <project.mpr>")
+		}
+		if err := installMPK(mpkPath, projectPath); err != nil {
+			return fmt.Errorf("install: %w", err)
+		}
+	}
 	return nil
 }

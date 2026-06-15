@@ -157,6 +157,8 @@ func init() {
 	widgetAddWidgetCmd.Flags().String("description", "", "Widget description (written into XML)")
 
 	widgetBuildCmd.Flags().String("dir", ".", "Widget project root directory")
+	widgetBuildCmd.Flags().Bool("install", false, "Install the built MPK into the Mendix project's widgets/ folder")
+	widgetBuildCmd.Flags().StringP("project", "p", "", "Path to Mendix project (.mpr file) — required with --install")
 
 	widgetInstallCmd.Flags().String("mpk", "", "Path to .mpk file (default: auto-detect *.mpk in current directory)")
 	widgetInstallCmd.Flags().StringP("project", "p", "", "Path to Mendix project (.mpr file)")
