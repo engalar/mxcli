@@ -71,6 +71,16 @@ func (e *Executor) newExecContext(ctx context.Context) *ExecContext {
 	cat := e.catalog
 	gen := e.catalogGen
 	e.catalogMu.RUnlock()
+
+	// Ensure cache exists (Connect sets it; direct Executor construction may leave it nil).
+	if e.cache == nil {
+		e.cache = &executorCache{}
+	}
+	// Warm name caches from graph if available — O(nodes) vs O(N²) backend scan.
+	if e.graphCatalog != nil {
+		warmCacheFromGraph(e.cache, e.graphCatalog)
+	}
+
 	return &ExecContext{
 		Context: ctx,
 		Backend: e.backend,

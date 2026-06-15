@@ -135,3 +135,35 @@ func TestWarmCacheFromGraph_NilSafe(t *testing.T) {
 	warmCacheFromGraph(nil, nil)
 	warmCacheFromGraph(&executorCache{}, nil)
 }
+
+func TestNewExecContext_WarmsCacheFromGraph(t *testing.T) {
+	// 构造内存图，不需要真实 MPR
+	g := mxgraph.New()
+	g.AddNode("uuid-e1", "Entity", map[string]any{
+		"QualifiedName": "MyModule.MyEntity",
+		"Module":        "MyModule",
+		"Name":          "MyEntity",
+	})
+	mgr := mxgraph.NewIndexManagerFromGraph(g)
+	pg := graphcatalog.NewProjectGraph(mgr)
+
+	// Executor 无 backend（nil），graph 已有
+	e := &Executor{
+		graphCatalog: pg,
+		cache:        nil, // 冷缓存
+	}
+
+	ctx := e.newExecContext(context.Background())
+
+	// newExecContext 应已预热缓存
+	if ctx.Cache == nil {
+		t.Fatal("cache should not be nil after newExecContext")
+	}
+	if len(ctx.Cache.entityNames) == 0 {
+		t.Error("expected entity names pre-warmed from graph")
+	}
+	got := ctx.Cache.entityNames[model.ID("uuid-e1")]
+	if got != "MyModule.MyEntity" {
+		t.Errorf("entityNames[uuid-e1] = %q, want MyModule.MyEntity", got)
+	}
+}
