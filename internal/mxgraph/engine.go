@@ -26,6 +26,18 @@ func New() *Graph {
 	}
 }
 
+func (g *Graph) AllNodes() map[NodeID]*Node {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+	return g.nodes
+}
+
+func (g *Graph) AllEdges() map[NodeID]*Edge {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+	return g.edges
+}
+
 func (g *Graph) GetNode(id NodeID) *Node {
 	g.mu.RLock()
 	defer g.mu.RUnlock()
