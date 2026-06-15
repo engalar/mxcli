@@ -108,6 +108,73 @@ func TestGraphFindNodesByLabel(t *testing.T) {
 	}
 }
 
+func buildTestGraph() *Graph {
+	g := New()
+	g.AddNode("m1", "Module", map[string]any{"Name": "MyModule"})
+	g.AddNode("e1", "Entity", map[string]any{"Name": "Payer"})
+	g.AddNode("a1", "Attribute", map[string]any{"Name": "Status"})
+	g.AddNode("mf1", "Microflow", map[string]any{"Name": "ACT_Process"})
+	g.AddEdge("edge1", "m1", "e1", "HAS_ENTITY", nil)
+	g.AddEdge("edge2", "e1", "a1", "HAS_ATTRIBUTE", nil)
+	g.AddEdge("edge3", "a1", "mf1", "USED_IN_MICROFLOW", nil)
+	return g
+}
+
+func TestFindPathSchemas(t *testing.T) {
+	g := buildTestGraph()
+	schemas := g.FindPathSchemas("e1", "mf1", 5)
+	if len(schemas) == 0 {
+		t.Fatal("FindPathSchemas returned 0 schemas")
+	}
+	found := false
+	for _, s := range schemas {
+		if s.Label == "Entity→HAS_ATTRIBUTE→Attribute→USED_IN_MICROFLOW→Microflow" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Errorf("expected path Entity→Attribute→Microflow, got schemas: %v", schemas)
+	}
+}
+
+func TestExplorePath(t *testing.T) {
+	g := buildTestGraph()
+	schemas := g.FindPathSchemas("e1", "mf1", 5)
+	if len(schemas) == 0 {
+		t.Fatal("no schemas found")
+	}
+	path := g.ExplorePath("e1", schemas[0])
+	if len(path) < 2 {
+		t.Fatalf("ExplorePath returned %d nodes, want >= 2", len(path))
+	}
+	if path[0].Node.ID != "e1" {
+		t.Errorf("first node = %q, want e1", path[0].Node.ID)
+	}
+	if path[len(path)-1].Node.ID != "mf1" {
+		t.Errorf("last node = %q, want mf1", path[len(path)-1].Node.ID)
+	}
+}
+
+func TestTraverse(t *testing.T) {
+	g := buildTestGraph()
+	results := g.Traverse("m1", "HAS_ENTITY", 1)
+	if len(results) == 0 {
+		t.Fatal("Traverse returned 0 results")
+	}
+	if results[0].ID != "e1" {
+		t.Errorf("first result = %q, want e1", results[0].ID)
+	}
+}
+
+func TestTraverseDepth(t *testing.T) {
+	g := buildTestGraph()
+	results := g.Traverse("m1", "HAS_ENTITY", 2)
+	if len(results) != 1 {
+		t.Errorf("expected 1 result (e1), got %d", len(results))
+	}
+}
+
 func TestGraphFindNodesByProps(t *testing.T) {
 	g := New()
 	g.AddNode("e1", "Entity", map[string]any{"Name": "Payer", "Module": "MyModule"})
