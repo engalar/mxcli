@@ -37,6 +37,14 @@ func NewIndexManager() *IndexManager {
 	}
 }
 
+// NewIndexManagerFromGraph 从已有图创建只读 IndexManager（用于从 snapshot 恢复）。
+func NewIndexManagerFromGraph(g *Graph) *IndexManager {
+	return &IndexManager{
+		graph:    g,
+		adapters: map[string]IndexAdapter{},
+	}
+}
+
 func (m *IndexManager) RegisterAdapter(a IndexAdapter) {
 	m.adapters[a.Name()] = a
 }
