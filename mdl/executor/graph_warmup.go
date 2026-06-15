@@ -3,6 +3,8 @@
 package executor
 
 import (
+	"os"
+
 	"github.com/mendixlabs/mxcli/mdl/graphcatalog"
 	"github.com/mendixlabs/mxcli/model"
 )
@@ -74,4 +76,25 @@ func warmCacheFromGraph(cache *executorCache, pg *graphcatalog.ProjectGraph) {
 			}
 		}
 	}
+}
+
+// tryLoadGraphSnapshot 尝试从项目目录的 .mxcli/graph.gob 加载图快照。
+// 成功时预热 cache 并设置 *out；失败时静默返回（graph 是可选加速器）。
+//
+// 设计为独立函数（而非 execConnect 内联）方便单独测试。
+func tryLoadGraphSnapshot(projectDir string, cache *executorCache, out **graphcatalog.ProjectGraph) {
+	if projectDir == "" || cache == nil || out == nil {
+		return
+	}
+	snapPath := graphcatalog.SnapshotPath(projectDir)
+	data, err := os.ReadFile(snapPath)
+	if err != nil {
+		return // 文件不存在或无权限——静默跳过
+	}
+	pg, err := graphcatalog.UnmarshalSnapshot(data)
+	if err != nil {
+		return // 快照损坏——静默跳过，不影响连接
+	}
+	*out = pg
+	warmCacheFromGraph(cache, pg)
 }

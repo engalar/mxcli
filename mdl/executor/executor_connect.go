@@ -5,6 +5,7 @@ package executor
 import (
 	"errors"
 	"fmt"
+	"path/filepath"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
@@ -35,6 +36,12 @@ func execConnect(ctx *ExecContext, s *ast.ConnectStmt) error {
 
 	ctx.MprPath = s.Path
 	ctx.Cache = &executorCache{} // Initialize fresh cache
+
+	// Auto-load graph snapshot if available — lets subsequent commands use the
+	// pre-built index without an explicit "refresh graph" command.
+	if s.Path != "" {
+		tryLoadGraphSnapshot(filepath.Dir(s.Path), ctx.Cache, &ctx.Graph)
+	}
 
 	// Reset project-scoped caches — previous project's catalog and theme
 	// registry are invalid for the new connection.

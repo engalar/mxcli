@@ -167,3 +167,45 @@ func TestNewExecContext_WarmsCacheFromGraph(t *testing.T) {
 		t.Errorf("entityNames[uuid-e1] = %q, want MyModule.MyEntity", got)
 	}
 }
+
+func TestExecConnect_AutoLoadsGraphSnapshot(t *testing.T) {
+	// 准备一个临时目录模拟项目目录结构
+	dir := t.TempDir()
+	mxcliDir := filepath.Join(dir, ".mxcli")
+	if err := os.MkdirAll(mxcliDir, 0700); err != nil {
+		t.Fatal(err)
+	}
+
+	// 构造一个小图并序列化为 graph.gob
+	g := mxgraph.New()
+	g.AddNode("uuid-e1", "Entity", map[string]any{
+		"QualifiedName": "Test.Entity1",
+		"Module":        "Test",
+		"Name":          "Entity1",
+	})
+	mgr := mxgraph.NewIndexManagerFromGraph(g)
+	pg := graphcatalog.NewProjectGraph(mgr)
+	data, err := pg.MarshalSnapshot()
+	if err != nil {
+		t.Fatalf("MarshalSnapshot: %v", err)
+	}
+	snapPath := graphcatalog.SnapshotPath(dir)
+	if err := os.WriteFile(snapPath, data, 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	// 不经过 execConnect，直接测试 tryLoadGraphSnapshot
+	cache := &executorCache{}
+	var loadedGraph *graphcatalog.ProjectGraph
+	tryLoadGraphSnapshot(dir, cache, &loadedGraph)
+
+	if loadedGraph == nil {
+		t.Fatal("expected graph to be loaded from snapshot")
+	}
+	if len(cache.entityNames) == 0 {
+		t.Error("expected entity names pre-warmed after snapshot load")
+	}
+	if cache.entityNames[model.ID("uuid-e1")] != "Test.Entity1" {
+		t.Errorf("entity name = %q, want Test.Entity1", cache.entityNames[model.ID("uuid-e1")])
+	}
+}
