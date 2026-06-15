@@ -235,6 +235,24 @@ func BenchmarkWriteStringDynamic(b *testing.B) {
 	de.SetString("Name", orig)
 }
 
+func TestKnownTypes(t *testing.T) {
+	descs := dynamic.KnownTypes()
+	if len(descs) == 0 {
+		t.Skip("no types registered — codegen may not have run")
+	}
+	t.Logf("registered %d types", len(descs))
+	found := false
+	for _, td := range descs {
+		if td.TypeName == "DomainModels$Entity" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Error("DomainModels$Entity not found in descriptor registry")
+	}
+}
+
 // ── Helpers ──────────────────────────────────────────────────────
 
 func copyFile(t testing.TB, src, dst string) {

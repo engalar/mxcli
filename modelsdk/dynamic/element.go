@@ -3,8 +3,17 @@ package dynamic
 import (
 	"sync"
 
+	"github.com/mendixlabs/mxcli/modelsdk/codec"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
 )
+
+func KnownTypes() []*codec.TypeDesc {
+	return codec.DefaultDescRegistry.All()
+}
+
+func LookupType(typeName string) (*codec.TypeDesc, bool) {
+	return codec.DefaultDescRegistry.Lookup(typeName)
+}
 
 type Element struct {
 	elem   element.Element
