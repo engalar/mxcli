@@ -1,0 +1,68 @@
+-- ============================================================
+-- 模块 10：Widget 独立验证脚本
+-- 前提：TicketStatusBadge.mpk 已放到项目 widgets/ 目录下
+-- 运行：mxcli exec test-widget-standalone.mdl -p EmptyApp.mpr
+-- ============================================================
+
+create or modify module WTest;
+
+create enumeration WTest.TicketStatus (
+  Draft      'Draft',
+  Open       'Open',
+  InProgress 'In Progress',
+  Resolved   'Resolved',
+  Closed     'Closed'
+);
+
+@position(100, 100)
+create or modify persistent entity WTest.Ticket (
+  Title:  string(500) not null,
+  Status: WTest.TicketStatus default Draft
+);
+
+-- 编辑页（接收 create_object 传入的新建对象）
+create or modify page WTest.TicketEdit (
+  params: { $Ticket: WTest.Ticket },
+  title:  'Edit Ticket',
+  layout: Atlas_Core.Atlas_Default
+) {
+  dataview dvTicket (datasource: $Ticket) {
+    textbox  tbTitle  (label: 'Title',  attribute: Title)
+    combobox cbStatus (label: 'Status', attribute: Status)
+    footer ftr {
+      actionbutton btnSave   (caption: 'Save',   action: save_changes,   buttonstyle: primary)
+      actionbutton btnCancel (caption: 'Cancel', action: cancel_changes, buttonstyle: default)
+    }
+  }
+};
+
+-- 列表页：使用 TicketStatusBadge widget 显示状态徽章
+create or modify page WTest.WidgetTest (
+  title:  'Widget Test — TicketStatusBadge',
+  layout: Atlas_Core.Atlas_Default
+) {
+  layoutgrid lgMain {
+    row rMain {
+      column cMain (desktopwidth: 12) {
+        datagrid dgTickets (
+          datasource: database from WTest.Ticket sort by Title asc,
+          PageSize: 10
+        ) {
+          controlbar cb {
+            actionbutton btnNew (
+              caption:     'New',
+              action:      create_object WTest.Ticket then show_page WTest.TicketEdit,
+              buttonstyle: primary
+            )
+          }
+          column colTitle  (attribute: Title,  caption: 'Title')
+          -- statusValue 绑定到 WTest.TicketStatus 枚举属性
+          column colStatus (attribute: Status, caption: 'Status', ShowContentAs: customContent, ColumnWidth: manual, Size: 140) {
+            PLUGGABLEWIDGET 'com.helpdesk.widget.TicketStatusBadge' wdgStatus (statusValue: Status)
+          }
+        }
+      }
+    }
+  }
+}
+/

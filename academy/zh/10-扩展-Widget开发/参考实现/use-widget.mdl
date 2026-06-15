@@ -1,12 +1,12 @@
 -- ============================================================
--- 模块 10：Widget 使用示例
+-- 模块 10：Widget 使用示例（Helpdesk 集成）
 -- 前提：
---   1. TicketStatusBadge.mpk 已在 Studio Pro 中导入
+--   1. TicketStatusBadge.mpk 已放到项目 widgets/ 目录下
 --   2. 模块 01–05 参考实现已执行（HD 模块存在）
 -- 运行：mxcli exec use-widget.mdl -p MyProject.mpr
 -- ============================================================
 
--- 重建工单概览页，将 Status 列替换为自定义 Widget
+-- 重建工单概览页，将 Status 列替换为 TicketStatusBadge widget
 create or replace page HD.Ticket_Overview
 (
   title:  'All Tickets',
@@ -37,14 +37,14 @@ create or replace page HD.Ticket_Overview
           column colSubject  (attribute: Subject,  caption: 'Subject') {
             textfilter fSubject
           }
-          -- TicketStatusBadge widget —属性绑定需在 Studio Pro 中设置（mxcli 负责注册 Widget）
-          column colStatus (attribute: Status, caption: 'Status', ShowContentAs: customContent, ColumnWidth: manual, Size: 130) {
-            PLUGGABLEWIDGET 'helpdesk.TicketStatusBadge' wdgStatus
+          -- statusValue 绑定到 HD.TicketStatus 枚举属性，自动显示对应颜色徽章
+          column colStatus (attribute: Status, caption: 'Status', ShowContentAs: customContent, ColumnWidth: manual, Size: 140) {
+            PLUGGABLEWIDGET 'com.helpdesk.widget.TicketStatusBadge' wdgStatus (statusValue: Status)
           }
           column colPriority (attribute: Priority, caption: 'Priority', ColumnWidth: manual, Size: 100) {
             dropdownfilter fPriority
           }
-          column colSLADue   (attribute: SLADueAt, caption: 'SLA Due',  ColumnWidth: manual, Size: 140)
+          column colSLADue   (attribute: SLADueAt,  caption: 'SLA Due',  ColumnWidth: manual, Size: 140)
           column colOverdue  (attribute: IsOverSLA, caption: 'Overdue',  ColumnWidth: manual, Size: 80)
           column colActions (caption: 'Actions', ShowContentAs: customContent, ColumnWidth: manual, Size: 80) {
             actionbutton btnOpen (

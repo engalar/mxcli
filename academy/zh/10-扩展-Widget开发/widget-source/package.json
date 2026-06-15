@@ -1,23 +1,9 @@
 {
-  "name": "ticket-status-badge",
-  "widgetName": "TicketStatusBadge",
+  "name": "ticketstatusbadge",
   "version": "1.0.0",
-  "description": "Colored status badge widget for Helpdesk tickets",
-  "packagePath": "helpdesk",
   "private": true,
   "type": "module",
-  "dependencies": {
-    "mendix": "^10.0.0"
-  },
   "devDependencies": {
-    "@mendix/pluggable-widgets-tools": "^10.0.0",
-    "@types/react": "^18.0.0",
-    "esbuild": "^0.20.0",
-    "typescript": "^5.0.0"
-  },
-  "scripts": {
-    "build": "pluggable-widgets-tools build:prod",
-    "dev": "pluggable-widgets-tools start:web",
-    "lint": "pluggable-widgets-tools lint"
+    "esbuild": "^0.20.0"
   }
 }
