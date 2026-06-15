@@ -2,6 +2,7 @@ package mxgraph
 
 import (
 	"bytes"
+	"context"
 	"io"
 	"testing"
 )
@@ -240,5 +241,41 @@ func TestGraphFindNodesByProps(t *testing.T) {
 	results2 := g.FindNodes("Entity", map[string]any{"Name": "Payer", "Module": "MyModule"})
 	if len(results2) != 1 {
 		t.Errorf("FindNodes with Name=Payer+Module=MyModule returned %d, want 1", len(results2))
+	}
+}
+
+type testAdapter struct {
+	name   string
+	schema *GraphSchema
+	events []Event
+}
+
+func (a *testAdapter) Name() string                     { return a.name }
+func (a *testAdapter) Schema() *GraphSchema              { return a.schema }
+func (a *testAdapter) Build(ctx context.Context, sink EventSink) error {
+	return sink.Emit(a.events)
+}
+func (a *testAdapter) Watch(ctx context.Context, sink EventSink) (func(), error) {
+	return func() {}, nil
+}
+
+func TestIndexManagerBuild(t *testing.T) {
+	m := NewIndexManager()
+	m.RegisterAdapter(&testAdapter{
+		name:   "test",
+		schema: &GraphSchema{NodeLabels: []Label{"Entity"}},
+		events: []Event{
+			{Type: NodeCreated, Node: &Node{ID: "e1", Label: "Entity"}},
+		},
+	})
+
+	ctx := context.Background()
+	if err := m.BuildAll(ctx); err != nil {
+		t.Fatalf("BuildAll: %v", err)
+	}
+
+	n := m.Query().GetNode("e1")
+	if n == nil {
+		t.Fatal("e1 not found after BuildAll")
 	}
 }
