@@ -135,6 +135,11 @@ func main() {
 // ttyCommands is the set of subcommands that require a real TTY.
 var ttyCommands = map[string]bool{
 	"tui": true, "serve": true, "oql": true, "playwright": true,
+	// "new" creates a Mendix project with multi-step progress output (Steps 1-4)
+	// and requires long-running file operations; socket forwarding drops streaming
+	// output and causes the daemon to emit help text instead of executing.
+	// "setup" downloads mxbuild with progress output and also must run directly.
+	"new": true, "setup": true,
 }
 
 // flagsWithValue lists root-level flags whose next token is their value, not a

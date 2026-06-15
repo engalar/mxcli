@@ -65,3 +65,138 @@ Mendix 的 dataview **不能**用 `datasource: new HD.Entity` 这种语法。
 | 修改关联对象的属性 | 沿关联路径 retrieve（关联名即路径，结尾不带实体段、不带 limit）：`retrieve $Ticket from $EscalationRequest/HD.EscalationRequest_Ticket` |
 | commit 顺序 | 先 commit EscalationRequest，再 commit Ticket |
 | 拒绝原因怎么收集 | 直接编辑 EscalationRequest 自带的 RejectionReason 字段，无需额外的非持久实体 |
+| `retrieve $T from $ER/HD.AssocName` | 关联检索 BSON key 有历史 bug，改用 `retrieve $T from HD.Ticket where [HD.Assoc/HD.EscalationRequest = $ER] limit 1` |
+| `limit 0` | 不代表无限制，省略 LIMIT 子句即可 |
+
+---
+
+## 路径 B：原生 Mendix Workflow（选修）
+
+### 何时选择原生 Workflow 而非微流
+
+| 场景 | 推荐方案 |
+|------|---------|
+| 简单的状态机审批（批准/拒绝） | 微流（路径 A，本模块主路径） |
+| 需要工作流收件箱（inbox）、任务分配 | 原生 Workflow |
+| 需要超时自动处理（边界事件） | 原生 Workflow |
+| 需要多人投票（majority / all） | 原生 Workflow |
+| 需要并行处理多个审批路径 | 原生 Workflow |
+
+### escalation-workflow.mdl 关键语法说明
+
+#### 声明 Workflow 和上下文实体
+
+```mdl
+create or replace workflow HD.WF_TicketEscalation
+  parameter $WorkflowContext: HD.EscalationRequest
+begin
+  ...
+end;
+```
+
+`$WorkflowContext` 是 Workflow 贯穿始终的上下文对象，所有活动都可以访问它。
+
+#### 用户任务
+
+```mdl
+user task UT_PrimaryReview 'Primary Manager Review'
+  page HD.EscalationReview_Form
+  params: { $WorkflowUserTask: System.WorkflowUserTask }
+  targeting users microflow HD.WFA_GetManagerAssignees
+  outcomes: approve, reject;
+```
+
+- `page` 指定审批页面，页面必须声明 `params: { $WorkflowUserTask: System.WorkflowUserTask }`
+- `targeting users microflow` 指定分配微流（返回 `list of System.User`）
+- `outcomes` 列出所有可能的结果分支
+
+#### 多人投票决策
+
+```mdl
+multi user task UT_SeniorCommitteeReview 'Senior Committee Review'
+  page HD.SeniorCommitteeReview_Form
+  params: { $WorkflowUserTask: System.WorkflowUserTask }
+  targeting users microflow HD.WFA_GetSeniorCommitteeMembers
+  completion method majority
+  outcomes: approve, reject;
+```
+
+`completion method majority` 表示超过一半成员完成任务即可继续（另有 `all` 要求所有人完成）。
+
+#### 等待通知
+
+```mdl
+wait for notification comment 'WaitForManagerAvailable';
+```
+
+可从外部微流通过 `notify workflow` 触发，适合需要等待外部信号的场景。
+
+#### 并行分支
+
+```mdl
+parallel split
+  path 1 {
+    user task UT_NotifyCustomer 'Notify Customer' ...;
+  }
+  path 2 {
+    user task UT_LogAudit 'Log Audit Trail' ...;
+  }
+end parallel split;
+```
+
+两条路径并行执行，均完成后 Workflow 继续。
+
+#### 边界事件（非中断型 / 中断型定时器）
+
+边界事件通过 `alter workflow` 附加到已有活动上：
+
+```mdl
+-- 非中断型：12 小时后发送提醒，活动继续正常执行
+alter workflow HD.WF_TicketEscalation
+  insert boundary event on UT_PrimaryReview@1
+    non interrupting timer 'addHours([%CurrentDateTime%], 12)'
+  action microflow HD.WFA_SendReminderNotification;
+
+-- 中断型：48 小时后终止活动，走拒绝分支
+alter workflow HD.WF_TicketEscalation
+  insert boundary event on UT_PrimaryReview@1
+    interrupting timer 'addHours([%CurrentDateTime%], 48)'
+  action microflow HD.WFA_AutoRejectEscalation;
+```
+
+- `non interrupting`：触发后活动继续，适合"提醒"场景
+- `interrupting`：触发后活动终止，适合"超时自动处理"场景
+
+#### 从微流触发 Workflow
+
+```mdl
+call workflow HD.WF_TicketEscalation (EscalationRequest = $ER);
+```
+
+在微流中用 `call workflow` 启动一个 Workflow 实例，传入上下文对象。
+
+### WFA_ 微流签名规范（重要）
+
+用户任务的 `targeting users microflow` 必须遵守固定签名：
+
+```
+参数：
+  $workflow: System.Workflow
+  $Context: HD.EscalationRequest   （与 Workflow 的 parameter 类型一致）
+
+返回值：list of System.User
+```
+
+签名不符会导致 Studio Pro 报错，且错误信息不会指向微流签名问题，难以排查。
+
+### Workflow 用户任务页面规范
+
+所有用户任务页面必须在 `params` 中声明 WorkflowUserTask 参数：
+
+```mdl
+create or replace page HD.EscalationReview_Form
+  params: { $WorkflowUserTask: System.WorkflowUserTask }
+  ...
+```
+
+页面通过 `$WorkflowUserTask` 获取任务信息（分配人、截止时间等），也用于提交审批结果。
