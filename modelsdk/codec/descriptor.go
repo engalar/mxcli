@@ -8,12 +8,14 @@ const (
 	PropKindString     PropKind = iota
 	PropKindBool
 	PropKindInt32
+	PropKindFloat64
 	PropKindPart
 	PropKindPartList
 	PropKindByNameRef
 	PropKindByNameList
 	PropKindByIdRef
 	PropKindEnum
+	PropKindEnumList
 	PropKindStringList
 	PropKindBinaryUUID
 )
