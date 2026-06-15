@@ -273,6 +273,58 @@ func TestScaffoldSingleWidget_TopLevelFiles(t *testing.T) {
 	}
 }
 
+func TestGenerateGitignore(t *testing.T) {
+	out := generateGitignore()
+	for _, want := range []string{"node_modules/", "dist/", "*.mpk"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("generateGitignore: missing %q\ngot:\n%s", want, out)
+		}
+	}
+}
+
+func TestGenerateReadme_WithPropsAndDescription(t *testing.T) {
+	props := []PropertySpec{
+		{Key: "value", XMLType: "attribute", Subtype: "Decimal"},
+		{Key: "slot", XMLType: "widgets"},
+	}
+	out := generateReadme("MySlider", "A nice slider", props)
+	checks := []string{
+		"# MySlider",
+		"A nice slider",
+		"mxcli widget build",
+		"## Properties",
+		"| value | attribute (Decimal) | Yes |",
+		"| slot | widgets | No |",
+	}
+	for _, want := range checks {
+		if !strings.Contains(out, want) {
+			t.Errorf("generateReadme: missing %q\ngot:\n%s", want, out)
+		}
+	}
+}
+
+func TestGenerateReadme_NoPropsNoDescription(t *testing.T) {
+	out := generateReadme("Foo", "", nil)
+	if !strings.Contains(out, "# Foo") {
+		t.Errorf("generateReadme: missing title\ngot:\n%s", out)
+	}
+	if strings.Contains(out, "## Properties") {
+		t.Errorf("generateReadme: should not have Properties section when no props\ngot:\n%s", out)
+	}
+}
+
+func TestScaffoldRootFiles_CreatesFiles(t *testing.T) {
+	dir := t.TempDir()
+	if err := scaffoldRootFiles(dir, "Foo", "desc", nil); err != nil {
+		t.Fatalf("scaffoldRootFiles: %v", err)
+	}
+	for _, rel := range []string{".gitignore", "README.md"} {
+		if _, err := os.Stat(filepath.Join(dir, rel)); err != nil {
+			t.Errorf("expected %s to exist: %v", rel, err)
+		}
+	}
+}
+
 func TestScaffoldPackage_EmptySrc(t *testing.T) {
 	dir := t.TempDir()
 	if err := scaffoldPackage(dir, "CrusherWidgets"); err != nil {

@@ -268,6 +268,56 @@ func generatePackageJSON(packageName string) string {
 `, packageName)
 }
 
+// generateGitignore returns the contents of a widget project's .gitignore.
+func generateGitignore() string {
+	return "node_modules/\ndist/\n*.mpk\n"
+}
+
+// generateReadme renders README.md documenting the widget's build steps and properties.
+func generateReadme(name, description string, props []PropertySpec) string {
+	var b strings.Builder
+	b.WriteString("# " + name + "\n\n")
+	if description != "" {
+		b.WriteString(description + "\n\n")
+	}
+	b.WriteString("## Build\n\n```bash\nmxcli widget build\n```\n\n")
+	b.WriteString("## Install into a Mendix project\n\n```bash\nmxcli widget build --install -p /path/to/app.mpr\n```\n\n")
+	if len(props) == 0 {
+		return b.String()
+	}
+	b.WriteString("## Properties\n\n")
+	b.WriteString("| Property | Type | Required |\n")
+	b.WriteString("|----------|------|----------|\n")
+	for _, p := range props {
+		typeStr := p.XMLType
+		if p.Subtype != "" {
+			typeStr += " (" + p.Subtype + ")"
+		}
+		req := "Yes"
+		if p.XMLType == "widgets" {
+			req = "No"
+		}
+		b.WriteString(fmt.Sprintf("| %s | %s | %s |\n", p.Key, typeStr, req))
+	}
+	b.WriteString("\n")
+	return b.String()
+}
+
+// scaffoldRootFiles writes the project-root .gitignore and README.md into dir.
+func scaffoldRootFiles(dir, name, description string, props []PropertySpec) error {
+	files := map[string][]byte{
+		".gitignore": []byte(generateGitignore()),
+		"README.md":  []byte(generateReadme(name, description, props)),
+	}
+	for filename, content := range files {
+		dest := filepath.Join(dir, filename)
+		if err := os.WriteFile(dest, content, 0644); err != nil {
+			return fmt.Errorf("writing %s: %w", filename, err)
+		}
+	}
+	return nil
+}
+
 // scaffoldWidget writes all source files for one widget into dir/src/.
 func scaffoldWidget(dir, name, widgetID, description string, offline bool, props []PropertySpec) error {
 	srcDir := filepath.Join(dir, "src")
@@ -382,6 +432,9 @@ func runWidgetNew(cmd *cobra.Command, args []string) error {
 
 	if err := scaffoldWidget(outDir, name, widgetID, description, offline, props); err != nil {
 		return fmt.Errorf("scaffolding widget: %w", err)
+	}
+	if err := scaffoldRootFiles(outDir, name, description, props); err != nil {
+		return fmt.Errorf("scaffolding root files: %w", err)
 	}
 	pkgName := strings.ToLower(name)
 	if err := os.WriteFile(filepath.Join(outDir, "package.json"), []byte(generatePackageJSON(pkgName)), 0644); err != nil {
