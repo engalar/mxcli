@@ -1,11 +1,5 @@
 package mxgraph
 
-type pathState struct {
-	current      NodeID
-	visitedNodes map[NodeID]bool
-	steps        []PathStep
-}
-
 func (g *Graph) FindPathSchemas(from, to NodeID, depthLimit int) []PathSchema {
 	g.mu.RLock()
 	defer g.mu.RUnlock()
@@ -17,51 +11,50 @@ func (g *Graph) FindPathSchemas(from, to NodeID, depthLimit int) []PathSchema {
 	var schemas []PathSchema
 	seen := map[string]bool{}
 
-	var dfs func(state pathState, depth int)
-	dfs = func(state pathState, depth int) {
+	// \u5171\u4eab\u56de\u6eaf\u72b6\u6001\uff0c\u4e0d\u518d\u6bcf\u6b65\u590d\u5236 map
+	visited := map[NodeID]bool{from: true}
+	steps := make([]PathStep, 0, depthLimit)
+
+	var dfs func(current NodeID, depth int)
+	dfs = func(current NodeID, depth int) {
 		if depth > depthLimit {
 			return
 		}
-		if state.current == to && len(state.steps) > 0 {
+		if current == to && len(steps) > 0 {
 			labelSeq := string(g.nodes[from].Label)
-			for _, s := range state.steps {
+			for _, s := range steps {
 				labelSeq += "\u2192" + string(s.RelType) + "\u2192" + string(s.NodeLabel)
 			}
 			if !seen[labelSeq] {
 				seen[labelSeq] = true
-				schema := PathSchema{
-					Steps: append([]PathStep{}, state.steps...),
+				schemas = append(schemas, PathSchema{
+					Steps: append([]PathStep{}, steps...), // \u4ec5\u5728\u627e\u5230\u8def\u5f84\u65f6\u590d\u5236
 					Label: labelSeq,
-				}
-				schemas = append(schemas, schema)
+				})
 			}
 			return
 		}
 
-		for rel, targets := range g.outEdges[state.current] {
+		for rel, targets := range g.outEdges[current] {
 			for _, nextID := range targets {
-				if state.visitedNodes[nextID] {
+				if visited[nextID] {
 					continue
 				}
 				nextNode := g.nodes[nextID]
 				if nextNode == nil {
 					continue
 				}
-				visitedCopy := make(map[NodeID]bool, len(state.visitedNodes)+1)
-				for k, v := range state.visitedNodes {
-					visitedCopy[k] = v
-				}
-				visitedCopy[nextID] = true
-				stepsCopy := append([]PathStep{}, state.steps...)
-				stepsCopy = append(stepsCopy, PathStep{NodeLabel: nextNode.Label, RelType: rel})
-				newState := pathState{current: nextID, visitedNodes: visitedCopy, steps: stepsCopy}
-				dfs(newState, depth+1)
+				// \u56de\u6eaf\uff1a\u52a0\u5165 \u2192 \u9012\u5f52 \u2192 \u79fb\u9664
+				visited[nextID] = true
+				steps = append(steps, PathStep{NodeLabel: nextNode.Label, RelType: rel})
+				dfs(nextID, depth+1)
+				steps = steps[:len(steps)-1]
+				delete(visited, nextID)
 			}
 		}
 	}
 
-	startVisited := map[NodeID]bool{from: true}
-	dfs(pathState{current: from, visitedNodes: startVisited, steps: nil}, 0)
+	dfs(from, 0)
 	return schemas
 }
 
