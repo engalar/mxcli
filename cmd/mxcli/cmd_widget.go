@@ -136,10 +136,12 @@ func init() {
 	widgetNewCmd.Flags().StringArray("property", nil, "Property spec: key:type or key:type:subtype (repeatable)")
 	widgetNewCmd.Flags().Bool("offline", false, "Set offlineCapable=true in the widget XML")
 	widgetNewCmd.Flags().Bool("package", false, "Create a multi-widget package project (empty src/)")
+	widgetNewCmd.Flags().String("description", "", "Widget description (written into XML and README)")
 
 	widgetAddWidgetCmd.Flags().String("id", "", "Widget ID (default: com.mendix.widget.custom.<Name>.<Name>)")
 	widgetAddWidgetCmd.Flags().StringArray("property", nil, "Property spec: key:type or key:type:subtype (repeatable)")
 	widgetAddWidgetCmd.Flags().Bool("offline", false, "Set offlineCapable=true")
+	widgetAddWidgetCmd.Flags().String("description", "", "Widget description (written into XML)")
 
 	widgetBuildCmd.Flags().String("dir", ".", "Widget project root directory")
 

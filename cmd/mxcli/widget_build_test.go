@@ -173,7 +173,7 @@ func TestRoundTrip_ScaffoldThenDiscover(t *testing.T) {
 		{Key: "value", XMLType: "attribute", Subtype: "Decimal"},
 		{Key: "label", XMLType: "string"},
 	}
-	err := scaffoldWidget(dir, "RoundTrip", "com.test.widget.RoundTrip.RoundTrip", false, props)
+	err := scaffoldWidget(dir, "RoundTrip", "com.test.widget.RoundTrip.RoundTrip", "", false, props)
 	if err != nil {
 		t.Fatalf("scaffoldWidget: %v", err)
 	}

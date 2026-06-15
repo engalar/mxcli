@@ -68,8 +68,20 @@ func humanizeWidgetName(name string) string {
 	return b.String()
 }
 
+// xmlEscape escapes the five XML special characters in s.
+func xmlEscape(s string) string {
+	r := strings.NewReplacer(
+		"&", "&amp;",
+		"<", "&lt;",
+		">", "&gt;",
+		"\"", "&quot;",
+		"'", "&apos;",
+	)
+	return r.Replace(s)
+}
+
 // generateWidgetXML renders the widget property-definition XML for src/<Name>.xml.
-func generateWidgetXML(name, widgetID string, offline bool, props []PropertySpec) string {
+func generateWidgetXML(name, widgetID, description string, offline bool, props []PropertySpec) string {
 	human := humanizeWidgetName(name)
 	offlineStr := "false"
 	if offline {
@@ -85,7 +97,7 @@ func generateWidgetXML(name, widgetID string, offline bool, props []PropertySpec
 			`        xsi:schemaLocation="http://www.mendix.com/widget/1.0/ ../../../../node_modules/mendix/custom_widget.xsd">`+"\n",
 		widgetID, offlineStr))
 	b.WriteString(fmt.Sprintf("  <name>%s</name>\n", human))
-	b.WriteString("  <description></description>\n")
+	b.WriteString(fmt.Sprintf("  <description>%s</description>\n", xmlEscape(description)))
 	b.WriteString("  <properties>\n")
 	b.WriteString("    <propertyGroup caption=\"General\">\n")
 	for _, p := range props {
@@ -257,13 +269,13 @@ func generatePackageJSON(packageName string) string {
 }
 
 // scaffoldWidget writes all source files for one widget into dir/src/.
-func scaffoldWidget(dir, name, widgetID string, offline bool, props []PropertySpec) error {
+func scaffoldWidget(dir, name, widgetID, description string, offline bool, props []PropertySpec) error {
 	srcDir := filepath.Join(dir, "src")
 	if err := os.MkdirAll(srcDir, 0755); err != nil {
 		return err
 	}
 	files := map[string][]byte{
-		name + ".xml":              []byte(generateWidgetXML(name, widgetID, offline, props)),
+		name + ".xml":              []byte(generateWidgetXML(name, widgetID, description, offline, props)),
 		name + ".jsx":              []byte(generateJSX(name, props)),
 		name + ".editorConfig.js":  []byte(generateEditorConfig(name, props)),
 		name + ".editorPreview.js": []byte(generateEditorPreview()),
@@ -357,6 +369,7 @@ func runWidgetNew(cmd *cobra.Command, args []string) error {
 		}
 	}
 	offline, _ := cmd.Flags().GetBool("offline")
+	description, _ := cmd.Flags().GetString("description")
 	propStrs, _ := cmd.Flags().GetStringArray("property")
 	var props []PropertySpec
 	for _, s := range propStrs {
@@ -367,7 +380,7 @@ func runWidgetNew(cmd *cobra.Command, args []string) error {
 		props = append(props, p)
 	}
 
-	if err := scaffoldWidget(outDir, name, widgetID, offline, props); err != nil {
+	if err := scaffoldWidget(outDir, name, widgetID, description, offline, props); err != nil {
 		return fmt.Errorf("scaffolding widget: %w", err)
 	}
 	pkgName := strings.ToLower(name)
@@ -428,6 +441,7 @@ func runWidgetAddWidget(cmd *cobra.Command, args []string) error {
 		widgetID = deriveWidgetID(name)
 	}
 	offline, _ := cmd.Flags().GetBool("offline")
+	description, _ := cmd.Flags().GetString("description")
 	propStrs, _ := cmd.Flags().GetStringArray("property")
 	var props []PropertySpec
 	for _, s := range propStrs {
@@ -442,7 +456,7 @@ func runWidgetAddWidget(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("widget %q already exists in src/", name)
 	}
 
-	if err := scaffoldWidget(dir, name, widgetID, offline, props); err != nil {
+	if err := scaffoldWidget(dir, name, widgetID, description, offline, props); err != nil {
 		return fmt.Errorf("scaffolding widget: %w", err)
 	}
 	if err := appendWidgetFileToPackageXML(pkgXMLPath, name); err != nil {

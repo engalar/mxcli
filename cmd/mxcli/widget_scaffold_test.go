@@ -112,7 +112,7 @@ func TestGenerateWidgetXML(t *testing.T) {
 		{Key: "label", XMLType: "string"},
 		{Key: "onChange", XMLType: "action"},
 	}
-	xml := generateWidgetXML("MySlider", "com.acme.widget.MySlider.MySlider", false, props)
+	xml := generateWidgetXML("MySlider", "com.acme.widget.MySlider.MySlider", "", false, props)
 
 	checks := []string{
 		`id="com.acme.widget.MySlider.MySlider"`,
@@ -132,9 +132,24 @@ func TestGenerateWidgetXML(t *testing.T) {
 }
 
 func TestGenerateWidgetXML_Offline(t *testing.T) {
-	xml := generateWidgetXML("Foo", "com.a.b.c.Foo.Foo", true, nil)
+	xml := generateWidgetXML("Foo", "com.a.b.c.Foo.Foo", "", true, nil)
 	if !strings.Contains(xml, `offlineCapable="true"`) {
 		t.Errorf("expected offlineCapable=true, got:\n%s", xml)
+	}
+}
+
+func TestGenerateWidgetXML_WithDescription(t *testing.T) {
+	xml := generateWidgetXML("Foo", "com.a.b.c.Foo.Foo", "A <special> & \"quoted\" widget", false, nil)
+	want := `<description>A &lt;special&gt; &amp; &quot;quoted&quot; widget</description>`
+	if !strings.Contains(xml, want) {
+		t.Errorf("generateWidgetXML: missing escaped description %q\ngot:\n%s", want, xml)
+	}
+}
+
+func TestGenerateWidgetXML_EmptyDescription(t *testing.T) {
+	xml := generateWidgetXML("Foo", "com.a.b.c.Foo.Foo", "", false, nil)
+	if !strings.Contains(xml, "<description></description>") {
+		t.Errorf("generateWidgetXML: expected empty description element\ngot:\n%s", xml)
 	}
 }
 
@@ -211,7 +226,7 @@ func TestScaffoldWidget_CreatesExpectedFiles(t *testing.T) {
 		{Key: "value", XMLType: "attribute", Subtype: "Decimal"},
 		{Key: "label", XMLType: "string"},
 	}
-	err := scaffoldWidget(dir, "MySlider", "com.acme.widget.MySlider.MySlider", false, props)
+	err := scaffoldWidget(dir, "MySlider", "com.acme.widget.MySlider.MySlider", "", false, props)
 	if err != nil {
 		t.Fatalf("scaffoldWidget: %v", err)
 	}
@@ -240,7 +255,7 @@ func TestScaffoldWidget_CreatesExpectedFiles(t *testing.T) {
 func TestScaffoldSingleWidget_TopLevelFiles(t *testing.T) {
 	dir := t.TempDir()
 	props := []PropertySpec{{Key: "label", XMLType: "string"}}
-	if err := scaffoldWidget(dir, "MySlider", deriveWidgetID("MySlider"), false, props); err != nil {
+	if err := scaffoldWidget(dir, "MySlider", deriveWidgetID("MySlider"), "", false, props); err != nil {
 		t.Fatalf("scaffoldWidget: %v", err)
 	}
 	pkgJSON := filepath.Join(dir, "package.json")
