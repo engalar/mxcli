@@ -13,16 +13,22 @@ type Graph struct {
 	inEdges  map[NodeID]map[RelType][]NodeID
 	byLabel  map[Label]map[NodeID]bool
 	propIdx  map[Label]map[string]map[any]map[NodeID]bool
+	// edge ID 索引，用于 O(degree) 的 Edges() 查询。
+	// key: node ID, value: relType → []edgeID（NodeID 类型复用，值是边的 ID）
+	outEdgeIDs map[NodeID]map[RelType][]NodeID
+	inEdgeIDs  map[NodeID]map[RelType][]NodeID
 }
 
 func New() *Graph {
 	return &Graph{
-		nodes:    map[NodeID]*Node{},
-		edges:    map[NodeID]*Edge{},
-		outEdges: map[NodeID]map[RelType][]NodeID{},
-		inEdges:  map[NodeID]map[RelType][]NodeID{},
-		byLabel:  map[Label]map[NodeID]bool{},
-		propIdx:  map[Label]map[string]map[any]map[NodeID]bool{},
+		nodes:      map[NodeID]*Node{},
+		edges:      map[NodeID]*Edge{},
+		outEdges:   map[NodeID]map[RelType][]NodeID{},
+		inEdges:    map[NodeID]map[RelType][]NodeID{},
+		byLabel:    map[Label]map[NodeID]bool{},
+		propIdx:    map[Label]map[string]map[any]map[NodeID]bool{},
+		outEdgeIDs: map[NodeID]map[RelType][]NodeID{},
+		inEdgeIDs:  map[NodeID]map[RelType][]NodeID{},
 	}
 }
 
@@ -74,6 +80,14 @@ func (g *Graph) AddEdge(id, from, to NodeID, rel RelType, props map[string]any) 
 		g.inEdges[to] = map[RelType][]NodeID{}
 	}
 	g.inEdges[to][rel] = append(g.inEdges[to][rel], from)
+	if g.outEdgeIDs[from] == nil {
+		g.outEdgeIDs[from] = map[RelType][]NodeID{}
+	}
+	g.outEdgeIDs[from][rel] = append(g.outEdgeIDs[from][rel], id)
+	if g.inEdgeIDs[to] == nil {
+		g.inEdgeIDs[to] = map[RelType][]NodeID{}
+	}
+	g.inEdgeIDs[to][rel] = append(g.inEdgeIDs[to][rel], id)
 }
 
 func (g *Graph) RemoveNode(id NodeID) {
@@ -83,33 +97,57 @@ func (g *Graph) RemoveNode(id NodeID) {
 	if n == nil {
 		return
 	}
-	// Dup check: if same ID already exists, clean old indexes first
-	if existing := g.nodes[id]; existing != nil && existing != n {
-		delete(g.byLabel[existing.Label], id)
-		g.unindexProps(existing)
-	}
 	delete(g.byLabel[n.Label], id)
-	// Outgoing: remove id from each target's inEdges
-	for rel, targets := range g.outEdges[id] {
-		for _, t := range targets {
-			g.removeInEdgeFromIndex(t, id, rel)
-		}
-	}
-	delete(g.outEdges, id)
-	// Incoming: remove id from each source's outEdges
-	for rel, sources := range g.inEdges[id] {
-		for _, s := range sources {
-			g.removeEdgeFromIndex(s, id, rel)
-		}
-	}
-	delete(g.inEdges, id)
-	g.unindexProps(n)
-	for eid, e := range g.edges {
-		if e.From == id || e.To == id {
+	// 用 outEdgeIDs 删除所有出边（O(out-degree)）
+	for rel, eids := range g.outEdgeIDs[id] {
+		for _, eid := range eids {
+			if e := g.edges[eid]; e != nil {
+				g.removeInEdgeFromIndex(e.To, id, rel)
+				g.removeFromInEdgeIDs(e.To, rel, eid)
+			}
 			delete(g.edges, eid)
 		}
 	}
+	delete(g.outEdgeIDs, id)
+	delete(g.outEdges, id)
+	// 用 inEdgeIDs 删除所有入边（O(in-degree)）
+	for rel, eids := range g.inEdgeIDs[id] {
+		for _, eid := range eids {
+			if e := g.edges[eid]; e != nil {
+				g.removeEdgeFromIndex(e.From, id, rel)
+				g.removeFromOutEdgeIDs(e.From, rel, eid)
+			}
+			delete(g.edges, eid)
+		}
+	}
+	delete(g.inEdgeIDs, id)
+	delete(g.inEdges, id)
+	g.unindexProps(n)
 	delete(g.nodes, id)
+}
+
+func (g *Graph) removeFromOutEdgeIDs(from NodeID, rel RelType, eid NodeID) {
+	if m, ok := g.outEdgeIDs[from]; ok {
+		eids := m[rel]
+		for i, e := range eids {
+			if e == eid {
+				m[rel] = append(eids[:i], eids[i+1:]...)
+				return
+			}
+		}
+	}
+}
+
+func (g *Graph) removeFromInEdgeIDs(to NodeID, rel RelType, eid NodeID) {
+	if m, ok := g.inEdgeIDs[to]; ok {
+		eids := m[rel]
+		for i, e := range eids {
+			if e == eid {
+				m[rel] = append(eids[:i], eids[i+1:]...)
+				return
+			}
+		}
+	}
 }
 
 func (g *Graph) removeEdgeFromIndex(from, to NodeID, rel RelType) {
@@ -174,6 +212,8 @@ func (g *Graph) Apply(events []Event) {
 			e := g.edges[ev.Edge.ID]
 			if e != nil {
 				g.removeEdgeFromAdj(e)
+				g.removeFromOutEdgeIDs(e.From, e.Type, e.ID)
+				g.removeFromInEdgeIDs(e.To, e.Type, e.ID)
 			}
 			delete(g.edges, ev.Edge.ID)
 			g.mu.Unlock()
@@ -209,23 +249,38 @@ func (g *Graph) Neighbors(id NodeID, relTypes ...RelType) []*Node {
 func (g *Graph) Edges(id NodeID, dir Direction, relTypes ...RelType) []*Edge {
 	g.mu.RLock()
 	defer g.mu.RUnlock()
+
+	relFilter := make(map[RelType]bool, len(relTypes))
+	for _, rt := range relTypes {
+		relFilter[rt] = true
+	}
+	useFilter := len(relTypes) > 0
+
 	var result []*Edge
-	filter := len(relTypes) > 0
-	for _, e := range g.edges {
-		match := (dir == Outbound && e.From == id) || (dir == Inbound && e.To == id) || (dir == Both && (e.From == id || e.To == id))
-		if !match {
-			continue
-		}
-		if filter {
-			for _, rt := range relTypes {
-				if e.Type == rt {
+	seen := map[NodeID]bool{} // 防止 Both 模式下重复（自环情况）
+
+	collect := func(idx map[NodeID]map[RelType][]NodeID) {
+		for rel, eids := range idx[id] {
+			if useFilter && !relFilter[rel] {
+				continue
+			}
+			for _, eid := range eids {
+				if seen[eid] {
+					continue
+				}
+				seen[eid] = true
+				if e := g.edges[eid]; e != nil {
 					result = append(result, e)
-					break
 				}
 			}
-		} else {
-			result = append(result, e)
 		}
+	}
+
+	if dir == Outbound || dir == Both {
+		collect(g.outEdgeIDs)
+	}
+	if dir == Inbound || dir == Both {
+		collect(g.inEdgeIDs)
 	}
 	return result
 }
