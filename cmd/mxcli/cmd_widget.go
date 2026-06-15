@@ -600,7 +600,7 @@ func runWidgetList(cmd *cobra.Command, args []string) error {
 	// Show widgets discovered in widgets/*.mpk but not yet extracted to .def.json.
 	discovered := registry.MPKDiscovered()
 	if len(discovered) > 0 {
-		fmt.Fprintf(out, "\n--- Discovered in widgets/*.mpk (not yet extracted) ---\n\n")
+		fmt.Fprintf(out, "\n--- Auto-discovered from widgets/*.mpk ---\n\n")
 		fmt.Fprintf(out, "%-22s %-32s %-45s %s\n", "MDL Name (auto)", "Display Name", "Widget ID", "Description")
 		fmt.Fprintf(out, "%-22s %-32s %-45s %s\n",
 			strings.Repeat("-", 22), strings.Repeat("-", 32), strings.Repeat("-", 45), strings.Repeat("-", 30))
@@ -623,7 +623,8 @@ func runWidgetList(cmd *cobra.Command, args []string) error {
 		}
 		fmt.Fprintf(out, "\nMDL syntax for MPK widgets:  PLUGGABLEWIDGET '<Widget ID>' name (prop: val)\n")
 		fmt.Fprintf(out, "Example:                     PLUGGABLEWIDGET '%s' myWidget1 (...)\n", exampleID)
-		fmt.Fprintf(out, "\nRun 'mxcli widget extract --mpk widgets/<file>.mpk' to generate .def.json with property names\n")
+		fmt.Fprintf(out, "\nMPK widgets are auto-discovered — no extraction needed.\n")
+		fmt.Fprintf(out, "To override property mappings: mxcli widget extract --mpk widgets/<file>.mpk\n")
 	}
 
 	fmt.Fprintf(out, "\nTotal: %d loaded, %d from MPK\n", len(defs), len(discovered))
