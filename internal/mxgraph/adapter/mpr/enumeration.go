@@ -50,7 +50,9 @@ func (a *EnumerationAdapter) Build(ctx context.Context, sink mxgraph.EventSink) 
 			continue
 		}
 
+		module := a.Model.ResolveModuleName(unit.ID)
 		enumNode := nodeForElement(elem, "Enumeration")
+		setDerived(enumNode, module)
 		events = append(events, mxgraph.Event{Type: mxgraph.NodeCreated, Node: enumNode})
 
 		for _, val := range childList(elem, "Values") {
@@ -58,6 +60,7 @@ func (a *EnumerationAdapter) Build(ctx context.Context, sink mxgraph.EventSink) 
 				continue
 			}
 			valNode := nodeForElement(val, "EnumValue")
+			setDerived(valNode, module)
 			events = append(events, mxgraph.Event{Type: mxgraph.NodeCreated, Node: valNode})
 			events = append(events, mxgraph.Event{
 				Type: mxgraph.EdgeCreated,

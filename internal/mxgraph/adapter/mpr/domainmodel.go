@@ -57,7 +57,10 @@ func (a *DomainModelAdapter) Build(ctx context.Context, sink mxgraph.EventSink) 
 			continue
 		}
 
+		module := a.Model.ResolveModuleName(unit.ID)
+
 		dmNode := nodeForElement(elem, "DomainModel")
+		setDerived(dmNode, module)
 		events = append(events, mxgraph.Event{Type: mxgraph.NodeCreated, Node: dmNode})
 
 		for _, prop := range elem.Properties() {
@@ -76,6 +79,7 @@ func (a *DomainModelAdapter) Build(ctx context.Context, sink mxgraph.EventSink) 
 						continue
 					}
 					entityNode := nodeForElement(child, "Entity")
+					setDerived(entityNode, module)
 					events = append(events, mxgraph.Event{Type: mxgraph.NodeCreated, Node: entityNode})
 					events = append(events, mxgraph.Event{
 						Type: mxgraph.EdgeCreated,
@@ -99,6 +103,7 @@ func (a *DomainModelAdapter) Build(ctx context.Context, sink mxgraph.EventSink) 
 								continue
 							}
 							attrNode := nodeForElement(attr, "Attribute")
+							setDerived(attrNode, module)
 							events = append(events, mxgraph.Event{Type: mxgraph.NodeCreated, Node: attrNode})
 							events = append(events, mxgraph.Event{
 								Type: mxgraph.EdgeCreated,
@@ -122,6 +127,7 @@ func (a *DomainModelAdapter) Build(ctx context.Context, sink mxgraph.EventSink) 
 						continue
 					}
 					assocNode := nodeForElement(child, "Association")
+					setDerived(assocNode, module)
 					events = append(events, mxgraph.Event{Type: mxgraph.NodeCreated, Node: assocNode})
 					events = append(events, mxgraph.Event{
 						Type: mxgraph.EdgeCreated,

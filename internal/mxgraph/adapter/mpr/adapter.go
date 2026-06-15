@@ -29,3 +29,23 @@ func nodeForElement(elem element.Element, label mxgraph.Label) *mxgraph.Node {
 	}
 	return &mxgraph.Node{ID: mxgraph.NodeID(elem.ID()), Label: label, Props: props}
 }
+
+// setDerived stamps the derived "Module" and "QualifiedName" props onto a node.
+// These are not stored in the element's BSON — Module comes from the owning unit's
+// container hierarchy (resolved by the adapter) and QualifiedName is "<Module>.<Name>".
+// graphcatalog.ProjectGraph filters/looks up nodes by these keys, so every queryable
+// node must carry them. Falls back gracefully when module or name is empty.
+func setDerived(node *mxgraph.Node, module string) {
+	if module != "" {
+		node.Props["Module"] = module
+	}
+	name, _ := node.Props["Name"].(string)
+	if name == "" {
+		return
+	}
+	if module != "" {
+		node.Props["QualifiedName"] = module + "." + name
+	} else {
+		node.Props["QualifiedName"] = name
+	}
+}

@@ -3,7 +3,10 @@
 // Adapters produce Event streams consumed by Graph.Apply to build and update the graph.
 package mxgraph
 
-import "sync"
+import (
+	"reflect"
+	"sync"
+)
 
 type Graph struct {
 	mu       sync.RWMutex
@@ -345,6 +348,12 @@ func (g *Graph) indexProps(n *Node) {
 		g.propIdx[n.Label] = map[string]map[any]map[NodeID]bool{}
 	}
 	for k, v := range n.Props {
+		// Only scalar (comparable) values can be map keys. Slice/map-valued
+		// props (e.g. StringList attributes) are not filterable via FindNodes
+		// and would panic if used as a key, so skip indexing them.
+		if !isHashable(v) {
+			continue
+		}
 		if g.propIdx[n.Label][k] == nil {
 			g.propIdx[n.Label][k] = map[any]map[NodeID]bool{}
 		}
@@ -357,10 +366,30 @@ func (g *Graph) indexProps(n *Node) {
 
 func (g *Graph) unindexProps(n *Node) {
 	for k, v := range n.Props {
+		if !isHashable(v) {
+			continue
+		}
 		if idx, ok := g.propIdx[n.Label]; ok {
 			if vals, ok := idx[k]; ok {
 				delete(vals[v], n.ID)
 			}
 		}
+	}
+}
+
+// isHashable reports whether v can be used as a Go map key (i.e. is comparable).
+// Slices, maps, and functions are not hashable and would panic if used as keys.
+func isHashable(v any) bool {
+	switch v.(type) {
+	case nil:
+		return false
+	case string, bool,
+		int, int8, int16, int32, int64,
+		uint, uint8, uint16, uint32, uint64, uintptr,
+		float32, float64,
+		complex64, complex128:
+		return true
+	default:
+		return reflect.TypeOf(v).Comparable()
 	}
 }

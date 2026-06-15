@@ -80,6 +80,7 @@ func (a *MicroflowAdapter) Build(ctx context.Context, sink mxgraph.EventSink) er
 		}
 
 		mfNode := nodeForElement(elem, label)
+		setDerived(mfNode, a.Model.ResolveModuleName(unit.ID))
 		events = append(events, mxgraph.Event{Type: mxgraph.NodeCreated, Node: mfNode})
 
 		for _, action := range microflowActions(elem) {

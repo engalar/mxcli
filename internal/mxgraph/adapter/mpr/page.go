@@ -65,6 +65,7 @@ func (a *PageAdapter) Build(ctx context.Context, sink mxgraph.EventSink) error {
 		}
 
 		node := nodeForElement(elem, label)
+		setDerived(node, a.Model.ResolveModuleName(unit.ID))
 		events = append(events, mxgraph.Event{Type: mxgraph.NodeCreated, Node: node})
 
 		if label == "Page" {
