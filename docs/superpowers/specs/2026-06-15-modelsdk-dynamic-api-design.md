@@ -2,7 +2,7 @@
 
 **Date:** 2026-06-15
 **Status:** PoC validated — implementation plan pending
-**Scope:** Add a dynamic/flexible API layer to modelsdk that enables runtime property access by name, type schema introspection, and BSON-level field access, coexisting with the existing typed API.
+**Scope:** Add a dynamic/flexible API adapter to modelsdk for test code and auxiliary tooling. The dynamic API is NOT used by production execution paths — those continue to use the strongly-typed API exclusively.
 
 ---
 
@@ -16,40 +16,56 @@ entity := m.AllOfType("DomainModels$Entity")[0].(*domainmodels.Entity)
 name := entity.Name()
 ```
 
-This forces callers to know the exact type at compile time, making it impossible to write generic model inspection tools, CLI commands that operate on arbitrary properties by name, or scripts that work with model types unknown at build time.
+This is ideal for production code (type-safe, zero overhead). But for **test code and auxiliary tooling** the typed API creates friction:
 
-**End state:** modelsdk exposes three complementary access layers:
+- **Tests**: asserting model state requires knowing the exact type, importing domain packages, and boilerplate type assertions — especially painful for generic test helpers that must work across domains
+- **CLI diagnostic commands**: `mxcli model get <type> <name> <property>` can't know the property name at compile time
+- **Feature exploration**: prototyping a new command that touches multiple property types requires importing many gen packages and repeatedly revisiting type assertions
+
+**End state:** modelsdk exposes a lightweight dynamic adapter in `modelsdk/dynamic/` with three access layers, importable only by test code and CLI diagnostic commands:
 
 | Layer | Capability | Use Case |
 |-------|-----------|----------|
-| **A: DynamicProperty** | `elem.GetString("Name")`, `elem.SetString("Name", "x")` | Generic model manipulation without type assertions |
-| **B: Type Introspection** | `elem.Properties()` → `[{Name, Kind, ...}]`, type enumeration | Schema-aware tooling, model browsers |
-| **C: Raw BSON Access** | `RawString(elem, "Name")` | Fast field reads, search indexing |
+| **A: Property by name** | `elem.GetString("Name")`, `elem.GetBool("IsRemote")` | Test assertions, diagnostic commands |
+| **B: Type introspection** | `elem.Properties()` → `[{Name, Kind}]`, type enumeration | Model browsers, generic diff tools |
+| **C: Raw BSON access** | `RawString(elem, "Name")` | Fast field reads in search/indexing |
+
+**Production code** (`mdl/repos/`, `mdl/backend/`, `executor/`, `cli/` command handlers) continues to use typed API exclusively. The dynamic package is a pure adapter — zero changes to production types.
 
 ---
 
-## 2. Current State
+## 2. SOLID Design Principles
 
-### Existing infrastructure (usable)
+This design must satisfy SOLID. Each section below identifies how:
+
+| Principle | How this design satisfies it |
+|-----------|-----------------------------|
+| **S**ingle Responsibility | `modelsdk/dynamic/` has one job: provide dynamic access. Each internal type (`Element`, `Property`) has one responsibility. |
+| **O**pen/Closed | No production type is modified. `property/` types are not touched. Dynamic access is achieved through interface checks (`ChildProperty`, `ChildListProperty`, `WritableProperty`) and external type switches — open to new property types without modifying the adapter. |
+| **L**iskov Substitution | `dynamic.Element` wraps `element.Element` by composition, not inheritance. It is NOT a subtype of `element.Element` — there is no substitution. |
+| **I**nterface Segregation | The dynamic API is its own interface (`DynamicProperty` inside the `dynamic` package). No new methods are added to `element.Property` or `element.Element` — consumers of the typed API see zero change. |
+| **D**ependency Inversion | `modelsdk/dynamic/` depends on `element.Element` (interface) and `element.Property` (interface) — abstractions, not concretions. The adapter never imports `gen/*/` packages. |
+
+---
+
+## 3. Current State
+
+### Existing infrastructure (usable without modification)
 
 - `element.Property` interface: `Name() string`
 - `element.WritableProperty`: `Dirty() bool`, `BSONValue() any`
 - `element.ChildProperty` / `element.ChildListProperty`: child element access
 - `element.Base.Properties()`: returns `[]Property`
-- `codec.DefaultRegistry`: `map[string]func() element.Element` type factories
+- `codec.DefaultRegistry`: type name → factory mapping
 - `codec.DefaultRefRegistry`: reference metadata per type
 
-### Gaps
+### Infrastructure NOT used (preserving SOLID O/C)
 
-- No way to get a `Property` by name without linear scan
-- No uniform read/write API: each property type has its own `Get() T` / `Set(T)`
-- `BSONValue() any` exists but `Part[T]` returns nil (child path)
-- No generated property metadata (kind, value type, BSON key) outside of Go struct definitions
-- `Registry.TypeRegistry` doesn't expose the list of registered type names
+We do NOT add interfaces or methods to `property/` package types. Production types remain untouched. The dynamic adapter uses type switches on the public interfaces (`WritableProperty`, `ChildProperty`, `ChildListProperty`) and concrete types (`*property.Primitive[string]`, etc.) to provide uniform access.
 
 ### POC Validation
 
-A PoC at `modelsdk/poc/dynamic/` implemented all three layers and measured:
+A PoC at `modelsdk/poc/dynamic/` implemented all three layers as an external adapter:
 
 | Operation | Typed | Dynamic | Raw BSON |
 |-----------|-------|---------|----------|
@@ -57,56 +73,82 @@ A PoC at `modelsdk/poc/dynamic/` implemented all three layers and measured:
 | Write string | 68 ns | 100 ns | — |
 | Property iteration (18 props) | 22 ns | 24 ns | — |
 
-Dynamic read is 28x slower than typed but takes only **25 nanoseconds** — irrelevant in CLI context where MPR I/O dominates (milliseconds). Write overhead is 1.5x. Property iteration is essentially equal after caching.
+The 25 ns dynamic read overhead is irrelevant for test code and CLI diagnostics.
 
 ---
 
-## 3. Design
+## 4. Design
 
-### 3.1 DynamicProperty interface (Level A)
+### 4.1 DynamicProperty adapter (Level A)
 
-The core abstraction. Every existing property type implements this:
+Defined in the `dynamic` package only. NOT added to `property/` production types:
 
 ```go
-package property
+package dynamic
 
-type DynamicProperty interface {
-    element.Property
-    Kind() PropertyKind
-    Value() any              // uniform read
-    SetValue(v any) error    // uniform write
-    Children() []element.Element  // for Part/PartList
+// PropertyKind identifies the category of a property value.
+type PropertyKind uint8
+
+const (
+    KindString     PropertyKind = iota  // Primitive[string], Enum, ByNameRef
+    KindBool                            // Primitive[bool]
+    KindInt32                           // Primitive[int32]
+    KindFloat64                         // Primitive[float64]
+    KindPart                            // single child element
+    KindPartList                        // list of child elements
+    KindByID                            // element ID reference
+    KindStringList                      // StringListPrimitive, EnumList
+    KindBinary                          // BinaryUUIDPrimitive
+    KindUnknown
+)
+
+// Property wraps an element.Property with dynamic access.
+type Property struct {
+    prop element.Property
+    kind PropertyKind
+    // lazily initialized via once.Do
 }
+
+func newProperty(p element.Property) *Property { ... }
+func (p *Property) Name() string
+func (p *Property) Kind() PropertyKind
+func (p *Property) Value() any                // uniform read; nil for Part/PartList
+func (p *Property) SetValue(v any) error      // uniform write via type switch
+func (p *Property) Children() []element.Element  // for Part/PartList
+func (p *Property) String() (string, bool)    // convenience
+func (p *Property) Bool() (bool, bool)        // convenience
+func (p *Property) Int32() (int32, bool)      // convenience
 ```
 
-Implemented on each concrete type via type switch:
+Kind detection algorithm (in `newProperty`):
 
-- `*Primitive[string]` → `Value() string`, `SetValue(any)` validates string
-- `*Primitive[bool]` → `Value() bool`, `SetValue(any)` validates bool
-- `*Enum[string]` → `Value() string`, `SetValue(any)` validates string
-- `*Part[T]` → `Children()` returns `[element.Element]`
-- `*PartList[T]` → `Children()` returns `[]element.Element`
-- `*ByNameRef[T]` → `Value() string` (qualified name)
-- `*ByIdRef[T]` → `Value() element.ID`
+1. Check `element.ChildListProperty` → KindPartList
+2. Check `element.ChildProperty` → KindPart
+3. Fall back to `element.WritableProperty.BSONValue()` return type:
+   - `string` → KindString
+   - `bool` → KindBool
+   - `int32` → KindInt32
+   - `float64` → KindFloat64
+   - `element.ID` → KindByID
+   - `bson.A` → KindStringList
+   - `bson.Binary` → KindBinary
+4. Fall back to type-assert on concrete types (`*property.StringListPrimitive`, `*property.BinaryUUIDPrimitive`)
 
-`PropertyKind` enum covers all property types: `KindString`, `KindBool`, `KindInt32`, `KindFloat64`, `KindPart`, `KindPartList`, `KindByNameRef`, `KindByNameRefList`, `KindByIdRef`, `KindEnum`, `KindStringList`, `KindBinaryUUID`.
+`SetValue` uses a type switch on the concrete property type (`*property.Primitive[string]`, `*property.Primitive[bool]`, `*property.Enum[string]`, `*property.ByNameRef[element.Element]`, etc.) to call the typed setter.
 
-### 3.2 Dynamic Element Wrapper (Level A user API)
-
-A cached wrapper around `element.Element`:
+### 4.2 Element wrapper (Level A user API)
 
 ```go
-package dynamic  // modelsdk/dynamic/
+package dynamic
 
 type Element struct {
     elem   element.Element
-    cached []*Property      // lazy-init via sync.Once
+    cached []*Property     // lazy-init via sync.Once
     byName map[string]*Property
 }
-```
 
-```go
 func WrapElement(elem element.Element) *Element
+func (e *Element) Element() element.Element         // unwrap to typed
 func (e *Element) Property(name string) *Property
 func (e *Element) Properties() []*Property
 func (e *Element) GetString(name string) (string, bool)
@@ -115,169 +157,179 @@ func (e *Element) GetBool(name string) (bool, bool)
 func (e *Element) SetBool(name string, val bool) bool
 ```
 
-Kind detection: inferred once from `BSONValue()` return type + interface checks (`ChildProperty`/`ChildListProperty`).
+`WrapElement` is the only entry point. The wrapper lazily initializes the property cache on first access (`sync.Once`). The `Element()` method returns the underlying `element.Element` for callers that need to switch back to typed access.
 
-### 3.3 Type Descriptor Registry (Level B)
+### 4.3 Type Descriptor Registry (Level B)
 
-Generated alongside existing types, extending the pattern from `codec.RefRegistry`:
+A generated registry of type → property metadata. Stored in `codec` package alongside the existing `RefRegistry`:
 
 ```go
 package codec
 
-type PropertyKind uint8
+type PropKind uint8
 
 const (
-    PropKindString     PropertyKind = ...
-    PropKindBool       PropertyKind = ...
-    PropKindPart       PropertyKind = ...
-    PropKindPartList   PropertyKind = ...
-    PropKindByNameRef  PropertyKind = ...
-    PropKindByNameList PropertyKind = ...
-    PropKindByIdRef    PropertyKind = ...
-    PropKindEnum       PropertyKind = ...
-    PropKindStringList PropertyKind = ...
-    PropKindBinaryUUID PropertyKind = ...
+    PropKindString     PropKind = iota
+    PropKindBool
+    PropKindInt32
+    PropKindPart
+    PropKindPartList
+    PropKindByNameRef
+    PropKindByNameList
+    PropKindByIdRef
+    PropKindEnum
+    PropKindStringList
+    PropKindBinaryUUID
 )
 
-type PropertyDescriptor struct {
-    Name    string       // property name (as returned by .Name())
-    BSONKey string       // BSON storage key (may differ from Name)
-    Kind    PropertyKind
-    RefType string       // target type name for references (empty for primitives)
+type PropDesc struct {
+    Name    string   // property name
+    BSONKey string   // BSON storage key
+    Kind    PropKind
+    RefType string   // target type for references; empty for primitives
 }
 
-type TypeDescriptor struct {
+type TypeDesc struct {
     TypeName   string
-    Properties []PropertyDescriptor
+    Properties []PropDesc
 }
-
-var DefaultTypeRegistry *TypeRegistry  // (replacing the old DefaultRegistry name)
 ```
 
-Generated `init()` in each `gen/*/types.go` registers descriptors:
+Generated `init()` in a separate file per domain package (e.g. `gen/domainmodels/descriptors.go`):
 
 ```go
 func init() {
-    codec.DefaultTypeRegistry.Register("DomainModels$Entity", &codec.TypeDescriptor{
+    codec.DefaultDescRegistry.Register("DomainModels$Entity", &codec.TypeDesc{
         TypeName: "DomainModels$Entity",
-        Properties: []codec.PropertyDescriptor{
+        Properties: []codec.PropDesc{
             {Name: "Name", BSONKey: "Name", Kind: codec.PropKindString},
             {Name: "MaybeGeneralization", BSONKey: "MaybeGeneralization", Kind: codec.PropKindPart},
             {Name: "Attributes", BSONKey: "Attributes", Kind: codec.PropKindPartList},
-            // ...
         },
     })
 }
 ```
 
-The generator (`cmd/modelsdk-codegen`) already has per-type property knowledge — this is a new output from the existing emitter pass.
+Separating into `descriptors.go` (not `types.go`) keeps the SRP clear — factory registration and descriptor registration are different responsibilities.
 
-### 3.4 BSON Helper Functions (Level C)
-
-Stateless functions for direct raw BSON access, already proven in PoC:
+### 4.4 BSON Helper Functions (Level C)
 
 ```go
-package dynamic  // or codec
+package dynamic
 
 func RawString(elem element.Element, key string) (string, bool)
 func RawBool(elem element.Element, key string) (bool, bool)
 func RawInt32(elem element.Element, key string) (int32, bool)
 ```
 
-These call `elem.Raw().LookupErr(key)` and convert. No caching. Useful when only a single field is needed and the full property decode overhead is undesirable.
+These call `elem.Raw().LookupErr(key)` and convert. No caching. Useful when only a single field is needed and full property decode is undesirable.
 
 ---
 
-## 4. Package Structure
+## 5. Package Structure
 
 ```
 modelsdk/
-  dynamic/                        # NEW — user-facing dynamic API
+  dynamic/                        # NEW — pure adapter, no production imports
     element.go                    # Element wrapper, WrapElement, convenience methods
-    property.go                   # Property wrapper, Kind inference, Value/SetValue (if needed externally)
-    raw.go                        # RawString, RawBool, RawInt32 (Level C)
+    property.go                   # Property wrapper, kind detection, Value/SetValue
 
-  property/
-    base.go                       # + DynamicProperty interface
-    primitive.go                  # + Value()/SetValue() on Primitive[T]
-    part.go                       # + Children() on Part[T]/PartList[T]
-    reference.go                  # + Value()/SetValue() on ByNameRef/ByIdRef
-    enum.go                       # + Value()/SetValue() on Enum[T]
-                                    
+  property/                       # UNCHANGED — no new interfaces or methods
+    ...
+
   codec/
-    registry.go                   # TypeRegistry → rename or extend for TypeDescriptor
-    descriptor.go                 # NEW — TypeDescriptor, PropertyDescriptor, PropertyKind
+    registry.go                   # UNCHANGED (DefaultRegistry)
+    descriptor.go                 # NEW — TypeDesc, PropDesc, PropKind, DefaultDescRegistry
 
   gen/*/
-    types.go                      # + init() registers TypeDescriptor for each type
+    types.go                      # UNCHANGED (factory registration only)
+    descriptors.go                # NEW — init() registers TypeDesc for each type
+    refs.go                       # UNCHANGED
 ```
 
+Zero imports of `modelsdk/dynamic/` from any production package (`mdl/`, `cmd/`, `executor/`, etc.).
+
 ---
 
-## 5. Incremental Delivery
+## 6. Production vs Test Boundary
 
-### Phase 1 — DynamicProperty (Level A, ~300 lines)
+```
+Production code path:
+  executor/handler.go
+    → mdl/repos/EntityRepo
+      → mdl/backend/mpr/repos/entity.go
+        → modelsdk (typed API)
+          → codec.Encoder/Decoder
+            → Store (MPR I/O)
 
-1. Add `DynamicProperty` interface + `PropertyKind` to `property/`
-2. Implement `Value() any` / `SetValue(any)` on all property types
-3. Add `Element` wrapper to `modelsdk/dynamic/`
-4. Add `Model.Types() []TypeDescriptor` to `modelsdk/model.go` (returns registered descriptors)
-5. Codegen: emit `RegisterTypeDescriptors` calls in each `init()`
-6. Tests: verify read/write parity with typed API for string/bool/part/partlist
+Test/auxiliary code path:
+  _test.go or cmd/mxcli/describe.go
+    → modelsdk/dynamic.WrapElement(elem)
+      → elem.GetString("Name")
+```
 
-### Phase 2 — Type Introspection (Level B, ~100 lines + codegen)
+`modelsdk/dynamic/` is imported only:
+- In `_test.go` files
+- In CLI diagnostic commands (`mxcli describe`, `mxcli inspect`)
+- Never in `mdl/`, `executor/`, `modelsdk/codec/`, or command handler implementations
 
-1. Implement `TypeDescriptor` generation in codegen emitter
-2. Export `codec.TypeRegistry.AllTypes()` → `[]TypeDescriptor`
-3. Add `Model.KnownTypes()` to `modelsdk/model.go`
+---
+
+## 7. Incremental Delivery
+
+### Phase 1 — Property adapter (Level A, ~250 lines)
+
+1. Create `modelsdk/dynamic/property.go`: `PropertyKind`, `Property` struct, kind detection, `Value()/SetValue()/Children()`
+2. Create `modelsdk/dynamic/element.go`: `Element` wrapper, `WrapElement`, `Property(name)`, `Properties()`, convenience methods
+3. Tests: verify read/write parity with typed API for string/bool/part/partlist across 3+ element types
+4. Add benchmark to ensure performance stays within budget
+
+### Phase 2 — Type Descriptor generation (Level B, ~150 lines + codegen)
+
+1. Define `codec.TypeDesc`, `codec.PropDesc`, `codec.PropKind`, `codec.DefaultDescRegistry`
+2. Modify codegen emitter to output `gen/*/descriptors.go` alongside `gen/*/refs.go`
+3. Add `Model.KnownTypes() []TypeDesc` or `dynamic.KnownTypes() []TypeDesc`
 4. Tests: verify descriptor contents match actual generated struct fields
 
-### Phase 3 — BSON Helpers (Level C, ~50 lines)
+### Phase 3 — BSON helpers (Level C, ~40 lines)
 
-1. Add `RawString`, `RawBool`, `RawInt32` to `modelsdk/dynamic/`
+1. Add `dynamic.RawString`, `RawBool`, `RawInt32`
 2. Tests: verify raw access matches typed access
-3. Documentation: show when to use each level
 
 ---
 
-## 6. Performance Budget
+## 8. Performance Budget
 
 From PoC benchmarks (Entity.Name on corpus-a MPR, avg of 5 runs):
 
 | Layer | Latency | vs Typed | B/op | Allocs |
 |-------|---------|----------|------|--------|
-| Typed | 0.87 ns | 1x | 0 | 0 |
-| Dynamic (warm, cached) | 25 ns | 28x | 16 | 1 |
-| Raw BSON | 165 ns | 190x | 5 | 1 |
-| Write typed | 68 ns | 1x | 24 | 2 |
-| Write dynamic | 100 ns | 1.5x | 40 | 3 |
+| Typed `entity.Name()` | 0.87 ns | 1x | 0 | 0 |
+| Dynamic `e.GetString("Name")` | 25 ns | 28x | 16 | 1 |
+| Raw BSON `RawString(e, "Name")` | 165 ns | 190x | 5 | 1 |
+| Write typed `entity.SetName("x")` | 68 ns | 1x | 24 | 2 |
+| Write dynamic `e.SetString("Name", "x")` | 100 ns | 1.5x | 40 | 3 |
 | Property iter typed | 22 ns | 1x | 0 | 0 |
-| Property iter dynamic | 24 ns | 1.1x | 0 | 0 |
+| Property iter dynamic (cached) | 24 ns | 1.1x | 0 | 0 |
 
-Worst-case: dynamic read at 25 ns × 1,000 properties = 25 µs — invisible next to MPR I/O.
-
----
-
-## 7. Key Decisions
-
-### 7.1 Why not a standalone dynamic package?
-
-Could put `Element` wrapper in a separate module. But `property.Value() any` must be on the concrete types in `modelsdk/property/`, so there's no avoiding modifying the core property types. Keeping everything in one module avoids split-package seams.
-
-### 7.2 Why generated TypeDescriptors instead of reflect-based?
-
-Reflection on generic types in Go is fragile — it cannot distinguish `Primitive[string]` from `Primitive[bool]` at the interface level without type-asserting every instantiation. A generated registry is deterministic, verifiable, and the codegen already has the required information.
-
-### 7.3 Dirty tracking for dynamic writes
-
-`DynamicProperty.SetValue()` calls the existing `Set()` / `SetQualifiedName()` / `SetID()` which internally call `markDirty()`. The dirty bitmap + container propagation work unchanged.
-
-### 7.4 Kind inference without TypeDescriptors
-
-The PoC shows BSONValue() return type is sufficient for kind detection (string → KindString, bool → KindBool, etc.). This works for all current property types. The TypeDescriptor registry is an optimization for schema queries, not required for runtime access.
+Dynamic read overhead is 25 ns — irrelevant for test code and CLI diagnostics. The 28x ratio is a misleading comparison since the baseline (0.87 ns) is the cost of returning a cached Go string. In absolute terms, 25 ns per property access is negligible.
 
 ---
 
-## 8. Open Questions
+## 9. Key Decisions
 
-None identified — POC resolved the design questions. See Section 7 for rationale on each.
+### 9.1 DynamicProperty as an external adapter, not a production interface
+
+The `Property` wrapper in `modelsdk/dynamic/` is a pure adapter. Kind detection uses runtime interface checks and type switches, not a production `DynamicProperty` interface. This avoids any modification to `property/` types and satisfies the Open/Closed principle.
+
+### 9.2 TypeDescriptor generation is optional for test code
+
+The PoC shows kind detection works without descriptors — the `dynamic.Property` wrapper infers kind from `BSONValue()` return type. TypeDescriptors are a complementary feature for tooling that needs schema queries without loading data. They can be deferred to Phase 2.
+
+### 9.3 Dirty tracking works through existing typed setters
+
+`Property.SetValue()` calls the concrete type's `Set()` / `SetQualifiedName()` / `SetID()`, which internally call `markDirty()`. The dirty bitmap + container chain propagation work unchanged. No additional dirty tracking logic needed in the dynamic adapter.
+
+### 9.4 Separating descriptors from factory registration
+
+Descriptors go in a separate `gen/*/descriptors.go` file (not appended to `types.go`) to maintain SRP. The `init()` in `descriptors.go` only registers descriptors; the `init()` in `types.go` only registers factories.
