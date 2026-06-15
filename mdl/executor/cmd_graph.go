@@ -18,7 +18,7 @@ import (
 )
 
 // buildGraph constructs the in-memory project graph from the connected project,
-// registering all five domain adapters, and installs it as ctx.GraphCatalog.
+// registering all five domain adapters, and installs it as ctx.Graph.
 // It also persists a gob snapshot to <projectDir>/.mxcli/graph.gob so a later
 // session can reload without rebuilding.
 //
@@ -52,9 +52,9 @@ func buildGraph(ctx *ExecContext) error {
 	}
 
 	pg := graphcatalog.NewProjectGraph(mgr)
-	ctx.GraphCatalog = pg
-	if ctx.SyncGraphCatalog != nil {
-		ctx.SyncGraphCatalog(pg)
+	ctx.Graph = pg
+	if ctx.SyncGraph != nil {
+		ctx.SyncGraph(pg)
 	}
 
 	// Persist a gob snapshot next to the project (best-effort).

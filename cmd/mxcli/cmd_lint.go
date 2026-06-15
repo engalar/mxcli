@@ -102,25 +102,15 @@ Examples:
 			}
 		}
 
-		// Build catalog (required for linting)
-		refreshCmd := "REFRESH CATALOG"
-		refreshProg, _ := visitor.Build(refreshCmd)
-		for _, stmt := range refreshProg.Statements {
-			if err := exec.Execute(stmt); err != nil {
-				fmt.Fprintf(os.Stderr, "Error building catalog: %v\n", err)
-				os.Exit(1)
-			}
-		}
-
-		// Get catalog from executor
-		cat := exec.Catalog()
-		if cat == nil {
-			fmt.Fprintln(os.Stderr, "Error: catalog not built")
+		// Build the project graph (required for linting)
+		pg, err := exec.BuildGraph()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error building project graph: %v\n", err)
 			os.Exit(1)
 		}
 
 		// Create lint context
-		ctx := linter.NewLintContext(cat, exec.Backend())
+		ctx := linter.NewLintContext(pg, exec.Backend())
 		ctx.SetExcludedModules(excludeModules)
 
 		// Create linter and register rules

@@ -56,8 +56,8 @@ func (e *Executor) syncBack(ctx *ExecContext) {
 	if old != nil && old != ctx.Catalog {
 		old.Close()
 	}
-	if ctx.GraphCatalog != nil {
-		e.graphCatalog = ctx.GraphCatalog
+	if ctx.Graph != nil {
+		e.graphCatalog = ctx.Graph
 	}
 	e.settings = ctx.Settings
 	e.fragments = ctx.Fragments
@@ -103,14 +103,14 @@ func (e *Executor) newExecContext(ctx context.Context) *ExecContext {
 			SqlMgr:         e.sqlMgr,
 			ThemeRegistry:  e.themeRegistry,
 			Catalog:        cat,
-			GraphCatalog:   e.graphCatalog,
+			Graph:          e.graphCatalog,
 			BackendFactory: e.backendFactory,
 		},
 		ExecCallbacks: ExecCallbacks{
 			ExecuteFn:        e.Execute,
 			ExecuteProgramFn: e.ExecuteProgram,
 			FinalizeFn:       e.finalizeProgramExecution,
-			SyncGraphCatalog: func(pg *graphcatalog.ProjectGraph) {
+			SyncGraph: func(pg *graphcatalog.ProjectGraph) {
 				e.graphCatalog = pg
 			},
 			SyncCatalog: func(cat *catalog.Catalog) {

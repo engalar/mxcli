@@ -56,7 +56,10 @@ type ExecConnection struct {
 	SqlMgr         *sqllib.Manager
 	ThemeRegistry  *ThemeRegistry
 	Catalog        *catalog.Catalog
-	GraphCatalog   graphcatalog.TraversalReader
+	// Graph is the in-memory project graph. *ProjectGraph implements both
+	// graphcatalog.TraversalReader (executor code-search) and LintReader
+	// (linter), so a single concrete-typed field serves both consumers.
+	Graph *graphcatalog.ProjectGraph
 }
 
 // ExecCallbacks holds function references for recursive execution.
@@ -65,7 +68,7 @@ type ExecCallbacks struct {
 	ExecuteProgramFn func(*ast.Program) error
 	FinalizeFn       func() error
 	SyncCatalog      func(*catalog.Catalog)
-	SyncGraphCatalog func(*graphcatalog.ProjectGraph)
+	SyncGraph        func(*graphcatalog.ProjectGraph)
 }
 
 // ExecContext carries all dependencies a statement handler needs.

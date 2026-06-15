@@ -24,16 +24,16 @@ func execLint(ctx *ExecContext, s *ast.LintStmt) error {
 		return listLintRules(ctx)
 	}
 
-	// Ensure catalog is built
-	if ctx.Catalog == nil {
-		fmt.Fprintln(ctx.Output, "Building catalog for linting...")
-		if err := buildCatalog(ctx, false); err != nil {
-			return mdlerrors.NewBackend("build catalog", err)
+	// Ensure the project graph is built (provides graphcatalog.LintReader).
+	if ctx.Graph == nil {
+		fmt.Fprintln(ctx.Output, "Building project graph for linting...")
+		if err := buildGraph(ctx); err != nil {
+			return mdlerrors.NewBackend("build project graph", err)
 		}
 	}
 
 	// Create lint context
-	lintCtx := linter.NewLintContext(ctx.Catalog, ctx.Backend)
+	lintCtx := linter.NewLintContext(ctx.Graph, ctx.Backend)
 
 	// Load configuration
 	projectDir := filepath.Dir(ctx.MprPath)

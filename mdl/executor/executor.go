@@ -355,7 +355,7 @@ type Executor struct {
 	settings       map[string]any
 	cache          *executorCache
 	catalog        *catalog.Catalog
-	graphCatalog   graphcatalog.TraversalReader       // in-memory project graph (lazy build) for code-search commands
+	graphCatalog   *graphcatalog.ProjectGraph         // in-memory project graph (lazy build) for code-search + lint
 	quiet          bool                               // suppress connection and status messages
 	format         OutputFormat                       // output format (table, json)
 	logger         *diaglog.Logger                    // session diagnostics logger (nil = no logging)
@@ -519,6 +519,22 @@ func (e *Executor) Catalog() *catalog.Catalog {
 	c := e.catalog
 	e.catalogMu.RUnlock()
 	return c
+}
+
+// Graph returns the in-memory project graph, or nil if not built.
+func (e *Executor) Graph() *graphcatalog.ProjectGraph {
+	return e.graphCatalog
+}
+
+// BuildGraph builds (or rebuilds) the in-memory project graph and returns it.
+// Used by CLI lint/report commands that need a graphcatalog.LintReader.
+func (e *Executor) BuildGraph() (*graphcatalog.ProjectGraph, error) {
+	ctx := e.newExecContext(context.Background())
+	if err := buildGraph(ctx); err != nil {
+		return nil, err
+	}
+	e.syncBack(ctx)
+	return e.graphCatalog, nil
 }
 
 // IsConnected returns true if connected to a project.

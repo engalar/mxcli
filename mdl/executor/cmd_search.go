@@ -13,7 +13,7 @@ import (
 
 // ensureGraph builds the in-memory project graph if it has not been built yet.
 func ensureGraph(ctx *ExecContext) error {
-	if ctx.GraphCatalog != nil {
+	if ctx.Graph != nil {
 		return nil
 	}
 	if !ctx.Connected() {
@@ -39,7 +39,7 @@ func execShowCallers(ctx *ExecContext, s *ast.ShowStmt) error {
 		fmt.Fprintln(ctx.Output, "")
 	}
 
-	callers := ctx.GraphCatalog.Callers(targetName, s.Transitive)
+	callers := ctx.Graph.Callers(targetName, s.Transitive)
 	if len(callers) == 0 {
 		fmt.Fprintln(ctx.Output, "(no callers found)")
 		return nil
@@ -77,7 +77,7 @@ func execShowCallees(ctx *ExecContext, s *ast.ShowStmt) error {
 		fmt.Fprintln(ctx.Output, "")
 	}
 
-	callees := ctx.GraphCatalog.Callees(sourceName, s.Transitive)
+	callees := ctx.Graph.Callees(sourceName, s.Transitive)
 	if len(callees) == 0 {
 		fmt.Fprintln(ctx.Output, "(no callees found)")
 		return nil
@@ -111,7 +111,7 @@ func execShowReferences(ctx *ExecContext, s *ast.ShowStmt) error {
 	targetName := s.Name.String()
 	fmt.Fprintf(ctx.Output, "\nReferences to %s\n", targetName)
 
-	refs := ctx.GraphCatalog.Impact(targetName)
+	refs := ctx.Graph.Impact(targetName)
 	if len(refs) == 0 {
 		fmt.Fprintln(ctx.Output, "(no references found)")
 		return nil
@@ -146,7 +146,7 @@ func execShowImpact(ctx *ExecContext, s *ast.ShowStmt) error {
 	targetName := s.Name.String()
 	fmt.Fprintf(ctx.Output, "\nImpact analysis for %s\n", targetName)
 
-	refs := ctx.GraphCatalog.Impact(targetName)
+	refs := ctx.Graph.Impact(targetName)
 	if len(refs) == 0 {
 		fmt.Fprintln(ctx.Output, "(no impact - element is not referenced)")
 		return nil
