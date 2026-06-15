@@ -119,6 +119,19 @@ Examples:
 	RunE: runWidgetBuild,
 }
 
+var widgetInstallCmd = &cobra.Command{
+	Use:   "install",
+	Short: "Install a built .mpk into a Mendix project's widgets/ folder",
+	Long: `Copy a widget .mpk file into <project>/widgets/, creating the directory if needed.
+
+Without --mpk, auto-detects a single *.mpk in the current directory (the output of 'mxcli widget build').
+
+Examples:
+  mxcli widget install -p /path/to/app.mpr
+  mxcli widget install --mpk TicketStatusBadge.mpk -p /path/to/app.mpr`,
+	RunE: runWidgetInstall,
+}
+
 func init() {
 	widgetExtractCmd.Flags().String("mpk", "", "Path to .mpk widget package file")
 	widgetExtractCmd.Flags().StringP("output", "o", "", "Output directory (default: .mxcli/widgets/)")
@@ -145,6 +158,10 @@ func init() {
 
 	widgetBuildCmd.Flags().String("dir", ".", "Widget project root directory")
 
+	widgetInstallCmd.Flags().String("mpk", "", "Path to .mpk file (default: auto-detect *.mpk in current directory)")
+	widgetInstallCmd.Flags().StringP("project", "p", "", "Path to Mendix project (.mpr file)")
+	widgetInstallCmd.MarkFlagRequired("project")
+
 	widgetCmd.AddCommand(widgetExtractCmd)
 	widgetCmd.AddCommand(widgetListCmd)
 	widgetCmd.AddCommand(widgetInitCmd)
@@ -152,7 +169,23 @@ func init() {
 	widgetCmd.AddCommand(widgetNewCmd)
 	widgetCmd.AddCommand(widgetAddWidgetCmd)
 	widgetCmd.AddCommand(widgetBuildCmd)
+	widgetCmd.AddCommand(widgetInstallCmd)
 	rootCmd.AddCommand(widgetCmd)
+}
+
+func runWidgetInstall(cmd *cobra.Command, args []string) error {
+	mpkFlag, _ := cmd.Flags().GetString("mpk")
+	projectPath, _ := cmd.Flags().GetString("project")
+
+	mpkPath := mpkFlag
+	if mpkPath == "" {
+		var err error
+		mpkPath, err = findMPKInCwd()
+		if err != nil {
+			return err
+		}
+	}
+	return installMPK(mpkPath, projectPath)
 }
 
 func runWidgetExtract(cmd *cobra.Command, args []string) error {

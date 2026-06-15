@@ -247,6 +247,37 @@ func verifyMPK(mpkPath string, infos []widgetInfo) error {
 	return nil
 }
 
+// findMPKInCwd globs *.mpk in the current working directory.
+// Returns an error if 0 or 2+ files are found.
+func findMPKInCwd() (string, error) {
+	matches, err := filepath.Glob("*.mpk")
+	if err != nil {
+		return "", err
+	}
+	switch len(matches) {
+	case 0:
+		return "", fmt.Errorf("no .mpk file found — run 'mxcli widget build' first")
+	case 1:
+		return matches[0], nil
+	default:
+		return "", fmt.Errorf("multiple .mpk files found (%s) — specify one with --mpk", strings.Join(matches, ", "))
+	}
+}
+
+// installMPK copies mpkPath into <projectDir>/widgets/, creating the directory if needed.
+func installMPK(mpkPath, projectPath string) error {
+	widgetsDir := filepath.Join(filepath.Dir(projectPath), "widgets")
+	if err := os.MkdirAll(widgetsDir, 0755); err != nil {
+		return fmt.Errorf("creating widgets/: %w", err)
+	}
+	dst := filepath.Join(widgetsDir, filepath.Base(mpkPath))
+	if err := copyFile(mpkPath, dst); err != nil {
+		return fmt.Errorf("copying MPK: %w", err)
+	}
+	fmt.Printf("Installed → %s\n", dst)
+	return nil
+}
+
 // readPackageName extracts the <clientModule name="..."> attribute from package.xml.
 func readPackageName(projectDir string) (string, error) {
 	type xmlClientModule struct {
