@@ -279,3 +279,28 @@ func TestIndexManagerBuild(t *testing.T) {
 		t.Fatal("e1 not found after BuildAll")
 	}
 }
+
+func TestIndexProps_SkipsUnhashableValues(t *testing.T) {
+	g := New()
+	// 包含 slice prop 的节点不应 panic
+	g.AddNode("n1", "Entity", map[string]any{
+		"Name":   "Ticket",
+		"Tags":   []interface{}{"a", "b"}, // 不可哈希，应跳过
+		"Active": true,
+	})
+	// FindNodes 应仍能按可哈希 prop 查找
+	nodes := g.FindNodes("Entity", map[string]any{"Name": "Ticket"})
+	if len(nodes) != 1 {
+		t.Fatalf("FindNodes = %d, want 1", len(nodes))
+	}
+
+	// 覆盖/删除同 ID 节点会走 unindexProps，也不应 panic
+	g.AddNode("n1", "Entity", map[string]any{
+		"Name": "Ticket2",
+		"Tags": []interface{}{"c"},
+	})
+	g.RemoveNode("n1")
+	if g.GetNode("n1") != nil {
+		t.Fatal("n1 should be removed")
+	}
+}
