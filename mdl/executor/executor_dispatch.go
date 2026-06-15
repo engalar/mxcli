@@ -7,6 +7,7 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	"github.com/mendixlabs/mxcli/mdl/catalog"
+	"github.com/mendixlabs/mxcli/mdl/graphcatalog"
 )
 
 // executeInner dispatches a statement to its registered handler.
@@ -55,6 +56,9 @@ func (e *Executor) syncBack(ctx *ExecContext) {
 	if old != nil && old != ctx.Catalog {
 		old.Close()
 	}
+	if ctx.GraphCatalog != nil {
+		e.graphCatalog = ctx.GraphCatalog
+	}
 	e.settings = ctx.Settings
 	e.fragments = ctx.Fragments
 	e.sqlMgr = ctx.SqlMgr
@@ -99,12 +103,16 @@ func (e *Executor) newExecContext(ctx context.Context) *ExecContext {
 			SqlMgr:         e.sqlMgr,
 			ThemeRegistry:  e.themeRegistry,
 			Catalog:        cat,
+			GraphCatalog:   e.graphCatalog,
 			BackendFactory: e.backendFactory,
 		},
 		ExecCallbacks: ExecCallbacks{
 			ExecuteFn:        e.Execute,
 			ExecuteProgramFn: e.ExecuteProgram,
 			FinalizeFn:       e.finalizeProgramExecution,
+			SyncGraphCatalog: func(pg *graphcatalog.ProjectGraph) {
+				e.graphCatalog = pg
+			},
 			SyncCatalog: func(cat *catalog.Catalog) {
 				e.catalogMu.Lock()
 				defer e.catalogMu.Unlock()

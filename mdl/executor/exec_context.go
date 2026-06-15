@@ -11,6 +11,7 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/backend"
 	"github.com/mendixlabs/mxcli/mdl/catalog"
 	"github.com/mendixlabs/mxcli/mdl/diaglog"
+	"github.com/mendixlabs/mxcli/mdl/graphcatalog"
 	"github.com/mendixlabs/mxcli/mdl/repos"
 	"github.com/mendixlabs/mxcli/model"
 	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
@@ -55,6 +56,7 @@ type ExecConnection struct {
 	SqlMgr         *sqllib.Manager
 	ThemeRegistry  *ThemeRegistry
 	Catalog        *catalog.Catalog
+	GraphCatalog   graphcatalog.TraversalReader
 }
 
 // ExecCallbacks holds function references for recursive execution.
@@ -63,6 +65,7 @@ type ExecCallbacks struct {
 	ExecuteProgramFn func(*ast.Program) error
 	FinalizeFn       func() error
 	SyncCatalog      func(*catalog.Catalog)
+	SyncGraphCatalog func(*graphcatalog.ProjectGraph)
 }
 
 // ExecContext carries all dependencies a statement handler needs.
@@ -86,49 +89,49 @@ type ExecContext struct {
 	// Role-specific backend interfaces. Populated lazily from Backend.
 	// Handler code should use these instead of ctx.Backend when only
 	// one domain is needed.
-	ModuleLister      backend.ModuleLister
-	ModuleWriter      backend.ModuleWriter
-	DomainModelReader backend.DomainModelReader
-	DomainModelWriter backend.DomainModelWriter
-	MicroflowReader   backend.MicroflowReader
-	MicroflowWriter   backend.MicroflowWriter
-	WorkflowReader    backend.WorkflowReader
-	WorkflowWriter    backend.WorkflowWriter
-	PageReader        backend.PageReader
-	PageWriter        backend.PageWriter
-	JavaActionReader  backend.JavaActionReader
-	JavaActionWriter  backend.JavaActionWriter
-	EnumerationReader backend.EnumerationReader
-	EnumerationWriter backend.EnumerationWriter
-	ConstantReader    backend.ConstantReader
-	ConstantWriter    backend.ConstantWriter
-	SettingsReader    backend.SettingsReader
-	SettingsWriter    backend.SettingsWriter
-	MappingReader     backend.MappingReader
-	MappingWriter     backend.MappingWriter
-	UnitReader        backend.UnitReader
-	UnitWriter        backend.UnitWriter
-	NavigationReader  backend.NavigationReader
-	NavigationWriter  backend.NavigationWriter
-	ImageCollectionWriter     backend.ImageCollectionWriter
-	ScheduledEventReader      backend.ScheduledEventReader
-	ServiceLister             backend.ServiceLister
-	ServiceWriter             backend.ServiceWriter
-	MetadataReader            backend.MetadataReader
-	ConnectionManager         backend.ConnectionManager
-	FolderManager             backend.FolderManager
-	ModuleSettingsReader      backend.ModuleSettingsReader
-	ModuleSettingsWriter      backend.ModuleSettingsWriter
-	RenameManager             backend.RenameManager
-	SecurityProjectManager    backend.SecurityProjectManager
-	SecurityModuleManager     backend.SecurityModuleManager
+	ModuleLister                backend.ModuleLister
+	ModuleWriter                backend.ModuleWriter
+	DomainModelReader           backend.DomainModelReader
+	DomainModelWriter           backend.DomainModelWriter
+	MicroflowReader             backend.MicroflowReader
+	MicroflowWriter             backend.MicroflowWriter
+	WorkflowReader              backend.WorkflowReader
+	WorkflowWriter              backend.WorkflowWriter
+	PageReader                  backend.PageReader
+	PageWriter                  backend.PageWriter
+	JavaActionReader            backend.JavaActionReader
+	JavaActionWriter            backend.JavaActionWriter
+	EnumerationReader           backend.EnumerationReader
+	EnumerationWriter           backend.EnumerationWriter
+	ConstantReader              backend.ConstantReader
+	ConstantWriter              backend.ConstantWriter
+	SettingsReader              backend.SettingsReader
+	SettingsWriter              backend.SettingsWriter
+	MappingReader               backend.MappingReader
+	MappingWriter               backend.MappingWriter
+	UnitReader                  backend.UnitReader
+	UnitWriter                  backend.UnitWriter
+	NavigationReader            backend.NavigationReader
+	NavigationWriter            backend.NavigationWriter
+	ImageCollectionWriter       backend.ImageCollectionWriter
+	ScheduledEventReader        backend.ScheduledEventReader
+	ServiceLister               backend.ServiceLister
+	ServiceWriter               backend.ServiceWriter
+	MetadataReader              backend.MetadataReader
+	ConnectionManager           backend.ConnectionManager
+	FolderManager               backend.FolderManager
+	ModuleSettingsReader        backend.ModuleSettingsReader
+	ModuleSettingsWriter        backend.ModuleSettingsWriter
+	RenameManager               backend.RenameManager
+	SecurityProjectManager      backend.SecurityProjectManager
+	SecurityModuleManager       backend.SecurityModuleManager
 	SecurityEntityAccessManager backend.SecurityEntityAccessManager
-	PageModelAccess                backend.PageModelAccess
-	PageMutationOperator           backend.PageMutationOperator
-	WorkflowMutationOperator       backend.WorkflowMutationOperator
-	WidgetBuilder                  backend.WidgetBuilder
-	ScriptTransactionManager       backend.ScriptTransactionManager
-	AgentEditorOperator            backend.AgentEditorOperator
+	PageModelAccess             backend.PageModelAccess
+	PageMutationOperator        backend.PageMutationOperator
+	WorkflowMutationOperator    backend.WorkflowMutationOperator
+	WidgetBuilder               backend.WidgetBuilder
+	ScriptTransactionManager    backend.ScriptTransactionManager
+	AgentEditorOperator         backend.AgentEditorOperator
 
 	ExecRepos
 	ExecIO

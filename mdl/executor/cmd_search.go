@@ -4,20 +4,30 @@ package executor
 
 import (
 	"fmt"
-	"strings"
+	"sort"
+	"text/tabwriter"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 )
+
+// ensureGraph builds the in-memory project graph if it has not been built yet.
+func ensureGraph(ctx *ExecContext) error {
+	if ctx.GraphCatalog != nil {
+		return nil
+	}
+	if !ctx.Connected() {
+		return mdlerrors.NewNotConnected()
+	}
+	return buildGraph(ctx)
+}
 
 // execShowCallers handles SHOW CALLERS OF Module.Microflow [TRANSITIVE].
 func execShowCallers(ctx *ExecContext, s *ast.ShowStmt) error {
 	if s.Name == nil {
 		return mdlerrors.NewValidation("target name required for show callers")
 	}
-
-	// Ensure catalog is available with full mode for refs
-	if err := ensureCatalog(ctx, true); err != nil {
+	if err := ensureGraph(ctx); err != nil {
 		return err
 	}
 
@@ -29,48 +39,25 @@ func execShowCallers(ctx *ExecContext, s *ast.ShowStmt) error {
 		fmt.Fprintln(ctx.Output, "")
 	}
 
-	var query string
-	if s.Transitive {
-		// Recursive CTE for transitive callers
-		query = `
-			with RECURSIVE callers_cte as (
-				select SourceName as Caller, 1 as Depth
-				from refs
-				where TargetName = ? and RefKind = 'call'
-				union all
-				select r.SourceName, c.Depth + 1
-				from refs r
-				join callers_cte c on r.TargetName = c.Caller
-				where r.RefKind = 'call' and c.Depth < 10
-			)
-			select distinct Caller, min(Depth) as Depth
-			from callers_cte
-			GROUP by Caller
-			ORDER by Depth, Caller
-		`
-	} else {
-		// Direct callers only
-		query = `
-			select distinct SourceName as Caller, 1 as Depth
-			from refs
-			where TargetName = ? and RefKind = 'call'
-			ORDER by Caller
-		`
-	}
-
-	result, err := ctx.Catalog.Query(strings.Replace(query, "?", "'"+targetName+"'", 1))
-	if err != nil {
-		return mdlerrors.NewBackend("query callers", err)
-	}
-
-	if result.Count == 0 {
+	callers := ctx.GraphCatalog.Callers(targetName, s.Transitive)
+	if len(callers) == 0 {
 		fmt.Fprintln(ctx.Output, "(no callers found)")
 		return nil
 	}
+	sort.SliceStable(callers, func(i, j int) bool {
+		if callers[i].Depth != callers[j].Depth {
+			return callers[i].Depth < callers[j].Depth
+		}
+		return callers[i].Caller < callers[j].Caller
+	})
 
-	fmt.Fprintf(ctx.Output, "Found %d caller(s)\n", result.Count)
-	outputCatalogResults(ctx, result)
-	return nil
+	fmt.Fprintf(ctx.Output, "Found %d caller(s)\n", len(callers))
+	w := tabwriter.NewWriter(ctx.Output, 0, 0, 2, ' ', 0)
+	fmt.Fprintln(w, "CALLER\tDEPTH")
+	for _, c := range callers {
+		fmt.Fprintf(w, "%s\t%d\n", c.Caller, c.Depth)
+	}
+	return w.Flush()
 }
 
 // execShowCallees handles SHOW CALLEES OF Module.Microflow [TRANSITIVE].
@@ -78,9 +65,7 @@ func execShowCallees(ctx *ExecContext, s *ast.ShowStmt) error {
 	if s.Name == nil {
 		return mdlerrors.NewValidation("target name required for show callees")
 	}
-
-	// Ensure catalog is available with full mode for refs
-	if err := ensureCatalog(ctx, true); err != nil {
+	if err := ensureGraph(ctx); err != nil {
 		return err
 	}
 
@@ -92,140 +77,109 @@ func execShowCallees(ctx *ExecContext, s *ast.ShowStmt) error {
 		fmt.Fprintln(ctx.Output, "")
 	}
 
-	var query string
-	if s.Transitive {
-		// Recursive CTE for transitive callees
-		query = `
-			with RECURSIVE callees_cte as (
-				select TargetName as Callee, 1 as Depth
-				from refs
-				where SourceName = ? and RefKind = 'call'
-				union all
-				select r.TargetName, c.Depth + 1
-				from refs r
-				join callees_cte c on r.SourceName = c.Callee
-				where r.RefKind = 'call' and c.Depth < 10
-			)
-			select distinct Callee, min(Depth) as Depth
-			from callees_cte
-			GROUP by Callee
-			ORDER by Depth, Callee
-		`
-	} else {
-		// Direct callees only
-		query = `
-			select distinct TargetName as Callee, 1 as Depth
-			from refs
-			where SourceName = ? and RefKind = 'call'
-			ORDER by Callee
-		`
-	}
-
-	result, err := ctx.Catalog.Query(strings.Replace(query, "?", "'"+sourceName+"'", 1))
-	if err != nil {
-		return mdlerrors.NewBackend("query callees", err)
-	}
-
-	if result.Count == 0 {
+	callees := ctx.GraphCatalog.Callees(sourceName, s.Transitive)
+	if len(callees) == 0 {
 		fmt.Fprintln(ctx.Output, "(no callees found)")
 		return nil
 	}
+	sort.SliceStable(callees, func(i, j int) bool {
+		if callees[i].Depth != callees[j].Depth {
+			return callees[i].Depth < callees[j].Depth
+		}
+		return callees[i].Callee < callees[j].Callee
+	})
 
-	fmt.Fprintf(ctx.Output, "Found %d callee(s)\n", result.Count)
-	outputCatalogResults(ctx, result)
-	return nil
+	fmt.Fprintf(ctx.Output, "Found %d callee(s)\n", len(callees))
+	w := tabwriter.NewWriter(ctx.Output, 0, 0, 2, ' ', 0)
+	fmt.Fprintln(w, "CALLEE\tDEPTH")
+	for _, c := range callees {
+		fmt.Fprintf(w, "%s\t%d\n", c.Callee, c.Depth)
+	}
+	return w.Flush()
 }
 
 // execShowReferences handles SHOW REFERENCES TO Module.Entity.
+// Lists every element that references the target (inbound edges).
 func execShowReferences(ctx *ExecContext, s *ast.ShowStmt) error {
 	if s.Name == nil {
 		return mdlerrors.NewValidation("target name required for show references")
 	}
-
-	// Ensure catalog is available with full mode for refs
-	if err := ensureCatalog(ctx, true); err != nil {
+	if err := ensureGraph(ctx); err != nil {
 		return err
 	}
 
 	targetName := s.Name.String()
 	fmt.Fprintf(ctx.Output, "\nReferences to %s\n", targetName)
 
-	// Find all references to this target
-	query := `
-		select SourceType, SourceName, RefKind
-		from refs
-		where TargetName = ?
-		ORDER by RefKind, SourceType, SourceName
-	`
-
-	result, err := ctx.Catalog.Query(strings.Replace(query, "?", "'"+targetName+"'", 1))
-	if err != nil {
-		return mdlerrors.NewBackend("query references", err)
-	}
-
-	if result.Count == 0 {
+	refs := ctx.GraphCatalog.Impact(targetName)
+	if len(refs) == 0 {
 		fmt.Fprintln(ctx.Output, "(no references found)")
 		return nil
 	}
+	sort.SliceStable(refs, func(i, j int) bool {
+		if refs[i].RefKind != refs[j].RefKind {
+			return refs[i].RefKind < refs[j].RefKind
+		}
+		return refs[i].Source < refs[j].Source
+	})
 
-	fmt.Fprintf(ctx.Output, "Found %d reference(s)\n", result.Count)
-	outputCatalogResults(ctx, result)
-	return nil
+	fmt.Fprintf(ctx.Output, "Found %d reference(s)\n", len(refs))
+	w := tabwriter.NewWriter(ctx.Output, 0, 0, 2, ' ', 0)
+	fmt.Fprintln(w, "SOURCE\tREF KIND")
+	for _, r := range refs {
+		fmt.Fprintf(w, "%s\t%s\n", r.Source, r.RefKind)
+	}
+	return w.Flush()
 }
 
 // execShowImpact handles SHOW IMPACT OF Module.Entity.
-// This shows all elements that would be affected by changing the target.
+// This shows all elements that would be affected by changing the target
+// (inbound edges), grouped by reference kind.
 func execShowImpact(ctx *ExecContext, s *ast.ShowStmt) error {
 	if s.Name == nil {
 		return mdlerrors.NewValidation("target name required for show impact")
 	}
-
-	// Ensure catalog is available with full mode for refs
-	if err := ensureCatalog(ctx, true); err != nil {
+	if err := ensureGraph(ctx); err != nil {
 		return err
 	}
 
 	targetName := s.Name.String()
 	fmt.Fprintf(ctx.Output, "\nImpact analysis for %s\n", targetName)
 
-	// Find all direct references to this target
-	directQuery := `
-		select SourceType, SourceName, RefKind
-		from refs
-		where TargetName = ?
-		ORDER by SourceType, SourceName
-	`
-
-	result, err := ctx.Catalog.Query(strings.Replace(directQuery, "?", "'"+targetName+"'", 1))
-	if err != nil {
-		return mdlerrors.NewBackend("query impact", err)
-	}
-
-	if result.Count == 0 {
+	refs := ctx.GraphCatalog.Impact(targetName)
+	if len(refs) == 0 {
 		fmt.Fprintln(ctx.Output, "(no impact - element is not referenced)")
 		return nil
 	}
 
-	// Group by type for summary
-	typeCounts := make(map[string]int)
-	for _, row := range result.Rows {
-		if len(row) > 0 {
-			if t, ok := row[0].(string); ok {
-				typeCounts[t]++
-			}
-		}
+	kindCounts := make(map[string]int)
+	for _, r := range refs {
+		kindCounts[r.RefKind]++
 	}
+	kinds := make([]string, 0, len(kindCounts))
+	for k := range kindCounts {
+		kinds = append(kinds, k)
+	}
+	sort.Strings(kinds)
 
 	fmt.Fprintf(ctx.Output, "\nSummary:\n")
-	for t, count := range typeCounts {
-		fmt.Fprintf(ctx.Output, "  %s: %d\n", t, count)
+	for _, k := range kinds {
+		fmt.Fprintf(ctx.Output, "  %s: %d\n", k, kindCounts[k])
 	}
 	fmt.Fprintln(ctx.Output)
 
-	fmt.Fprintf(ctx.Output, "Found %d affected element(s)\n", result.Count)
-	outputCatalogResults(ctx, result)
+	sort.SliceStable(refs, func(i, j int) bool {
+		if refs[i].RefKind != refs[j].RefKind {
+			return refs[i].RefKind < refs[j].RefKind
+		}
+		return refs[i].Source < refs[j].Source
+	})
 
-	return nil
+	fmt.Fprintf(ctx.Output, "Found %d affected element(s)\n", len(refs))
+	w := tabwriter.NewWriter(ctx.Output, 0, 0, 2, ' ', 0)
+	fmt.Fprintln(w, "SOURCE\tREF KIND")
+	for _, r := range refs {
+		fmt.Fprintf(w, "%s\t%s\n", r.Source, r.RefKind)
+	}
+	return w.Flush()
 }
-
-// --- Executor method wrappers for backward compatibility ---
