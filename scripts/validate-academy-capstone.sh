@@ -76,7 +76,16 @@ if [ "$SKIP_CREATE" -eq 1 ]; then
     fi
 else
     echo "  creating project $PROJECT_NAME ($MX_VERSION)..."
-    rm -rf "$REPO_ROOT/$PROJECT_NAME"
+    # On Windows, Studio Pro or other tools may hold file handles on a previous
+    # project directory. Detect this early and give a helpful message.
+    if [ -d "$REPO_ROOT/$PROJECT_NAME" ]; then
+        if ! rm -rf "$REPO_ROOT/$PROJECT_NAME" 2>/dev/null; then
+            echo "ERROR: cannot delete $REPO_ROOT/$PROJECT_NAME — a process has it locked." >&2
+            echo "  Close Studio Pro (or any tool) that has HelpDeskE2E open, then retry." >&2
+            echo "  Or reuse the existing project: ./scripts/validate-academy-capstone.sh --skip-create" >&2
+            exit 1
+        fi
+    fi
     # mxcli new step 4 (Linux devcontainer binary) may fail on Windows — tolerate it
     # as long as the MPR was successfully created in step 2.
     (cd "$REPO_ROOT" && run_mxcli new "$PROJECT_NAME" --version "$MX_VERSION") || true
