@@ -181,12 +181,12 @@ No `build` dependency — `go run` recompiles on demand.
 
 ## Prerequisites
 
-| Requirement | Why |
-|-------------|-----|
-| Go toolchain in PATH | `go run` for both mxcli and mx-path helper |
-| `mxcli setup mxbuild --version 11.6.6` run once | mx binary cached at `~/.mxcli/mxbuild/11.6.6/` |
-| `mxcli local upgrade` run once | `mxcli-local` binary available for build/run |
-| Java 21 in PATH | `mxcli local run` requires JVM |
+| Requirement | How to satisfy |
+|-------------|----------------|
+| Go toolchain in PATH | All mxcli and helper invocations use `go run` — no compiled binary needed |
+| mx 11.6.6 cached | `go run ./cmd/mxcli setup mxbuild --version 11.6.6` (one-time download) |
+| mxcli-local binary | `go run ./cmd/mxcli local upgrade` (one-time download) |
+| Java 21 in PATH | Required by `mxcli local run` JVM runtime |
 
 ## Non-Goals
 
