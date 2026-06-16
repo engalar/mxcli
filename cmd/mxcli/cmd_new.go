@@ -122,19 +122,12 @@ Examples:
 			fmt.Printf("\nStep 3/4: Skipped (--skip-init)\n")
 		}
 
-		// Step 4: Ensure correct mxcli binary for devcontainer
+		// Step 4: Ensure correct mxcli binary for devcontainer (Linux only).
+		// On Windows/macOS the devcontainer postCreateCommand downloads the Linux
+		// binary automatically on first start — no pre-download needed here.
 		fmt.Printf("\nStep 4/4: Setting up mxcli binary...\n")
-		mxcliBinPath := filepath.Join(absDir, "mxcli")
-		if runtime.GOOS != "linux" {
-			// Running on Windows/macOS — download the Linux binary for devcontainer
-			tag := mxcliReleaseTag()
-			fmt.Printf("  Downloading Linux mxcli (%s) for devcontainer...\n", tag)
-			if err := downloadMxcliBinary("mendixlabs/mxcli", tag, "linux", "amd64", mxcliBinPath, os.Stdout); err != nil {
-				fmt.Fprintf(os.Stderr, "  Warning: could not download Linux mxcli binary for devcontainer: %v\n", err)
-				fmt.Fprintln(os.Stderr, "  Run 'go run ./cmd/mxcli setup mxcli --output ./mxcli' inside the project directory when needed.")
-			}
-		} else {
-			// Running on Linux — copy ourselves
+		if runtime.GOOS == "linux" {
+			mxcliBinPath := filepath.Join(absDir, "mxcli")
 			self, err := os.Executable()
 			if err == nil {
 				selfBytes, err := os.ReadFile(self)
@@ -149,6 +142,8 @@ Examples:
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "  Warning: could not copy mxcli binary: %v\n", err)
 			}
+		} else {
+			fmt.Println("  Skipped (devcontainer will download the Linux binary on first start).")
 		}
 
 		fmt.Printf("\n✓ Project '%s' created at %s\n", appName, absDir)
