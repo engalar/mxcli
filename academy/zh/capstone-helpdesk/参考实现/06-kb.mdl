@@ -250,7 +250,7 @@ create or replace page KB.Article_NewEdit
 {
   layoutgrid lgMain {
     row rMain {
-      column cMain (desktopwidth: 8) {
+      column cMain (desktopwidth: 12) {
         dataview dvForm (datasource: $Article) {
           textbox  tbTitle   (label: 'Title',   attribute: Title)
           textarea taContent (label: 'Content', attribute: Content)
