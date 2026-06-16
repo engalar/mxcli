@@ -1116,7 +1116,6 @@ func (o *AssociationRetrieveSource) SetAssociationQualifiedName(v string) {
 // NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *AssociationRetrieveSource) InitFromRaw(raw bson.Raw) {
 	o.startVariableName.Init(raw)
-	// BSONKey is "AssociationId" (not "Association") — confirmed from Studio Pro BSON.
 	if val, err := raw.LookupErr("AssociationId"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
 			o.association.SetFromDecode(s)
@@ -12828,7 +12827,7 @@ func initAssociationRetrieveSource() *AssociationRetrieveSource {
 	o.SetTypeName("Microflows$AssociationRetrieveSource")
 	o.startVariableName = property.NewPrimitive[string]("StartVariableName", property.DecodeString)
 	o.startVariableName.Bind(&o.Base, 0)
-	o.association = property.NewByNameRef[element.Element]("Association", "DomainModels$AssociationBase")
+	o.association = property.NewByNameRef[element.Element]("AssociationId", "DomainModels$AssociationBase")
 	o.association.Bind(&o.Base, 1)
 	o.SetProperties([]element.Property{o.startVariableName, o.association})
 	return o

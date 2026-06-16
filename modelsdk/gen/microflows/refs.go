@@ -31,7 +31,7 @@ func init() {
 		{Prop: "Parameter", Kind: codec.RefByName, Target: "AppServices$AppServiceActionParameter"},
 	})
 	codec.DefaultRefRegistry.RegisterRefs("Microflows$AssociationRetrieveSource", []codec.RefMeta{
-		{Prop: "Association", Kind: codec.RefByName, Target: "DomainModels$AssociationBase"},
+		{Prop: "AssociationId", Kind: codec.RefByName, Target: "DomainModels$AssociationBase"},
 	})
 	codec.DefaultRefRegistry.RegisterRefs("Microflows$AuthenticationDocumentConfig", []codec.RefMeta{
 		{Prop: "AuthenticationDocument", Kind: codec.RefByName, Target: "Authentication$Authentication"},
