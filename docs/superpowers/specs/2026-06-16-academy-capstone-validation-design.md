@@ -123,7 +123,7 @@ func main() {
     version := os.Args[1]
     path := docker.CachedMxPath(version)
     if path == "" {
-        fmt.Fprintf(os.Stderr, "ERROR: mx %s not cached\n  Run: mxcli setup mxbuild --version %s\n",
+        fmt.Fprintf(os.Stderr, "ERROR: mx %s not cached\n  Run: go run ./cmd/mxcli setup mxbuild --version %s\n",
             version, version)
         os.Exit(1)
     }
