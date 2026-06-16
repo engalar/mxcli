@@ -11,9 +11,11 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path/filepath"
 	"runtime"
 	"strings"
+	"syscall"
 )
 
 // ProcessStarter abstracts exec.Cmd execution for testing.
@@ -22,9 +24,33 @@ type ProcessStarter interface {
 }
 
 // RealStarter executes the command for real (used in production).
+// It starts the process and waits, forwarding SIGINT/SIGTERM to the
+// child so the Java runtime shuts down cleanly on Ctrl+C.
 type RealStarter struct{}
 
-func (r *RealStarter) Run(cmd *exec.Cmd) error { return cmd.Run() }
+func (r *RealStarter) Run(cmd *exec.Cmd) error {
+	if err := cmd.Start(); err != nil {
+		return err
+	}
+	sig := make(chan os.Signal, 1)
+	signal.Notify(sig, os.Interrupt, syscall.SIGTERM)
+	done := make(chan error, 1)
+	go func() { done <- cmd.Wait() }()
+	select {
+	case err := <-done:
+		signal.Stop(sig)
+		return err
+	case s := <-sig:
+		signal.Stop(sig)
+		if cmd.Process != nil {
+			// Signal() on Windows only supports os.Kill; fall back if unsupported.
+			if err := cmd.Process.Signal(s); err != nil {
+				cmd.Process.Kill()
+			}
+		}
+		return <-done
+	}
+}
 
 // LocalRunOptions configures StartLocal.
 type LocalRunOptions struct {
