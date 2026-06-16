@@ -486,6 +486,12 @@ func (e *Executor) ExecuteProgram(prog *ast.Program) error {
 		created.collectSingle(stmt)
 	}
 
+	// Run domain-model reconciliation while scriptBuf is still open so its
+	// writes (writeUnitContents) are batched into the same atomic commit.
+	if execErr == nil {
+		execErr = e.finalizeProgramExecution()
+	}
+
 	if stx != nil {
 		if execErr != nil {
 			_ = stx.Rollback()
@@ -493,10 +499,7 @@ func (e *Executor) ExecuteProgram(prog *ast.Program) error {
 			return commitErr
 		}
 	}
-	if execErr != nil {
-		return execErr
-	}
-	return e.finalizeProgramExecution()
+	return execErr
 }
 
 // finalizeProgramExecution runs post-execution reconciliation on modified domain models.
