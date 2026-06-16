@@ -23,6 +23,15 @@ PROJECT_NAME="HelpDeskE2E"
 MPR="$REPO_ROOT/$PROJECT_NAME/$PROJECT_NAME.mpr"
 CAPSTONE_DIR="$REPO_ROOT/academy/zh/capstone-helpdesk/参考实现"
 BASELINE=""
+SKIP_CREATE=0
+
+# Parse flags
+for arg in "$@"; do
+    case "$arg" in
+        --skip-create) SKIP_CREATE=1 ;;
+        *) echo "unknown flag: $arg" >&2; exit 2 ;;
+    esac
+done
 
 # ── helpers ────────────────────────────────────────────────────────────────
 
@@ -54,9 +63,23 @@ trap cleanup EXIT
 # ── step 1: fresh project ──────────────────────────────────────────────────
 
 echo "=== validate-academy-capstone ==="
-echo "  creating project $PROJECT_NAME ($MX_VERSION)..."
-rm -rf "$REPO_ROOT/$PROJECT_NAME"
-(cd "$REPO_ROOT" && run_mxcli new "$PROJECT_NAME" --version "$MX_VERSION")
+if [ "$SKIP_CREATE" -eq 1 ]; then
+    echo "  skipping project creation (--skip-create)"
+    if [ ! -f "$MPR" ]; then
+        echo "ERROR: --skip-create set but MPR not found: $MPR" >&2
+        exit 1
+    fi
+else
+    echo "  creating project $PROJECT_NAME ($MX_VERSION)..."
+    rm -rf "$REPO_ROOT/$PROJECT_NAME"
+    # mxcli new step 4 (Linux devcontainer binary) may fail on Windows — tolerate it
+    # as long as the MPR was successfully created in step 2.
+    (cd "$REPO_ROOT" && run_mxcli new "$PROJECT_NAME" --version "$MX_VERSION") || true
+    if [ ! -f "$MPR" ]; then
+        echo "ERROR: mxcli new failed — MPR not found: $MPR" >&2
+        exit 1
+    fi
+fi
 
 # ── step 2: batch exec ────────────────────────────────────────────────────
 
