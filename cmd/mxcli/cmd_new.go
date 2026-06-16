@@ -130,9 +130,8 @@ Examples:
 			tag := mxcliReleaseTag()
 			fmt.Printf("  Downloading Linux mxcli (%s) for devcontainer...\n", tag)
 			if err := downloadMxcliBinary("mendixlabs/mxcli", tag, "linux", "amd64", mxcliBinPath, os.Stdout); err != nil {
-				fmt.Fprintf(os.Stderr, "Error: could not download Linux mxcli binary for devcontainer: %v\n", err)
-				fmt.Fprintln(os.Stderr, "  Run 'mxcli setup mxcli --output ./mxcli' inside the project directory to fix this.")
-				os.Exit(1)
+				fmt.Fprintf(os.Stderr, "  Warning: could not download Linux mxcli binary for devcontainer: %v\n", err)
+				fmt.Fprintln(os.Stderr, "  Run 'go run ./cmd/mxcli setup mxcli --output ./mxcli' inside the project directory when needed.")
 			}
 		} else {
 			// Running on Linux — copy ourselves
