@@ -33,22 +33,25 @@ BASELINE=""
 FROM_STEP="new"
 
 # Parse flags
-for arg in "$@"; do
-    case "$arg" in
-        --from) ;;  # consumed by next iteration via shift; handled below
-        --from=*) FROM_STEP="${arg#--from=}" ;;
-        --skip-create) FROM_STEP="exec" ;;  # backwards compat
-        *) echo "unknown flag: $arg" >&2
-           echo "Usage: $0 [--from new|exec|check|build|run]" >&2
-           exit 2 ;;
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --from)
+            shift
+            FROM_STEP="${1:-}"
+            ;;
+        --from=*)
+            FROM_STEP="${1#--from=}"
+            ;;
+        --skip-create)
+            FROM_STEP="exec"  # backwards compat
+            ;;
+        *)
+            echo "unknown flag: $1" >&2
+            echo "Usage: $0 [--from new|exec|check|build|run]" >&2
+            exit 2
+            ;;
     esac
-done
-# Handle "--from <value>" (two-token form)
-args=("$@")
-for i in "${!args[@]}"; do
-    if [ "${args[$i]}" = "--from" ] && [ $((i+1)) -lt ${#args[@]} ]; then
-        FROM_STEP="${args[$((i+1))]}"
-    fi
+    shift
 done
 
 case "$FROM_STEP" in
