@@ -99,24 +99,25 @@ run_mxcli_local() {
 # M2EE /stop requires authentication we don't have here, so we find the
 # owning PID via netstat and force-kill it instead.
 stop_runtime() {
-    # Check if port 8090 is in use
+    # grep 无匹配返回 1，用 || true 防止 pipefail 退出
+    _port_pid() {
+        netstat -ano 2>/dev/null | grep ":8090 " | grep "LISTENING" | awk '{print $NF}' | head -1 || true
+    }
     local pid
-    pid=$(netstat -ano 2>/dev/null | grep ":8090 " | grep "LISTENING" | awk '{print $NF}' | head -1)
+    pid=$(_port_pid)
     if [ -z "$pid" ]; then
-        # Try PowerShell as fallback (works on Windows Git Bash)
         pid=$(powershell -NoProfile -Command \
             "(Get-NetTCPConnection -LocalPort 8090 -ErrorAction SilentlyContinue).OwningProcess" \
-            2>/dev/null | tr -d '[:space:]')
+            2>/dev/null | tr -d '[:space:]') || true
     fi
     if [ -n "$pid" ] && [ "$pid" -gt 0 ] 2>/dev/null; then
         echo "  stopping runtime (PID $pid on :8090)..."
         powershell -NoProfile -Command "Stop-Process -Id $pid -Force -ErrorAction SilentlyContinue" 2>/dev/null || \
             taskkill //F //PID "$pid" >/dev/null 2>&1 || true
-        # Wait up to 5s for port to be released
         local i=0
         while [ $i -lt 10 ]; do
             sleep 0.5
-            pid=$(netstat -ano 2>/dev/null | grep ":8090 " | grep "LISTENING" | awk '{print $NF}' | head -1)
+            pid=$(_port_pid)
             [ -z "$pid" ] && return 0
             i=$((i+1))
         done
