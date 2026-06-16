@@ -22,8 +22,8 @@ A local, manually-triggered Bash script that runs a full end-to-end validation o
 
 1. Execute all 8 MDL files against a fresh Mendix project
 2. Run `mx check` (Studio Pro–level BSON validation) — zero new errors allowed
-3. `mxcli local build` — PAD package must build successfully
-4. `mxcli local run` — app starts; human validates UI, login flows, and demo data
+3. `go run ./cmd/mxcli-local build` — PAD package must build successfully
+4. `go run ./cmd/mxcli-local run` — app starts; human validates UI, login flows, and demo data
 
 ## Execution Flow
 
@@ -49,12 +49,12 @@ A local, manually-triggered Bash script that runs a full end-to-end validation o
    baseline = 0  (fresh project, zero errors expected)
    MX_BIN  = resolved via go run ./scripts/mx-path/main.go 11.6.6
 
-④ mxcli local build
-   run_mxcli local build -p ./HelpDeskE2E/HelpDeskE2E.mpr
+④ PAD build
+   run_mxcli_local build -p ./HelpDeskE2E/HelpDeskE2E.mpr
 
 ⑤ Human handoff
    Print demo account credentials, then:
-   run_mxcli local run -p ./HelpDeskE2E/HelpDeskE2E.mpr --admin-password Admin1234
+   run_mxcli_local run -p ./HelpDeskE2E/HelpDeskE2E.mpr --admin-password Admin1234
    (blocks in foreground; human presses Ctrl+C when done)
 ```
 
@@ -78,16 +78,26 @@ set -euo pipefail
 
 Consistent with `scripts/run-mdl-tests.sh` and `scripts/generate-sbom.sh`.
 
-### mxcli invocation — `run_mxcli` function
+### mxcli invocation — two `go run` helpers
 
-No compiled binary required. Uses `go run` by default; supports override via `MXCLI` env var:
+`cmd/mxcli` (launcher/daemon) handles `new`, `exec`, `setup`. `cmd/mxcli-local` is an independent binary for `build` and `run` — no launcher routing needed. Both support an env-var override for cases where a compiled binary is available:
 
 ```bash
+# daemon-routed commands: new, exec, setup mxbuild
 run_mxcli() {
     if [ -n "${MXCLI:-}" ]; then
         "$MXCLI" "$@"
     else
         (cd "$REPO_ROOT" && go run ./cmd/mxcli "$@")
+    fi
+}
+
+# local runtime commands: build, run — bypasses launcher entirely
+run_mxcli_local() {
+    if [ -n "${MXCLI_LOCAL:-}" ]; then
+        "$MXCLI_LOCAL" "$@"
+    else
+        (cd "$REPO_ROOT" && go run ./cmd/mxcli-local "$@")
     fi
 }
 ```
@@ -183,10 +193,9 @@ No `build` dependency — `go run` recompiles on demand.
 
 | Requirement | How to satisfy |
 |-------------|----------------|
-| Go toolchain in PATH | All mxcli and helper invocations use `go run` — no compiled binary needed |
+| Go toolchain in PATH | All invocations use `go run` — no compiled binary needed |
 | mx 11.6.6 cached | `go run ./cmd/mxcli setup mxbuild --version 11.6.6` (one-time download) |
-| mxcli-local binary | `go run ./cmd/mxcli local upgrade` (one-time download) |
-| Java 21 in PATH | Required by `mxcli local run` JVM runtime |
+| Java 21 in PATH | Required by `go run ./cmd/mxcli-local run` JVM runtime |
 
 ## Non-Goals
 
