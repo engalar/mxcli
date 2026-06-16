@@ -458,7 +458,18 @@ func (e *Executor) Execute(stmt ast.Statement) error {
 }
 
 // ExecuteProgram runs all statements in a program.
+// When the backend supports ScriptTransactionBackend, all writes are
+// batched into a single SQLite transaction — dramatically reducing I/O
+// overhead for multi-statement files (e.g. 8-file capstone exec).
 func (e *Executor) ExecuteProgram(prog *ast.Program) error {
+	// Open a script transaction if the backend supports it.
+	var stx backend.ScriptTransaction
+	if sbe, ok := e.backend.(backend.ScriptTransactionBackend); ok {
+		if tx, err := sbe.BeginScriptTransaction(); err == nil {
+			stx = tx
+		}
+	}
+
 	// Collect all names defined in the script for forward-reference hints.
 	allDefined := newScriptContext()
 	allDefined.collectDefinitions(prog)
@@ -466,11 +477,24 @@ func (e *Executor) ExecuteProgram(prog *ast.Program) error {
 	// Track which names have been created so far.
 	created := newScriptContext()
 
+	var execErr error
 	for _, stmt := range prog.Statements {
 		if err := e.Execute(stmt); err != nil {
-			return annotateForwardRef(err, stmt, created, allDefined)
+			execErr = annotateForwardRef(err, stmt, created, allDefined)
+			break
 		}
 		created.collectSingle(stmt)
+	}
+
+	if stx != nil {
+		if execErr != nil {
+			_ = stx.Rollback()
+		} else if commitErr := stx.Commit(); commitErr != nil {
+			return commitErr
+		}
+	}
+	if execErr != nil {
+		return execErr
 	}
 	return e.finalizeProgramExecution()
 }
