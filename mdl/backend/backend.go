@@ -27,6 +27,7 @@ type FullBackend interface {
 	ServiceBackend
 	MappingBackend
 	JavaBackend
+	JavaScriptBackend
 	WorkflowBackend
 	SettingsBackend
 	ImageBackend
@@ -53,6 +54,8 @@ type FullBackend interface {
 	WorkflowWriter
 	JavaActionReader
 	JavaActionWriter
+	JavaScriptActionReader
+	JavaScriptActionWriter
 	EnumerationReader
 	EnumerationWriter
 	ConstantReader

@@ -359,6 +359,30 @@ func expressionToStringForGen(e ast.Expression) string {
 	if e == nil {
 		return ""
 	}
+	switch v := e.(type) {
+	case *ast.LiteralExpr:
+		switch v.Kind {
+		case ast.LiteralBoolean:
+			if b, ok := v.Value.(bool); ok {
+				if b {
+					return "true"
+				}
+				return "false"
+			}
+		case ast.LiteralString:
+			if s, ok := v.Value.(string); ok {
+				return "'" + s + "'"
+			}
+		case ast.LiteralInteger, ast.LiteralDecimal:
+			return fmt.Sprintf("%v", v.Value)
+		case ast.LiteralEmpty:
+			return "empty"
+		case ast.LiteralNull:
+			return "null"
+		}
+	case *ast.VariableExpr:
+		return "$" + v.Name
+	}
 	if s, ok := e.(interface{ String() string }); ok {
 		return s.String()
 	}

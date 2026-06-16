@@ -240,9 +240,10 @@ type MockBackend struct {
 	CreateJavaActionGenFunc           func(parentUUID, containmentName string, ja *genJA.JavaAction) error
 	UpdateJavaActionGenFunc           func(ja *genJA.JavaAction) error
 	WriteJavaSourceFileGenFunc        func(moduleName, actionName string, javaCode string, params []*genJA.JavaActionParameter, returnType element.Element, extraImports []string, extraCode string) error
-	ListJavaScriptActionsGenFunc      func() ([]*genJSA.JavaScriptAction, error)
-	ReadJavaScriptActionByNameGenFunc func(qualifiedName string) (*genJSA.JavaScriptAction, error)
-	UpdateJavaScriptActionGenFunc     func(jsa *genJSA.JavaScriptAction) error
+	ListJavaScriptActionsGenFunc         func() ([]*genJSA.JavaScriptAction, error)
+	ReadJavaScriptActionByNameGenFunc    func(qualifiedName string) (*genJSA.JavaScriptAction, error)
+	CreateJavaScriptActionGenFunc        func(parentUUID, containmentName string, jsa *genJSA.JavaScriptAction) error
+	UpdateJavaScriptActionGenFunc        func(jsa *genJSA.JavaScriptAction) error
 
 	// WorkflowBackend (gen-typed surface; pure-ID DeleteWorkflow lives
 	// alongside the gen-typed quartet after Stage 3.3.3.E1).

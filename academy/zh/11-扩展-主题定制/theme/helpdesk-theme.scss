@@ -1,0 +1,79 @@
+// TechCorp Helpdesk — 品牌主题
+// 覆盖 Atlas UI 变量，无需修改 Atlas 源码。
+// 追加到 theme/web/main.scss 末尾即可生效。
+
+// ====================================================
+// 主色（品牌蓝 #1565C0，替换 Atlas 默认紫色）
+// ====================================================
+$brand-primary:           #1565C0;
+$brand-primary-dark:      #0D47A1;
+$brand-primary-light:     #1976D2;
+$brand-primary-contrast:  #FFFFFF;
+
+// ====================================================
+// 按钮样式
+// ====================================================
+$border-radius-button:    4px;
+$border-radius-default:   4px;
+
+// ====================================================
+// 链接颜色
+// ====================================================
+$color-link:              #1565C0;
+$color-link-hover:        #0D47A1;
+
+// ====================================================
+// 导航栏颜色（Mendix Atlas Sidebar）
+// ====================================================
+$nav-background:          #1565C0;
+$nav-item-text:           #FFFFFF;
+$nav-item-text-hover:     #E3F2FD;
+$nav-item-bg-hover:       rgba(255, 255, 255, 0.12);
+$nav-item-bg-active:      rgba(255, 255, 255, 0.20);
+
+// ====================================================
+// CSS 自定义属性（Atlas UI 设计令牌覆盖）
+// ====================================================
+:root {
+  --color-brand-primary:           #{$brand-primary};
+  --color-brand-primary-dark:      #{$brand-primary-dark};
+  --color-brand-primary-light:     #{$brand-primary-light};
+  --color-brand-primary-contrast:  #{$brand-primary-contrast};
+
+  --border-radius-button:          #{$border-radius-button};
+  --border-radius-default:         #{$border-radius-default};
+
+  --color-link:                    #{$color-link};
+  --color-link-hover:              #{$color-link-hover};
+
+  --color-nav-background:          #{$nav-background};
+  --color-nav-item-text:           #{$nav-item-text};
+  --color-nav-item-text-hover:     #{$nav-item-text-hover};
+  --color-nav-item-bg-hover:       #{$nav-item-bg-hover};
+  --color-nav-item-bg-active:      #{$nav-item-bg-active};
+}
+
+// ====================================================
+// 主要操作按钮（Primary）
+// ====================================================
+.btn-primary,
+.mx-button.btn-primary {
+  background-color: $brand-primary;
+  border-color:     $brand-primary;
+
+  &:hover {
+    background-color: $brand-primary-dark;
+    border-color:     $brand-primary-dark;
+  }
+}
+
+// ====================================================
+// 输入框焦点边框颜色
+// ====================================================
+.form-control,
+.mx-input {
+  &:focus {
+    border-color: $brand-primary;
+    box-shadow:   0 0 0 3px rgba($brand-primary, 0.15);
+  }
+}

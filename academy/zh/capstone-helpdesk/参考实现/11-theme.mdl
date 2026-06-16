@@ -1,0 +1,11 @@
+-- ============================================================
+-- Capstone 11：主题定制集成
+-- 注意：主题定制通过 CSS 完成，本文件仅作为标识，
+--       实际主题内容由验证脚本追加到 HelpDeskE2E/theme/web/main.scss
+--   cat academy/zh/11-扩展-主题定制/theme/helpdesk-theme.scss >> \
+--      HelpDeskE2E/theme/web/main.scss
+-- 运行此文件仅占位确认主题模块已就绪
+-- ============================================================
+
+-- 空 MDL：标识 11-theme 步骤已完成
+-- 实际主题效果由 helpdesk-theme.scss 追加到 main.scss 提供

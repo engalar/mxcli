@@ -104,6 +104,7 @@ type ExecContext struct {
 	PageWriter                  backend.PageWriter
 	JavaActionReader            backend.JavaActionReader
 	JavaActionWriter            backend.JavaActionWriter
+	JavaScriptActionWriter      backend.JavaScriptActionWriter
 	EnumerationReader           backend.EnumerationReader
 	EnumerationWriter           backend.EnumerationWriter
 	ConstantReader              backend.ConstantReader
@@ -162,6 +163,7 @@ func (ctx *ExecContext) initRoles() {
 	ctx.PageWriter = ctx.Backend
 	ctx.JavaActionReader = ctx.Backend
 	ctx.JavaActionWriter = ctx.Backend
+	ctx.JavaScriptActionWriter = ctx.Backend
 	ctx.EnumerationReader = ctx.Backend
 	ctx.EnumerationWriter = ctx.Backend
 	ctx.ConstantReader = ctx.Backend

@@ -216,9 +216,9 @@ type supplements struct {
 
 type supplementProp struct {
 	Name          string `json:"name"`
-	Kind          string `json:"kind"`           // Primitive, ByNameRef, Part, PartList
+	Kind          string `json:"kind"`           // Primitive, ByNameRef, ByIdRef, Part, PartList
 	PrimitiveType string `json:"primitive_type"` // String, Boolean, Integer, etc.
-	Target        string `json:"target"`         // for ByNameRef
+	Target        string `json:"target"`         // for ByNameRef / ByIdRef
 }
 
 type supplementTypeDef struct {
@@ -307,6 +307,9 @@ func supplementPropToJsProp(sp supplementProp) dtsparser.JsProp {
 		p.PrimitiveType = dtsparser.PrimitiveType(sp.PrimitiveType)
 	case "ByNameRef":
 		p.Kind = dtsparser.PKByNameRef
+		p.TargetType = sp.Target
+	case "ByIdRef":
+		p.Kind = dtsparser.PKByIdRef
 		p.TargetType = sp.Target
 	case "Part":
 		p.Kind = dtsparser.PKPart

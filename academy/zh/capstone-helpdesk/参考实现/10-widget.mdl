@@ -1,0 +1,66 @@
+-- ============================================================
+-- Capstone 10：自定义 Widget 集成（TicketStatusBadge）
+--   将 Ticket_Overview 的 Status 列替换为自定义徽章组件
+-- 前提：
+--   1. 01-09 已执行
+--   2. TicketStatusBadge.mpk 已放到 HelpDeskE2E/widgets/ 目录下
+-- 注意：本文件需在 widget MPK 已部署的前提下运行
+-- 运行：mxcli exec 10-widget.mdl -p MyProject.mpr
+-- ============================================================
+
+-- ============================================================
+-- 重建工单概览页：Status 列替换为 TicketStatusBadge widget
+-- ============================================================
+
+create or replace page HD.Ticket_Overview
+(
+  title:  'All Tickets',
+  layout: Atlas_Core.Atlas_Default,
+  folder: 'Ticket'
+)
+{
+  layoutgrid lgMain {
+    row rHeader {
+      column cTitle (desktopwidth: 12) {
+        dynamictext txtTitle (content: 'All Tickets', rendermode: H2)
+      }
+    }
+    row rMain {
+      column cMain (desktopwidth: 12) {
+        datagrid dgTickets (
+          datasource:     database from HD.Ticket sort by SLADueAt asc,
+          PageSize:       20,
+          PagingPosition: both
+        ) {
+          controlbar cb {
+            actionbutton btnNew (
+              caption:     'New Ticket',
+              action:      create_object HD.Ticket then show_page HD.Ticket_NewEdit,
+              buttonstyle: primary
+            )
+          }
+          column colSubject  (attribute: Subject,  caption: 'Subject') {
+            textfilter fSubject
+          }
+          column colStatus (attribute: Status, caption: 'Status', ShowContentAs: customContent, ColumnWidth: manual, Size: 140) {
+            PLUGGABLEWIDGET 'com.helpdesk.widget.TicketStatusBadge' wdgStatus (statusValue: Status)
+          }
+          column colPriority (attribute: Priority, caption: 'Priority', ColumnWidth: manual, Size: 100) {
+            dropdownfilter fPriority
+          }
+          column colSLADue   (attribute: SLADueAt,  caption: 'SLA Due',  ColumnWidth: manual, Size: 140)
+          column colOverdue  (attribute: IsOverSLA, caption: 'Overdue',  ColumnWidth: manual, Size: 80)
+          column colActions (caption: 'Actions', ShowContentAs: customContent, ColumnWidth: manual, Size: 80) {
+            actionbutton btnOpen (
+              caption:     'Open',
+              action:      show_page HD.Ticket_Detail (Ticket: $currentObject),
+              buttonstyle: link
+            )
+          }
+        }
+      }
+    }
+  }
+};
+
+grant view on page HD.Ticket_Overview to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;

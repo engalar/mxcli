@@ -45,14 +45,14 @@ mx_check_against_baseline() {
 
     # Detect crash: tool exited non-zero but no [error] lines → crash, not validation failure.
     if [ $ec -ne 0 ] && ! echo "$output" | grep -q "^\[error\]"; then
-        echo "" >&2
-        echo "CRASH: mx check crashed (exit $ec) — no [error] lines in output." >&2
-        echo "First 10 lines of output:" >&2
-        echo "$output" | head -10 >&2
-        echo "" >&2
-        echo "This indicates a NullReferenceException or similar during MPR postprocessing." >&2
-        echo "Common cause: widget BSON missing required fields (e.g. ReturnType for" >&2
-        echo "expression-type properties). Check recent widget generation changes." >&2
+        echo ""
+        echo "CRASH: mx check crashed (exit $ec) — no [error] lines in output."
+        echo "First 10 lines of output:"
+        echo "$output" | head -10
+        echo ""
+        echo "This indicates a NullReferenceException or similar during MPR postprocessing."
+        echo "Common cause: widget BSON missing required fields (e.g. ReturnType for"
+        echo "expression-type properties). Check recent widget generation changes."
         return 2
     fi
 
@@ -62,10 +62,10 @@ mx_check_against_baseline() {
     if [ "$errors" -gt "$baseline" ]; then
         local new
         new=$((errors - baseline))
-        echo "" >&2
-        echo "FAIL: mx check found $new new error(s) ($errors total, baseline $baseline)." >&2
-        echo "" >&2
-        echo "$output" | grep "^\[error\]" >&2
+        echo ""
+        echo "FAIL: mx check found $new new error(s) ($errors total, baseline $baseline)."
+        echo ""
+        echo "$output" | grep "^\[error\]"
         return 1
     fi
 

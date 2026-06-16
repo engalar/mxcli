@@ -219,8 +219,7 @@ func (r *javaActionRepo) Delete(id model.ID) error {
 
 var _ repos.JavaActionRepository = (*javaActionRepo)(nil)
 
-// javaScriptActionRepo is the direct-mode read-only JavaScriptActionRepository.
-// JavaScript actions have no MDL `create` surface, so there is no writer half.
+// javaScriptActionRepo is the direct-mode JavaScriptActionRepository.
 type javaScriptActionRepo struct {
 	w    *mmpr.Writer
 	r    *mmpr.Reader
@@ -238,6 +237,23 @@ func NewJavaScriptActionRepository(w *mmpr.Writer) repos.JavaScriptActionReposit
 		enc:  newEncoder(),
 		sink: newWriterSink(w),
 	}
+}
+
+func (r *javaScriptActionRepo) Create(parentUUID, containmentName string, jsa *genJSA.JavaScriptAction) error {
+	if jsa == nil {
+		return fmt.Errorf("javaScriptActionRepo.Create: nil JavaScriptAction")
+	}
+	if jsa.ID() == "" {
+		jsa.SetID(element.ID(mmpr.GenerateID()))
+	}
+	if jsa.TypeName() == "" {
+		jsa.SetTypeName(javaScriptActionTypeName)
+	}
+	contents, err := r.enc.Encode(jsa)
+	if err != nil {
+		return err
+	}
+	return r.sink.InsertUnit(string(jsa.ID()), parentUUID, containmentName, jsa.TypeName(), contents)
 }
 
 func (r *javaScriptActionRepo) Update(jsa *genJSA.JavaScriptAction) error {

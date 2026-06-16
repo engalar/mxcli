@@ -38,8 +38,6 @@ type JavaActionRepository interface {
 }
 
 // JavaScriptActionReader mirrors JavaActionReader for JavaScript actions.
-// MDL has no `create javascript action` syntax today, so no writer
-// counterpart is required.
 type JavaScriptActionReader interface {
 	Get(id model.ID) (*genJSA.JavaScriptAction, error)
 	List(moduleID model.ID) ([]*genJSA.JavaScriptAction, error)
@@ -48,7 +46,13 @@ type JavaScriptActionReader interface {
 	GetContainerUUID(id model.ID) (model.ID, error)
 }
 
+// JavaScriptActionWriter creates/updates JavaScript actions.
+type JavaScriptActionWriter interface {
+	Create(parentUUID string, containmentName string, jsa *genJSA.JavaScriptAction) error
+	Update(jsa *genJSA.JavaScriptAction) error
+}
+
 type JavaScriptActionRepository interface {
 	JavaScriptActionReader
-	Update(jsa *genJSA.JavaScriptAction) error
+	JavaScriptActionWriter
 }

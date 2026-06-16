@@ -124,7 +124,7 @@ func readJavaScriptActionSource(mprPath, moduleName, actionName string) (userCod
 
 // writeJavaScriptActionSource writes or overwrites the JS action source file at
 // javascriptsource/<lowercase-module>/actions/<ActionName>.js.
-func writeJavaScriptActionSource(mprPath, moduleName, actionName, imports, extraCode, userCode string) error {
+func writeJavaScriptActionSource(mprPath, moduleName, actionName, imports, extraCode, userCode string, paramNames []string) error {
 	if mprPath == "" {
 		return fmt.Errorf("writeJavaScriptActionSource: mprPath is empty")
 	}
@@ -164,9 +164,26 @@ func writeJavaScriptActionSource(mprPath, moduleName, actionName, imports, extra
 	}
 	sb.WriteString("// END EXTRA CODE\n")
 	sb.WriteString("\n")
+	// JSDoc
+	sb.WriteString("/**\n")
+	for _, pn := range paramNames {
+		sb.WriteString(" * @param {string} ")
+		sb.WriteString(pn)
+		sb.WriteString("\n")
+	}
+	sb.WriteString(" * @returns {Promise.<void>}\n")
+	sb.WriteString(" */\n")
+
 	sb.WriteString("export async function ")
 	sb.WriteString(actionName)
-	sb.WriteString("() {\n")
+	sb.WriteString("(")
+	for i, pn := range paramNames {
+		if i > 0 {
+			sb.WriteString(", ")
+		}
+		sb.WriteString(pn)
+	}
+	sb.WriteString(") {\n")
 	sb.WriteString("\t// BEGIN USER CODE\n")
 	if userCode != "" {
 		for _, line := range strings.Split(userCode, "\n") {
@@ -853,48 +870,32 @@ func describeJavaScriptActionGen(ctx *ExecContext, name ast.QualifiedName) error
 	}
 	sb.WriteString("(")
 
-	params := jsa.ActionParametersItems()
-	hasDescriptions := false
-	for _, p := range params {
-		pp, ok := p.(*genJSA.JavaScriptActionParameter)
-		if !ok {
-			continue
-		}
-		if pp.Description() != "" {
-			hasDescriptions = true
-			break
-		}
+	// Read params from legacy Parameters or newer ActionParameters BSON key.
+	params := jsa.ParametersItems()
+	if len(params) == 0 {
+		params = jsa.ActionParametersItems()
 	}
-
-	wrote := 0
-	for _, p := range params {
+	for i, p := range params {
 		pp, ok := p.(*genJSA.JavaScriptActionParameter)
 		if !ok {
 			continue
 		}
-		if wrote > 0 {
+		if i > 0 {
 			sb.WriteString(", ")
 		}
-		if hasDescriptions {
-			sb.WriteString("\n    ")
+		// Prefer legacy ParameterType (BasicParameterType wrapper), fall back to ActionParameterType.
+		typeElem := pp.ActionParameterType()
+		if typeElem != nil {
+			if bpt, bptOK := typeElem.(*genCA.BasicParameterType); bptOK {
+				typeElem = bpt.Type()
+			}
 		}
 		sb.WriteString(pp.Name())
 		sb.WriteString(": ")
-		sb.WriteString(formatJavaActionTypeGen(pp.ActionParameterType(), typeParams))
+		sb.WriteString(formatJavaActionTypeGen(typeElem, typeParams))
 		if pp.IsRequired() {
 			sb.WriteString(" not null")
 		}
-		if pp.Description() != "" {
-			pd := strings.ReplaceAll(pp.Description(), "\r\n", "\n")
-			pd = strings.ReplaceAll(pd, "\r", "\n")
-			firstLine, _, _ := strings.Cut(pd, "\n")
-			sb.WriteString("  -- ")
-			sb.WriteString(firstLine)
-		}
-		wrote++
-	}
-	if hasDescriptions {
-		sb.WriteString("\n")
 	}
 	sb.WriteString(")")
 
@@ -1046,18 +1047,39 @@ func execDropJavaActionGen(ctx *ExecContext, s *ast.DropJavaActionStmt) error {
 // ─────────────────────────────────────────────────────────────────────
 
 // execCreateJavaScriptAction handles CREATE [OR MODIFY] JAVASCRIPT ACTION.
-// Phase 1: the action must already exist in BSON (Studio Pro creates the
-// unit + its parameter/return BSON); this handler updates the Platform
-// field and (re)writes the javascriptsource/<module>/actions/<Name>.js
-// source file from the supplied imports/extra/code blocks.
+// Creates the BSON unit and JavaScript source file from scratch, mirroring
+// execCreateJavaActionGen — no Studio Pro pre-requisite.
 func execCreateJavaScriptAction(ctx *ExecContext, s *ast.CreateJavaScriptActionStmt) error {
 	if !ctx.ConnectedForWrite() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
+
 	h, err := getHierarchy(ctx)
 	if err != nil {
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}
+
+	// Find the module.
+	modules, err := ctx.ModuleLister.ListModules()
+	if err != nil {
+		return mdlerrors.NewBackend("get modules", err)
+	}
+	var (
+		containerID model.ID
+		moduleName  string
+	)
+	for _, mod := range modules {
+		if mod.Name == s.Name.Module {
+			containerID = mod.ID
+			moduleName = mod.Name
+			break
+		}
+	}
+	if containerID == "" {
+		return mdlerrors.NewNotFound("module", s.Name.Module)
+	}
+
+	// Existence check.
 	pairs, err := listJavaScriptActionsWithContainerGen(ctx)
 	if err != nil {
 		return mdlerrors.NewBackend("list javascript actions", err)
@@ -1070,29 +1092,101 @@ func execCreateJavaScriptAction(ctx *ExecContext, s *ast.CreateJavaScriptActionS
 		modID := h.FindModuleID(modelIDFromElementID(p.ContainerID))
 		modName := h.GetModuleName(modID)
 		if modName == s.Name.Module && p.Elem.Name() == s.Name.Name {
+			if !s.CreateOrModify {
+				return mdlerrors.NewAlreadyExists("javascript action", s.Name.Module+"."+s.Name.Name)
+			}
 			existingJSA = p.Elem
 			break
 		}
 	}
-	if existingJSA == nil {
-		qn := s.Name.Module + "." + s.Name.Name
-		return mdlerrors.NewNotFoundMsg("javascript action", qn,
-			fmt.Sprintf("javascript action %s not found in project — create it in Mendix Studio Pro first", qn))
+
+	// Build the gen JavaScriptAction.
+	jsa := genJSA.NewJavaScriptAction()
+	if existingJSA != nil {
+		jsa.SetID(existingJSA.ID())
+	} else {
+		jsa.SetID(element.ID(types.GenerateID()))
 	}
+	jsa.SetName(s.Name.Name)
+	jsa.SetDocumentation(s.Documentation)
+	jsa.SetExportLevel("Public")
+	jsa.SetExcluded(false)
+	jsa.SetActionDefaultReturnName("ReturnValue")
 	if s.Platform != "" {
-		existingJSA.SetPlatform(s.Platform)
-		if err := ctx.JavaActionWriter.UpdateJavaScriptActionGen(existingJSA); err != nil {
-			return mdlerrors.NewBackend("update javascript action platform", err)
+		jsa.SetPlatform(s.Platform)
+	}
+
+	// Parameters — JS actions store the inner type directly (no BasicParameterType wrapper).
+	// When modifying, match existing parameters by name to preserve their element IDs
+	// so nanoflow call references don't break (CE1613).
+	existingParams := make(map[string]element.ID)
+	if existingJSA != nil {
+		for _, p := range existingJSA.ParametersItems() {
+			if pp, ok := p.(*genJSA.JavaScriptActionParameter); ok {
+				existingParams[pp.Name()] = pp.ID()
+			}
 		}
 	}
-	if s.Imports != "" || s.ExtraCode != "" || s.UserCode != "" {
-		if err := writeJavaScriptActionSource(ctx.MprPath, s.Name.Module, s.Name.Name,
-			s.Imports, s.ExtraCode, s.UserCode); err != nil {
+	for _, param := range s.Parameters {
+		jsaParam := genJSA.NewJavaScriptActionParameter()
+		if id, ok := existingParams[param.Name]; ok {
+			jsaParam.SetID(id)
+		} else {
+			jsaParam.SetID(element.ID(types.GenerateID()))
+		}
+		jsaParam.SetName(strings.ToLower(param.Name[:1]) + param.Name[1:])
+		jsaParam.SetCategory("")
+		jsaParam.SetDescription("")
+		jsaParam.SetIsRequired(param.IsRequired)
+		// Use legacy BSON format: BasicParameterType wrapper + Parameters key
+		innerType := astDataTypeToJavaActionParamTypeGen(param.Type, nil)
+		bpt := genCA.NewBasicParameterType()
+		bpt.SetID(element.ID(types.GenerateID()))
+		bpt.SetType(innerType)
+		jsaParam.SetActionParameterType(bpt)
+		jsa.AddParameters(jsaParam)
+	}
+
+	// Return type — don't set for void (mxbuild 11.6.6 reads return type from JavaReturnType legacy key).
+	if s.ReturnType.Kind != ast.TypeVoid {
+		jsa.SetActionReturnType(astDataTypeToJavaActionReturnTypeGen(s.ReturnType, nil))
+	}
+
+	// Persist.
+	if existingJSA != nil {
+		if err := ctx.JavaScriptActionWriter.UpdateJavaScriptActionGen(jsa); err != nil {
+			return mdlerrors.NewBackend("update javascript action", err)
+		}
+	} else {
+		if err := ctx.JavaScriptActionWriter.CreateJavaScriptActionGen(string(containerID), "Documents", jsa); err != nil {
+			return mdlerrors.NewBackend("create javascript action", err)
+		}
+	}
+
+	// JavaScript source file with parameter names (lowercased per Studio Pro convention).
+	if s.UserCode != "" || s.Imports != "" || s.ExtraCode != "" {
+		paramNames := make([]string, len(s.Parameters))
+		for i, p := range s.Parameters {
+			if p.Name == "" {
+				paramNames[i] = fmt.Sprintf("param%d", i)
+			} else {
+				paramNames[i] = strings.ToLower(p.Name[:1]) + p.Name[1:]
+			}
+		}
+		if err := writeJavaScriptActionSource(ctx.MprPath, moduleName, s.Name.Name,
+			s.Imports, s.ExtraCode, s.UserCode, paramNames); err != nil {
 			return mdlerrors.NewBackend("write javascript source file", err)
 		}
-		invalidateJavaScriptActionsCache(ctx)
 	}
-	fmt.Fprintf(ctx.Output, "updated javascript action %s.%s\n", s.Name.Module, s.Name.Name)
+
+	invalidateJavaScriptActionsCache(ctx)
+	invalidateHierarchy(ctx)
+
+	if existingJSA != nil {
+		fmt.Fprintf(ctx.Output, "Modified javascript action: %s.%s\n", s.Name.Module, s.Name.Name)
+	} else {
+		fmt.Fprintf(ctx.Output, "Created javascript action: %s.%s\n", s.Name.Module, s.Name.Name)
+	}
 	return nil
 }
 

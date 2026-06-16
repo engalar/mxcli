@@ -1,0 +1,131 @@
+-- ============================================================
+-- Capstone 09：JS Action 扩展集成
+--   创建三个 JavaScript Action + 调用纳流 + 安全权限
+-- 前提：01-08 已执行
+-- 注意：纯浏览器 API，无需外部依赖
+-- 运行：mxcli exec 09-js-actions.mdl -p MyProject.mpr
+-- ============================================================
+
+-- ============================================================
+-- JSA_CopyToClipboard：复制文本到剪贴板
+-- BSON 不包含参数定义（mxbuild 11.6.6 不支持 JavaScriptActionParameter），
+-- 参数名仅在 JS 源文件函数签名中存在
+-- ============================================================
+
+create or modify javascript action HD.JSA_CopyToClipboard (
+  text: string not null
+) returns void
+platform 'Web'
+{
+  imports $$
+import "mx-global";
+  $$
+  code $$
+return navigator.clipboard.writeText(text).then(function() {
+  mx.ui.info('Copied to clipboard');
+}).catch(function(err) {
+  console.error('Copy failed: ' + err);
+});
+  $$
+};
+
+-- ============================================================
+-- JSA_CopyToClipboard 调用纳流
+-- ============================================================
+
+create or modify nanoflow HD.NF_CopyToClipboard
+  ($Text: string)
+  returns void
+  folder 'UI'
+{
+  call javascript action HD.JSA_CopyToClipboard(Text = $Text);
+}
+/
+
+-- ============================================================
+-- JSA_NotifyHighPriority：浏览器桌面通知
+-- ============================================================
+
+create or modify javascript action HD.JSA_NotifyHighPriority (
+  subject: string not null
+) returns void
+platform 'Web'
+{
+  imports $$
+import "mx-global";
+  $$
+  code $$
+if (Notification.permission === 'granted') {
+  new Notification('High Priority Ticket', { body: subject });
+} else if (Notification.permission !== 'denied') {
+  Notification.requestPermission().then(function(permission) {
+    if (permission === 'granted') {
+      new Notification('High Priority Ticket', { body: subject });
+    }
+  });
+}
+  $$
+};
+
+-- ============================================================
+-- JSA_NotifyHighPriority 调用纳流
+-- ============================================================
+
+create or modify nanoflow HD.NF_NotifyHighPriority
+  ($Subject: string)
+  returns void
+  folder 'UI'
+{
+  call javascript action HD.JSA_NotifyHighPriority(Subject = $Subject);
+}
+/
+
+-- ============================================================
+-- JSA_FormatRelativeTime：相对时间格式化
+-- ============================================================
+
+create or modify javascript action HD.JSA_FormatRelativeTime (
+  dateTime: datetime not null
+) returns string
+platform 'Web'
+{
+  imports $$
+import "mx-global";
+  $$
+  code $$
+var now = new Date();
+var diff = now.getTime() - dateTime.getTime();
+var seconds = Math.floor(diff / 1000);
+if (seconds < 60) { return 'just now'; }
+var minutes = Math.floor(seconds / 60);
+if (minutes < 60) { return minutes + 'm ago'; }
+var hours = Math.floor(minutes / 60);
+if (hours < 24) { return hours + 'h ago'; }
+var days = Math.floor(hours / 24);
+if (days < 30) { return days + 'd ago'; }
+var months = Math.floor(days / 30);
+return months + 'mo ago';
+  $$
+};
+
+-- ============================================================
+-- JSA_FormatRelativeTime 调用纳流
+-- ============================================================
+
+create or modify nanoflow HD.NF_FormatRelativeTime
+  ($DateTime: datetime)
+  returns boolean
+  folder 'UI'
+{
+  call javascript action HD.JSA_FormatRelativeTime(DateTime = $DateTime);
+  return true;
+}
+/
+
+-- ============================================================
+-- 安全权限
+-- ============================================================
+
+grant execute on nanoflow HD.NF_CopyToClipboard       to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
+grant execute on nanoflow HD.NF_NotifyHighPriority     to HD.AgentRole, HD.ManagerRole;
+grant execute on nanoflow HD.NF_FormatRelativeTime     to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;

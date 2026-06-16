@@ -1,0 +1,120 @@
+-- ============================================================
+-- Capstone 08：Java Action 扩展集成
+--   创建密码哈希/验证 Java Action + 调用微流 + 安全权限
+-- 前提：01-07 已执行
+-- 注意：纯 JDK 实现，无需外部依赖
+-- 运行：mxcli exec 08-java-actions.mdl -p MyProject.mpr
+-- ============================================================
+
+-- ============================================================
+-- JA_HashPassword：SHA-256 + 随机 salt
+-- 输入：明文密码
+-- 输出：<salt>$<hash>（便于分割验证）
+-- ============================================================
+
+create or modify java action HD.JA_HashPassword (
+  Password: string not null
+) returns string
+imports $$
+import java.security.MessageDigest;
+import java.security.SecureRandom;
+import java.nio.charset.StandardCharsets;
+$$
+code $$
+if (Password == null || Password.isEmpty()) {
+    throw new IllegalArgumentException("Password cannot be empty");
+}
+SecureRandom rng = new SecureRandom();
+byte[] saltBytes = new byte[16];
+rng.nextBytes(saltBytes);
+StringBuilder saltHex = new StringBuilder();
+for (byte b : saltBytes) {
+    saltHex.append(String.format("%02x", b));
+}
+String salt = saltHex.toString();
+MessageDigest digest = MessageDigest.getInstance("SHA-256");
+byte[] hashBytes = digest.digest((salt + Password).getBytes(StandardCharsets.UTF_8));
+StringBuilder hashHex = new StringBuilder();
+for (byte b : hashBytes) {
+    hashHex.append(String.format("%02x", b));
+}
+return salt + "$" + hashHex.toString();
+$$;
+
+-- ============================================================
+-- JA_VerifyPassword：验证密码
+-- 输入：明文密码 + <salt>$<hash>
+-- 输出：boolean
+-- ============================================================
+
+create or modify java action HD.JA_VerifyPassword (
+  Password: string not null,
+  HashedPassword: string not null
+) returns boolean
+imports $$
+import java.security.MessageDigest;
+import java.nio.charset.StandardCharsets;
+$$
+code $$
+if (Password == null || HashedPassword == null) {
+    return false;
+}
+int sep = HashedPassword.indexOf('$');
+if (sep < 0) {
+    return false;
+}
+String salt = HashedPassword.substring(0, sep);
+String storedHash = HashedPassword.substring(sep + 1);
+MessageDigest digest = MessageDigest.getInstance("SHA-256");
+byte[] hashBytes = digest.digest((salt + Password).getBytes(StandardCharsets.UTF_8));
+StringBuilder computed = new StringBuilder();
+for (byte b : hashBytes) {
+    computed.append(String.format("%02x", b));
+}
+return MessageDigest.isEqual(
+    storedHash.getBytes(StandardCharsets.UTF_8),
+    computed.toString().getBytes(StandardCharsets.UTF_8)
+);
+$$;
+
+-- ============================================================
+-- ACT_HashPassword：调用 Java Action 返回哈希字符串
+-- ============================================================
+
+create or modify microflow HD.ACT_HashPassword
+  ($Password: string)
+  returns string as $Hash
+  folder 'Security'
+{
+  if $Password = '' or length($Password) < 8 then
+    show message 'Password must be at least 8 characters.' type warning;
+    return '';
+  end if;
+  $Hash = call java action HD.JA_HashPassword(Password = $Password);
+  return $Hash;
+}
+/
+
+-- ============================================================
+-- ACT_VerifyPassword：调用 Java Action 验证密码
+-- ============================================================
+
+create or modify microflow HD.ACT_VerifyPassword
+  ($Password: string, $HashedPassword: string)
+  returns boolean as $IsValid
+  folder 'Security'
+{
+  $IsValid = call java action HD.JA_VerifyPassword(
+    Password       = $Password,
+    HashedPassword = $HashedPassword
+  );
+  return $IsValid;
+}
+/
+
+-- ============================================================
+-- 安全权限
+-- ============================================================
+
+grant execute on microflow HD.ACT_HashPassword    to HD.AgentRole, HD.ManagerRole;
+grant execute on microflow HD.ACT_VerifyPassword  to HD.AgentRole, HD.ManagerRole;

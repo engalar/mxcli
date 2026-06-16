@@ -5,7 +5,6 @@
 package executor
 
 import (
-	"strings"
 	"testing"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
@@ -44,29 +43,38 @@ func (r *jsActionRepoStub) GetContainerUUID(id model.ID) (model.ID, error) {
 	}
 	return "", nil
 }
+func (r *jsActionRepoStub) Create(parentUUID, containmentName string, jsa *genJSA.JavaScriptAction) error {
+	r.items = append(r.items, jsa)
+	if r.containerOf != nil {
+		r.containerOf[model.ID(jsa.ID())] = model.ID(parentUUID)
+	}
+	return nil
+}
 func (r *jsActionRepoStub) Update(jsa *genJSA.JavaScriptAction) error { return nil }
 
-func TestExecCreateJavaScriptAction_NotFoundError(t *testing.T) {
+func TestExecCreateJavaScriptAction_CreatesFromScratch(t *testing.T) {
 	mod := mkModule("MyModule")
 	h := mkHierarchy(mod)
+	mprDir := t.TempDir()
+	mprPath := mprDir + "/test.mpr"
 	mb := &mock.MockBackend{
 		IsConnectedFunc: func() bool { return true },
 		ListModulesFunc: func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
+		CreateJavaScriptActionGenFunc: func(parentUUID, containmentName string, jsa *genJSA.JavaScriptAction) error {
+			return nil
+		},
 	}
 	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
-	ctx.JavaScriptActions = &jsActionRepoStub{} // empty — action not in BSON
+	ctx.MprPath = mprPath
+	ctx.JavaScriptActions = &jsActionRepoStub{} // empty — will be created
 
 	stmt := &ast.CreateJavaScriptActionStmt{
 		Name:           ast.QualifiedName{Module: "MyModule", Name: "MyAction"},
 		CreateOrModify: true,
 		UserCode:       "return true;",
 	}
-	err := execCreateJavaScriptAction(ctx, stmt)
-	if err == nil {
-		t.Fatal("expected error when JS action not found in BSON")
-	}
-	if !strings.Contains(err.Error(), "MyAction") {
-		t.Errorf("error = %q, want to mention action name", err.Error())
+	if err := execCreateJavaScriptAction(ctx, stmt); err != nil {
+		t.Fatalf("expected success (create from scratch), got: %v", err)
 	}
 }
 

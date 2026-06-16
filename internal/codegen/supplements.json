@@ -76,6 +76,8 @@
     "PageForSpecialization.page": "Form",
     "*.outputVariableName": "VariableName",
     "RetrieveAction.outputVariableName": "ResultVariableName",
+    "JavaScriptActionParameterMapping.parameter": "Parameter",
+    "JavaScriptActionParameter.actionParameterType": "ParameterType",
     "MicroflowParameter.parameterType": "VariableType",
     "MicroflowCallAction.outputVariableName": "ResultVariableName",
     "JavaActionCallAction.outputVariableName": "ResultVariableName",
@@ -274,6 +276,12 @@
         "name": "size",
         "kind": "Primitive",
         "primitive_type": "String"
+      }
+    ],
+    "JavaScriptAction": [
+      {
+        "name": "parameters",
+        "kind": "PartList"
       }
     ],
     "JumpToActivity": [],
@@ -518,6 +526,7 @@
   "part_list_version2_fields": [
     "JavaAction.parameters",
     "JavaAction.typeParameters",
+    "JavaScriptAction.parameters",
     "ProjectSecurity.demoUsers"
   ]
 }

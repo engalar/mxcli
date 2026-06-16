@@ -180,7 +180,7 @@ func TestWriteJavaScriptActionSource_CreatesFileWithAllSections(t *testing.T) {
 	extraCode := "function helper() { return 42; }"
 	userCode := "return helper();"
 
-	if err := writeJavaScriptActionSource(mprPath, "MyModule", "MyAction", imports, extraCode, userCode); err != nil {
+	if err := writeJavaScriptActionSource(mprPath, "MyModule", "MyAction", imports, extraCode, userCode, []string{"base64"}); err != nil {
 		t.Fatalf("writeJavaScriptActionSource: %v", err)
 	}
 
@@ -227,7 +227,7 @@ func TestWriteJavaScriptActionSource_EmptySectionsOmitted(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := writeJavaScriptActionSource(mprPath, "Mod", "Act", "", "", "throw new Error('not implemented');"); err != nil {
+	if err := writeJavaScriptActionSource(mprPath, "Mod", "Act", "", "", "throw new Error('not implemented');", nil); err != nil {
 		t.Fatalf("writeJavaScriptActionSource: %v", err)
 	}
 

@@ -6,10 +6,9 @@ import (
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
 	genJA "github.com/mendixlabs/mxcli/modelsdk/gen/javaactions"
-	genJSA "github.com/mendixlabs/mxcli/modelsdk/gen/javascriptactions"
 )
 
-// JavaBackend provides Java and JavaScript action operations.
+// JavaBackend provides Java action operations.
 //
 // Stage 3.3.2.E1 retired the sdk-typed surface entirely. All consumers
 // use the gen-typed siblings. ID-/string-keyed file operations
@@ -28,7 +27,4 @@ type JavaBackend interface {
 	CreateJavaActionGen(parentUUID, containmentName string, ja *genJA.JavaAction) error
 	UpdateJavaActionGen(ja *genJA.JavaAction) error
 	WriteJavaSourceFileGen(moduleName, actionName string, javaCode string, params []*genJA.JavaActionParameter, returnType element.Element, extraImports []string, extraCode string) error
-	ListJavaScriptActionsGen() ([]*genJSA.JavaScriptAction, error)
-	ReadJavaScriptActionByNameGen(qualifiedName string) (*genJSA.JavaScriptAction, error)
-	UpdateJavaScriptActionGen(jsa *genJSA.JavaScriptAction) error
 }

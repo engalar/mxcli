@@ -35,6 +35,7 @@ type JavaScriptAction struct {
 	modelerActionInfo       *property.Part[element.Element]
 	actionParameters        *property.PartList[element.Element]
 	platform                *property.Enum[string]
+	parameters              *property.PartList[element.Element]
 }
 
 // Name returns the value of the name property.
@@ -147,6 +148,21 @@ func (o *JavaScriptAction) SetPlatform(v string) {
 	o.platform.Set(v)
 }
 
+// ParametersItems returns the value of the parameters property.
+func (o *JavaScriptAction) ParametersItems() []element.Element {
+	return o.parameters.Items()
+}
+
+// AddParameters appends a child element to the parameters list.
+func (o *JavaScriptAction) AddParameters(v element.Element) {
+	o.parameters.Append(v)
+}
+
+// RemoveParameters removes the element at the given index from the parameters list.
+func (o *JavaScriptAction) RemoveParameters(index int) {
+	o.parameters.Remove(index)
+}
+
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 // NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *JavaScriptAction) InitFromRaw(raw bson.Raw) {
@@ -178,6 +194,11 @@ func (o *JavaScriptAction) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Platform"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
 			o.platform.SetFromDecode(s)
+		}
+	}
+	if children, err := codec.DecodeChildren(raw, "Parameters"); err == nil {
+		for _, child := range children {
+			o.parameters.AppendFromDecode(child)
 		}
 	}
 }
@@ -249,7 +270,7 @@ func (o *JavaScriptActionParameter) SetIsRequired(v bool) {
 // NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *JavaScriptActionParameter) InitFromRaw(raw bson.Raw) {
 	o.name.Init(raw)
-	if child, err := codec.DecodeChild(raw, "ActionParameterType"); err == nil {
+	if child, err := codec.DecodeChild(raw, "ParameterType"); err == nil {
 		o.actionParameterType.SetFromDecode(child)
 	}
 	o.description.Init(raw)
@@ -313,7 +334,9 @@ func initJavaScriptAction() *JavaScriptAction {
 	o.actionParameters.Bind(&o.Base, 8)
 	o.platform = property.NewEnum[string]("Platform")
 	o.platform.Bind(&o.Base, 9)
-	o.SetProperties([]element.Property{o.name, o.documentation, o.excluded, o.exportLevel, o.actionTypeParameters, o.actionReturnType, o.actionDefaultReturnName, o.modelerActionInfo, o.actionParameters, o.platform})
+	o.parameters = property.NewPartListV2[element.Element]("Parameters")
+	o.parameters.Bind(&o.Base, 10)
+	o.SetProperties([]element.Property{o.name, o.documentation, o.excluded, o.exportLevel, o.actionTypeParameters, o.actionReturnType, o.actionDefaultReturnName, o.modelerActionInfo, o.actionParameters, o.platform, o.parameters})
 	return o
 }
 
@@ -334,7 +357,7 @@ func initJavaScriptActionParameter() *JavaScriptActionParameter {
 	o.SetTypeName("JavaScriptActions$JavaScriptActionParameter")
 	o.name = property.NewPrimitive[string]("Name", property.DecodeString)
 	o.name.Bind(&o.Base, 0)
-	o.actionParameterType = property.NewPart[element.Element]("ActionParameterType")
+	o.actionParameterType = property.NewPart[element.Element]("ParameterType")
 	o.actionParameterType.Bind(&o.Base, 1)
 	o.description = property.NewPrimitive[string]("Description", property.DecodeString)
 	o.description.Bind(&o.Base, 2)

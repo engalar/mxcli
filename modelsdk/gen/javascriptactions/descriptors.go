@@ -20,13 +20,14 @@ func init() {
 			{Name: "modelerActionInfo", BSONKey: "ModelerActionInfo", Kind: codec.PropKindPart, RefType: ""},
 			{Name: "actionParameters", BSONKey: "ActionParameters", Kind: codec.PropKindPartList, RefType: ""},
 			{Name: "platform", BSONKey: "Platform", Kind: codec.PropKindEnum, RefType: ""},
+			{Name: "parameters", BSONKey: "Parameters", Kind: codec.PropKindPartList, RefType: ""},
 		},
 	})
 	codec.DefaultDescRegistry.Register("JavaScriptActions$JavaScriptActionParameter", &codec.TypeDesc{
 		TypeName: "JavaScriptActions$JavaScriptActionParameter",
 		Properties: []codec.PropDesc{
 			{Name: "name", BSONKey: "Name", Kind: codec.PropKindString, RefType: ""},
-			{Name: "actionParameterType", BSONKey: "ActionParameterType", Kind: codec.PropKindPart, RefType: ""},
+			{Name: "actionParameterType", BSONKey: "ParameterType", Kind: codec.PropKindPart, RefType: ""},
 			{Name: "description", BSONKey: "Description", Kind: codec.PropKindString, RefType: ""},
 			{Name: "category", BSONKey: "Category", Kind: codec.PropKindString, RefType: ""},
 			{Name: "isRequired", BSONKey: "IsRequired", Kind: codec.PropKindBool, RefType: ""},

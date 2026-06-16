@@ -96,16 +96,14 @@ type WorkflowWriter interface {
 	DeleteWorkflow(id model.ID) error
 }
 
-// JavaActionReader provides read-only Java/JavaScript action queries.
+// JavaActionReader provides read-only Java action queries.
 type JavaActionReader interface {
 	ListJavaActionsGen() ([]*genJA.JavaAction, error)
 	ReadJavaActionByNameGen(qualifiedName string) (*genJA.JavaAction, error)
-	ListJavaScriptActionsGen() ([]*genJSA.JavaScriptAction, error)
-	ReadJavaScriptActionByNameGen(qualifiedName string) (*genJSA.JavaScriptAction, error)
 	ReadJavaSourceFile(moduleName, actionName string) (string, error)
 }
 
-// JavaActionWriter provides Java/JavaScript action mutations.
+// JavaActionWriter provides Java action mutations.
 type JavaActionWriter interface {
 	DeleteJavaAction(id model.ID) error
 	DeleteJavaSourceFile(moduleName, actionName string) error
@@ -113,6 +111,17 @@ type JavaActionWriter interface {
 	CreateJavaActionGen(parentUUID, containmentName string, ja *genJA.JavaAction) error
 	UpdateJavaActionGen(ja *genJA.JavaAction) error
 	WriteJavaSourceFileGen(moduleName, actionName string, javaCode string, params []*genJA.JavaActionParameter, returnType element.Element, extraImports []string, extraCode string) error
+}
+
+// JavaScriptActionReader provides read-only JavaScript action queries.
+type JavaScriptActionReader interface {
+	ListJavaScriptActionsGen() ([]*genJSA.JavaScriptAction, error)
+	ReadJavaScriptActionByNameGen(qualifiedName string) (*genJSA.JavaScriptAction, error)
+}
+
+// JavaScriptActionWriter provides JavaScript action mutations.
+type JavaScriptActionWriter interface {
+	CreateJavaScriptActionGen(parentUUID, containmentName string, jsa *genJSA.JavaScriptAction) error
 	UpdateJavaScriptActionGen(jsa *genJSA.JavaScriptAction) error
 }
 
