@@ -95,6 +95,21 @@ run_mxcli_local() {
     fi
 }
 
+# stop_runtime sends M2EE stop to any running Mendix runtime on the default
+# admin port and waits up to 5 seconds for it to exit.
+stop_runtime() {
+    if curl -s --max-time 1 "http://localhost:8090/" >/dev/null 2>&1; then
+        echo "  stopping running runtime (M2EE :8090)..."
+        curl -s -X POST "http://localhost:8090/stop" >/dev/null 2>&1 || true
+        local i=0
+        while [ $i -lt 10 ]; do
+            sleep 0.5
+            curl -s --max-time 1 "http://localhost:8090/" >/dev/null 2>&1 || return 0
+            i=$((i+1))
+        done
+    fi
+}
+
 cleanup() {
     [ -n "$BASELINE" ] && rm -f "$BASELINE"
     echo
@@ -112,9 +127,7 @@ if step_enabled new; then
     # On Windows, file handles held by the Java process prevent rm -rf.
     if [ -d "$REPO_ROOT/$PROJECT_NAME" ]; then
         if ! rm -rf "$REPO_ROOT/$PROJECT_NAME" 2>/dev/null; then
-            echo "  runtime still running — sending stop via M2EE admin API..."
-            curl -s -X POST "http://localhost:8090/stop" >/dev/null 2>&1 || true
-            sleep 3
+            stop_runtime
             if ! rm -rf "$REPO_ROOT/$PROJECT_NAME" 2>/dev/null; then
                 echo "ERROR: cannot delete $REPO_ROOT/$PROJECT_NAME — a process has it locked." >&2
                 echo "  Close Studio Pro or any app with HelpDeskE2E open, then retry." >&2
@@ -184,6 +197,7 @@ fi
 # ── step 5: run ────────────────────────────────────────────────────────────
 
 if step_enabled run; then
+    stop_runtime
     echo
     echo "=== Human validation ==="
     echo "  URL:      http://localhost:8080"
