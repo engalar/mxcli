@@ -60,12 +60,6 @@ type MprBackend struct {
 	// transactions; the whole script commits atomically via a single BatchWrite
 	// at the end — see backend.ScriptTransaction.
 	scriptBuf *ScriptBuffer
-	// scriptDirtyDMs accumulates in-memory DomainModel mutations during a
-	// ScriptTransaction. Entity/association write methods load the DM once,
-	// modify it in-place, and store it here — deferring UpdateDomainModelGen
-	// until FlushScriptDirtyDMs is called (one serialisation per module, not N).
-	// Nil outside a ScriptTransaction; cleared by Commit/Rollback.
-	scriptDirtyDMs map[string]*genDm.DomainModel
 	// unitBuf is non-nil when an ImportSession is active.
 	// writeUnitContents routes writes through the buffer instead of opening
 	// individual SQLite transactions. Reads are satisfied from the overlay.

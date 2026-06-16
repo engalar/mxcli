@@ -16,39 +16,9 @@ import (
 	modelsdkmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
 )
 
-// getOrLoadScriptDM returns the DomainModel for domainModelID from the
-// per-script dirty-DM map (if already loaded during this script) or loads
-// it fresh from the backend. Only used when a ScriptTransaction is active.
-func (b *MprBackend) getOrLoadScriptDM(domainModelID model.ID) (*genDm.DomainModel, error) {
-	if b.scriptDirtyDMs != nil {
-		if dm, ok := b.scriptDirtyDMs[string(domainModelID)]; ok {
-			return dm, nil
-		}
-	}
-	dm, err := b.GetDomainModelByIDGen(domainModelID)
-	if err != nil {
-		return nil, err
-	}
-	if b.scriptDirtyDMs != nil && dm != nil {
-		b.scriptDirtyDMs[string(domainModelID)] = dm
-	}
-	return dm, nil
-}
-
 func (b *MprBackend) CreateEntityGen(domainModelID model.ID, entity *genDm.Entity) error {
 	if entity == nil {
 		return fmt.Errorf("CreateEntityGen: nil entity")
-	}
-	if b.scriptDirtyDMs != nil {
-		// Deferred write: accumulate in memory, flush at FlushScriptDirtyDMs.
-		dm, err := b.getOrLoadScriptDM(domainModelID)
-		if err != nil {
-			return fmt.Errorf("CreateEntityGen: load domain model: %w", err)
-		}
-		assignEntityIDsGen(entity)
-		dm.AddEntities(entity)
-		b.scriptDirtyDMs[string(domainModelID)] = dm
-		return nil
 	}
 	dm, err := b.GetDomainModelByIDGen(domainModelID)
 	if err != nil {
@@ -62,24 +32,6 @@ func (b *MprBackend) CreateEntityGen(domainModelID model.ID, entity *genDm.Entit
 func (b *MprBackend) UpdateEntityGen(domainModelID model.ID, entity *genDm.Entity) error {
 	if entity == nil {
 		return fmt.Errorf("UpdateEntityGen: nil entity")
-	}
-	if b.scriptDirtyDMs != nil {
-		// Deferred write: accumulate in memory, flush at FlushScriptDirtyDMs.
-		dm, err := b.getOrLoadScriptDM(domainModelID)
-		if err != nil {
-			return fmt.Errorf("UpdateEntityGen: load domain model: %w", err)
-		}
-		assignEntityIDsGen(entity)
-		for i, candidateElem := range dm.EntitiesItems() {
-			candidate, ok := candidateElem.(*genDm.Entity)
-			if ok && candidate != nil && candidate.ID() == entity.ID() {
-				dm.RemoveEntities(i)
-				dm.AddEntities(entity)
-				b.scriptDirtyDMs[string(domainModelID)] = dm
-				return nil
-			}
-		}
-		return fmt.Errorf("entity not found: %s", entity.ID())
 	}
 	dm, err := b.GetDomainModelByIDGen(domainModelID)
 	if err != nil {
@@ -166,19 +118,6 @@ func (b *MprBackend) moveEntityGen(sourceDMID, targetDMID model.ID, sourceModule
 func (b *MprBackend) CreateAssociationGen(domainModelID model.ID, assoc *genDm.Association) error {
 	if assoc == nil {
 		return fmt.Errorf("CreateAssociationGen: nil association")
-	}
-	if b.scriptDirtyDMs != nil {
-		dm, err := b.getOrLoadScriptDM(domainModelID)
-		if err != nil {
-			return fmt.Errorf("CreateAssociationGen: load domain model: %w", err)
-		}
-		assignElementIDGen(assoc)
-		assignElementIDGen(assoc.DeleteBehavior())
-		assignElementIDGen(assoc.Source())
-		assignElementIDGen(assoc.Capabilities())
-		dm.AddAssociations(assoc)
-		b.scriptDirtyDMs[string(domainModelID)] = dm
-		return nil
 	}
 	dm, err := b.GetDomainModelByIDGen(domainModelID)
 	if err != nil {
