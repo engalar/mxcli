@@ -2,12 +2,19 @@
 # scripts/validate-academy-capstone.sh
 # End-to-end validation of academy/zh/capstone-helpdesk reference implementation.
 #
-# Flow:
-#   1. Create fresh HelpDeskE2E project via mxcli new
-#   2. Batch-exec all 8 capstone MDL files
-#   3. Run mx check (Studio Pro-level BSON validation, baseline=0)
-#   4. Build PAD package via mxcli-local build
-#   5. Start runtime for human validation (blocks until Ctrl+C)
+# Steps:
+#   new    — rm -rf HelpDeskE2E + mxcli new (fresh project)
+#   exec   — mdlrun 8 MDL files
+#   check  — mx check (Studio Pro-level BSON validation, baseline=0)
+#   build  — mxcli-local build (PAD package)
+#   run    — mxcli-local run (blocks until Ctrl+C, human validation)
+#
+# Usage:
+#   ./validate-academy-capstone.sh                 # full run (all 5 steps)
+#   ./validate-academy-capstone.sh --from exec     # skip new,  run exec→check→build→run
+#   ./validate-academy-capstone.sh --from check    # skip new+exec, run check→build→run
+#   ./validate-academy-capstone.sh --from build    # skip new+exec+check, run build→run
+#   ./validate-academy-capstone.sh --from run      # just start the runtime
 #
 # Overrides:
 #   MXCLI=path/to/mxcli         use compiled binary instead of go run ./cmd/mxcli
@@ -23,17 +30,44 @@ PROJECT_NAME="HelpDeskE2E"
 MPR="$REPO_ROOT/$PROJECT_NAME/$PROJECT_NAME.mpr"
 CAPSTONE_DIR="$REPO_ROOT/academy/zh/capstone-helpdesk/参考实现"
 BASELINE=""
-SKIP_CREATE=0
+FROM_STEP="new"
 
 # Parse flags
 for arg in "$@"; do
     case "$arg" in
-        --skip-create) SKIP_CREATE=1 ;;
-        *) echo "unknown flag: $arg" >&2; exit 2 ;;
+        --from) ;;  # consumed by next iteration via shift; handled below
+        --from=*) FROM_STEP="${arg#--from=}" ;;
+        --skip-create) FROM_STEP="exec" ;;  # backwards compat
+        *) echo "unknown flag: $arg" >&2
+           echo "Usage: $0 [--from new|exec|check|build|run]" >&2
+           exit 2 ;;
     esac
 done
+# Handle "--from <value>" (two-token form)
+args=("$@")
+for i in "${!args[@]}"; do
+    if [ "${args[$i]}" = "--from" ] && [ $((i+1)) -lt ${#args[@]} ]; then
+        FROM_STEP="${args[$((i+1))]}"
+    fi
+done
+
+case "$FROM_STEP" in
+    new|exec|check|build|run) ;;
+    *) echo "ERROR: --from must be one of: new exec check build run" >&2; exit 2 ;;
+esac
 
 # ── helpers ────────────────────────────────────────────────────────────────
+
+step_enabled() {
+    local order="new exec check build run"
+    local pos_from pos_step i=0
+    for s in $order; do
+        [ "$s" = "$FROM_STEP" ] && pos_from=$i
+        [ "$s" = "$1" ]        && pos_step=$i
+        i=$((i+1))
+    done
+    [ "${pos_step:-99}" -ge "${pos_from:-0}" ]
+}
 
 # daemon-routed commands: new, exec, setup mxbuild
 run_mxcli() {
@@ -65,16 +99,11 @@ cleanup() {
 }
 trap cleanup EXIT
 
-# ── step 1: fresh project ──────────────────────────────────────────────────
+echo "=== validate-academy-capstone (from: $FROM_STEP) ==="
 
-echo "=== validate-academy-capstone ==="
-if [ "$SKIP_CREATE" -eq 1 ]; then
-    echo "  skipping project creation (--skip-create)"
-    if [ ! -f "$MPR" ]; then
-        echo "ERROR: --skip-create set but MPR not found: $MPR" >&2
-        exit 1
-    fi
-else
+# ── step 1: new ────────────────────────────────────────────────────────────
+
+if step_enabled new; then
     echo "  creating project $PROJECT_NAME ($MX_VERSION)..."
     # On Windows, Studio Pro or other tools may hold file handles on a previous
     # project directory. Detect this early and give a helpful message.
@@ -82,7 +111,7 @@ else
         if ! rm -rf "$REPO_ROOT/$PROJECT_NAME" 2>/dev/null; then
             echo "ERROR: cannot delete $REPO_ROOT/$PROJECT_NAME — a process has it locked." >&2
             echo "  Close Studio Pro (or any tool) that has HelpDeskE2E open, then retry." >&2
-            echo "  Or reuse the existing project: ./scripts/validate-academy-capstone.sh --skip-create" >&2
+            echo "  Or skip creation: $0 --from exec" >&2
             exit 1
         fi
     fi
@@ -93,43 +122,63 @@ else
         echo "ERROR: mxcli new failed — MPR not found: $MPR" >&2
         exit 1
     fi
+else
+    echo "  skipping new (--from $FROM_STEP)"
+    if [ ! -f "$MPR" ]; then
+        echo "ERROR: MPR not found: $MPR — run without --from to create it first." >&2
+        exit 1
+    fi
 fi
 
-# ── step 2: batch exec ────────────────────────────────────────────────────
+# ── step 2: exec ───────────────────────────────────────────────────────────
 
-echo "  exec 8 MDL files..."
-run_mdlrun -p "$MPR" \
-    "$CAPSTONE_DIR/01-domain.mdl" \
-    "$CAPSTONE_DIR/02-microflows.mdl" \
-    "$CAPSTONE_DIR/03-nanoflows.mdl" \
-    "$CAPSTONE_DIR/04-pages.mdl" \
-    "$CAPSTONE_DIR/05-security.mdl" \
-    "$CAPSTONE_DIR/06-kb.mdl" \
-    "$CAPSTONE_DIR/07-escalation.mdl" \
-    "$CAPSTONE_DIR/99-seed-data.mdl"
+if step_enabled exec; then
+    echo "  exec 8 MDL files..."
+    run_mdlrun -p "$MPR" \
+        "$CAPSTONE_DIR/01-domain.mdl" \
+        "$CAPSTONE_DIR/02-microflows.mdl" \
+        "$CAPSTONE_DIR/03-nanoflows.mdl" \
+        "$CAPSTONE_DIR/04-pages.mdl" \
+        "$CAPSTONE_DIR/05-security.mdl" \
+        "$CAPSTONE_DIR/06-kb.mdl" \
+        "$CAPSTONE_DIR/07-escalation.mdl" \
+        "$CAPSTONE_DIR/99-seed-data.mdl"
+else
+    echo "  skipping exec"
+fi
 
-# ── step 3: mx check ──────────────────────────────────────────────────────
+# ── step 3: check ──────────────────────────────────────────────────────────
 
-echo "  mx check..."
-MX_BIN=$(cd "$REPO_ROOT" && go run ./scripts/mx-path/main.go "$MX_VERSION")
-BASELINE=$(mktemp)
-echo 0 > "$BASELINE"
-mx_check_against_baseline "$MPR" "$BASELINE" "$MX_BIN"
+if step_enabled check; then
+    echo "  mx check..."
+    MX_BIN=$(cd "$REPO_ROOT" && go run ./scripts/mx-path/main.go "$MX_VERSION")
+    BASELINE=$(mktemp)
+    echo 0 > "$BASELINE"
+    mx_check_against_baseline "$MPR" "$BASELINE" "$MX_BIN"
+else
+    echo "  skipping mx check"
+fi
 
-# ── step 4: PAD build ─────────────────────────────────────────────────────
+# ── step 4: build ──────────────────────────────────────────────────────────
 
-echo "  building..."
-run_mxcli_local build -p "$MPR"
-echo "  build complete."
+if step_enabled build; then
+    echo "  building..."
+    run_mxcli_local build -p "$MPR"
+    echo "  build complete."
+else
+    echo "  skipping build"
+fi
 
-# ── step 5: human handoff ─────────────────────────────────────────────────
+# ── step 5: run ────────────────────────────────────────────────────────────
 
-echo
-echo "=== Human validation ==="
-echo "  URL:      http://localhost:8080"
-echo "  Customer: demo_customer@helpdesk.test / Demo12345678"
-echo "  Agent:    demo_agent@helpdesk.test    / Demo12345678"
-echo "  Manager:  demo_manager@helpdesk.test  / Demo12345678"
-echo
-echo "Starting runtime — Ctrl+C to stop."
-run_mxcli_local run -p "$MPR" --admin-password Admin1234
+if step_enabled run; then
+    echo
+    echo "=== Human validation ==="
+    echo "  URL:      http://localhost:8080"
+    echo "  Customer: demo_customer@helpdesk.test / Demo12345678"
+    echo "  Agent:    demo_agent@helpdesk.test    / Demo12345678"
+    echo "  Manager:  demo_manager@helpdesk.test  / Demo12345678"
+    echo
+    echo "Starting runtime — Ctrl+C to stop."
+    run_mxcli_local run -p "$MPR" --admin-password Admin1234
+fi
