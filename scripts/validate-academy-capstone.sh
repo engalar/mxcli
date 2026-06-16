@@ -154,10 +154,19 @@ fi
 
 if step_enabled check; then
     echo "  mx check..."
-    MX_BIN=$(cd "$REPO_ROOT" && go run ./scripts/mx-path/main.go "$MX_VERSION")
+    MX_BIN=$(cd "$REPO_ROOT" && go run ./scripts/mx-path/main.go "$MX_VERSION") || {
+        echo "  FAIL: could not resolve mx $MX_VERSION binary" >&2
+        echo "  Debug: cd $REPO_ROOT && go run ./scripts/mx-path/main.go $MX_VERSION" >&2
+        exit 1
+    }
+    echo "  mx binary: $MX_BIN"
     BASELINE=$(mktemp)
     echo 0 > "$BASELINE"
-    mx_check_against_baseline "$MPR" "$BASELINE" "$MX_BIN"
+    mx_check_against_baseline "$MPR" "$BASELINE" "$MX_BIN" || {
+        rc=$?
+        echo "  FAIL: mx_check_against_baseline returned $rc" >&2
+        exit $rc
+    }
 else
     echo "  skipping mx check"
 fi
