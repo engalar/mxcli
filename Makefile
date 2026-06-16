@@ -56,7 +56,7 @@ TEST_PARALLEL ?= $(_85PCT)
 # Hard ceiling on how long the full test suite may run.
 TEST_TIMEOUT ?= 180s
 
-.PHONY: build mdlrun build-local install-local build-debug release release-launcher release-daemon release-local-bins clean test _test-inner test-mdl report report-bench report-reset-baseline bench-baseline grammar sync-skills sync-commands sync-lint-rules sync-changelog sync-examples sync-all docs documentation docs-site docs-serve source-tree sbom sbom-report lint lint-go fmt vet update-helpdesk-golden test-helpdesk-regression setup install install-daemon test-section-check update-snapshots validate-snapshots
+.PHONY: build mdlrun build-local install-local build-debug release release-launcher release-daemon release-local-bins clean test _test-inner test-mdl report report-bench report-reset-baseline bench-baseline grammar sync-skills sync-commands sync-lint-rules sync-changelog sync-examples sync-all docs documentation docs-site docs-serve source-tree sbom sbom-report lint lint-go fmt vet update-helpdesk-golden test-helpdesk-regression setup install install-daemon test-section-check update-snapshots validate-snapshots validate-academy-capstone
 
 setup:
 	git config core.hooksPath .githooks
@@ -462,6 +462,10 @@ validate-snapshots: build
 	    -run '^TestHelpdeskGolden_DescribeSnapshot_Idempotent$$' \
 	    -v -timeout 5m || exit 1; \
 	done
+
+## validate-academy-capstone: full e2e validation of academy/zh capstone reference implementation
+validate-academy-capstone:
+	@./scripts/validate-academy-capstone.sh
 
 # Run both helpdesk regression layers (BSON + describe MDL).
 # Requires testdata/helpdesk-golden-11.6.6/ to exist (run update-helpdesk-golden first).
