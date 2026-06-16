@@ -628,3 +628,64 @@ func bsonDocToMap(v any) map[string]any {
 	}
 	return nil
 }
+
+// TestUpdateEntityGen_ScriptTransaction_BatchesAllUpdates verifies that when
+// multiple entities are created/updated in the same domain model within a
+// ScriptTransaction, all updates survive in the final committed result.
+//
+// Without the domain-model cache optimization, each CreateEntityGen reads the
+// domain model fresh (discarding previous in-memory mutations that are buffered
+// but not yet committed), so entity N overwrites entity N-1 in the DM write.
+// The cache ensures all mutations accumulate in one in-memory DM object.
+func TestUpdateEntityGen_ScriptTransaction_BatchesAllUpdates(t *testing.T) {
+	mprPath, dmID := makeDomainModelTestMPR(t)
+
+	b := New()
+	if err := b.Connect(mprPath); err != nil {
+		t.Fatalf("Connect: %v", err)
+	}
+	defer b.Disconnect()
+
+	tx, err := b.BeginScriptTransaction()
+	if err != nil {
+		t.Fatalf("BeginScriptTransaction: %v", err)
+	}
+
+	names := []string{"Alpha", "Beta", "Gamma"}
+	for _, name := range names {
+		e := genDm.NewEntity()
+		e.SetName(name)
+		ng := genDm.NewNoGeneralization()
+		ng.SetPersistable(true)
+		e.SetGeneralization(ng)
+		if err := b.CreateEntityGen(dmID, e); err != nil {
+			t.Fatalf("CreateEntityGen(%s): %v", name, err)
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		t.Fatalf("Commit: %v", err)
+	}
+
+	dm, err := b.GetDomainModelByIDGen(dmID)
+	if err != nil {
+		t.Fatalf("GetDomainModelByIDGen: %v", err)
+	}
+
+	got := len(dm.EntitiesItems())
+	if got != 3 {
+		t.Errorf("after commit: got %d entities, want 3", got)
+	}
+
+	names2 := map[string]bool{}
+	for _, item := range dm.EntitiesItems() {
+		if e, ok := item.(*genDm.Entity); ok {
+			names2[e.Name()] = true
+		}
+	}
+	for _, want := range names {
+		if !names2[want] {
+			t.Errorf("entity %q missing from committed domain model; found: %v", want, names2)
+		}
+	}
+}

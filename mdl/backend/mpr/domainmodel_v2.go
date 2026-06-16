@@ -16,11 +16,27 @@ import (
 	modelsdkmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
 )
 
+// getOrLoadDomainModelForScript returns the DomainModel for domainModelID,
+// using the per-script in-memory cache when a ScriptTransaction is active.
+// This avoids repeated BSON parsing when multiple entities in the same module
+// are created/updated within one script (O(N) parses → O(1)).
+func (b *MprBackend) getOrLoadDomainModelForScript(domainModelID model.ID) (*genDm.DomainModel, error) {
+	if dm := b.scriptDMCacheGet(string(domainModelID)); dm != nil {
+		return dm, nil
+	}
+	dm, err := b.GetDomainModelByIDGen(domainModelID)
+	if err != nil {
+		return nil, err
+	}
+	b.scriptDMCachePut(string(domainModelID), dm)
+	return dm, nil
+}
+
 func (b *MprBackend) CreateEntityGen(domainModelID model.ID, entity *genDm.Entity) error {
 	if entity == nil {
 		return fmt.Errorf("CreateEntityGen: nil entity")
 	}
-	dm, err := b.GetDomainModelByIDGen(domainModelID)
+	dm, err := b.getOrLoadDomainModelForScript(domainModelID)
 	if err != nil {
 		return fmt.Errorf("CreateEntityGen: load domain model: %w", err)
 	}
@@ -33,7 +49,7 @@ func (b *MprBackend) UpdateEntityGen(domainModelID model.ID, entity *genDm.Entit
 	if entity == nil {
 		return fmt.Errorf("UpdateEntityGen: nil entity")
 	}
-	dm, err := b.GetDomainModelByIDGen(domainModelID)
+	dm, err := b.getOrLoadDomainModelForScript(domainModelID)
 	if err != nil {
 		return fmt.Errorf("UpdateEntityGen: load domain model: %w", err)
 	}
@@ -119,7 +135,7 @@ func (b *MprBackend) CreateAssociationGen(domainModelID model.ID, assoc *genDm.A
 	if assoc == nil {
 		return fmt.Errorf("CreateAssociationGen: nil association")
 	}
-	dm, err := b.GetDomainModelByIDGen(domainModelID)
+	dm, err := b.getOrLoadDomainModelForScript(domainModelID)
 	if err != nil {
 		return fmt.Errorf("CreateAssociationGen: load domain model: %w", err)
 	}
