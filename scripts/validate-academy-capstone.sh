@@ -108,14 +108,19 @@ echo "=== validate-academy-capstone (from: $FROM_STEP) ==="
 
 if step_enabled new; then
     echo "  creating project $PROJECT_NAME ($MX_VERSION)..."
-    # On Windows, Studio Pro or other tools may hold file handles on a previous
-    # project directory. Detect this early and give a helpful message.
+    # Stop any running Mendix runtime on the default admin port before deletion.
+    # On Windows, file handles held by the Java process prevent rm -rf.
     if [ -d "$REPO_ROOT/$PROJECT_NAME" ]; then
         if ! rm -rf "$REPO_ROOT/$PROJECT_NAME" 2>/dev/null; then
-            echo "ERROR: cannot delete $REPO_ROOT/$PROJECT_NAME — a process has it locked." >&2
-            echo "  Close Studio Pro (or any tool) that has HelpDeskE2E open, then retry." >&2
-            echo "  Or skip creation: $0 --from exec" >&2
-            exit 1
+            echo "  runtime still running — sending stop via M2EE admin API..."
+            curl -s -X POST "http://localhost:8090/stop" >/dev/null 2>&1 || true
+            sleep 3
+            if ! rm -rf "$REPO_ROOT/$PROJECT_NAME" 2>/dev/null; then
+                echo "ERROR: cannot delete $REPO_ROOT/$PROJECT_NAME — a process has it locked." >&2
+                echo "  Close Studio Pro or any app with HelpDeskE2E open, then retry." >&2
+                echo "  Or skip creation: $0 --from exec" >&2
+                exit 1
+            fi
         fi
     fi
     # mxcli new step 4 (Linux devcontainer binary) may fail on Windows — tolerate it
