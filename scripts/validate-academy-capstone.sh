@@ -44,6 +44,11 @@ run_mxcli() {
     fi
 }
 
+# multi-file MDL execution (cmd/mdlrun supports multiple positional file args)
+run_mdlrun() {
+    (cd "$REPO_ROOT" && go run ./cmd/mdlrun "$@")
+}
+
 # local runtime commands: build, run — bypasses launcher entirely
 run_mxcli_local() {
     if [ -n "${MXCLI_LOCAL:-}" ]; then
@@ -84,7 +89,7 @@ fi
 # ── step 2: batch exec ────────────────────────────────────────────────────
 
 echo "  exec 8 MDL files..."
-run_mxcli exec \
+run_mdlrun -p "$MPR" \
     "$CAPSTONE_DIR/01-domain.mdl" \
     "$CAPSTONE_DIR/02-microflows.mdl" \
     "$CAPSTONE_DIR/03-nanoflows.mdl" \
@@ -92,8 +97,7 @@ run_mxcli exec \
     "$CAPSTONE_DIR/05-security.mdl" \
     "$CAPSTONE_DIR/06-kb.mdl" \
     "$CAPSTONE_DIR/07-escalation.mdl" \
-    "$CAPSTONE_DIR/99-seed-data.mdl" \
-    -p "$MPR"
+    "$CAPSTONE_DIR/99-seed-data.mdl"
 
 # ── step 3: mx check ──────────────────────────────────────────────────────
 
