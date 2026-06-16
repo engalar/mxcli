@@ -23,9 +23,9 @@ func TestRoundtripMicroflow_CallWithUnifiedParams(t *testing.T) {
 
 	// First create a simple microflow to call
 	createMfMDL := `create microflow ` + microflowName + ` ($Input: String) returns String
-	begin
+	{
 		return $Input;
-	end;`
+	}`
 
 	if err := env.executeMDL(createMfMDL); err != nil {
 		t.Fatalf("Failed to create microflow: %v", err)
@@ -36,10 +36,10 @@ func TestRoundtripMicroflow_CallWithUnifiedParams(t *testing.T) {
 	env.registerCleanup("microflow", callerName)
 
 	createCallerMDL := `create microflow ` + callerName + ` () returns String
-	begin
+	{
 		$Result = call microflow ` + microflowName + ` (Input = 'Hello World');
 		return $Result;
-	end;`
+	}`
 
 	if err := env.executeMDL(createCallerMDL); err != nil {
 		t.Fatalf("Failed to create calling microflow with unified param syntax: %v", err)
@@ -75,10 +75,10 @@ func TestRoundtripMicroflow_LogWithTemplate(t *testing.T) {
 
 	// Create microflow with LOG using WITH syntax
 	createMDL := `create microflow ` + microflowName + ` ($OrderNumber: String, $CustomerName: String) returns Boolean
-	begin
+	{
 		log info node 'OrderService' 'Processing order {1} for customer {2}' with ({1} = $OrderNumber, {2} = $CustomerName);
 		return true;
-	end;`
+	}`
 
 	if err := env.executeMDL(createMDL); err != nil {
 		t.Fatalf("Failed to create microflow with log template: %v", err)
@@ -134,10 +134,10 @@ func TestRoundtripMicroflow_LogWithNodeExpression(t *testing.T) {
 	env.registerCleanup("microflow", microflowName)
 
 	createMDL := `CREATE MICROFLOW ` + microflowName + ` () RETURNS Boolean
-	BEGIN
+	{
 		LOG INFO NODE @` + testModule + `.SecurityLogNode 'User added';
 		RETURN true;
-	END;`
+	}`
 
 	if err := env.executeMDL(createMDL); err != nil {
 		t.Fatalf("Failed to create microflow with node expression: %v", err)
@@ -200,7 +200,7 @@ func TestRoundtripMicroflow_IfElseWithBody(t *testing.T) {
 
 	mfName := testModule + ".RT_IfElseBody"
 	createMDL := `create microflow ` + mfName + ` ($Count: Integer) returns String
-begin
+{
   declare $Result String = 'unknown';
   if $Count > 10 then
     set $Result = 'high';
@@ -208,7 +208,7 @@ begin
     set $Result = 'low';
   end if;
   return $Result;
-end;`
+}`
 
 	assertMicroflowContains(t, env, mfName, createMDL,
 		[]string{"if", "then", "else", "end if", "'high'", "'low'", "return"},
@@ -224,7 +224,7 @@ func TestRoundtripMicroflow_NestedIfElse(t *testing.T) {
 
 	mfName := testModule + ".RT_NestedIf"
 	createMDL := `create microflow ` + mfName + ` ($X: Integer) returns String
-begin
+{
   declare $Msg String = 'none';
   if $X > 0 then
     if $X > 100 then
@@ -236,7 +236,7 @@ begin
     set $Msg = 'negative';
   end if;
   return $Msg;
-end;`
+}`
 
 	if err := env.executeMDL(createMDL); err != nil {
 		t.Fatalf("Failed to create microflow: %v", err)
@@ -270,12 +270,12 @@ func TestRoundtripMicroflow_IfWithoutElse(t *testing.T) {
 
 	mfName := testModule + ".RT_IfNoElse"
 	createMDL := `create microflow ` + mfName + ` ($Active: Boolean) returns Boolean
-begin
+{
   if $Active then
     log info node 'Test' 'Item is active';
   end if;
   return $Active;
-end;`
+}`
 
 	assertMicroflowContains(t, env, mfName, createMDL,
 		[]string{"if", "end if", "log info", "return"},
@@ -290,11 +290,11 @@ func TestRoundtripMicroflow_LinearDeclareSetReturn(t *testing.T) {
 
 	mfName := testModule + ".RT_LinearFlow"
 	createMDL := `create microflow ` + mfName + ` () returns Integer
-begin
+{
   declare $Value Integer = 0;
   set $Value = 42;
   return $Value;
-end;`
+}`
 
 	assertMicroflowContains(t, env, mfName, createMDL,
 		[]string{"declare", "$Value", "Integer", "set $Value = 42", "return"},
@@ -314,12 +314,12 @@ func TestRoundtripMicroflow_CreateChangeDelete(t *testing.T) {
 
 	mfName := testModule + ".RT_CRUD"
 	createMDL := `create microflow ` + mfName + ` () returns Boolean
-begin
+{
   $Item = create RoundtripTest.MfTestItem (Name = 'test');
   change $Item (Name = 'updated');
   delete $Item;
   return true;
-end;`
+}`
 
 	assertMicroflowContains(t, env, mfName, createMDL,
 		[]string{"create RoundtripTest.MfTestItem", "change $Item", "delete $Item", "return"},
@@ -339,10 +339,10 @@ func TestRoundtripMicroflow_Retrieve(t *testing.T) {
 
 	mfName := testModule + ".RT_Retrieve"
 	createMDL := `create microflow ` + mfName + ` () returns Boolean
-begin
+{
   retrieve $Items from RoundtripTest.MfTestItem;
   return true;
-end;`
+}`
 
 	assertMicroflowContains(t, env, mfName, createMDL,
 		[]string{"retrieve", "RoundtripTest.MfTestItem", "return"},
@@ -362,11 +362,11 @@ func TestRoundtripMicroflow_RetrieveWithLimit(t *testing.T) {
 
 	mfName := testModule + ".RT_RetrieveLimit"
 	createMDL := `create microflow ` + mfName + ` () returns Boolean
-begin
+{
   retrieve $Item from RoundtripTest.MfTestItem
     limit 1;
   return true;
-end;`
+}`
 
 	assertMicroflowContains(t, env, mfName, createMDL,
 		[]string{"retrieve", "RoundtripTest.MfTestItem", "limit 1", "return"},
@@ -386,12 +386,12 @@ func TestRoundtripMicroflow_RetrieveWithLimitOffset(t *testing.T) {
 
 	mfName := testModule + ".RT_RetrieveLimitOffset"
 	createMDL := `create microflow ` + mfName + ` () returns Boolean
-begin
+{
   retrieve $Items from RoundtripTest.MfTestItem
     limit 2
     offset 3;
   return true;
-end;`
+}`
 
 	assertMicroflowContains(t, env, mfName, createMDL,
 		[]string{"retrieve", "RoundtripTest.MfTestItem", "limit 2", "offset 3", "return"},
@@ -411,11 +411,11 @@ func TestRoundtripMicroflow_RetrieveWithSortBy(t *testing.T) {
 
 	mfName := testModule + ".RT_RetrieveSort"
 	createMDL := `create microflow ` + mfName + ` () returns Boolean
-begin
+{
   retrieve $Items from RoundtripTest.MfTestItem
     sort by RoundtripTest.MfTestItem.Name asc;
   return true;
-end;`
+}`
 
 	assertMicroflowContains(t, env, mfName, createMDL,
 		[]string{"retrieve", "RoundtripTest.MfTestItem", "sort by", "Name asc", "return"},
@@ -435,14 +435,14 @@ func TestRoundtripMicroflow_RetrieveWithWhereSortLimitOffset(t *testing.T) {
 
 	mfName := testModule + ".RT_RetrieveFull"
 	createMDL := `create microflow ` + mfName + ` () returns Boolean
-begin
+{
   retrieve $Items from RoundtripTest.MfTestItem
     where (starts-with(Name, 'a'))
     sort by RoundtripTest.MfTestItem.Name asc
     limit 2
     offset 3;
   return true;
-end;`
+}`
 
 	assertMicroflowContains(t, env, mfName, createMDL,
 		[]string{
@@ -475,14 +475,14 @@ func TestRoundtripMicroflow_LoopWithMultipleBodyActivities(t *testing.T) {
 
 	mfName := testModule + ".RT_LoopMultiBody"
 	createMDL := `create microflow ` + mfName + ` () returns Nothing
-begin
+{
   retrieve $Items from RoundtripTest.MfTestItem;
-  loop $Item in $Items begin
+  loop $Item in $Items {
     change $Item (Processed = true);
     commit $Item;
-  end loop;
+  }
   return;
-end;`
+}`
 
 	// BOTH "change" and "commit" must appear in the describe output.
 	assertMicroflowContains(t, env, mfName, createMDL,
@@ -502,13 +502,13 @@ func TestRoundtripMicroflow_LoopWithBody(t *testing.T) {
 
 	mfName := testModule + ".RT_Loop"
 	createMDL := `create microflow ` + mfName + ` () returns Boolean
-begin
+{
   retrieve $Items from RoundtripTest.MfTestItem;
-  loop $Item in $Items begin
+  loop $Item in $Items {
     log info node 'Test' 'Processing item';
-  end loop;
+  }
   return true;
-end;`
+}`
 
 	assertMicroflowContains(t, env, mfName, createMDL,
 		[]string{"loop", "$Items", "log info", "end loop", "return"},
@@ -528,17 +528,17 @@ func TestRoundtripMicroflow_LoopInsideBranch(t *testing.T) {
 
 	mfName := testModule + ".RT_LoopInBranch"
 	createMDL := `create microflow ` + mfName + ` ($Flag: Boolean) returns Boolean
-begin
+{
   if $Flag then
     retrieve $Items from RoundtripTest.MfTestItem;
-    loop $Item in $Items begin
+    loop $Item in $Items {
       log info node 'Test' 'In loop';
-    end loop;
+    }
   else
     log info node 'Test' 'No items';
   end if;
   return true;
-end;`
+}`
 
 	assertMicroflowContains(t, env, mfName, createMDL,
 		[]string{"if", "retrieve", "loop", "log info", "In loop", "end loop", "else", "No items", "end if", "return"},
@@ -559,10 +559,10 @@ func TestRoundtripMicroflow_ValidationFeedback(t *testing.T) {
 
 	mfName := testModule + ".RT_Validation"
 	createMDL := `create microflow ` + mfName + ` ($ValItem: RoundtripTest.MfValItem) returns Boolean
-begin
+{
   validation feedback $ValItem/Email message 'Email is required';
   return false;
-end;`
+}`
 
 	assertMicroflowContains(t, env, mfName, createMDL,
 		[]string{"validation feedback", "Email", "Email is required", "return"},
@@ -577,13 +577,13 @@ func TestRoundtripMicroflow_MultipleReturnPaths(t *testing.T) {
 
 	mfName := testModule + ".RT_MultiReturn"
 	createMDL := `create microflow ` + mfName + ` ($Flag: Boolean) returns String
-begin
+{
   if $Flag then
     return 'yes';
   else
     return 'no';
   end if;
-end;`
+}`
 
 	if err := env.executeMDL(createMDL); err != nil {
 		t.Fatalf("Failed to create microflow: %v", err)
@@ -619,11 +619,11 @@ func TestRoundtripMicroflow_CommitWithEvents(t *testing.T) {
 
 	mfName := testModule + ".RT_Commit"
 	createMDL := `create microflow ` + mfName + ` () returns Boolean
-begin
+{
   $Obj = create RoundtripTest.MfCommitItem;
   commit $Obj with events;
   return true;
-end;`
+}`
 
 	assertMicroflowContains(t, env, mfName, createMDL,
 		[]string{"commit", "with events", "return"},
@@ -643,11 +643,11 @@ func TestRoundtripMicroflow_ErrorHandlingContinue(t *testing.T) {
 
 	mfName := testModule + ".RT_ErrorHandling"
 	createMDL := `create microflow ` + mfName + ` () returns Boolean
-begin
+{
   $Obj = create RoundtripTest.MfCommitItem;
   commit $Obj on error continue;
   return true;
-end;`
+}`
 
 	assertMicroflowContains(t, env, mfName, createMDL,
 		[]string{"commit", "on error continue", "return"},
@@ -662,11 +662,11 @@ func TestRoundtripMicroflow_Annotate(t *testing.T) {
 
 	mfName := testModule + ".RT_Annotate"
 	createMDL := `create microflow ` + mfName + ` () returns Boolean
-begin
+{
   @annotation 'This is a test annotation'
   log info node 'Test' 'Hello';
   return true;
-end;`
+}`
 
 	assertMicroflowContains(t, env, mfName, createMDL,
 		[]string{"@annotation", "test annotation", "log info", "return"},
@@ -681,12 +681,12 @@ func TestRoundtripMicroflow_CaptionColor(t *testing.T) {
 
 	mfName := testModule + ".RT_CaptionColor"
 	createMDL := `create microflow ` + mfName + ` () returns Boolean
-begin
+{
   @caption 'Custom Caption'
   @color Green
   log info node 'Test' 'Hello';
   return true;
-end;`
+}`
 
 	assertMicroflowContains(t, env, mfName, createMDL,
 		[]string{"@caption 'Custom Caption'", "@color Green", "log info", "return"},
@@ -709,9 +709,9 @@ func TestRoundtripMicroflow_SystemEntityParameter(t *testing.T) {
   $Workflow: System.Workflow,
   $Count: Integer
 ) returns List of System.User
-begin
+{
   return empty;
-end;`
+}`
 
 	assertMicroflowContains(t, env, mfName, createMDL,
 		// "empty" is a reserved keyword — must round-trip as "RETURN empty", not "$empty"
@@ -727,11 +727,11 @@ func TestRoundtripMicroflow_Position(t *testing.T) {
 
 	mfName := testModule + ".RT_Position"
 	createMDL := `create microflow ` + mfName + ` () returns Boolean
-begin
+{
   @position(500, 300)
   log info node 'Test' 'Hello';
   return true;
-end;`
+}`
 
 	// @position is always emitted but the exact coordinates depend on the BSON roundtrip
 	// (RelativeMiddle vs RelativeMiddlePoint key mismatch). Verify @position appears.

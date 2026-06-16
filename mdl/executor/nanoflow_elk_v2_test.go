@@ -35,11 +35,13 @@ func newGenVizContext(t *testing.T, out *bytes.Buffer) *ExecContext {
 	}
 	t.Cleanup(func() { _ = be.Disconnect() })
 
-	return &ExecContext{
+	_ctx := &ExecContext{
 		Backend:   be,
 		ExecRepos: ExecRepos{Microflows: repoCtx.Microflows, Nanoflows: repoCtx.Nanoflows},
 		ExecIO:    ExecIO{Output: out},
 	}
+	_ctx.initRoles()
+	return _ctx
 }
 
 // TestNanoflowELKGen_Smoke verifies that the gen-typed nanoflow ELK

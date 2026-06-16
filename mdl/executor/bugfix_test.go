@@ -17,11 +17,11 @@ import (
 // Bug #3: mxcli check passed but mx check reported CE0111.
 func TestValidateDuplicateVariableDeclareRetrieve(t *testing.T) {
 	input := `create microflow Test.MF_DuplicateVar ()
-begin
+{
   declare $Count Integer = 0;
   retrieve $Count from Test.TestItem;
   return $Count;
-end;`
+}`
 
 	errors := validateMicroflowFromMDL(t, input)
 
@@ -41,10 +41,10 @@ end;`
 // for the same variable are caught as duplicate.
 func TestValidateDuplicateVariableDeclareOnly(t *testing.T) {
 	input := `create microflow Test.MF_DoubleDeclare ()
-begin
+{
   declare $X Integer = 0;
   declare $X String = 'hello';
-end;`
+}`
 
 	errors := validateMicroflowFromMDL(t, input)
 
@@ -64,9 +64,9 @@ end;`
 // (without prior DECLARE) does not trigger a false positive.
 func TestValidateNoDuplicateWhenRetrieveOnly(t *testing.T) {
 	input := `create microflow Test.MF_RetrieveOnly ()
-begin
+{
   retrieve $Items from Test.SomeEntity;
-end;`
+}`
 
 	errors := validateMicroflowFromMDL(t, input)
 
@@ -81,10 +81,10 @@ end;`
 // CREATE for the same variable is caught as a duplicate (CE0111).
 func TestValidateDuplicateVariableDeclareCreate(t *testing.T) {
 	input := `create microflow Test.MF_DeclareCreate ()
-begin
+{
   declare $NewTodo Test.Todo;
   $NewTodo = create Test.Todo();
-end;`
+}`
 
 	errors := validateMicroflowFromMDL(t, input)
 
@@ -187,10 +187,10 @@ func TestValidateEntityNormalAttributesPass(t *testing.T) {
 func TestReturnsNothingAcceptsBarReturn(t *testing.T) {
 	input := `create microflow Test.MF_ReturnsNothing ()
 returns Nothing
-begin
+{
   log info 'hello';
   return;
-end;`
+}`
 
 	prog, errs := visitor.Build(input)
 	if len(errs) > 0 {
@@ -429,10 +429,10 @@ func validateMicroflowFromMDL(t *testing.T, input string) []string {
 func TestAssociationNavParsing(t *testing.T) {
 	input := `create microflow Test.MF_Nav()
 returns String as $Result
-begin
+{
   declare $CustName String = $Order/Test.Order_Customer/Name;
   return $CustName;
-end;`
+}`
 
 	prog, errs := visitor.Build(input)
 	if len(errs) > 0 {

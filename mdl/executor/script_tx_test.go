@@ -62,6 +62,7 @@ func scriptCtx(t *testing.T, tx *mockScriptTx, execFn func(ast.Statement) error)
 		ExecIO:        ExecIO{Output: &buf, Format: FormatTable},
 		ExecCallbacks: ExecCallbacks{ExecuteFn: execFn},
 	}
+	ctx.initRoles()
 	return ctx, &buf
 }
 
@@ -148,6 +149,7 @@ func TestExecuteScript_NotConnected_NoTransaction(t *testing.T) {
 		ExecIO:        ExecIO{Output: &buf, Format: FormatTable},
 		ExecCallbacks: ExecCallbacks{ExecuteFn: func(stmt ast.Statement) error { return nil }},
 	}
+	ctx.initRoles()
 	if err := execExecuteScript(ctx, &ast.ExecuteScriptStmt{Path: path}); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -179,6 +181,7 @@ func TestExecuteScript_Nested_ReusesOuterTransaction(t *testing.T) {
 		Backend: mb,
 		ExecIO:  ExecIO{Output: &buf, Format: FormatTable},
 	}
+	ctx.initRoles()
 	// ExecuteFn re-enters execExecuteScript for nested EXECUTE SCRIPT
 	// statements, otherwise it's a no-op.
 	ctx.ExecuteFn = func(stmt ast.Statement) error {

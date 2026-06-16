@@ -56,6 +56,7 @@ func TestCreateModuleRole_OverwritesAutoProvisioned(t *testing.T) {
 		Backend: mb,
 		ExecIO:  ExecIO{Output: &strings.Builder{}, Quiet: true},
 	}
+	ctx.initRoles()
 
 	stmt := &ast.CreateModuleRoleStmt{
 		Name:        ast.QualifiedName{Module: "TaskMgr", Name: "User"},

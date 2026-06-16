@@ -207,6 +207,7 @@ func newSanityContext(t *testing.T, w *mmpr.Writer) *ExecContext {
 		ExecRepos: ExecRepos{Microflows: repoCtx.Microflows, DomainModels: repoCtx.DomainModels},
 		ExecIO:    ExecIO{Output: io.Discard},
 	}
+	ctx.initRoles()
 	// Cache the listDomainModelsWithContainerGen result so the entity
 	// loop runs in O(N) instead of O(N * modules).
 	ctx.ensureCache()

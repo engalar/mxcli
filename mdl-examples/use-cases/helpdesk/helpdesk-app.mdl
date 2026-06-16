@@ -857,7 +857,7 @@ create or replace workflow HD.WF_SUB_ManagerReview
   parameter $WorkflowContext: HD.EscalationRequest
   display 'Manager Review'
   overview page HD.EscalationWorkflow_Overview
-begin
+{
   user task UT_PrimaryReview 'Primary Review'
     page HD.EscalationReview_Form
     targeting users microflow HD.WFA_GetManagerAssignees
@@ -880,7 +880,7 @@ begin
           ;
       }
   ;
-end workflow;
+}
 /
 
 -- Non-interrupting 12h reminder boundary on primary review user task
@@ -947,7 +947,7 @@ create or replace workflow HD.WF_TicketEscalation
   parameter $WorkflowContext: HD.EscalationRequest
   display 'Ticket Escalation'
   overview page HD.EscalationWorkflow_Overview
-begin
+{
   call microflow HD.WFS_Escalation_Initialize with (EscalationRequest = '$WorkflowContext');
   -- $WorkflowContext accesses the business context entity (HD.EscalationRequest).
   -- $WorkflowInstance accesses the System.Workflow runtime instance (State, StartTime, etc.).
@@ -966,7 +966,7 @@ begin
         ;
       }
   ;
-end workflow;
+}
 /
 
 -- Non-interrupting 12h reminder on WaitForManagerAvailable

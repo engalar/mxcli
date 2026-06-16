@@ -147,7 +147,7 @@ type ExecContext struct {
 // call multiple times. Repopulates every call so reconnecting to a new project
 // picks up the new Backend's role interface implementations.
 func (ctx *ExecContext) initRoles() {
-	if ctx.Backend == nil {
+	if ctx == nil || ctx.Backend == nil {
 		return
 	}
 	ctx.ModuleLister = ctx.Backend
@@ -197,7 +197,13 @@ func (ctx *ExecContext) initRoles() {
 
 // Connected returns true if a project is connected via the Backend.
 func (ctx *ExecContext) Connected() bool {
-	return ctx.Backend != nil && ctx.ConnectionManager.IsConnected()
+	if ctx.Backend == nil {
+		return false
+	}
+	if ctx.ConnectionManager == nil {
+		return ctx.Backend.IsConnected()
+	}
+	return ctx.ConnectionManager.IsConnected()
 }
 
 // ConnectedForWrite returns true if a project is connected and the backend
@@ -244,7 +250,7 @@ func (ctx *ExecContext) ensureCache() {
 // trackModifiedDomainModel records a domain model that was modified during
 // execution, so it can be reconciled at the end of the program.
 func (ctx *ExecContext) trackModifiedDomainModel(moduleID model.ID, moduleName string) {
-	if ctx.Backend == nil || !ctx.ConnectionManager.IsConnected() {
+	if !ctx.Connected() {
 		return
 	}
 	ctx.ensureCache()

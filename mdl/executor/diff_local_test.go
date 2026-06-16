@@ -24,12 +24,14 @@ func gitFailBackend(contentsDir string) *ExecContext {
 		VersionFunc:     func() types.MPRVersion { return 2 },
 		ContentsDirFunc: func() string { return contentsDir },
 	}
-	return &ExecContext{
+	ctx := &ExecContext{
 		Context:     context.Background(),
 		Backend:     mb,
 		ExecIO:      ExecIO{Output: &bytes.Buffer{}},
 		ExecSession: ExecSession{Cache: &executorCache{}},
 	}
+	ctx.initRoles()
+	return ctx
 }
 
 // TestDiffLocal_GitError_ReturnsError is a regression test for issue #424:

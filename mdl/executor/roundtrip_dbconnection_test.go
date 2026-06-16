@@ -40,7 +40,7 @@ type 'PostgreSQL'
 connection string @` + testModule + `.TestDatabase_DBSource
 username @` + testModule + `.TestDatabase_DBUsername
 password @` + testModule + `.TestDatabase_DBPassword
-begin
+{
   query GetAllEmployees
     sql 'select id, name, email from employees'
     returns ` + testModule + `.Employee
@@ -49,7 +49,7 @@ begin
       name as Name,
       email as Email
     );
-end;`
+}`
 
 	env.assertContains(createMDL, []string{
 		"database connection",
@@ -99,7 +99,7 @@ type 'MSSQL'
 connection string @` + testModule + `.ParamDB_DBSource
 username @` + testModule + `.ParamDB_DBUsername
 password @` + testModule + `.ParamDB_DBPassword
-begin
+{
   query GetRacesBySeason
     sql 'select raceId, year, round, name from races where year between {startYear} and {endYear}'
     parameter startYear: Integer default '1900'
@@ -111,7 +111,7 @@ begin
       round as Round,
       name as RaceName
     );
-end;`
+}`
 
 	env.assertContains(createMDL, []string{
 		"database connection",

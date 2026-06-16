@@ -52,8 +52,8 @@ func TestRoundtripNanoflow_EmptyVoid(t *testing.T) {
 
 	nfName := testModule + ".RT_NF_Empty"
 	createMDL := `create nanoflow ` + nfName + ` () returns Void
-begin
-end;`
+{
+}`
 
 	assertNanoflowContains(t, env, nfName, createMDL,
 		[]string{"nanoflow", nfName},
@@ -68,10 +68,10 @@ func TestRoundtripNanoflow_ReturnString(t *testing.T) {
 
 	nfName := testModule + ".RT_NF_ReturnString"
 	createMDL := `create nanoflow ` + nfName + ` () returns String
-begin
+{
   declare $Greeting String = 'hello';
   return $Greeting;
-end;`
+}`
 
 	assertNanoflowContains(t, env, nfName, createMDL,
 		[]string{"nanoflow", "String", "return"},
@@ -86,9 +86,9 @@ func TestRoundtripNanoflow_WithParameters(t *testing.T) {
 
 	nfName := testModule + ".RT_NF_Params"
 	createMDL := `create nanoflow ` + nfName + ` ($Name: String, $Count: Integer) returns Boolean
-begin
+{
   return true;
-end;`
+}`
 
 	assertNanoflowContains(t, env, nfName, createMDL,
 		[]string{"nanoflow", "$Name", "String", "$Count", "Integer", "Boolean"},
@@ -103,7 +103,7 @@ func TestRoundtripNanoflow_IfElse(t *testing.T) {
 
 	nfName := testModule + ".RT_NF_IfElse"
 	createMDL := `create nanoflow ` + nfName + ` ($Value: Integer) returns String
-begin
+{
   declare $Result String = 'none';
   if $Value > 0 then
     set $Result = 'positive';
@@ -111,7 +111,7 @@ begin
     set $Result = 'non-positive';
   end if;
   return $Result;
-end;`
+}`
 
 	assertNanoflowContains(t, env, nfName, createMDL,
 		[]string{"if", "then", "else", "end if", "'positive'", "return"},
@@ -133,14 +133,14 @@ func TestRoundtripNanoflow_Loop(t *testing.T) {
 
 	nfName := testModule + ".RT_NF_Loop"
 	createMDL := `create nanoflow ` + nfName + ` () returns Integer
-begin
+{
   retrieve $Items from ` + testModule + `.LoopItem;
   declare $Count Integer = 0;
-  loop $Item in $Items begin
+  loop $Item in $Items {
     set $Count = $Count + 1;
-  end loop;
+  }
   return $Count;
-end;`
+}`
 
 	assertNanoflowContains(t, env, nfName, createMDL,
 		[]string{"nanoflow", "loop", "end loop", "retrieve", "return"},
@@ -155,9 +155,9 @@ func TestRoundtripNanoflow_ShowPage(t *testing.T) {
 
 	nfName := testModule + ".RT_NF_ShowPage"
 	createMDL := `create nanoflow ` + nfName + ` () returns Void
-begin
+{
   show page MyFirstModule.Home_Web ();
-end;`
+}`
 
 	assertNanoflowContains(t, env, nfName, createMDL,
 		[]string{"nanoflow", "show page"},
@@ -173,19 +173,19 @@ func TestRoundtripNanoflow_CallMicroflow(t *testing.T) {
 	// Create a target microflow first
 	mfName := testModule + ".RT_NF_TargetMf"
 	createMf := `create microflow ` + mfName + ` ($Input: String) returns String
-begin
+{
   return $Input;
-end;`
+}`
 	if err := env.executeMDL(createMf); err != nil {
 		t.Fatalf("Failed to create target microflow: %v", err)
 	}
 
 	nfName := testModule + ".RT_NF_CallMf"
 	createMDL := `create nanoflow ` + nfName + ` () returns String
-begin
+{
   $Result = call microflow ` + mfName + ` (Input = 'test');
   return $Result;
-end;`
+}`
 
 	assertNanoflowContains(t, env, nfName, createMDL,
 		[]string{"nanoflow", "call microflow", "return"},
@@ -201,19 +201,19 @@ func TestRoundtripNanoflow_CallNanoflow(t *testing.T) {
 	// Create target nanoflow
 	targetName := testModule + ".RT_NF_Target"
 	createTarget := `create nanoflow ` + targetName + ` ($Input: String) returns String
-begin
+{
   return $Input;
-end;`
+}`
 	if err := env.executeMDL(createTarget); err != nil {
 		t.Fatalf("Failed to create target nanoflow: %v", err)
 	}
 
 	nfName := testModule + ".RT_NF_CallNf"
 	createMDL := `create nanoflow ` + nfName + ` () returns String
-begin
+{
   $Result = call nanoflow ` + targetName + ` (Input = 'hello');
   return $Result;
-end;`
+}`
 
 	assertNanoflowContains(t, env, nfName, createMDL,
 		[]string{"nanoflow", "call nanoflow", "return"},
@@ -229,19 +229,19 @@ func TestRoundtripNanoflow_ErrorHandling(t *testing.T) {
 	// Create a target microflow to call with error handling
 	mfName := testModule + ".RT_NF_ErrTarget"
 	createMf := `create microflow ` + mfName + ` () returns Boolean
-begin
+{
   return true;
-end;`
+}`
 	if err := env.executeMDL(createMf); err != nil {
 		t.Fatalf("Failed to create target microflow: %v", err)
 	}
 
 	nfName := testModule + ".RT_NF_ErrorHandling"
 	createMDL := `create nanoflow ` + nfName + ` () returns Boolean
-begin
+{
   $Result = call microflow ` + mfName + ` () on error continue;
   return $Result;
-end;`
+}`
 
 	assertNanoflowContains(t, env, nfName, createMDL,
 		[]string{"nanoflow", "call microflow", "on error continue", "return"},
@@ -258,8 +258,8 @@ func TestNanoflow_Drop(t *testing.T) {
 
 	nfName := testModule + ".RT_NF_Drop"
 	createMDL := `create nanoflow ` + nfName + ` () returns Void
-begin
-end;`
+{
+}`
 
 	if err := env.executeMDL(createMDL); err != nil {
 		t.Fatalf("Failed to create nanoflow: %v", err)
@@ -295,8 +295,8 @@ func TestNanoflow_Show(t *testing.T) {
 
 	for _, nf := range []string{nf1, nf2} {
 		createMDL := `create nanoflow ` + nf + ` () returns Void
-begin
-end;`
+{
+}`
 		if err := env.executeMDL(createMDL); err != nil {
 			t.Fatalf("Failed to create nanoflow %s: %v", nf, err)
 		}
@@ -327,8 +327,8 @@ func TestNanoflow_Move(t *testing.T) {
 
 	nfName := testModule + ".RT_NF_Move"
 	createMDL := `create nanoflow ` + nfName + ` () returns Void
-begin
-end;`
+{
+}`
 	if err := env.executeMDL(createMDL); err != nil {
 		t.Fatalf("Failed to create nanoflow: %v", err)
 	}
@@ -354,8 +354,8 @@ func TestNanoflow_GrantRevoke(t *testing.T) {
 
 	nfName := testModule + ".RT_NF_Security"
 	createMDL := `create nanoflow ` + nfName + ` () returns Void
-begin
-end;`
+{
+}`
 	if err := env.executeMDL(createMDL); err != nil {
 		t.Fatalf("Failed to create nanoflow: %v", err)
 	}
@@ -398,8 +398,8 @@ func TestNanoflow_GrantIdempotent(t *testing.T) {
 
 	nfName := testModule + ".RT_NF_GrantIdem"
 	createMDL := `create nanoflow ` + nfName + ` () returns Void
-begin
-end;`
+{
+}`
 	if err := env.executeMDL(createMDL); err != nil {
 		t.Fatalf("Failed to create nanoflow: %v", err)
 	}
@@ -426,18 +426,18 @@ func TestNanoflow_CreateOrModify(t *testing.T) {
 
 	// Create v1
 	createV1 := `create nanoflow ` + nfName + ` () returns String
-begin
+{
   return 'v1';
-end;`
+}`
 	if err := env.executeMDL(createV1); err != nil {
 		t.Fatalf("Failed to create nanoflow v1: %v", err)
 	}
 
 	// Create or modify v2 (should replace)
 	createV2 := `create or modify nanoflow ` + nfName + ` () returns Integer
-begin
+{
   return 42;
-end;`
+}`
 	if err := env.executeMDL(createV2); err != nil {
 		t.Fatalf("Failed to create or modify nanoflow v2: %v", err)
 	}
@@ -465,9 +465,9 @@ func TestNanoflow_DisallowedAction(t *testing.T) {
 	nfName := testModule + ".RT_NF_Disallowed"
 	// Attempt to create a nanoflow with a Java action call (disallowed)
 	createMDL := `create nanoflow ` + nfName + ` () returns Void
-begin
+{
   call java action MyFirstModule.SomeJavaAction ();
-end;`
+}`
 
 	err := env.executeMDL(createMDL)
 	if err == nil {
@@ -489,13 +489,13 @@ func TestNanoflow_Mermaid(t *testing.T) {
 
 	nfName := testModule + ".RT_NF_Mermaid"
 	createMDL := `create nanoflow ` + nfName + ` ($X: Integer) returns String
-begin
+{
   if $X > 0 then
     return 'positive';
   else
     return 'non-positive';
   end if;
-end;`
+}`
 
 	if err := env.executeMDL(createMDL); err != nil {
 		t.Fatalf("Failed to create nanoflow: %v", err)
@@ -522,8 +522,8 @@ func TestNanoflow_DuplicateError(t *testing.T) {
 
 	nfName := testModule + ".RT_NF_Dup"
 	createMDL := `create nanoflow ` + nfName + ` () returns Void
-begin
-end;`
+{
+}`
 
 	if err := env.executeMDL(createMDL); err != nil {
 		t.Fatalf("First creation should succeed: %v", err)
@@ -546,9 +546,9 @@ func TestNanoflow_DropAndRecreate(t *testing.T) {
 
 	nfName := testModule + ".RT_NF_DropRecreate"
 	createMDL := `create nanoflow ` + nfName + ` () returns String
-begin
+{
   return 'original';
-end;`
+}`
 
 	// Create
 	if err := env.executeMDL(createMDL); err != nil {
@@ -562,9 +562,9 @@ end;`
 
 	// Recreate with different return type
 	createV2 := `create nanoflow ` + nfName + ` () returns Integer
-begin
+{
   return 99;
-end;`
+}`
 	if err := env.executeMDL(createV2); err != nil {
 		t.Fatalf("Failed to recreate nanoflow after drop: %v", err)
 	}
@@ -595,9 +595,9 @@ func TestRoundtripNanoflow_EntityParameter(t *testing.T) {
 
 	nfName := testModule + ".RT_NF_EntityParam"
 	createMDL := `create nanoflow ` + nfName + ` ($Item: ` + testModule + `.NfParamEntity) returns String
-begin
+{
   return $Item/Label;
-end;`
+}`
 
 	assertNanoflowContains(t, env, nfName, createMDL,
 		[]string{"nanoflow", "$Item", "NfParamEntity"},
@@ -617,9 +617,9 @@ func TestRoundtripNanoflow_EnumParameter(t *testing.T) {
 
 	nfName := testModule + ".RT_NF_EnumParam"
 	createMDL := `create nanoflow ` + nfName + ` ($Color: Enum ` + testModule + `.NfColor) returns String
-begin
+{
   return 'got color';
-end;`
+}`
 
 	assertNanoflowContains(t, env, nfName, createMDL,
 		[]string{"nanoflow", "$Color", "NfColor"},
@@ -637,8 +637,8 @@ func TestRoundtripNanoflow_InFolder(t *testing.T) {
 	nfName := testModule + ".RT_NF_Folder"
 	createMDL := `create nanoflow ` + nfName + ` () returns Void
   folder 'NanoflowTests'
-begin
-end;`
+{
+}`
 
 	if err := env.executeMDL(createMDL); err != nil {
 		t.Fatalf("Failed to create nanoflow in folder: %v", err)
@@ -659,8 +659,8 @@ func TestNanoflow_Rename(t *testing.T) {
 
 	oldName := testModule + ".RT_NF_BeforeRename"
 	createMDL := `create nanoflow ` + oldName + ` () returns Void
-begin
-end;`
+{
+}`
 	if err := env.executeMDL(createMDL); err != nil {
 		t.Fatalf("Failed to create nanoflow: %v", err)
 	}
@@ -692,17 +692,17 @@ func TestRoundtripNanoflow_CallVoidNanoflow(t *testing.T) {
 
 	targetName := testModule + ".RT_NF_VoidTarget"
 	createTarget := `create nanoflow ` + targetName + ` () returns Void
-begin
-end;`
+{
+}`
 	if err := env.executeMDL(createTarget); err != nil {
 		t.Fatalf("Failed to create target nanoflow: %v", err)
 	}
 
 	nfName := testModule + ".RT_NF_CallVoid"
 	createMDL := `create nanoflow ` + nfName + ` () returns Void
-begin
+{
   call nanoflow ` + targetName + ` ();
-end;`
+}`
 
 	assertNanoflowContains(t, env, nfName, createMDL,
 		[]string{"call nanoflow"},
@@ -719,11 +719,11 @@ func TestRoundtripNanoflow_Annotations(t *testing.T) {
 
 	nfName := testModule + ".RT_NF_Annotations"
 	createMDL := `create nanoflow ` + nfName + ` () returns String
-begin
+{
   declare $Result String = 'hello';
   @annotation 'Important step'
   return $Result;
-end;`
+}`
 
 	assertNanoflowContains(t, env, nfName, createMDL,
 		[]string{"nanoflow", "return"},
@@ -740,7 +740,7 @@ func TestRoundtripNanoflow_MultipleReturnPaths(t *testing.T) {
 
 	nfName := testModule + ".RT_NF_MultiReturn"
 	createMDL := `create nanoflow ` + nfName + ` ($X: Integer) returns String
-begin
+{
   if $X > 100 then
     return 'high';
   end if;
@@ -748,7 +748,7 @@ begin
     return 'positive';
   end if;
   return 'non-positive';
-end;`
+}`
 
 	assertNanoflowContains(t, env, nfName, createMDL,
 		[]string{"nanoflow", "return", "if", "'high'", "'positive'", "'non-positive'"},
@@ -772,12 +772,12 @@ func TestNanoflow_DisallowedNestedInLoop(t *testing.T) {
 
 	nfName := testModule + ".RT_NF_DisallowedLoop"
 	createMDL := `create nanoflow ` + nfName + ` () returns Void
-begin
+{
   $Items = retrieve ` + testModule + `.LoopCheck;
   loop $Item in $Items
     call java action MyFirstModule.SomeJavaAction ();
-  end loop;
-end;`
+  }
+}`
 
 	err := env.executeMDL(createMDL)
 	if err == nil {
@@ -796,8 +796,8 @@ func TestNanoflow_ShowInModule(t *testing.T) {
 
 	nfName := testModule + ".RT_NF_ShowMod"
 	createMDL := `create nanoflow ` + nfName + ` () returns Void
-begin
-end;`
+{
+}`
 	if err := env.executeMDL(createMDL); err != nil {
 		t.Fatalf("Failed to create nanoflow: %v", err)
 	}
@@ -865,10 +865,10 @@ func TestRoundtripNanoflow_CallJavaScriptAction(t *testing.T) {
 
 	nfName := testModule + ".RT_NF_CallJSAction"
 	createMDL := `create nanoflow ` + nfName + ` () returns String
-begin
+{
   $Result = call javascript action ` + jsActionName + ` ();
   return $Result;
-end;`
+}`
 
 	assertNanoflowContains(t, env, nfName, createMDL,
 		[]string{"call javascript action", jsActionName},

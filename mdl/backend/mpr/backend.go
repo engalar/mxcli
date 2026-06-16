@@ -1279,6 +1279,9 @@ func (b *MprBackend) GetRawMicroflowByName(qualifiedName string) ([]byte, error)
 }
 func (b *MprBackend) UpdateRawUnit(unitID string, contents []byte) error {
 	b.initSubBackends()
+	if b.rawUnits == nil {
+		return fmt.Errorf("modelsdk writer not initialized")
+	}
 	return b.rawUnits.UpdateRawUnit(unitID, contents)
 }
 

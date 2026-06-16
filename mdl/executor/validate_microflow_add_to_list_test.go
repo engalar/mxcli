@@ -13,7 +13,7 @@ import (
 func TestValidateMicroflowReferencesAddExpressionValue(t *testing.T) {
 	input := `create microflow Synthetic.MF_AddExpressionScope ()
 returns Boolean
-begin
+{
   declare $Items List of Synthetic.Item = empty;
   declare $Fallback Synthetic.Item = empty;
   if true then
@@ -21,7 +21,7 @@ begin
   end if;
   add if true then $SourceItem else $Fallback to $Items;
   return true;
-end;`
+}`
 
 	prog, errs := visitor.Build(input)
 	if len(errs) > 0 {

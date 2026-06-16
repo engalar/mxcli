@@ -234,6 +234,7 @@ func TestRoundTrip_ExportThenImport(t *testing.T) {
 		Backend:     origBe,
 		ExecSession: ExecSession{Cache: &executorCache{}},
 	}
+	origCtx.initRoles()
 	origEntityCount := 0
 	for _, m := range origMods {
 		if m.FromAppStore {
@@ -266,6 +267,7 @@ func TestRoundTrip_ExportThenImport(t *testing.T) {
 		Backend:     importBe,
 		ExecSession: ExecSession{Cache: &executorCache{}},
 	}
+	importCtx.initRoles()
 	importEntityCount := 0
 	for _, m := range importMods {
 		if m.FromAppStore {

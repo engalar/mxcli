@@ -515,10 +515,10 @@ func TestRoundtripPage_MicroflowButtonWithParams(t *testing.T) {
 		$Product: ` + entityName + `
 	)
 	returns Boolean
-	begin
+	{
 		log info node 'Test' 'Processing item';
 		return true;
-	end;`
+	}`
 
 	if err := env.executeMDL(createMfMDL); err != nil {
 		t.Fatalf("Failed to create microflow: %v", err)
@@ -586,9 +586,9 @@ func TestRoundtripPage_MicroflowButtonWithCurrentObject(t *testing.T) {
 	createMfMDL := `create microflow ` + mfName + ` (
 		$Target: ` + entityName + `
 	)
-	begin
+	{
 		log info node 'Test' 'Processing: ' + $Target/Name;
-	end;`
+	}`
 
 	if err := env.executeMDL(createMfMDL); err != nil {
 		t.Fatalf("Failed to create microflow: %v", err)

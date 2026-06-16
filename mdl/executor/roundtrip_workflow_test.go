@@ -39,24 +39,24 @@ func TestRoundtripWorkflow_Comprehensive(t *testing.T) {
 	}
 
 	// Microflow: single-user targeting
-	if err := env.executeMDL(`create microflow ` + mod + `.GetSingleReviewer () returns String begin end;`); err != nil {
+	if err := env.executeMDL(`create microflow ` + mod + `.GetSingleReviewer () returns String {}`); err != nil {
 		t.Fatalf("create GetSingleReviewer: %v", err)
 	}
 
 	// Microflow: multi-user targeting
-	if err := env.executeMDL(`create microflow ` + mod + `.GetMultiReviewers () returns String begin end;`); err != nil {
+	if err := env.executeMDL(`create microflow ` + mod + `.GetMultiReviewers () returns String {}`); err != nil {
 		t.Fatalf("create GetMultiReviewers: %v", err)
 	}
 
 	// Microflow: called by CALL MICROFLOW (returns Boolean)
-	if err := env.executeMDL(`create microflow ` + mod + `.ScoreCalc (Score: Integer) returns Boolean begin end;`); err != nil {
+	if err := env.executeMDL(`create microflow ` + mod + `.ScoreCalc (Score: Integer) returns Boolean {}`); err != nil {
 		t.Fatalf("create ScoreCalc: %v", err)
 	}
 
 	// Sub-workflow for CALL WORKFLOW
 	if err := env.executeMDL(`create workflow ` + mod + `.SubApprovalFlow
   parameter $WorkflowContext: ` + mod + `.WfCtxEntity
-begin
+{
   user task SubTask 'Sub-Approval'
     page ` + mod + `.SubPage
     targeting xpath '[%CurrentUser%]'
@@ -68,7 +68,7 @@ end workflow;`); err != nil {
 	// --- Main comprehensive workflow ---
 	createMDL := `create workflow ` + mod + `.ComprehensiveFlow
   parameter $WorkflowContext: ` + mod + `.WfCtxEntity
-begin
+{
 
   annotation 'Comprehensive workflow covering all MDL syntax';
 
@@ -174,7 +174,7 @@ func TestRoundtripWorkflow_BoundaryEventInterrupting(t *testing.T) {
 
 	createMDL := `create workflow ` + testModule + `.WfBoundaryInt
   parameter $WorkflowContext: ` + testModule + `.TestEntitySimple
-begin
+{
   user task act1 'Review'
     page ` + testModule + `.ReviewPage
     targeting xpath '[%CurrentUser%]'
@@ -207,7 +207,7 @@ func TestRoundtripWorkflow_BoundaryEventNonInterrupting(t *testing.T) {
 
 	createMDL := `create workflow ` + testModule + `.WfBoundaryNonInt
   parameter $WorkflowContext: ` + testModule + `.TestEntitySimple2
-begin
+{
   user task act1 'Review'
     page ` + testModule + `.ReviewPage
     targeting xpath '[%CurrentUser%]'
@@ -240,7 +240,7 @@ func TestRoundtripWorkflow_MultiUserTask(t *testing.T) {
 
 	createMDL := `create workflow ` + testModule + `.WfMultiUser
   parameter $WorkflowContext: ` + testModule + `.TestEntityMulti
-begin
+{
   multi user task act1 'Caption'
     page ` + testModule + `.ReviewPage
     targeting xpath '[%CurrentUser%]'
@@ -272,7 +272,7 @@ func TestRoundtripWorkflow_AnnotationActivity(t *testing.T) {
 
 	createMDL := `create workflow ` + testModule + `.WfAnnotation
   parameter $WorkflowContext: ` + testModule + `.TestEntityAnnot
-begin
+{
   annotation 'This is a workflow note';
 end workflow;`
 
@@ -325,7 +325,7 @@ func TestRoundtripWorkflow_AnnotationBeforeActivity(t *testing.T) {
 	// This mimics the pattern from Studio Pro where an annotation is attached to an activity.
 	createMDL := `create workflow ` + testModule + `.WfAnnotBeforeTimer
   parameter $WorkflowContext: ` + testModule + `.TestEntityAnnotTimer
-begin
+{
   annotation 'I am a note';
   wait for timer 'addDays([%CurrentDateTime%], 1)' comment 'Timer';
 end workflow;`
@@ -361,7 +361,7 @@ func TestRoundtripWorkflow_CallMicroflowWithParams(t *testing.T) {
 
 	createMDL := `create workflow ` + testModule + `.WfCallMf
   parameter $WorkflowContext: ` + testModule + `.TestEntityCallMf
-begin
+{
   call microflow ` + testModule + `.SomeMicroflow with (Amount = '$WorkflowContext/Amount')
     outcomes true -> { } false -> { };
 end workflow;`
@@ -370,7 +370,7 @@ end workflow;`
 		t.Fatalf("Failed to create entity: %v", err)
 	}
 
-	if err := env.executeMDL(`create microflow ` + testModule + `.SomeMicroflow (Amount: Decimal) returns Boolean begin end;`); err != nil {
+	if err := env.executeMDL(`create microflow ` + testModule + `.SomeMicroflow (Amount: Decimal) returns Boolean {}`); err != nil {
 		t.Fatalf("Failed to create microflow: %v", err)
 	}
 

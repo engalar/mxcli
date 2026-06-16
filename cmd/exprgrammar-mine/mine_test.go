@@ -18,13 +18,13 @@ func TestWalker_RecordsIfCondition(t *testing.T) {
 	mdl := `
 CREATE MICROFLOW Mod.Foo ()
 RETURNS Boolean AS $ok
-BEGIN
+{
     DECLARE $ok Boolean = false;
     IF $ok = false THEN
         SET $ok = true;
     END IF;
     RETURN $ok;
-END;
+}
 `
 	m := NewMiner()
 	if err := WalkMDL(m, "Mod.Foo", mdl); err != nil {
@@ -45,16 +45,16 @@ func TestWalker_CoversAllSlots(t *testing.T) {
 	mdl := `
 CREATE MICROFLOW Mod.Foo ($p Integer)
 RETURNS Integer AS $r
-BEGIN
+{
     DECLARE $r Integer = 0;
     SET $r = $p + 1;
-    WHILE $r < 10 BEGIN
+    WHILE $r < 10 {
         SET $r = $r + 1;
-    END WHILE;
+    }
     RETRIEVE $list FROM Mod.Entity LIMIT 5 OFFSET 1;
     LOG INFO 'count=' + toString($r);
     RETURN $r * 2;
-END;
+}
 `
 	m := NewMiner()
 	if err := WalkMDL(m, "Mod.Foo", mdl); err != nil {

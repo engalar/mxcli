@@ -50,7 +50,7 @@ func TestRoundtrip_PageModel_Container(t *testing.T) {
 	page := testModule + ".PMContainerPage"
 	roundtripPage(t, `
 create or modify persistent entity `+entity+` (Title: String(200));
-create or modify microflow `+testModule+`.ACT_Noop () returns Nothing begin return; end;
+create or modify microflow `+testModule+`.ACT_Noop () returns Nothing { return; }
 create or modify page `+page+` (
   title: 'Container Test',
   layout: Atlas_Core.Atlas_Default

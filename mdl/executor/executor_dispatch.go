@@ -81,7 +81,7 @@ func (e *Executor) newExecContext(ctx context.Context) *ExecContext {
 		warmCacheFromGraph(e.cache, e.graphCatalog)
 	}
 
-	return &ExecContext{
+	execCtx := &ExecContext{
 		Context: ctx,
 		Backend: e.backend,
 		Logger:  e.logger,
@@ -143,6 +143,8 @@ func (e *Executor) newExecContext(ctx context.Context) *ExecContext {
 			},
 		},
 	}
+	execCtx.initRoles()
+	return execCtx
 }
 
 // Ensure ast import is used via executeInner's stmt parameter.

@@ -26,6 +26,7 @@ func TestExecShowInstalledWidgets_NoWidgetsDir(t *testing.T) {
 		ExecIO:         ExecIO{Output: out},
 		ExecConnection: ExecConnection{MprPath: filepath.Join(tmp, "app.mpr")},
 	}
+	ctx.initRoles()
 	err := execShowInstalledWidgets(ctx, &ast.ShowInstalledWidgetsStmt{})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -53,6 +54,7 @@ func TestExecShowInstalledWidgets_FindsMpk(t *testing.T) {
 		ExecIO:         ExecIO{Output: out},
 		ExecConnection: ExecConnection{MprPath: filepath.Join(tmp, "app.mpr")},
 	}
+	ctx.initRoles()
 
 	err := execShowInstalledWidgets(ctx, &ast.ShowInstalledWidgetsStmt{})
 	if err != nil {

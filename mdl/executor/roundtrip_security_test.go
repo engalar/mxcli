@@ -234,9 +234,9 @@ func TestRoundtripSecurity_MicroflowAccess(t *testing.T) {
 
 	// Create microflow
 	createMDL := `create microflow ` + mfName + ` ()
-	begin
+	{
 		log info 'test';
-	end;`
+	}`
 	if err := env.executeMDL(createMDL); err != nil {
 		t.Fatalf("Failed to create microflow: %v", err)
 	}
@@ -281,9 +281,9 @@ func TestRoundtripSecurity_MicroflowNoAccess(t *testing.T) {
 
 	// Create microflow without granting access
 	createMDL := `create microflow ` + mfName + ` ()
-	begin
+	{
 		log info 'test';
-	end;`
+	}`
 	if err := env.executeMDL(createMDL); err != nil {
 		t.Fatalf("Failed to create microflow: %v", err)
 	}

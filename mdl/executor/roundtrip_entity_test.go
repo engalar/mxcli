@@ -98,9 +98,9 @@ func TestRoundtripEntity_WithEventHandler(t *testing.T) {
 
 	// Create a microflow first (event handler references it)
 	if err := env.executeMDL(`create or modify microflow ` + mfName + ` ()
-begin
+{
   log info 'validating';
-end;`); err != nil {
+}`); err != nil {
 		t.Fatalf("failed to create microflow: %v", err)
 	}
 
@@ -130,9 +130,9 @@ func TestRoundtripEntity_AlterAddDropEventHandler(t *testing.T) {
 
 	// Create microflow
 	if err := env.executeMDL(`create or modify microflow ` + mfName + ` ()
-begin
+{
   log info 'test';
-end;`); err != nil {
+}`); err != nil {
 		t.Fatalf("failed to create microflow: %v", err)
 	}
 

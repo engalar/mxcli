@@ -1023,7 +1023,7 @@ create or modify workflow HD.WF_SUB_ManagerReview
   display 'Manager Review'
   overview page HD.EscalationWorkflow_Overview
 
-begin
+{
   user task UT_PrimaryReview 'Primary Review'
     page HD.EscalationReview_Form
     targeting microflow HD.WFA_GetManagerAssignees
@@ -1063,7 +1063,7 @@ begin
 
     };
 
-end workflow
+}
 /
 -- Workflow: HD.WF_TicketEscalation
 
@@ -1072,7 +1072,7 @@ create or modify workflow HD.WF_TicketEscalation
   display 'Ticket Escalation'
   overview page HD.EscalationWorkflow_Overview
 
-begin
+{
   call microflow HD.WFS_Escalation_Initialize with (EscalationRequest = '$WorkflowContext') -- WFS_Escalation_Initialize
     outcomes
       default -> { };
@@ -1120,7 +1120,7 @@ begin
 
       };
 
-end workflow
+}
 /
 create or modify constant HD.SLA_HIGH_HOURS
   type Integer

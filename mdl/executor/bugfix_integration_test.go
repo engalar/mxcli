@@ -22,9 +22,9 @@ func TestDropCreateMicroflowReplacesContent(t *testing.T) {
 
 	// Create original microflow with a LOG statement
 	err := env.executeMDL(`create microflow ` + name + ` ()
-begin
+{
   log info 'original content';
-end;
+}
 /`)
 	if err != nil {
 		t.Fatalf("Failed to create original microflow: %v", err)
@@ -46,9 +46,9 @@ end;
 	}
 
 	err = env.executeMDL(`create microflow ` + name + ` ()
-begin
+{
   log warning 'replacement content';
-end;
+}
 /`)
 	if err != nil {
 		t.Fatalf("Failed to create replacement microflow: %v", err)

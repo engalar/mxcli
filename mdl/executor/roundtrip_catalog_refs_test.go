@@ -87,18 +87,18 @@ func TestCatalogRefs_MicroflowCallsMicroflow(t *testing.T) {
 
 	// Create target microflow
 	if err := env.executeMDL(fmt.Sprintf(`create microflow %s.TargetMf () returns Boolean
-begin
+{
   return true;
-end;`, mod)); err != nil {
+}`, mod)); err != nil {
 		t.Fatalf("Failed to create target microflow: %v", err)
 	}
 
 	// Create caller microflow
 	if err := env.executeMDL(fmt.Sprintf(`create microflow %s.CallerMf () returns Boolean
-begin
+{
   $Result = call microflow %s.TargetMf ();
   return $Result;
-end;`, mod, mod)); err != nil {
+}`, mod, mod)); err != nil {
 		t.Fatalf("Failed to create caller microflow: %v", err)
 	}
 
@@ -117,10 +117,10 @@ func TestCatalogRefs_MicroflowCreatesEntity(t *testing.T) {
 	}
 
 	if err := env.executeMDL(fmt.Sprintf(`create microflow %s.CreatorMf () returns Boolean
-begin
+{
   $Obj = create %s.RefCustomer;
   return true;
-end;`, mod, mod)); err != nil {
+}`, mod, mod)); err != nil {
 		t.Fatalf("Failed to create microflow: %v", err)
 	}
 
@@ -139,10 +139,10 @@ func TestCatalogRefs_MicroflowRetrievesEntity(t *testing.T) {
 	}
 
 	if err := env.executeMDL(fmt.Sprintf(`create microflow %s.RetrieverMf () returns Boolean
-begin
+{
   retrieve $Items from %s.RefProduct;
   return true;
-end;`, mod, mod)); err != nil {
+}`, mod, mod)); err != nil {
 		t.Fatalf("Failed to create microflow: %v", err)
 	}
 
@@ -184,11 +184,11 @@ func TestCatalogRefs_MultipleRefKindsToSameTarget(t *testing.T) {
 
 	// Microflow that both creates and retrieves the same entity
 	if err := env.executeMDL(fmt.Sprintf(`create microflow %s.MultiRefMf () returns Boolean
-begin
+{
   $Obj = create %s.RefOrder;
   retrieve $List from %s.RefOrder;
   return true;
-end;`, mod, mod, mod)); err != nil {
+}`, mod, mod, mod)); err != nil {
 		t.Fatal(err)
 	}
 
@@ -226,18 +226,18 @@ func TestCatalogRefs_ShowCallersOf(t *testing.T) {
 
 	// Create target
 	if err := env.executeMDL(fmt.Sprintf(`create microflow %s.CalleeA () returns Boolean
-begin
+{
   return true;
-end;`, mod)); err != nil {
+}`, mod)); err != nil {
 		t.Fatal(err)
 	}
 
 	// Create caller
 	if err := env.executeMDL(fmt.Sprintf(`create microflow %s.CallerA () returns Boolean
-begin
+{
   $R = call microflow %s.CalleeA ();
   return $R;
-end;`, mod, mod)); err != nil {
+}`, mod, mod)); err != nil {
 		t.Fatal(err)
 	}
 
@@ -267,18 +267,18 @@ func TestCatalogRefs_ShowCalleesOf(t *testing.T) {
 
 	// Create callee
 	if err := env.executeMDL(fmt.Sprintf(`create microflow %s.CalleeB () returns Boolean
-begin
+{
   return true;
-end;`, mod)); err != nil {
+}`, mod)); err != nil {
 		t.Fatal(err)
 	}
 
 	// Create caller
 	if err := env.executeMDL(fmt.Sprintf(`create microflow %s.CallerB () returns Boolean
-begin
+{
   $R = call microflow %s.CalleeB ();
   return $R;
-end;`, mod, mod)); err != nil {
+}`, mod, mod)); err != nil {
 		t.Fatal(err)
 	}
 
@@ -307,25 +307,25 @@ func TestCatalogRefs_ShowCallersTransitive(t *testing.T) {
 
 	// Create chain: CallerC1 -> CallerC2 -> CalleeC
 	if err := env.executeMDL(fmt.Sprintf(`create microflow %s.CalleeC () returns Boolean
-begin
+{
   return true;
-end;`, mod)); err != nil {
+}`, mod)); err != nil {
 		t.Fatal(err)
 	}
 
 	if err := env.executeMDL(fmt.Sprintf(`create microflow %s.CallerC2 () returns Boolean
-begin
+{
   $R = call microflow %s.CalleeC ();
   return $R;
-end;`, mod, mod)); err != nil {
+}`, mod, mod)); err != nil {
 		t.Fatal(err)
 	}
 
 	if err := env.executeMDL(fmt.Sprintf(`create microflow %s.CallerC1 () returns Boolean
-begin
+{
   $R = call microflow %s.CallerC2 ();
   return $R;
-end;`, mod, mod)); err != nil {
+}`, mod, mod)); err != nil {
 		t.Fatal(err)
 	}
 
@@ -376,19 +376,19 @@ func TestCatalogRefs_ShowReferencesTo(t *testing.T) {
 
 	// Microflow creates the entity
 	if err := env.executeMDL(fmt.Sprintf(`create microflow %s.RefCreator () returns Boolean
-begin
+{
   $Obj = create %s.RefTarget;
   return true;
-end;`, mod, mod)); err != nil {
+}`, mod, mod)); err != nil {
 		t.Fatal(err)
 	}
 
 	// Another microflow retrieves it
 	if err := env.executeMDL(fmt.Sprintf(`create microflow %s.RefRetriever () returns Boolean
-begin
+{
   retrieve $List from %s.RefTarget;
   return true;
-end;`, mod, mod)); err != nil {
+}`, mod, mod)); err != nil {
 		t.Fatal(err)
 	}
 
@@ -450,10 +450,10 @@ func TestCatalogRefs_ShowImpactOf(t *testing.T) {
 	}
 
 	if err := env.executeMDL(fmt.Sprintf(`create microflow %s.ImpactMf () returns Boolean
-begin
+{
   $Obj = create %s.ImpactEntity;
   return true;
-end;`, mod, mod)); err != nil {
+}`, mod, mod)); err != nil {
 		t.Fatal(err)
 	}
 

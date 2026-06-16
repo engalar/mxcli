@@ -145,11 +145,11 @@ func TestMxCheck_RetrieveWithLimit(t *testing.T) {
 	env.registerCleanup("microflow", mfName)
 
 	createMDL := `create microflow ` + mfName + ` () returns Boolean
-begin
+{
   retrieve $Item from RoundtripTest.MxCheckItem
     limit 1;
   return true;
-end;`
+}`
 
 	if err := env.executeMDL(createMDL); err != nil {
 		t.Fatalf("Failed to create microflow: %v", err)
@@ -188,12 +188,12 @@ func TestMxCheck_RetrieveWithLimitOffset(t *testing.T) {
 	env.registerCleanup("microflow", mfName)
 
 	createMDL := `create microflow ` + mfName + ` () returns Boolean
-begin
+{
   retrieve $Items from RoundtripTest.MxCheckItem
     limit 2
     offset 3;
   return true;
-end;`
+}`
 
 	if err := env.executeMDL(createMDL); err != nil {
 		t.Fatalf("Failed to create microflow: %v", err)
@@ -232,11 +232,11 @@ func TestMxCheck_RetrieveWithSortBy(t *testing.T) {
 	env.registerCleanup("microflow", mfName)
 
 	createMDL := `create microflow ` + mfName + ` () returns Boolean
-begin
+{
   retrieve $Items from RoundtripTest.MxCheckItem
     sort by RoundtripTest.MxCheckItem.Name asc;
   return true;
-end;`
+}`
 
 	if err := env.executeMDL(createMDL); err != nil {
 		t.Fatalf("Failed to create microflow: %v", err)
@@ -275,14 +275,14 @@ func TestMxCheck_RetrieveWithWhereSortLimitOffset(t *testing.T) {
 	env.registerCleanup("microflow", mfName)
 
 	createMDL := `create microflow ` + mfName + ` () returns Boolean
-begin
+{
   retrieve $Items from RoundtripTest.MxCheckItem
     where (starts-with(Name, 'a'))
     sort by RoundtripTest.MxCheckItem.Name asc
     limit 2
     offset 3;
   return true;
-end;`
+}`
 
 	if err := env.executeMDL(createMDL); err != nil {
 		t.Fatalf("Failed to create microflow: %v", err)
@@ -555,11 +555,11 @@ func TestMxCheck_RetrieveWithDateTimeToken(t *testing.T) {
 	env.registerCleanup("microflow", mfName)
 
 	createMDL := `create microflow ` + mfName + ` () returns Boolean
-begin
+{
   retrieve $Items from RoundtripTest.MxCheckDated
     where DueDate < [%CurrentDateTime%];
   return true;
-end;`
+}`
 
 	if err := env.executeMDL(createMDL); err != nil {
 		t.Fatalf("Failed to create microflow: %v", err)
@@ -593,9 +593,9 @@ func TestMxCheck_MicroflowWithCallParams(t *testing.T) {
 	env.registerCleanup("microflow", helperName)
 
 	createHelperMDL := `create microflow ` + helperName + ` ($InputValue: String) returns String
-	begin
+	{
 		return $InputValue;
-	end;`
+	}`
 
 	if err := env.executeMDL(createHelperMDL); err != nil {
 		t.Fatalf("Failed to create helper microflow: %v", err)
@@ -606,10 +606,10 @@ func TestMxCheck_MicroflowWithCallParams(t *testing.T) {
 	env.registerCleanup("microflow", callerName)
 
 	createCallerMDL := `create microflow ` + callerName + ` () returns String
-	begin
+	{
 		$Result = call microflow ` + helperName + ` (InputValue = 'TestValue');
 		return $Result;
-	end;`
+	}`
 
 	if err := env.executeMDL(createCallerMDL); err != nil {
 		t.Fatalf("Failed to create caller microflow: %v", err)
@@ -800,10 +800,10 @@ func TestMxCheck_ComboBoxWithAssociation(t *testing.T) {
 	env.registerCleanup("microflow", mfName)
 
 	mfMDL := `create microflow ` + mfName + ` () returns ` + contactEntity + `
-begin
+{
   retrieve $Contact from ` + contactEntity + ` limit 1;
   return $Contact;
-end;`
+}`
 
 	if err := env.executeMDL(mfMDL); err != nil {
 		t.Fatalf("Failed to create microflow: %v", err)
@@ -878,16 +878,16 @@ func TestMxCheck_WhileLoop(t *testing.T) {
 	env.registerCleanup("microflow", mfName)
 
 	createMDL := `create microflow ` + mfName + ` ($N: Integer) returns Integer
-begin
+{
   declare $Counter Integer = 0;
   declare $Sum Integer = 0;
   while $Counter < $N
-  begin
+  {
     set $Counter = $Counter + 1;
     set $Sum = $Sum + $Counter;
-  end while;
+  }
   return $Sum;
-end;`
+}`
 
 	if err := env.executeMDL(createMDL); err != nil {
 		t.Fatalf("Failed to create microflow with while loop: %v", err)

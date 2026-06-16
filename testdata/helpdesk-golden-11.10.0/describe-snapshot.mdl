@@ -1023,7 +1023,7 @@ create or modify workflow HD.WF_SUB_ManagerReview
   display 'Manager Review'
   overview page HD.EscalationWorkflow_Overview
 
-begin
+{
   user task UT_PrimaryReview 'Primary Review'
     page HD.EscalationReview_Form
     targeting microflow HD.WFA_GetManagerAssignees
@@ -1063,7 +1063,7 @@ begin
 
     };
 
-end workflow
+}
 /
 -- Workflow: HD.WF_TicketEscalation
 
@@ -1072,7 +1072,7 @@ create or modify workflow HD.WF_TicketEscalation
   display 'Ticket Escalation'
   overview page HD.EscalationWorkflow_Overview
 
-begin
+{
   call microflow HD.WFS_Escalation_Initialize with (EscalationRequest = '$WorkflowContext') -- WFS_Escalation_Initialize
     outcomes
       default -> { };
@@ -1120,7 +1120,7 @@ begin
 
       };
 
-end workflow
+}
 /
 create or modify constant HD.SLA_HIGH_HOURS
   type Integer
@@ -1147,19 +1147,19 @@ create or replace navigation Responsive
   home page HD.EscalationWorkflow_Overview for Manager
   login page Administration.login
   menu (
-    menu item '我的工单' page HD.MyTickets_Overview;
-    menu item '知识库' page KB.Article_Overview;
-    menu '工单管理' (
-      menu item '所有工单' page HD.Ticket_Overview;
-      menu item '升级审批' page HD.EscalationWorkflow_Overview;
-      menu item '工作流管理' page HD.EscalationWorkflow_Overview;
+    menu item 'My Tickets' page HD.MyTickets_Overview;
+    menu item 'Knowledge Base' page KB.Article_Overview;
+    menu 'Ticket Management' (
+      menu item 'All Tickets' page HD.Ticket_Overview;
+      menu item 'Escalations' page HD.EscalationWorkflow_Overview;
+      menu item 'Workflow Admin' page HD.EscalationWorkflow_Overview;
     );
-    menu '账户管理' (
-      menu item '账户总览' page HD.Account_Overview;
-      menu item '我的账户' page HD.ManageMyAccount;
-      menu item '修改密码' microflow HD.Nav_ChangePassword;
+    menu 'Account Management' (
+      menu item 'Accounts' page HD.Account_Overview;
+      menu item 'My Account' page HD.ManageMyAccount;
+      menu item 'Change Password' microflow HD.Nav_ChangePassword;
     );
-    menu item '系统管理' page Administration.Account_Overview;
+    menu item 'Admin' page Administration.Account_Overview;
   )
 ;
 

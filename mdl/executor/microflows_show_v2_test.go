@@ -72,11 +72,13 @@ func newGenDescribeContext(t *testing.T, w *mmpr.Writer) *ExecContext {
 	}
 	t.Cleanup(func() { _ = be.Disconnect() })
 
-	return &ExecContext{
+	_ctx := &ExecContext{
 		Backend:   be,
 		ExecRepos: ExecRepos{Microflows: repoCtx.Microflows, Nanoflows: repoCtx.Nanoflows},
 		ExecIO:    ExecIO{Output: io.Discard},
 	}
+	_ctx.initRoles()
+	return _ctx
 }
 
 // TestDescribeMicroflowGenToString_StructuralSkeleton renders a trivial
@@ -381,12 +383,12 @@ func TestDescribeMicroflowGen_BreakEvent(t *testing.T) {
 	exec.backend = be
 
 	mdl := `create or modify microflow MyFirstModule.TestBreak () returns Nothing
-begin
-  while true begin
+{
+  while true {
     break;
-  end while;
+  }
   return;
-end;`
+}`
 	prog, errs := visitor.Build(mdl)
 	if len(errs) > 0 {
 		t.Fatalf("parse error: %v", errs[0])
@@ -423,12 +425,12 @@ func TestDescribeMicroflowGen_ContinueEvent(t *testing.T) {
 	exec.backend = be
 
 	mdl := `create or modify microflow MyFirstModule.TestContinue () returns Nothing
-begin
-  while true begin
+{
+  while true {
     continue;
-  end while;
+  }
   return;
-end;`
+}`
 	prog, errs := visitor.Build(mdl)
 	if len(errs) > 0 {
 		t.Fatalf("parse error: %v", errs[0])
@@ -537,13 +539,13 @@ func TestDescribeMicroflowGen_ListReturnAndLoop(t *testing.T) {
   $Accs: List of Administration.Account
 )
 returns List of Administration.Account as $Result
-begin
+{
   $Result = CREATE LIST OF Administration.Account;
-  LOOP $Acc IN $Accs BEGIN
+  LOOP $Acc IN $Accs {
     ADD $Acc TO $Result;
-  END LOOP;
+  }
   RETURN $Result;
-end;`
+}`
 
 	prog, errs := visitor.Build(mdl)
 	if len(errs) > 0 {
@@ -697,6 +699,7 @@ func TestDescribeMicroflowGenToString_NestedLoopBodyComplete(t *testing.T) {
 	ctx := &ExecContext{
 		ExecIO: ExecIO{Output: io.Discard},
 	}
+	ctx.initRoles()
 	out, err := DescribeMicroflowGenToString(ctx, mf)
 	if err != nil {
 		t.Fatalf("DescribeMicroflowGenToString: %v", err)

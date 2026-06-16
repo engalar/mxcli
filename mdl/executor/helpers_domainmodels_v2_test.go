@@ -28,6 +28,7 @@ func newDomainModelsTestContext(t *testing.T) *ExecContext {
 		ExecRepos: ExecRepos{DomainModels: mprrepos.NewDomainModelRepository(w)},
 		ExecIO:    ExecIO{Output: io.Discard},
 	}
+	ctx.initRoles()
 	ctx.ensureCache()
 	return ctx
 }
@@ -80,6 +81,7 @@ func TestListDomainModelsWithContainerGen_NilRepoReturnsNil(t *testing.T) {
 	ctx := &ExecContext{
 		ExecIO: ExecIO{Output: io.Discard},
 	}
+	ctx.initRoles()
 	ctx.ensureCache()
 	list, err := listDomainModelsWithContainerGen(ctx)
 	if err != nil {

@@ -75,8 +75,8 @@ create persistent entity Dup.Customer (Name: string);
 func TestCheckScriptDuplicates_CreateCreate_Microflow(t *testing.T) {
 	assertHasDupViolation(t, `
 create module Dup;
-create microflow Dup.MF_Test () begin return; end;
-create microflow Dup.MF_Test () begin return; end;
+create microflow Dup.MF_Test () { return; }
+create microflow Dup.MF_Test () { return; }
 `, "Dup.MF_Test")
 }
 
@@ -99,8 +99,8 @@ create enumeration Dup.Status (Active 'Active', Inactive 'Inactive');
 func TestCheckScriptDuplicates_CreateCreate_Workflow(t *testing.T) {
 	assertHasDupViolation(t, `
 create module Dup;
-create workflow Dup.WF_Process begin end workflow;
-create workflow Dup.WF_Process begin end workflow;
+create workflow Dup.WF_Process {}
+create workflow Dup.WF_Process {}
 `, "Dup.WF_Process")
 }
 
@@ -120,18 +120,18 @@ create persistent entity Dup.Customer (Name: string);
 func TestCheckScriptDuplicates_CreateDropCreate_Microflow(t *testing.T) {
 	assertNoDupViolations(t, `
 create module Dup;
-create microflow Dup.MF_Test () begin return; end;
+create microflow Dup.MF_Test () { return; }
 drop microflow Dup.MF_Test;
-create microflow Dup.MF_Test () begin return; end;
+create microflow Dup.MF_Test () { return; }
 `)
 }
 
 func TestCheckScriptDuplicates_CreateDropCreate_Workflow(t *testing.T) {
 	assertNoDupViolations(t, `
 create module Dup;
-create workflow Dup.WF_Process begin end workflow;
+create workflow Dup.WF_Process {}
 drop workflow Dup.WF_Process;
-create workflow Dup.WF_Process begin end workflow;
+create workflow Dup.WF_Process {}
 `)
 }
 
@@ -159,8 +159,8 @@ create or modify persistent entity Dup.Customer (Name: string);
 func TestCheckScriptDuplicates_OrModify_Microflow(t *testing.T) {
 	assertNoDupViolations(t, `
 create module Dup;
-create microflow Dup.MF_Test () begin return; end;
-create or modify microflow Dup.MF_Test () begin return; end;
+create microflow Dup.MF_Test () { return; }
+create or modify microflow Dup.MF_Test () { return; }
 `)
 }
 
@@ -172,7 +172,7 @@ func TestCheckScriptDuplicates_DifferentTypes_SameQN_NoError(t *testing.T) {
 	// A microflow and a page can share the same qualified name without conflict.
 	assertNoDupViolations(t, `
 create module Dup;
-create microflow Dup.Foo () begin return; end;
+create microflow Dup.Foo () { return; }
 create page Dup.Foo ( title: 'Foo' ) {};
 `)
 }
@@ -341,7 +341,7 @@ func TestCheckProjectConflicts_CreateNew_NoError(t *testing.T) {
 	// BrandNewWF does not exist in project
 	assertNoConflicts(t, ctx, `
 create module M;
-create workflow M.BrandNewWF begin end workflow;
+create workflow M.BrandNewWF {}
 `)
 }
 
@@ -349,7 +349,7 @@ func TestCheckProjectConflicts_CreateExisting_Error(t *testing.T) {
 	ctx, _ := setupProjectConflictCtx(t)
 	assertHasConflict(t, ctx, `
 create module M;
-create workflow M.ExistingWF begin end workflow;
+create workflow M.ExistingWF {}
 `, "M.ExistingWF")
 }
 
@@ -358,7 +358,7 @@ func TestCheckProjectConflicts_CreateOrModify_NoError(t *testing.T) {
 	// OR MODIFY is idempotent — never a conflict
 	assertNoConflicts(t, ctx, `
 create module M;
-create or modify workflow M.ExistingWF begin end workflow;
+create or modify workflow M.ExistingWF {}
 `)
 }
 
@@ -366,7 +366,7 @@ func TestCheckProjectConflicts_CreateExistingMicroflow_Error(t *testing.T) {
 	ctx, _ := setupProjectConflictCtx(t)
 	assertHasConflict(t, ctx, `
 create module M;
-create microflow M.ExistingMF () begin return; end;
+create microflow M.ExistingMF () { return; }
 `, "M.ExistingMF")
 }
 
@@ -377,8 +377,8 @@ func TestCheckProjectConflicts_ScriptCreatedFirst_NoProjectCheck(t *testing.T) {
 	// Phase 2 skips the project check for names already alive in the registry.
 	assertNoConflicts(t, ctx, `
 create module M;
-create workflow M.BrandNew begin end workflow;
-create or modify workflow M.BrandNew begin end workflow;
+create workflow M.BrandNew {}
+create or modify workflow M.BrandNew {}
 `)
 }
 
@@ -388,9 +388,9 @@ func TestCheckProjectConflicts_DropThenCreate_ChecksProjectAgain(t *testing.T) {
 	// because the project still has ExistingWF at execution time.
 	msgs := conflictErrorMessages(ctx, `
 create module M;
-create workflow M.ExistingWF begin end workflow;
+create workflow M.ExistingWF {}
 drop workflow M.ExistingWF;
-create workflow M.ExistingWF begin end workflow;
+create workflow M.ExistingWF {}
 `, t)
 	// Both CREATEs should be flagged — project still has ExistingWF
 	count := 0

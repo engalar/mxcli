@@ -13,11 +13,11 @@ func TestValidateMicroflow_ProducesExprCheckHints(t *testing.T) {
 	src := `
 CREATE MICROFLOW M.F ($p: Integer)
 RETURNS Boolean AS $r
-BEGIN
+{
     DECLARE $r Boolean = false;
     IF $r = true THEN SET $r = false; END IF;
     RETURN $r;
-END;
+}
 `
 	prog, errs := visitor.Build(src)
 	if len(errs) > 0 {

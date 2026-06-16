@@ -39,6 +39,7 @@ func newMockCtx(t *testing.T, opts ...mockCtxOption) (*ExecContext, *bytes.Buffe
 		},
 		ExecIO: ExecIO{Output: &buf, Format: FormatTable},
 	}
+	ctx.initRoles()
 	for _, opt := range opts {
 		opt(ctx)
 	}
@@ -46,7 +47,10 @@ func newMockCtx(t *testing.T, opts ...mockCtxOption) (*ExecContext, *bytes.Buffe
 }
 
 func withBackend(b *mock.MockBackend) mockCtxOption {
-	return func(ctx *ExecContext) { ctx.Backend = b }
+	return func(ctx *ExecContext) {
+		ctx.Backend = b
+		ctx.initRoles()
+	}
 }
 
 func withFormat(f OutputFormat) mockCtxOption {
