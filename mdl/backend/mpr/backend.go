@@ -60,11 +60,12 @@ type MprBackend struct {
 	// transactions; the whole script commits atomically via a single BatchWrite
 	// at the end — see backend.ScriptTransaction.
 	scriptBuf *ScriptBuffer
-	// scriptDMCache caches parsed DomainModel objects during a ScriptTransaction.
-	// CreateEntityGen/UpdateEntityGen update this cache in-place so subsequent
-	// entity writes in the same script reuse the already-parsed Go object rather
-	// than re-parsing the domain model BSON on every call (O(N) → O(1) parses).
-	scriptDMCache map[string]*genDm.DomainModel
+	// scriptDirtyDMs accumulates in-memory DomainModel mutations during a
+	// ScriptTransaction. Entity/association write methods load the DM once,
+	// modify it in-place, and store it here — deferring UpdateDomainModelGen
+	// until FlushScriptDirtyDMs is called (one serialisation per module, not N).
+	// Nil outside a ScriptTransaction; cleared by Commit/Rollback.
+	scriptDirtyDMs map[string]*genDm.DomainModel
 	// unitBuf is non-nil when an ImportSession is active.
 	// writeUnitContents routes writes through the buffer instead of opening
 	// individual SQLite transactions. Reads are satisfied from the overlay.

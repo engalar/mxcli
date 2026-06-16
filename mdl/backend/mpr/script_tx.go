@@ -17,7 +17,7 @@ func (b *MprBackend) BeginScriptTransaction() (backend.ScriptTransaction, error)
 		return nil, fmt.Errorf("script transaction already active")
 	}
 	b.scriptBuf = newScriptBuffer(b.reader)
-	b.scriptDMCache = make(map[string]*genDm.DomainModel)
+	b.scriptDirtyDMs = make(map[string]*genDm.DomainModel)
 	return &mprScriptTx{b: b}, nil
 }
 
@@ -25,37 +25,49 @@ type mprScriptTx struct {
 	b *MprBackend
 }
 
-// Commit flushes all buffered writes in one atomic SQL transaction.
+// Commit flushes all dirty domain models and buffered writes in one atomic SQL transaction.
 func (tx *mprScriptTx) Commit() error {
 	if tx.b.scriptBuf == nil {
 		return fmt.Errorf("script transaction already closed")
 	}
-	tx.b.scriptDMCache = nil
+	if err := tx.b.flushScriptDirtyDMs(); err != nil {
+		return err
+	}
 	return tx.b.commitScriptBuffer()
 }
 
-// Rollback discards all buffered writes. No SQL rollback needed.
+// Rollback discards all buffered writes and dirty domain models.
 func (tx *mprScriptTx) Rollback() error {
 	if tx.b.scriptBuf == nil {
 		return nil
 	}
-	tx.b.scriptDMCache = nil
+	tx.b.scriptDirtyDMs = nil
 	tx.b.scriptBuf.Rollback()
 	tx.b.scriptBuf = nil
 	return nil
 }
 
-// scriptDMCacheGet returns the cached DomainModel for id, or nil if not cached.
-func (b *MprBackend) scriptDMCacheGet(id string) *genDm.DomainModel {
-	if b.scriptDMCache == nil {
+// flushScriptDirtyDMs serialises all accumulated in-memory domain model
+// mutations and routes each through writeUnitContents (which writes to
+// scriptBuf + sets the reader overlay). Called once before finalization and
+// once at Commit — safe to call multiple times (idempotent after first flush
+// because scriptDirtyDMs is cleared).
+func (b *MprBackend) flushScriptDirtyDMs() error {
+	if len(b.scriptDirtyDMs) == 0 {
 		return nil
 	}
-	return b.scriptDMCache[id]
+	for _, dm := range b.scriptDirtyDMs {
+		if err := b.UpdateDomainModelGen(dm); err != nil {
+			return fmt.Errorf("flush dirty domain model: %w", err)
+		}
+	}
+	b.scriptDirtyDMs = make(map[string]*genDm.DomainModel) // keep map alive (transaction still open)
+	return nil
 }
 
-// scriptDMCachePut stores a DomainModel in the per-script cache.
-func (b *MprBackend) scriptDMCachePut(id string, dm *genDm.DomainModel) {
-	if b.scriptDMCache != nil {
-		b.scriptDMCache[id] = dm
-	}
+// FlushScriptDirtyDMs is the exported hook called by ExecuteProgram before
+// finalizeProgramExecution so that raw BSON reads (e.g. ReconcileMemberAccesses)
+// see the accumulated entity/association changes via the reader overlay.
+func (b *MprBackend) FlushScriptDirtyDMs() error {
+	return b.flushScriptDirtyDMs()
 }

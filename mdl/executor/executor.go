@@ -486,6 +486,15 @@ func (e *Executor) ExecuteProgram(prog *ast.Program) error {
 		created.collectSingle(stmt)
 	}
 
+	// Flush accumulated in-memory domain model mutations (entities, associations)
+	// to the scriptBuf overlay so that finalizeProgramExecution (which reads raw
+	// BSON for member-access reconciliation) sees the latest entity changes.
+	if execErr == nil {
+		if flusher, ok := e.backend.(interface{ FlushScriptDirtyDMs() error }); ok {
+			execErr = flusher.FlushScriptDirtyDMs()
+		}
+	}
+
 	// Run domain-model reconciliation while scriptBuf is still open so its
 	// writes (writeUnitContents) are batched into the same atomic commit.
 	if execErr == nil {
