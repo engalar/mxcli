@@ -367,6 +367,7 @@ func (pb *pageBuilder) buildWidgetV3(w *ast.WidgetV3) (element.Element, error) {
 		}
 		applyWidgetAppearanceGen(widget, w, pb.themeRegistry)
 		applyConditionalSettingsGen(widget, w)
+		applyWidgetDefaults(widget)
 		return widget, nil
 	}
 
@@ -406,7 +407,9 @@ func (pb *pageBuilder) customWidgetToElement(cw *backend.GenCustomWidgetElem) (e
 	if cw == nil {
 		return nil, fmt.Errorf("customWidgetToElement: nil GenCustomWidgetElem")
 	}
-	return cw.AsElement(), nil
+	elem := cw.AsElement()
+	applyWidgetDefaults(elem)
+	return elem, nil
 }
 
 // applyConditionalSettingsGen sets ConditionalVisibilitySettings and
@@ -433,6 +436,28 @@ func applyConditionalSettingsGen(widget element.Element, w *ast.WidgetV3) {
 		}
 		if s, ok := widget.(cesSetter); ok {
 			s.SetConditionalEditabilitySettings(ces)
+		}
+	}
+}
+
+// applyWidgetDefaults sets common default values on any widget.
+func applyWidgetDefaults(w element.Element) {
+	type hasCondVis interface{ ConditionalVisibilitySettings() element.Element }
+	type setCondVis interface{ SetConditionalVisibilitySettings(element.Element) }
+	if w, ok := w.(setCondVis); ok {
+		if cv, ok2 := w.(hasCondVis); !ok2 || cv.ConditionalVisibilitySettings() == nil {
+			w.SetConditionalVisibilitySettings(nil)
+		}
+	}
+	type setTabIdx interface{ SetTabIndex(int32) }
+	if w, ok := w.(setTabIdx); ok {
+		w.SetTabIndex(0)
+	}
+	type hasApp interface{ Appearance() element.Element }
+	type setApp interface{ SetAppearance(element.Element) }
+	if w, ok := w.(setApp); ok {
+		if ha, ok2 := w.(hasApp); ok2 && ha.Appearance() == nil {
+			w.SetAppearance(newDefaultAppearance())
 		}
 	}
 }
