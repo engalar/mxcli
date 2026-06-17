@@ -352,7 +352,10 @@ func minimalPNG() []byte {
 	return buf.Bytes()
 }
 
-// generatePackageXML renders package.xml — the MPK manifest listing all widget XML files.
+// generatePackageXML renders package.xml — the MPK manifest listing all widget XML files
+// and their compiled JS output directories. Mendix 11+ requires the <files> section to
+// locate ES6 module bundles at deployment time; without it mxbuild fails with
+// "please check if they were generated using the latest version of pluggable-widgets-tools".
 func generatePackageXML(packageName string, widgetNames []string) string {
 	var b strings.Builder
 	b.WriteString(`<?xml version="1.0" encoding="utf-8"?>` + "\n")
@@ -366,6 +369,12 @@ func generatePackageXML(packageName string, widgetNames []string) string {
 			b.WriteString(fmt.Sprintf("      <widgetFile path=%q/>\n", name+".xml"))
 		}
 		b.WriteString("    </widgetFiles>\n")
+		b.WriteString("    <files>\n")
+		for _, name := range widgetNames {
+			filePath := fmt.Sprintf("com/mendix/widget/custom/%s/", name)
+			b.WriteString(fmt.Sprintf("      <file path=%q/>\n", filePath))
+		}
+		b.WriteString("    </files>\n")
 	}
 	b.WriteString("  </clientModule>\n")
 	b.WriteString("</package>\n")

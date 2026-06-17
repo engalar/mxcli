@@ -1943,6 +1943,24 @@ func (pb *pageBuilder) buildWidgetBSON(w *ast.WidgetV3) (bson.D, error) {
 			return nil, mdlerrors.NewBackend("build controlbar filter widget", err)
 		}
 		return pb.serializeGenWidgetToBsonD(fw)
+	case "pluggablewidget", "customwidget":
+		widgetType, ok := w.Properties["WidgetType"].(string)
+		if !ok || widgetType == "" {
+			return nil, mdlerrors.NewValidation("pluggable widget in datagrid column: missing WidgetType")
+		}
+		pb.initPluggableEngine()
+		if pb.pluggableEngine == nil {
+			return nil, mdlerrors.NewUnsupported("pluggable widget engine not available")
+		}
+		if def, ok := pb.widgetRegistry.GetByWidgetID(widgetType); ok {
+			cw, err := pb.pluggableEngine.Build(def, w)
+			if err != nil {
+				return nil, mdlerrors.NewBackend("build pluggable widget in datagrid column", err)
+			}
+			return pb.serializeGenWidgetToBsonD(cw)
+		}
+		return nil, mdlerrors.NewNotFoundMsg("widget", widgetType,
+			"no definition for widget "+widgetType)
 	default:
 		// For other widget types in DataGrid context, create a minimal DivContainer
 		doc := bson.D{
