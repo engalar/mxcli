@@ -84,6 +84,8 @@ var actionBuilders = map[string]actionBuilderFn{
 		// LayoutCallArgument constructor failures in Studio Pro when the container type
 		// is PageSettings rather than LayoutCall.
 		act.SetPageSettings(ps)
+		act.SetDisabledDuringExecution(false)
+		act.SetNumberOfPagesToClose2("1")
 		return act, nil
 	},
 	"microflow": func(pb *pageBuilder, action *ast.ActionV3) (element.Element, error) {
@@ -111,6 +113,7 @@ var actionBuilders = map[string]actionBuilderFn{
 		}
 
 		act.SetMicroflowSettings(settings)
+		act.SetDisabledDuringExecution(false)
 		if action.ClosePage {
 			setRawBSONField(act, "ClosePage", true)
 		}
@@ -149,6 +152,7 @@ var actionBuilders = map[string]actionBuilderFn{
 			}
 			act.AddParameterMappings(nm)
 		}
+		act.SetDisabledDuringExecution(false)
 		return act, nil
 	},
 	"openLink": func(pb *pageBuilder, action *ast.ActionV3) (element.Element, error) {
