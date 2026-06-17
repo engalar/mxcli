@@ -227,6 +227,50 @@ func outputBson(contents []byte, format string) {
 	fmt.Println(string(jsonBytes))
 }
 
+// skipDiffNoise returns true for fields that are always different between
+// independently-created objects (IDs, pointers, UUIDs, layout coordinates).
+func skipDiffNoise(path string) bool {
+	if path == "" {
+		return false
+	}
+	// Root-level $ID or nested .$ID
+	if path == "$ID" || strings.HasSuffix(path, ".$ID") {
+		return true
+	}
+	if strings.HasSuffix(path, "PersistentId") {
+		return true
+	}
+	if strings.HasSuffix(path, "TypePointer") {
+		return true
+	}
+	if strings.HasSuffix(path, "OriginPointer") {
+		return true
+	}
+	if strings.HasSuffix(path, "DestinationPointer") {
+		return true
+	}
+	if strings.HasSuffix(path, "FallbackOutcomePointer") {
+		return true
+	}
+	if strings.HasSuffix(path, "VetoOutcomePointer") {
+		return true
+	}
+	if strings.HasSuffix(path, "DefaultButtonPointer") {
+		return true
+	}
+	if strings.HasSuffix(path, "TypeParameterPointer") {
+		return true
+	}
+	// Layout coordinates (not semantically meaningful)
+	if strings.HasSuffix(path, "RelativeMiddlePoint") {
+		return true
+	}
+	if strings.HasSuffix(path, "Size") {
+		return true
+	}
+	return false
+}
+
 // compareBsonDocs compares two BSON documents and returns a list of differences.
 // It compares top-level keys and their values, recursing into nested documents.
 func compareBsonDocs(doc1, doc2 bson.D, path string) []string {
@@ -281,8 +325,9 @@ func compareBsonDocs(doc1, doc2 bson.D, path string) []string {
 func compareValues(val1, val2 any, path string) []string {
 	var diffs []string
 
-	// Skip $ID comparisons (they're always different)
-	if strings.HasSuffix(path, ".$ID") {
+	// Skip structural/layout fields that are always different between
+	// independently-created objects (mirrors defaultSkipFields in cmd/mxcli/bson/compare.go).
+	if skipDiffNoise(path) {
 		return nil
 	}
 
