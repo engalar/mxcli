@@ -8,6 +8,7 @@ import (
 	"html/template"
 	"math"
 	"net/http"
+	"path/filepath"
 	"sort"
 	"strings"
 
@@ -92,6 +93,7 @@ func buildProjectGraph(projectPath string) (*graphcatalog.ProjectGraph, error) {
 	mgr.RegisterAdapter(&mpradapter.PageAdapter{Model: m})
 	mgr.RegisterAdapter(&mpradapter.EnumerationAdapter{Model: m})
 	mgr.RegisterAdapter(&mpradapter.WorkflowAdapter{Model: m})
+	mgr.RegisterAdapter(&mpradapter.WidgetAdapter{ProjectDir: filepath.Dir(projectPath)})
 
 	if err := mgr.BuildAll(context.Background()); err != nil {
 		return nil, fmt.Errorf("build graph: %w", err)

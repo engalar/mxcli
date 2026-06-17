@@ -473,6 +473,7 @@ func buildMxGraph(projectPath string) *mxgraph.Graph {
 	mgr.RegisterAdapter(&mpradapter.PageAdapter{Model: m})
 	mgr.RegisterAdapter(&mpradapter.EnumerationAdapter{Model: m})
 	mgr.RegisterAdapter(&mpradapter.WorkflowAdapter{Model: m})
+	mgr.RegisterAdapter(&mpradapter.WidgetAdapter{ProjectDir: filepath.Dir(projectPath)})
 
 	if err := mgr.BuildAll(context.Background()); err != nil {
 		return nil
