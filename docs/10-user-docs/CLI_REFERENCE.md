@@ -121,21 +121,70 @@ Available tables: `modules`, `entities`, `microflows`, `nanoflows`, `pages`, `sn
 
 ## Widget Scaffold and Build
 
+Scaffold and build pluggable widget projects using the official `@mendix/pluggable-widgets-tools` toolchain.
+
 ```bash
+# Scaffold a new widget project
 mxcli widget new MySlider
 mxcli widget new MySlider --property "value:attribute:Decimal" --property "label:string" --property "onChange:action"
 mxcli widget new MySlider --id com.acme.widget.MySlider.MySlider --offline
+mxcli widget new MySlider --dir ./custom/path
 
-mxcli widget new CrusherWidgets --package
-cd CrusherWidgets
-mxcli widget add-widget CrusherSlider --property "value:attribute:Decimal"
-mxcli widget add-widget CrusherButton --property "label:string" --property "onClick:action"
-
+# Build a widget project (auto-installs dependencies)
 mxcli widget build
-mxcli widget build --dir ./CrusherWidgets
+mxcli widget build --dir ./MySlider
+
+# Build with npm registry proxy (for air-gapped environments)
+mxcli widget build --registry http://npm-registry.local:4873
+
+# Build with HTTPS proxy (for corporate networks)
+mxcli widget build --https-proxy http://proxy.company.com:8080
+
+# Build and install directly into Mendix project
+mxcli widget build --install --project /path/to/app.mpr
 ```
 
-Property spec format: `key:type` or `key:type:subtype`. Supported types: `attribute`, `string`, `integer`, `boolean`, `action`, `datasource`, `expression`, `widgets`.
+**`mxcli widget new` flags:**
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--id` | auto-derived | Widget ID (default: `com.mendix.widget.custom.<Name>.<Name>`) |
+| `--dir`, `-d` | `<Name>/` | Output directory for the scaffolded project |
+| `--property` | - | Property spec: `key:type` or `key:type:subtype` (repeatable) |
+| `--description` | - | Widget description (written into XML and README) |
+| `--offline` | false | Set `offlineCapable=true` in the widget XML |
+| `--package-path` | `com.mendix.widget.custom` | Widget package path (used in widget ID and JS output structure) |
+| `--project-path` | `./tests/testProject` | Path to Mendix test project (.mpr) for live preview |
+
+**`mxcli widget build` flags:**
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--dir` | `.` | Widget project root directory |
+| `--install` | false | Install the built MPK into the Mendix project's `widgets/` folder |
+| `--project`, `-p` | - | Path to Mendix project (.mpr) — required with `--install` |
+| `--registry` | - | npm registry URL for dependency install (e.g. `http://localhost:4873/`) |
+| `--https-proxy` | - | HTTPS proxy URL for npm install (e.g. `http://proxy.company.com:8080`) |
+
+**Project structure:**
+
+```
+MySlider/
+├── .eslintrc.js, prettier.config.js, .gitattributes, LICENSE, .prettierignore
+├── package.json              # @mendix/pluggable-widgets-tools + React 19
+├── README.md
+├── src/
+│   ├── package.xml           # MPK manifest (<widgetFiles> + <files>)
+│   ├── MySlider.xml          # Widget property definition
+│   ├── MySlider.jsx          # React component (main entry)
+│   ├── MySlider.editorConfig.js     # Studio Pro design-time preview
+│   ├── MySlider.editorPreview.jsx   # Browser preview (JSX format)
+│   ├── MySlider.{icon,tile}.png     # Widget icons
+│   ├── components/
+│   │   └── MySliderSample.jsx       # Render component
+│   └── ui/
+│       └── MySlider.css             # Widget styles
+```
+
+Build produces `<PackageName>.mpk` in `dist/1.0.0/`. Copy to project's `widgets/` folder or use `--install`.
 
 ## Widget Discovery and Bulk Updates
 

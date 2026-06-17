@@ -4,8 +4,8 @@
 
 | 工具 | 版本 | 用途 |
 |------|------|------|
-| Node.js / Bun | 18+ / 最新 | 运行 esbuild（`mxcli widget build` 自动调用） |
-| mxcli | 最新 | 构建 widget、在页面中使用 widget |
+| Node.js | 18+ | 运行 `@mendix/pluggable-widgets-tools` 构建工具链 |
+| mxcli | 最新 | 脚手架、构建 widget、安装到项目、在页面中使用 widget |
 | Mendix Studio Pro | 11.x | 导入 .mpk，运行时测试 widget |
 
 ## 两种学习路径
@@ -16,11 +16,13 @@
 # 步骤 1：进入 widget 源码目录
 cd academy/zh/10-扩展-Widget开发/widget-source
 
-# 步骤 2：构建 widget（esbuild 自动安装，产出 TicketStatusBadge.mpk）
+# 步骤 2：构建 widget（自动 npm install + pluggable-widgets-tools 编译，产出 .mpk）
 mxcli widget build
 
-# 步骤 3：把 .mpk 放到 Mendix 项目的 widgets/ 目录
-cp TicketStatusBadge.mpk /path/to/MyProject/widgets/
+# 步骤 3：安装到 Mendix 项目 widgets/ 目录
+cp dist/1.0.0/com.helpdesk.widget.TicketStatusBadge.mpk /path/to/MyProject/widgets/
+# 或直接通过 mxcli 安装：
+mxcli widget build --install --project /path/to/MyProject.mpr
 
 # 步骤 4a：空应用独立验证（创建测试模块 + 页面）
 mxcli exec 参考实现/test-widget-standalone.mdl -p /path/to/MyProject.mpr
@@ -32,29 +34,49 @@ mxcli exec 参考实现/use-widget.mdl -p /path/to/MyProject.mpr
 > **无需 `.def.json`**：mxcli 自动扫描 `widgets/*.mpk`，从中读取 widget 定义，
 > 不需要手动运行 `mxcli widget extract`。
 
+在网络受限环境使用代理：
+```bash
+# 通过 HTTPS 代理安装依赖
+mxcli widget build --https-proxy http://192.168.2.35:29758
+
+# 通过自定义 npm registry
+mxcli widget build --registry http://npm-registry.internal:4873
+```
+
 ### 路径 B：修改 Widget 源码（完整开发路径）
 
-1. 修改 `widget-source/src/TicketStatusBadge.jsx`（主逻辑）或 `TicketStatusBadge.xml`（属性定义）
-2. `cd widget-source && mxcli widget build`
-3. 把新的 `.mpk` 覆盖到项目 `widgets/` 目录
-4. 再次执行 MDL 脚本测试
+1. 修改 `widget-source/src/TicketStatusBadge.jsx`（主逻辑）、`components/TicketStatusBadgeSample.jsx`（渲染组件）或 `TicketStatusBadge.xml`（属性定义）
+2. `cd widget-source && mxcli widget build --install --project /path/to/MyProject.mpr`
+3. 再次执行 MDL 脚本测试
 
 ## Widget 工作原理
 
 ```
 widget-source/
+├── .eslintrc.js, prettier.config.js, .gitattributes, LICENSE
+├── package.json                       ← @mendix/pluggable-widgets-tools + React 19
+├── README.md
 ├── src/
-│   ├── TicketStatusBadge.jsx   ← 主逻辑（React 函数组件）
-│   ├── TicketStatusBadge.xml   ← 属性定义（告诉 Mendix 有哪些属性）
-│   └── ...（editorConfig, icons）
-├── package.json                ← 只需 esbuild，无其他依赖
-└── package.xml                 ← MPK manifest
+│   ├── package.xml                    ← MPK manifest（含 <files> 段，Mendix 11 必需）
+│   ├── TicketStatusBadge.xml          ← 属性定义
+│   ├── TicketStatusBadge.jsx          ← 主入口（React 函数组件）
+│   ├── TicketStatusBadge.editorConfig.js    ← Studio Pro 设计时配置
+│   ├── TicketStatusBadge.editorPreview.jsx  ← Studio Pro 预览（JSX 格式）
+│   ├── TicketStatusBadge.{icon,tile}.png    ← 图标
+│   ├── components/
+│   │   └── TicketStatusBadgeSample.jsx      ← 渲染组件
+│   └── ui/
+│       └── TicketStatusBadge.css            ← 样式
 
 mxcli widget build
-  └─→ esbuild 编译 .jsx → .js bundle
-  └─→ 打包 XML + bundle → TicketStatusBadge.mpk
+  └─→ npm install（首次自动执行）
+  └─→ pluggable-widgets-tools build:web
+      ├─→ rollup 编译 .jsx → .js (AMD) + .mjs (ESM) 双格式
+      └─→ 打包 XML + bundle → dist/1.0.0/*.mpk
+  └─→ mxcli 后处理（Windows 兼容性修补）
+  └─→ 产出完整 .mpk
 
-MyProject/widgets/TicketStatusBadge.mpk  ← 放这里
+MyProject/widgets/com.helpdesk.widget.TicketStatusBadge.mpk
   └─→ mxcli exec 时自动发现（无需 extract）
   └─→ PLUGGABLEWIDGET 'com.helpdesk.widget.TicketStatusBadge' name (statusValue: Status)
 ```
@@ -101,7 +123,9 @@ ticketstatusbadge Ticket Status Badge   com.helpdesk.widget.TicketStatusBadge  C
 
 | 问题 | 解决方案 |
 |------|----------|
-| `mxcli widget build` 找不到 esbuild | 执行 `bun install` 或 `npm install` 后再 build |
+| `mxcli widget build` 卡在 `npm install` | 检查网络，或设置 `--https-proxy`/`--registry` |
+| `mxcli widget build` 构建慢 | `@mendix/pluggable-widgets-tools` 依赖 1400+ 包，首次安装约 3 分钟 |
 | widget 在 `mxcli widget list` 看不到 | 确认 `.mpk` 在项目的 `widgets/` 子目录中 |
 | `statusValue: Status` 不生效 | 确认实体有 `Status` 枚举属性，且 enum 类型正确 |
 | `mxcli widget build` 报 widget ID 格式错误 | Widget ID 必须有 4+ 段（如 `com.helpdesk.widget.TicketStatusBadge`） |
+| `exit handler never called` | npm 11 + HTTPS proxy 已知 bug，去掉 `--loglevel verbose` 可避免 |

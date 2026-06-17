@@ -4,36 +4,38 @@
 
 | Tool | Version | Purpose |
 |------|---------|---------|
-| Node.js | 18+ | Run the Widget toolchain |
-| pluggable-widgets-tools | latest | Compile and package the Widget |
+| Node.js | 18+ | Run `@mendix/pluggable-widgets-tools` build toolchain |
+| mxcli | latest | Scaffold, build, install widgets; use widgets in pages |
 | Mendix Studio Pro | 11.x | Import the .mpk, test the Widget |
 
 ## Two Learning Paths
 
-### Path A: Use the Widget only (5 minutes)
-
-1. Drag the prebuilt `TicketStatusBadge.mpk` (the build artifact provided with this module) into Studio Pro
-2. Run `参考实现/use-widget.mdl` to add the Widget to a page
-3. Start the app and check the result
-
-### Path B: Develop the Widget from scratch (full path)
+### Path A: Use the Widget in a Page (5 minutes)
 
 ```bash
-# 1. Clone the Widget template
-npx @mendix/pluggable-widgets-tools@latest create-widget TicketStatusBadge
+# The widget is already built and installed. Just use it in MDL:
+PLUGGABLEWIDGET 'com.helpdesk.widget.TicketStatusBadge' wdgStatus (statusValue: Status)
+```
 
-# 2. Replace the source (copy from widget-source/src/)
-cp widget-source/src/TicketStatusBadge.tsx src/TicketStatusBadge.tsx
+### Path B: Develop the Widget from scratch
 
-# 3. Compile + package
-npm run build
-# Output: dist/TicketStatusBadge.mpk
+```bash
+# 1. Scaffold from a clean template (not needed if using widget-source/)
+mxcli widget new TicketStatusBadge --dir my-widget
 
-# 4. Import the .mpk in Studio Pro
-# App → Import module package → select the .mpk
+# 2. Build, install, and run in one step
+cd widget-source
+mxcli widget build --install --project MyProject.mpr
 
-# 5. Use it on a page via MDL
+# 3. Use it on a page via MDL
 mxcli exec 参考实现/use-widget.mdl -p MyProject.mpr
+```
+
+### Using a proxy for restricted networks
+
+```bash
+mxcli widget build --https-proxy http://192.168.2.35:29758
+mxcli widget build --registry http://npm-registry.internal:4873
 ```
 
 ## Collaborating with Claude
@@ -49,9 +51,7 @@ HD.Ticket_Overview ticket list, replacing the original plain-text display.
 
 ```mdl
 -- Use a custom Widget inside a DataGrid column
-column colStatus (caption: 'Status', ColumnWidth: manual, Size: 120, ShowContentAs: customContent) {
-  PLUGGABLEWIDGET 'helpdesk.TicketStatusBadge' wdgStatus (
-    statusValue: attribute Status
-  )
+column colStatus (attribute: Status, caption: 'Status', ShowContentAs: customContent, ColumnWidth: manual, Size: 140) {
+  PLUGGABLEWIDGET 'com.helpdesk.widget.TicketStatusBadge' wdgStatus (statusValue: Status)
 }
 ```

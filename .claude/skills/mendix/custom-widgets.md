@@ -7,7 +7,8 @@ description: Use when writing MDL for GALLERY, COMBOBOX, or third-party pluggabl
 
 ## Quick Start: Scaffold and Build a Widget Project
 
-Use `mxcli widget new` to scaffold a complete pluggable widget project in seconds:
+Use `mxcli widget new` to scaffold a complete pluggable widget project in seconds.
+The scaffold uses the official `@mendix/pluggable-widgets-tools` structure (React 19, dual AMD/ESM output).
 
 ```bash
 # Minimal widget (no properties)
@@ -25,11 +26,11 @@ mxcli widget new MySlider --id com.acme.widget.MySlider.MySlider
 # Offline-capable widget
 mxcli widget new MySlider --offline
 
-# Multi-widget package (empty src/, then add widgets individually)
-mxcli widget new CrusherWidgets --package
-cd CrusherWidgets
-mxcli widget add-widget CrusherSlider --property "value:attribute:Decimal"
-mxcli widget add-widget CrusherButton --property "label:string" --property "onClick:action"
+# Output to custom directory
+mxcli widget new MySlider --dir ./custom/path
+
+# Specify package path (used in widget ID and JS output structure)
+mxcli widget new MySlider --package-path com.example.widgets
 ```
 
 **Property spec format:** `key:type` or `key:type:subtype`
@@ -49,27 +50,37 @@ mxcli widget add-widget CrusherButton --property "label:string" --property "onCl
 
 ```bash
 cd MySlider
-mxcli widget build                      # auto-detects bun or npm, compiles via esbuild, packages .mpk
+mxcli widget build                      # auto npm install + pluggable-widgets-tools build
 mxcli widget build --dir ./MySlider    # from any directory
+
+# Build with proxy for restricted networks
+mxcli widget build --https-proxy http://proxy.company.com:8080
+mxcli widget build --registry http://npm-registry.internal:4873
+
+# Build and install directly into Mendix project
+mxcli widget build --install --project /path/to/app.mpr
 ```
 
-The build output is `<PackageName>.mpk` in the project root. Copy it to your Mendix app's `widgets/` folder and restart Studio Pro.
+Build output: `dist/1.0.0/<PackageName>.mpk`. The first build may take ~3 minutes (1400+ npm dependencies).
 
 **Generated file structure:**
 
 ```
 MySlider/
+├── .eslintrc.js, prettier.config.js, .gitattributes, LICENSE, .prettierignore
+├── package.json               # @mendix/pluggable-widgets-tools + React 19
+├── README.md
 ├── src/
+│   ├── package.xml            # MPK manifest (<widgetFiles> + <files>)
 │   ├── MySlider.xml           # Widget property definition (edit to add properties)
-│   ├── MySlider.jsx           # React component stub (implement your widget here)
+│   ├── MySlider.jsx           # React component (main entry)
 │   ├── MySlider.editorConfig.js   # Studio Pro design-time caption/preview
-│   ├── MySlider.editorPreview.js  # Browser preview stub
-│   ├── MySlider.icon.png      # Placeholder icon (replace with real asset)
-│   ├── MySlider.icon.dark.png
-│   ├── MySlider.tile.png
-│   └── MySlider.tile.dark.png
-├── package.json               # esbuild as only dev dependency
-└── package.xml                # MPK manifest
+│   ├── MySlider.editorPreview.jsx # Browser preview (JSX format)
+│   ├── MySlider.{icon,tile}.png   # Widget icons
+│   ├── components/
+│   │   └── MySliderSample.jsx     # Render component
+│   └── ui/
+│       └── MySlider.css           # Widget styles
 ```
 
 ## Built-in Pluggable Widgets

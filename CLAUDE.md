@@ -433,7 +433,7 @@ go build -o bin/mxcli ./cmd/mxcli
 | **Diff revisions** | `mxcli diff-local -p app.mpr --ref main..feature` | Compare two arbitrary git revisions |
 | **Mendix git compat** | `mxcli git commit`, `mxcli git doctor`, `mxcli git fix`, `mxcli git notes push` | Commit wrapper that auto-adds `mx_metadata` git notes required by Studio Pro; doctor/fix for existing repos |
 | **OQL** | `mxcli oql -p app.mpr "select ..."` | Query running Mendix runtime |
-| **Widget scaffold** | `mxcli widget new <Name>`, `mxcli widget add-widget <Name>`, `mxcli widget build` | Scaffold pluggable widget projects, add widgets to packages, compile + package to .mpk |
+| **Widget scaffold** | `mxcli widget new <Name>`, `mxcli widget build [--install]` | Scaffold + build pluggable widget projects via @mendix/pluggable-widgets-tools |
 | **Widget discovery** | `show widgets`, `update widgets set ...` | Widget discovery and bulk updates (experimental) |
 | **External SQL** | `sql connect`, `sql <alias> select ...`, `mxcli sql` | Direct SQL queries against PostgreSQL, Oracle, SQL Server (credential isolation) |
 | **Data import** | `import from <alias> query '...' into Module.Entity map (...)` | Import from external DB into Mendix app PostgreSQL (batch insert with ID generation) |
