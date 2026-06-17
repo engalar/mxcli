@@ -12,6 +12,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/mendixlabs/mxcli/internal/widget/build"
 	"github.com/mendixlabs/mxcli/mdl/executor"
 	"github.com/mendixlabs/mxcli/modelsdk/widgets"
 	"github.com/mendixlabs/mxcli/modelsdk/widgets/mpk"
@@ -81,27 +82,20 @@ var widgetDocsCmd = &cobra.Command{
 var widgetNewCmd = &cobra.Command{
 	Use:   "new <name>",
 	Short: "Scaffold a new pluggable widget project",
-	Long: `Create a new Mendix pluggable widget project with a parameterized XML definition,
-JSX stub, editorConfig, editorPreview, and placeholder icons.
+	Long: `Create a Mendix pluggable widget project using @mendix/pluggable-widgets-tools.
+
+Generates a project structure matching the official Mendix Pluggable Widget template:
+  - React 19 with ES module format
+  - Proper package.xml with <files> section for Mendix 11+ compatibility
+  - ESLint, Prettier, LICENSE pre-configured
+  - Dual AMD/ESM output via pluggable-widgets-tools build
 
 Examples:
   mxcli widget new MySlider
   mxcli widget new MySlider --property "value:attribute:Decimal" --property "label:string" --property "onChange:action"
   mxcli widget new MySlider --id com.acme.widget.MySlider --offline
-  mxcli widget new CrusherWidgets --package`,
+  mxcli widget new MySlider --project-path ./MyProject/MyProject.mpr`,
 	RunE: runWidgetNew,
-}
-
-var widgetAddWidgetCmd = &cobra.Command{
-	Use:   "add-widget <name>",
-	Short: "Add a widget to an existing package project",
-	Long: `Add a new widget to a multi-widget package project.
-Run inside the package directory (where package.xml lives).
-
-Examples:
-  mxcli widget add-widget CrusherSlider
-  mxcli widget add-widget CrusherSlider --property "value:attribute:Decimal" --property "label:string"`,
-	RunE: runWidgetAddWidget,
 }
 
 var widgetBuildCmd = &cobra.Command{
@@ -148,13 +142,9 @@ func init() {
 	widgetNewCmd.Flags().String("id", "", "Widget ID (default: com.mendix.widget.custom.<Name>.<Name>)")
 	widgetNewCmd.Flags().StringArray("property", nil, "Property spec: key:type or key:type:subtype (repeatable)")
 	widgetNewCmd.Flags().Bool("offline", false, "Set offlineCapable=true in the widget XML")
-	widgetNewCmd.Flags().Bool("package", false, "Create a multi-widget package project (empty src/)")
 	widgetNewCmd.Flags().String("description", "", "Widget description (written into XML and README)")
-
-	widgetAddWidgetCmd.Flags().String("id", "", "Widget ID (default: com.mendix.widget.custom.<Name>.<Name>)")
-	widgetAddWidgetCmd.Flags().StringArray("property", nil, "Property spec: key:type or key:type:subtype (repeatable)")
-	widgetAddWidgetCmd.Flags().Bool("offline", false, "Set offlineCapable=true")
-	widgetAddWidgetCmd.Flags().String("description", "", "Widget description (written into XML)")
+	widgetNewCmd.Flags().String("package-path", "com.mendix.widget.custom", "Widget package path (used in widget ID and output structure)")
+	widgetNewCmd.Flags().String("project-path", "./tests/testProject", "Path to Mendix test project (.mpr) for live preview")
 
 	widgetBuildCmd.Flags().String("dir", ".", "Widget project root directory")
 	widgetBuildCmd.Flags().Bool("install", false, "Install the built MPK into the Mendix project's widgets/ folder")
@@ -169,7 +159,6 @@ func init() {
 	widgetCmd.AddCommand(widgetInitCmd)
 	widgetCmd.AddCommand(widgetDocsCmd)
 	widgetCmd.AddCommand(widgetNewCmd)
-	widgetCmd.AddCommand(widgetAddWidgetCmd)
 	widgetCmd.AddCommand(widgetBuildCmd)
 	widgetCmd.AddCommand(widgetInstallCmd)
 	rootCmd.AddCommand(widgetCmd)
@@ -182,12 +171,12 @@ func runWidgetInstall(cmd *cobra.Command, args []string) error {
 	mpkPath := mpkFlag
 	if mpkPath == "" {
 		var err error
-		mpkPath, err = findMPKInCwd()
+		mpkPath, err = build.FindMPKInCwd()
 		if err != nil {
 			return err
 		}
 	}
-	return installMPK(mpkPath, projectPath)
+	return build.InstallMPK(mpkPath, projectPath)
 }
 
 func runWidgetExtract(cmd *cobra.Command, args []string) error {
