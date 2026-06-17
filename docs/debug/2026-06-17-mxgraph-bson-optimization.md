@@ -75,3 +75,9 @@ bson dump 命令
    - `internal/mxgraph/adapter/mpr/gen_imports.go` 空白导入 `gen/workflows` 以触发 codec registry 初始化
    - 缺少时 `LoadUnit` 返回 `*element.Base` 而非 `*genWf.Workflow`，导致类型断言失败
    - 同样影响边界事件解析——`BoundaryEvents` 子元素也需要 registry 才能正确解码
+
+5. **CE6686: VoidConditionOutcome 不匹配**
+   - 微流没有 `returns` 子句时，`s.ReturnType` 为 nil，executor 不设置 `ReturnType`/`MicroflowReturnType`
+   - mx check 认为返回类型为"未知"，而 workflow 的 `CallMicroflowTask` 有 `VoidConditionOutcome`
+   - 两者不匹配 → CE6686
+   - **修复**: 在 `cmd_microflows_create_v2.go` 的 `else` 分支中设置 `ReturnType="Nothing"` + `MicroflowReturnType=VoidType`

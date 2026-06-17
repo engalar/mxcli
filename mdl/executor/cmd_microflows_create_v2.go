@@ -45,6 +45,7 @@ import (
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
+	genDt "github.com/mendixlabs/mxcli/modelsdk/gen/datatypes"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 	"github.com/mendixlabs/mxcli/modelsdk/version"
 )
@@ -163,6 +164,15 @@ func execCreateMicroflowGen(ctx *ExecContext, s *ast.CreateMicroflowStmt) error 
 		if s.ReturnType.Variable != "" {
 			mf.SetReturnVariableName(s.ReturnType.Variable)
 		}
+	} else {
+		// No explicit returns clause → void/Nothing.
+		// Without this, mx check sees an unknown return type and reports
+		// CE6686 on any workflow CallMicroflowActivity that has a
+		// VoidConditionOutcome (the return types don't match).
+		mf.SetReturnType("Nothing")
+		vt := genDt.NewVoidType()
+		assignFreshID(vt)
+		mf.SetMicroflowReturnType(vt)
 	}
 
 	// ── Build the flow graph ─────────────────────────────────
