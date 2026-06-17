@@ -8,35 +8,40 @@ import (
 type ComponentSampleRenderer struct{}
 
 func (ComponentSampleRenderer) Render(spec Spec) []File {
+	name := spec.Name + "Sample"
+	className := "widget-" + strings.ToLower(spec.Name)
+
 	var params []string
 	for _, p := range spec.Properties {
-		if p.Key == "label" {
-			params = append(params, "label")
-		} else {
-			params = append(params, p.Key+": "+p.Key)
-		}
+		params = append(params, p.Key)
 	}
-	propsStr := "{ " + strings.Join(params, ", ") + " }"
-	if len(params) == 0 {
+	propsStr := ""
+	if len(params) > 0 {
+		propsStr = "{ " + strings.Join(params, ", ") + " }"
+	} else {
 		propsStr = "_props"
 	}
-	name := spec.Name + "Sample"
-	className := strings.ToLower(spec.Name)
-	labelExpr := fmt.Sprintf("'%s'", spec.Name)
-	for _, p := range spec.Properties {
-		if p.Key == "label" {
-			labelExpr = "label ?? '" + spec.Name + "'"
-			break
+
+	displayExpr := fmt.Sprintf("%q", spec.Name)
+	if len(spec.Properties) > 0 {
+		p := spec.Properties[0]
+		if p.XMLType == "string" || p.XMLType == "attribute" {
+			displayExpr = p.Key + " ?? " + fmt.Sprintf("%q", spec.Name)
+		} else {
+			displayExpr = fmt.Sprintf("String(%s) ?? %q", p.Key, spec.Name)
 		}
 	}
-	content := fmt.Sprintf(`import { createElement } from 'react';
+
+	content := fmt.Sprintf(`import classNames from "classnames";
 
 export function %[1]s(%[2]s) {
-    return createElement('div', { className: %[4]q },
-        createElement('span', null, %[3]s),
+    return (
+        <div className={classNames(%[3]q)}>
+            <span>%[4]s</span>
+        </div>
     );
 }
-`, name, propsStr, labelExpr, "widget-"+className)
+`, name, propsStr, className, displayExpr)
 	return []File{{
 		Path:    "src/components/" + name + ".jsx",
 		Content: []byte(content),

@@ -1,7 +1,9 @@
-import { createElement } from 'react';
+import classNames from "classnames";
 
-export function TicketStatusBadgeSample({ statusValue: statusValue }) {
-    return createElement('div', { className: "widget-ticketstatusbadge" },
-        createElement('span', null, 'TicketStatusBadge'),
+export function TicketStatusBadgeSample({ statusValue }) {
+    return (
+        <div className={classNames("widget-ticketstatusbadge")}>
+            <span>statusValue ?? "TicketStatusBadge"</span>
+        </div>
     );
 }
