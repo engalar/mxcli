@@ -1,6 +1,8 @@
-/*
-Place your custom CSS here
-*/
 .widget-ticketstatusbadge {
-
+    display:       inline-block;
+    padding:       2px 10px;
+    border-radius: 12px;
+    font-size:     0.8rem;
+    font-weight:   600;
+    white-space:   nowrap;
 }
