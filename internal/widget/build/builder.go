@@ -1,11 +1,14 @@
 package build
 
 import (
+	"archive/zip"
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 )
 
 // Config holds parameters for a widget build.
@@ -28,21 +31,26 @@ func Build(ctx context.Context, cfg Config) (*Result, error) {
 		return nil, fmt.Errorf("install deps: %w", err)
 	}
 
+	// pluggable-widgets-tools handles JS bundling via rollup
 	if err := runScript(ctx, cfg.ProjectDir, "build"); err != nil {
 		return nil, fmt.Errorf("npm run build failed: %w", err)
 	}
 
-	// pluggable-widgets-tools outputs to dist/1.0.0/<PackageName>.mpk
-	mpkPattern := filepath.Join(cfg.ProjectDir, "dist", "1.0.0", "*.mpk")
-	matches, err := filepath.Glob(mpkPattern)
-	if err != nil {
-		return nil, fmt.Errorf("glob mpk: %w", err)
-	}
-	if len(matches) == 0 {
-		return nil, fmt.Errorf("no .mpk found in dist/1.0.0/ — build may have failed")
+	// Windows workaround: shelljs cp() in rollup.config.mjs uses bash-only globs
+	// (src/**/*.xml, @(tile|icon)?(.dark).png) that fail on Windows.
+	// We copy missing assets ourselves after build.
+	if err := postProcessAssets(cfg.ProjectDir); err != nil {
+		return nil, fmt.Errorf("post-process assets: %w", err)
 	}
 
-	mpkPath := matches[0]
+	// pluggable-widgets-tools outputs to dist/1.0.0/<PackageName>.mpk,
+	// but that MPK may be empty on Windows (assets missing above).
+	// Re-package from dist/tmp/widgets/ which now has all files.
+	mpkPath, err := repackageMPK(cfg.ProjectDir)
+	if err != nil {
+		return nil, fmt.Errorf("repackage mpk: %w", err)
+	}
+
 	fi, _ := os.Stat(mpkPath)
 	var size int64
 	if fi != nil {
@@ -109,4 +117,141 @@ func detectToolchain() string {
 		return "bun"
 	}
 	return "npm"
+}
+
+// postProcessAssets copies XML, PNG, and package.xml into dist/tmp/widgets/
+// after pluggable-widgets-tools finishes. This works around shelljs cp() glob
+// limitations on Windows (src/**/*.xml, @(tile|icon)?(.dark).png).
+func postProcessAssets(projectDir string) error {
+	srcDir := filepath.Join(projectDir, "src")
+	outDir := filepath.Join(projectDir, "dist", "tmp", "widgets")
+
+	// Copy widget XML files (but not package.xml)
+	matches, err := filepath.Glob(filepath.Join(srcDir, "*.xml"))
+	if err != nil {
+		return err
+	}
+	for _, src := range matches {
+		if strings.HasSuffix(src, "package.xml") {
+			continue
+		}
+		dst := filepath.Join(outDir, filepath.Base(src))
+		if err := copyFile(src, dst); err != nil {
+			return fmt.Errorf("copy xml %s: %w", filepath.Base(src), err)
+		}
+		fmt.Printf("[mxcli] copy %s\n", filepath.Base(src))
+	}
+
+	// Copy package.xml from src/ to dist/tmp/widgets/
+	pkgXML := filepath.Join(srcDir, "package.xml")
+	if _, err := os.Stat(pkgXML); err == nil {
+		dst := filepath.Join(outDir, "package.xml")
+		if err := copyFile(pkgXML, dst); err != nil {
+			return fmt.Errorf("copy package.xml: %w", err)
+		}
+		fmt.Println("[mxcli] copy package.xml")
+	}
+
+	// Copy PNG icon/tile files (Windows-friendly glob, no bash extensions)
+	pngFiles, _ := filepath.Glob(filepath.Join(srcDir, "*.png"))
+	for _, src := range pngFiles {
+		dst := filepath.Join(outDir, filepath.Base(src))
+		if err := copyFile(src, dst); err != nil {
+			return fmt.Errorf("copy png %s: %w", filepath.Base(src), err)
+		}
+		fmt.Printf("[mxcli] copy %s\n", filepath.Base(src))
+	}
+
+	return nil
+}
+
+// repackageMPK re-creates the MPK from dist/tmp/widgets/ contents,
+// overwriting the empty/incomplete MPK that pluggable-widgets-tools produced.
+func repackageMPK(projectDir string) (string, error) {
+	// Find the existing MPK from dist/1.0.0/
+	existing, err := filepath.Glob(filepath.Join(projectDir, "dist", "1.0.0", "*.mpk"))
+	if err != nil {
+		return "", err
+	}
+	if len(existing) == 0 {
+		return "", fmt.Errorf("no existing MPK in dist/1.0.0/")
+	}
+	mpkPath := existing[0]
+
+	widgetsDir := filepath.Join(projectDir, "dist", "tmp", "widgets")
+
+	// Check if there are any files to package
+	hasFiles := false
+	filepath.Walk(widgetsDir, func(path string, fi os.FileInfo, err error) error {
+		if err == nil && !fi.IsDir() {
+			hasFiles = true
+		}
+		return nil
+	})
+	if !hasFiles {
+		return "", fmt.Errorf("dist/tmp/widgets/ is empty — nothing to package")
+	}
+
+	// Create new MPK from dist/tmp/widgets/
+	tmpPath := mpkPath + ".tmp"
+	f, err := os.Create(tmpPath)
+	if err != nil {
+		return "", err
+	}
+	w := zip.NewWriter(f)
+
+	err = filepath.Walk(widgetsDir, func(path string, fi os.FileInfo, err error) error {
+		if err != nil || fi.IsDir() {
+			return err
+		}
+		rel, _ := filepath.Rel(widgetsDir, path)
+		entry, err := w.Create(filepath.ToSlash(rel))
+		if err != nil {
+			return err
+		}
+		data, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		_, err = entry.Write(data)
+		return err
+	})
+
+	closeErr := w.Close()
+	f.Close()
+
+	if err != nil {
+		os.Remove(tmpPath)
+		return "", err
+	}
+	if closeErr != nil {
+		os.Remove(tmpPath)
+		return "", closeErr
+	}
+
+	// Atomic replace
+	if err := os.Rename(tmpPath, mpkPath); err != nil {
+		os.Remove(tmpPath)
+		return "", err
+	}
+
+	return mpkPath, nil
+}
+
+func copyFile(src, dst string) error {
+	if err := os.MkdirAll(filepath.Dir(dst), 0755); err != nil {
+		return err
+	}
+	in, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer in.Close()
+	out, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+	_, err = io.Copy(out, in)
+	return err
 }
