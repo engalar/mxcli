@@ -372,6 +372,29 @@ func collectNestedProperties(pg xmlPropGroup, parent *PropertyDef) {
 	}
 }
 
+// FindAllMPK scans projectDir/widgets/*.mpk and returns a map of
+// widgetID → mpkFilePath for every widget discovered across all MPK files.
+func FindAllMPK(projectDir string) (map[string]string, error) {
+	widgetsDir := filepath.Join(projectDir, "widgets")
+	matches, err := filepath.Glob(filepath.Join(widgetsDir, "*.mpk"))
+	if err != nil {
+		return nil, fmt.Errorf("scan widgets dir: %w", err)
+	}
+	result := make(map[string]string)
+	for _, mpkPath := range matches {
+		ids, err := getWidgetIDsFromMPK(mpkPath)
+		if err != nil {
+			continue
+		}
+		for _, id := range ids {
+			if _, exists := result[id]; !exists {
+				result[id] = mpkPath
+			}
+		}
+	}
+	return result, nil
+}
+
 // FindMPK looks in the project's widgets/ directory for an .mpk matching the widgetID.
 // Returns the path to the .mpk file, or empty string if not found.
 func FindMPK(projectDir string, widgetID string) (string, error) {
