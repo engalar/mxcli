@@ -36,6 +36,7 @@ type JavaScriptAction struct {
 	actionParameters        *property.PartList[element.Element]
 	platform                *property.Enum[string]
 	parameters              *property.PartList[element.Element]
+	javaReturnType          *property.Part[element.Element]
 }
 
 // Name returns the value of the name property.
@@ -163,6 +164,16 @@ func (o *JavaScriptAction) RemoveParameters(index int) {
 	o.parameters.Remove(index)
 }
 
+// JavaReturnType returns the value of the javaReturnType property.
+func (o *JavaScriptAction) JavaReturnType() element.Element {
+	return o.javaReturnType.Get()
+}
+
+// SetJavaReturnType sets the value of the javaReturnType property.
+func (o *JavaScriptAction) SetJavaReturnType(v element.Element) {
+	o.javaReturnType.Set(v)
+}
+
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 // NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *JavaScriptAction) InitFromRaw(raw bson.Raw) {
@@ -200,6 +211,9 @@ func (o *JavaScriptAction) InitFromRaw(raw bson.Raw) {
 		for _, child := range children {
 			o.parameters.AppendFromDecode(child)
 		}
+	}
+	if child, err := codec.DecodeChild(raw, "JavaReturnType"); err == nil {
+		o.javaReturnType.SetFromDecode(child)
 	}
 }
 
@@ -336,7 +350,9 @@ func initJavaScriptAction() *JavaScriptAction {
 	o.platform.Bind(&o.Base, 9)
 	o.parameters = property.NewPartListV2[element.Element]("Parameters")
 	o.parameters.Bind(&o.Base, 10)
-	o.SetProperties([]element.Property{o.name, o.documentation, o.excluded, o.exportLevel, o.actionTypeParameters, o.actionReturnType, o.actionDefaultReturnName, o.modelerActionInfo, o.actionParameters, o.platform, o.parameters})
+	o.javaReturnType = property.NewPart[element.Element]("JavaReturnType")
+	o.javaReturnType.Bind(&o.Base, 11)
+	o.SetProperties([]element.Property{o.name, o.documentation, o.excluded, o.exportLevel, o.actionTypeParameters, o.actionReturnType, o.actionDefaultReturnName, o.modelerActionInfo, o.actionParameters, o.platform, o.parameters, o.javaReturnType})
 	return o
 }
 

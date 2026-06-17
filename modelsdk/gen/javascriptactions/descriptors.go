@@ -21,6 +21,7 @@ func init() {
 			{Name: "actionParameters", BSONKey: "ActionParameters", Kind: codec.PropKindPartList, RefType: ""},
 			{Name: "platform", BSONKey: "Platform", Kind: codec.PropKindEnum, RefType: ""},
 			{Name: "parameters", BSONKey: "Parameters", Kind: codec.PropKindPartList, RefType: ""},
+			{Name: "javaReturnType", BSONKey: "JavaReturnType", Kind: codec.PropKindPart, RefType: ""},
 		},
 	})
 	codec.DefaultDescRegistry.Register("JavaScriptActions$JavaScriptActionParameter", &codec.TypeDesc{

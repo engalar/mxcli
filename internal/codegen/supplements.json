@@ -78,6 +78,7 @@
     "RetrieveAction.outputVariableName": "ResultVariableName",
     "JavaScriptActionParameterMapping.parameter": "Parameter",
     "JavaScriptActionParameter.actionParameterType": "ParameterType",
+    "JavaScriptAction.javaReturnType": "JavaReturnType",
     "MicroflowParameter.parameterType": "VariableType",
     "MicroflowCallAction.outputVariableName": "ResultVariableName",
     "JavaActionCallAction.outputVariableName": "ResultVariableName",
@@ -282,6 +283,10 @@
       {
         "name": "parameters",
         "kind": "PartList"
+      },
+      {
+        "name": "javaReturnType",
+        "kind": "Part"
       }
     ],
     "JumpToActivity": [],

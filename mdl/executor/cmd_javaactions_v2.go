@@ -1176,9 +1176,11 @@ func execCreateJavaScriptAction(ctx *ExecContext, s *ast.CreateJavaScriptActionS
 		jsa.AddParameters(jsaParam)
 	}
 
-	// Return type — don't set for void (mxbuild 11.6.6 reads return type from JavaReturnType legacy key).
+	// Return type — mxbuild 11.6.6 reads the legacy JavaReturnType key.
 	if s.ReturnType.Kind != ast.TypeVoid {
-		jsa.SetActionReturnType(astDataTypeToJavaActionReturnTypeGen(s.ReturnType, nil))
+		rt := astDataTypeToJavaActionReturnTypeGen(s.ReturnType, nil)
+		jsa.SetActionReturnType(rt)
+		jsa.SetJavaReturnType(rt)
 	}
 
 	// Persist.
