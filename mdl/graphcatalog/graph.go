@@ -25,6 +25,17 @@ func NewProjectGraph(mgr *mxgraph.IndexManager) *ProjectGraph {
 
 // g 是内部便捷访问器。
 func (pg *ProjectGraph) g() *mxgraph.Graph {
+	if pg == nil || pg.mgr == nil {
+		return nil
+	}
+	return pg.mgr.Query()
+}
+
+// MxGraph returns the underlying mxgraph.Graph for direct node queries.
+func (pg *ProjectGraph) MxGraph() *mxgraph.Graph {
+	if pg == nil || pg.mgr == nil {
+		return nil
+	}
 	return pg.mgr.Query()
 }
 
