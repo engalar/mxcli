@@ -145,10 +145,13 @@ func init() {
 	widgetNewCmd.Flags().String("description", "", "Widget description (written into XML and README)")
 	widgetNewCmd.Flags().String("package-path", "com.mendix.widget.custom", "Widget package path (used in widget ID and output structure)")
 	widgetNewCmd.Flags().String("project-path", "./tests/testProject", "Path to Mendix test project (.mpr) for live preview")
+	widgetNewCmd.Flags().StringP("dir", "d", "", "Output directory (default: <name>/)")
 
 	widgetBuildCmd.Flags().String("dir", ".", "Widget project root directory")
 	widgetBuildCmd.Flags().Bool("install", false, "Install the built MPK into the Mendix project's widgets/ folder")
 	widgetBuildCmd.Flags().StringP("project", "p", "", "Path to Mendix project (.mpr file) — required with --install")
+	widgetBuildCmd.Flags().String("registry", "", "npm registry URL for dependency install (e.g. http://localhost:29758/)")
+	widgetBuildCmd.Flags().String("https-proxy", "", "HTTPS proxy URL for npm install (e.g. http://127.0.0.1:29758)")
 
 	widgetInstallCmd.Flags().String("mpk", "", "Path to .mpk file (default: auto-detect *.mpk in current directory)")
 	widgetInstallCmd.Flags().StringP("project", "p", "", "Path to Mendix project (.mpr file)")

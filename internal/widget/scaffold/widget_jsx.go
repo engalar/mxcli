@@ -25,8 +25,6 @@ import "./ui/%[1]s.css";
 export function %[1]s(%[2]s) {
     return createElement(%[1]sSample, { %[3]s });
 }
-
-export default %[1]s;
 `, spec.Name, propsStr, jsxSpreadAttrs(spec.Properties))
 	return []File{{
 		Path:    "src/" + spec.Name + ".jsx",

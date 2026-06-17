@@ -5,13 +5,13 @@ package main
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/mendixlabs/mxcli/internal/widget/scaffold"
 	"github.com/spf13/cobra"
 )
 
-// renderers is the default set of scaffold renderers, in write order.
 var renderers = []scaffold.Renderer{
 	scaffold.PackageJSONRenderer{},
 	scaffold.PackageXMLRenderer{},
@@ -32,7 +32,14 @@ func runWidgetNew(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("widget name required: mxcli widget new <name>")
 	}
 	name := args[0]
-	outDir := name
+
+	outDir, _ := cmd.Flags().GetString("dir")
+	if outDir == "" {
+		outDir = name
+	}
+	if abs, err := filepath.Abs(outDir); err == nil {
+		outDir = abs
+	}
 
 	if _, err := os.Stat(outDir); err == nil {
 		return fmt.Errorf("directory %q already exists", outDir)
@@ -80,7 +87,6 @@ func runWidgetNew(cmd *cobra.Command, args []string) error {
 	fmt.Printf("Created widget project: %s/\n", outDir)
 	fmt.Printf("  Widget ID: %s\n", widgetID)
 	fmt.Printf("  Edit:      %s/src/%s.jsx\n", outDir, name)
-	fmt.Printf("  Install:   cd %s && npm install\n", outDir)
-	fmt.Printf("  Build:     cd %s && npm run build\n", outDir)
+	fmt.Printf("  Build:     mxcli widget build --dir %s\n", outDir)
 	return nil
 }
