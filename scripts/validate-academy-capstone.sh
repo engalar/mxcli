@@ -4,21 +4,25 @@
 #
 # Steps:
 #   new    — rm -rf HelpDeskE2E + mxcli new (fresh project)
-#   exec   — pre-build widget + mdlrun MDL files (01-10 + 99)
+#   widget — build + install TicketStatusBadge widget from source
+#   exec   — mdlrun MDL files (01-10 + 99)
 #   check  — mx check (Studio Pro-level BSON validation, baseline=0)
 #   ext    — copy theme SCSS; confirm widget installed
 #   build  — mxcli-local build (PAD package)
 #   run    — mxcli-local run (blocks until Ctrl+C, human validation)
 #
 # Usage:
-#   ./validate-academy-capstone.sh                # full run (all 6 steps)
-#   ./validate-academy-capstone.sh --from exec    # skip new, run exec→check→build→run
-#   ./validate-academy-capstone.sh --from check   # skip new+exec, run check→build→run
-#   ./validate-academy-capstone.sh --from build   # skip new+exec+check, run build→run
-#   ./validate-academy-capstone.sh --from run     # just start the runtime
+#   ./validate-academy-capstone.sh                          # full run (all 7 steps)
+#   ./validate-academy-capstone.sh --from widget            # skip new, run widget→exec→check→build→run
+#   ./validate-academy-capstone.sh --from exec              # skip new+widget, run exec→check→build→run
+#   ./validate-academy-capstone.sh --from check             # skip new+widget+exec, run check→build→run
+#   ./validate-academy-capstone.sh --from build             # skip new+widget+exec+check, run build→run
+#   ./validate-academy-capstone.sh --from run               # just start the runtime
+#
 #
 # Modules:
-#   01-07  Core modules (domain, microflows, nanoflows, pages, security, KB, escalation)
+#   01-06  Core modules (domain, microflows, nanoflows, pages, security, KB)
+#   07     Workflow — native escalation (replaces microflow-based escalation)
 #   08     Java Action — password hashing
 #   09     JS Action   — clipboard, notifications, relative time
 #   10     Widget      — TicketStatusBadge (built from source automatically)
@@ -53,11 +57,11 @@ while [ $# -gt 0 ]; do
             FROM_STEP="${1#--from=}"
             ;;
         --skip-create)
-            FROM_STEP="exec"  # backwards compat
+            FROM_STEP="widget"  # backwards compat (previously exec included widget build)
             ;;
         *)
             echo "unknown flag: $1" >&2
-            echo "Usage: $0 [--from new|exec|check|build|run]" >&2
+            echo "Usage: $0 [--from new|widget|exec|check|build|run]" >&2
             exit 2
             ;;
     esac
@@ -65,14 +69,14 @@ while [ $# -gt 0 ]; do
 done
 
 case "$FROM_STEP" in
-    new|exec|check|build|run) ;;
-    *) echo "ERROR: --from must be one of: new exec check build run" >&2; exit 2 ;;
+    new|widget|exec|check|build|run) ;;
+    *) echo "ERROR: --from must be one of: new widget exec check build run" >&2; exit 2 ;;
 esac
 
 # ── helpers ────────────────────────────────────────────────────────────────
 
 step_enabled() {
-    local order="new exec check build run"
+    local order="new widget exec check build run"
     local pos_from pos_step i=0
     for s in $order; do
         [ "$s" = "$FROM_STEP" ] && pos_from=$i
@@ -175,16 +179,21 @@ else
     fi
 fi
 
-# ── step 2: exec ───────────────────────────────────────────────────────────
+# ── step 2: widget ─────────────────────────────────────────────────────────
 
-if step_enabled exec; then
-    # Build+install widget before exec (needed by 10-widget.mdl)
+if step_enabled widget; then
     if [ -d "$WIDGET_SOURCE_DIR" ]; then
-        echo "  pre-exec: building + installing widget from $WIDGET_SOURCE_DIR..."
+        echo "  widget: building + installing from $WIDGET_SOURCE_DIR..."
         run_mxcli widget build --dir "$WIDGET_SOURCE_DIR" --install -p "$MPR" || \
             echo "  WARNING: widget build failed — will skip 10-widget.mdl" >&2
     fi
+else
+    echo "  skipping widget build"
+fi
 
+# ── step 3: exec ───────────────────────────────────────────────────────────
+
+if step_enabled exec; then
     mdl_files=(
         "$CAPSTONE_DIR/01-domain.mdl"
         "$CAPSTONE_DIR/02-microflows.mdl"
@@ -192,7 +201,7 @@ if step_enabled exec; then
         "$CAPSTONE_DIR/04-pages.mdl"
         "$CAPSTONE_DIR/05-security.mdl"
         "$CAPSTONE_DIR/06-kb.mdl"
-        "$CAPSTONE_DIR/07-escalation.mdl"
+        "$CAPSTONE_DIR/08-workflow.mdl"
         "$CAPSTONE_DIR/08-java-actions.mdl"
         "$CAPSTONE_DIR/09-js-actions.mdl"
         "$CAPSTONE_DIR/99-seed-data.mdl"
@@ -209,7 +218,7 @@ else
     echo "  skipping exec"
 fi
 
-# ── step 3: check ──────────────────────────────────────────────────────────
+# ── step 4: check ──────────────────────────────────────────────────────────
 
 if step_enabled check; then
     echo "  mx check..."
@@ -219,15 +228,17 @@ if step_enabled check; then
     else
         BASELINE=$(mktemp)
         echo 0 > "$BASELINE"
+        echo ""
         mx_check_against_baseline "$MPR" "$BASELINE" "$MX_BIN" || {
-            echo "  WARNING: mx check found errors (see above). Continuing..." >&2
+            echo "mx check failed — aborting." >&2
+            exit 1
         }
     fi
 else
     echo "  skipping mx check"
 fi
 
-# ── step 4: extensions (theme + optional widget) ──────────────────────────
+# ── step 5: extensions (theme + optional widget) ──────────────────────────
 
 if step_enabled check; then
     # Always append theme CSS to main.scss (module 11)
@@ -244,7 +255,7 @@ if step_enabled check; then
     fi
 fi
 
-# ── step 5: build ──────────────────────────────────────────────────────────
+# ── step 6: build ──────────────────────────────────────────────────────────
 
 if step_enabled build; then
     echo "  building..."
@@ -254,7 +265,7 @@ else
     echo "  skipping build"
 fi
 
-# ── step 6: run ────────────────────────────────────────────────────────────
+# ── step 7: run ────────────────────────────────────────────────────────────
 
 if step_enabled run; then
     stop_runtime

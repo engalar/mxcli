@@ -43,6 +43,7 @@ func buildGraph(ctx *ExecContext) error {
 	mgr.RegisterAdapter(&mpradapter.PageAdapter{Model: m})
 	mgr.RegisterAdapter(&mpradapter.SecurityAdapter{Model: m})
 	mgr.RegisterAdapter(&mpradapter.EnumerationAdapter{Model: m})
+	mgr.RegisterAdapter(&mpradapter.WorkflowAdapter{Model: m})
 
 	buildCtx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()

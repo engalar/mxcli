@@ -91,6 +91,7 @@ func buildProjectGraph(projectPath string) (*graphcatalog.ProjectGraph, error) {
 	mgr.RegisterAdapter(&mpradapter.MicroflowAdapter{Model: m})
 	mgr.RegisterAdapter(&mpradapter.PageAdapter{Model: m})
 	mgr.RegisterAdapter(&mpradapter.EnumerationAdapter{Model: m})
+	mgr.RegisterAdapter(&mpradapter.WorkflowAdapter{Model: m})
 
 	if err := mgr.BuildAll(context.Background()); err != nil {
 		return nil, fmt.Errorf("build graph: %w", err)

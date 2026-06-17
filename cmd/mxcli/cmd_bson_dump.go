@@ -3,12 +3,18 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	bsondebug "github.com/mendixlabs/mxcli/cmd/mxcli/bson"
+	"github.com/mendixlabs/mxcli/internal/mxgraph"
+	mpradapter "github.com/mendixlabs/mxcli/internal/mxgraph/adapter/mpr"
+	"github.com/mendixlabs/mxcli/mdl/graphcatalog"
+	"github.com/mendixlabs/mxcli/modelsdk"
 	mmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
 	"github.com/spf13/cobra"
 	"go.mongodb.org/mongo-driver/v2/bson"
@@ -68,14 +74,34 @@ Examples:
 		}
 		defer reader.Close()
 
+		// Try mxgraph fast path — load snapshot, or build + save if missing
+		mxGraph := tryLoadMxGraph(projectPath)
+		if mxGraph == nil {
+			mxGraph = buildMxGraph(projectPath)
+		}
+
 		// List objects
 		if listObjects {
+			if mxGraph != nil {
+				if label := mxTypeToLabel(objectType); label != "" {
+					nodes := mxGraph.FindNodes(label, nil)
+					fmt.Printf("Objects of type '%s':\n", objectType)
+					for _, n := range nodes {
+						qn, _ := n.Props["QualifiedName"].(string)
+						t, _ := n.Props["$Type"].(string)
+						if qn != "" {
+							fmt.Printf("  %s (%s)\n", qn, t)
+						}
+					}
+					return
+				}
+			}
+			// Fallback: O(N) scan via reader
 			units, err := reader.ListRawUnits(objectType)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 				os.Exit(1)
 			}
-
 			fmt.Printf("Objects of type '%s':\n", objectType)
 			for _, u := range units {
 				fmt.Printf("  %s (%s)\n", u.QualifiedName, u.Type)
@@ -133,42 +159,27 @@ Examples:
 
 		// Dump single object
 		if objectName != "" {
+			// Fast path via mxgraph: find unit ID by QualifiedName, load raw BSON
+			if mxGraph != nil {
+				if label := mxTypeToLabel(objectType); label != "" {
+					nodes := mxGraph.FindNodes(label, map[string]any{"QualifiedName": objectName})
+					if len(nodes) > 0 {
+						nodeID := string(nodes[0].ID)
+						contents, err := reader.GetRawUnitBytes(nodeID)
+						if err == nil && len(contents) > 0 {
+							outputBson(contents, format)
+							return
+						}
+					}
+				}
+			}
+			// Fallback: O(N) scan via reader
 			obj, err := reader.GetRawUnitByName(objectType, objectName)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 				os.Exit(1)
 			}
-
-			if format == "bson" {
-				// Write raw BSON bytes to stdout (for baseline extraction)
-				os.Stdout.Write(obj.Contents)
-				return
-			}
-
-			if format == "ndsl" {
-				var doc bson.D
-				if err := bson.Unmarshal(obj.Contents, &doc); err != nil {
-					fmt.Fprintf(os.Stderr, "Error parsing BSON: %v\n", err)
-					os.Exit(1)
-				}
-				fmt.Println(bsondebug.Render(doc, 0))
-				return
-			}
-
-			// Parse BSON and output as JSON
-			var raw any
-			if err := bson.Unmarshal(obj.Contents, &raw); err != nil {
-				fmt.Fprintf(os.Stderr, "Error parsing BSON: %v\n", err)
-				os.Exit(1)
-			}
-
-			jsonBytes, err := json.MarshalIndent(raw, "", "  ")
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "Error converting to JSON: %v\n", err)
-				os.Exit(1)
-			}
-
-			fmt.Println(string(jsonBytes))
+			outputBson(obj.Contents, format)
 			return
 		}
 
@@ -176,6 +187,35 @@ Examples:
 		fmt.Fprintln(os.Stderr, "Error: specify --list, --object, or --compare")
 		os.Exit(1)
 	},
+}
+
+// outputBson formats and writes raw BSON bytes in the specified format.
+func outputBson(contents []byte, format string) {
+	if format == "bson" {
+		os.Stdout.Write(contents)
+		return
+	}
+	if format == "ndsl" {
+		var doc bson.D
+		if err := bson.Unmarshal(contents, &doc); err != nil {
+			fmt.Fprintf(os.Stderr, "Error parsing BSON: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Println(bsondebug.Render(doc, 0))
+		return
+	}
+	// Default: JSON
+	var raw any
+	if err := bson.Unmarshal(contents, &raw); err != nil {
+		fmt.Fprintf(os.Stderr, "Error parsing BSON: %v\n", err)
+		os.Exit(1)
+	}
+	jsonBytes, err := json.MarshalIndent(raw, "", "  ")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error converting to JSON: %v\n", err)
+		os.Exit(1)
+	}
+	fmt.Println(string(jsonBytes))
 }
 
 // compareBsonDocs compares two BSON documents and returns a list of differences.
@@ -346,8 +386,75 @@ func formatValue(val any) string {
 	}
 }
 
+// mxTypeToLabel maps bson dump object types to mxgraph node labels.
+// Empty label means the type is not indexed by mxgraph.
+func mxTypeToLabel(objectType string) mxgraph.Label {
+	switch strings.ToLower(objectType) {
+	case "workflow":
+		return "Workflow"
+	case "microflow":
+		return "Microflow"
+	case "nanoflow":
+		return "Nanoflow"
+	case "page":
+		return "Page"
+	case "enumeration":
+		return "Enumeration"
+	}
+	return ""
+}
+
+// tryLoadMxGraph loads the mxgraph snapshot from the project directory.
+// Returns nil if the snapshot doesn't exist or can't be loaded.
+func tryLoadMxGraph(projectPath string) *mxgraph.Graph {
+	dir := filepath.Dir(projectPath)
+	snapPath := filepath.Join(dir, ".mxcli", "graph.gob")
+	data, err := os.ReadFile(snapPath)
+	if err != nil {
+		return nil
+	}
+	g, err := mxgraph.UnmarshalSnapshot(data)
+	if err != nil {
+		return nil
+	}
+	return g
+}
+
+// buildMxGraph builds the mxgraph from the MPR, saves a snapshot, and returns the graph.
+// Falls back to nil on any error — the caller will use the O(N) scan path.
+func buildMxGraph(projectPath string) *mxgraph.Graph {
+	m, err := modelsdk.Open(projectPath)
+	if err != nil {
+		return nil
+	}
+	defer m.Close()
+
+	mgr := mxgraph.NewIndexManager()
+	mgr.RegisterAdapter(&mpradapter.DomainModelAdapter{Model: m})
+	mgr.RegisterAdapter(&mpradapter.MicroflowAdapter{Model: m})
+	mgr.RegisterAdapter(&mpradapter.PageAdapter{Model: m})
+	mgr.RegisterAdapter(&mpradapter.EnumerationAdapter{Model: m})
+	mgr.RegisterAdapter(&mpradapter.WorkflowAdapter{Model: m})
+
+	if err := mgr.BuildAll(context.Background()); err != nil {
+		return nil
+	}
+	pg := graphcatalog.NewProjectGraph(mgr)
+
+	// Persist snapshot (best-effort)
+	data, snapErr := pg.MarshalSnapshot()
+	dir := filepath.Dir(projectPath)
+	snapPath := filepath.Join(dir, ".mxcli", "graph.gob")
+	if snapErr == nil {
+		if mkErr := os.MkdirAll(filepath.Dir(snapPath), 0700); mkErr == nil {
+			_ = os.WriteFile(snapPath, data, 0600)
+		}
+	}
+	return mgr.Query()
+}
+
 func init() {
-	bsonDumpCmd.Flags().StringP("type", "t", "page", "Object type: page, microflow, nanoflow, enumeration, snippet, layout, constant")
+	bsonDumpCmd.Flags().StringP("type", "t", "page", "Object type: page, microflow, nanoflow, enumeration, snippet, layout, constant, workflow")
 	bsonDumpCmd.Flags().StringP("object", "o", "", "Object qualified name to dump (e.g., Module.PageName)")
 	bsonDumpCmd.Flags().BoolP("list", "l", false, "List all objects of the specified type")
 	bsonDumpCmd.Flags().StringSliceP("compare", "c", nil, "Compare two objects: --compare Obj1,Obj2")

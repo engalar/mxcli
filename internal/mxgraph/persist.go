@@ -6,6 +6,8 @@ import (
 	"encoding/gob"
 	"fmt"
 	"io"
+
+	"github.com/mendixlabs/mxcli/modelsdk/element"
 )
 
 func init() {
@@ -13,6 +15,8 @@ func init() {
 	gob.Register(&Edge{})
 	gob.Register(map[string]any{})
 	gob.Register([]any{})
+	gob.Register(NodeID(""))
+	gob.Register(element.ID(""))
 }
 
 // ── Snapshot ────────────────────────────────────────────────
