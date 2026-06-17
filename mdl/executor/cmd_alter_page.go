@@ -295,6 +295,7 @@ func buildWidgetsFromASTGen(ctx *ExecContext, widgets []*ast.WidgetV3, moduleNam
 		themeRegistry:    ctx.GetThemeRegistry(),
 		widgetBackend:    ctx.Backend,
 		snippetsRepo:     ctx.Snippets,
+		mxGraph:          ctx.Graph.MxGraph(),
 	}
 
 	var result []element.Element

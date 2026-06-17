@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/mendixlabs/mxcli/internal/mxgraph"
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	"github.com/mendixlabs/mxcli/mdl/backend"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
@@ -63,6 +64,8 @@ type pageBuilder struct {
 	// container (folder or module) so cmd_pages_create_v3.go can use it
 	// when calling CreatePageGen / CreateSnippetGen.
 	lastContainerID model.ID
+
+	mxGraph *mxgraph.Graph // Injected from ExecContext for widget registry fast path
 }
 
 // initPluggableEngine lazily initializes the pluggable widget engine.
@@ -75,6 +78,9 @@ func (pb *pageBuilder) initPluggableEngine() {
 		pb.pluggableEngineErr = mdlerrors.NewBackend("widget registry init", err)
 		log.Printf("warning: %v", pb.pluggableEngineErr)
 		return
+	}
+	if pb.mxGraph != nil {
+		registry.SetMxGraph(pb.mxGraph)
 	}
 	if pb.backend != nil {
 		if loadErr := registry.LoadUserDefinitions(pb.backend.Path()); loadErr != nil {

@@ -77,6 +77,7 @@ func execCreatePageV3(ctx *ExecContext, s *ast.CreatePageStmtV3) error {
 		microflowsRepo:   ctx.Microflows,
 		nanoflowsRepo:    ctx.Nanoflows,
 		snippetsRepo:     ctx.Snippets,
+		mxGraph:          ctx.Graph.MxGraph(),
 	}
 
 	// buildPageV3 now returns *genPg.Page directly (Stage 3.3.5.Cat-B).
