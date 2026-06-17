@@ -11,7 +11,7 @@ import (
 
 func TestRenderersListIsPopulated(t *testing.T) {
 	// renderers list removed in template-based approach — just verify scaffold exists
-	_ = scaffold.DeriveWidgetID("Test")
+	_ = scaffold.DeriveWidgetID("com.mendix.widget.custom", "Test")
 }
 
 func TestScaffoldThenDiscover(t *testing.T) {

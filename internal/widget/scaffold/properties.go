@@ -23,9 +23,12 @@ func ParsePropertySpec(s string) (PropertySpec, error) {
 	return PropertySpec{Key: key, XMLType: xmlType, Subtype: subtype}, nil
 }
 
-// DeriveWidgetID returns the default widget ID for a widget named name.
-func DeriveWidgetID(name string) string {
-	return fmt.Sprintf("com.mendix.widget.custom.%s.%s", name, name)
+// DeriveWidgetID returns the canonical widget ID for the given package path and name.
+// The middle segment (package name) is lowercased to match the directory that
+// pluggable-widgets-tools emits, e.g. packagePath="com.mendix.widget.custom",
+// name="MySlider" → "com.mendix.widget.custom.myslider.MySlider".
+func DeriveWidgetID(packagePath, name string) string {
+	return fmt.Sprintf("%s.%s.%s", packagePath, strings.ToLower(name), name)
 }
 
 // ValidateWidgetIDFormat checks that a widget ID has at least 4 dot-separated segments.

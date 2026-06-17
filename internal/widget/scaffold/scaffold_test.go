@@ -41,8 +41,18 @@ func TestParsePropertySpec(t *testing.T) {
 }
 
 func TestDeriveWidgetID(t *testing.T) {
-	if got := DeriveWidgetID("MySlider"); got != "com.mendix.widget.custom.MySlider.MySlider" {
-		t.Errorf("DeriveWidgetID = %q", got)
+	cases := []struct {
+		packagePath string
+		name        string
+		want        string
+	}{
+		{"com.mendix.widget.custom", "MySlider", "com.mendix.widget.custom.myslider.MySlider"},
+		{"com.helpdesk.widget", "TicketStatusBadge", "com.helpdesk.widget.ticketstatusbadge.TicketStatusBadge"},
+	}
+	for _, c := range cases {
+		if got := DeriveWidgetID(c.packagePath, c.name); got != c.want {
+			t.Errorf("DeriveWidgetID(%q, %q) = %q, want %q", c.packagePath, c.name, got, c.want)
+		}
 	}
 }
 
@@ -119,7 +129,7 @@ func TestRunScaffold_CreatesExpectedFiles(t *testing.T) {
 
 func TestRunScaffold_NoProps(t *testing.T) {
 	dir := t.TempDir()
-	spec := Spec{Name: "Empty", WidgetID: DeriveWidgetID("Empty"), PackagePath: "com.mendix.widget.custom"}
+	spec := Spec{Name: "Empty", WidgetID: DeriveWidgetID("com.mendix.widget.custom", "Empty"), PackagePath: "com.mendix.widget.custom"}
 	if err := Run(dir, spec); err != nil {
 		t.Fatalf("Run: %v", err)
 	}

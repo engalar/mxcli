@@ -30,16 +30,16 @@ func runWidgetNew(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("directory %q already exists", outDir)
 	}
 
+	packagePath, _ := cmd.Flags().GetString("package-path")
 	widgetID, _ := cmd.Flags().GetString("id")
 	if widgetID == "" {
-		widgetID = scaffold.DeriveWidgetID(name)
+		widgetID = scaffold.DeriveWidgetID(packagePath, name)
 	} else {
 		if err := scaffold.ValidateWidgetIDFormat(widgetID); err != nil {
 			return err
 		}
 	}
 
-	packagePath, _ := cmd.Flags().GetString("package-path")
 	projectPath, _ := cmd.Flags().GetString("project-path")
 	offline, _ := cmd.Flags().GetBool("offline")
 	description, _ := cmd.Flags().GetString("description")

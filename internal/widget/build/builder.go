@@ -66,15 +66,11 @@ func patchRollupCP(projectDir string) error {
 	}
 	content := string(data)
 
-	// Guard: skip if we already patched (fs.existsSync wrap instead of @() glob)
 	sentinel := "[mxcli-patched]"
 	if strings.Contains(content, sentinel) {
 		return nil
 	}
 
-	// Bash extended glob `@(tile|icon)?(.dark)` contains @ and ? sequences
-	// that glob.sync() treats as literal characters.
-	// Replace with standard-Node.js explicit file checks.
 	oldPng := "if (existsSync(`src/${widgetName}.icon.png`) || existsSync(`src/${widgetName}.tile.png`)) {\n                        cp(join(sourcePath, `src/${widgetName}.@(tile|icon)?(.dark).png`), outDir);\n                    }"
 	newPng := "// " + sentinel + "\n                    ['icon.png','icon.dark.png','tile.png','tile.dark.png'].forEach(function(f){var p=join(sourcePath,'src',widgetName+'.'+f);if(existsSync(p))cp(p,join(outDir,widgetName+'.'+f));})"
 
@@ -91,9 +87,13 @@ func patchRollupCP(projectDir string) error {
 }
 
 func installDeps(cfg Config) error {
-	if _, err := os.Stat(filepath.Join(cfg.ProjectDir, "node_modules")); err == nil {
+	// Check for the specific tool, not just any node_modules directory.
+	// node_modules/ may exist with only unrelated packages (e.g. esbuild alone).
+	toolsPath := filepath.Join(cfg.ProjectDir, "node_modules", "@mendix", "pluggable-widgets-tools")
+	if _, err := os.Stat(toolsPath); err == nil {
 		return nil
 	}
+
 	tool := detectToolchain()
 	args := []string{"install", "--no-audit", "--no-fund"}
 	if cfg.Registry != "" {

@@ -43,7 +43,7 @@ create or replace page HD.Ticket_Overview
             textfilter fSubject
           }
           column colStatus (attribute: Status, caption: 'Status', ShowContentAs: customContent, ColumnWidth: manual, Size: 140) {
-            PLUGGABLEWIDGET 'com.helpdesk.widget.TicketStatusBadge' wdgStatus (statusValue: Status)
+            PLUGGABLEWIDGET 'com.helpdesk.widget.ticketstatusbadge.TicketStatusBadge' wdgStatus (statusValue: Status)
           }
           column colPriority (attribute: Priority, caption: 'Priority', ColumnWidth: manual, Size: 100) {
             dropdownfilter fPriority
