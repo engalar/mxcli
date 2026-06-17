@@ -245,6 +245,13 @@ func execCreateNanoflowGen(ctx *ExecContext, s *ast.CreateNanoflowStmt) error {
 			}
 		}
 
+		// Register named return variable before building the flow graph
+		// so body statements that assign or read it pass the declared-
+		// variable check. Mirrors cmd_microflows_create_v2.go:215-219.
+		if s.ReturnType != nil && s.ReturnType.Variable != "" {
+			fb.declaredVars[s.ReturnType.Variable] = "Unknown"
+		}
+
 		oc = fb.buildFlowGraphGen(s.Body, s.ReturnType)
 
 		// Surface validation errors collected during build.
@@ -283,6 +290,9 @@ func execCreateNanoflowGen(ctx *ExecContext, s *ast.CreateNanoflowStmt) error {
 		}
 		if dt := convertASTToGenDataType(s.ReturnType.Type); dt != nil {
 			nf.SetMicroflowReturnType(dt)
+		}
+		if s.ReturnType.Variable != "" {
+			nf.SetReturnVariableName(s.ReturnType.Variable)
 		}
 	}
 
