@@ -18,6 +18,7 @@ func (WidgetXMLRenderer) Render(spec Spec) []File {
 	b.Line(`        xsi:schemaLocation="http://www.mendix.com/widget/1.0/ ../node_modules/mendix/custom_widget.xsd">`)
 	b.Line(fmt.Sprintf(`  <name>%s</name>`, human))
 	b.Line(fmt.Sprintf(`  <description>%s</description>`, xmlEscape(spec.Description)))
+	b.Line(`  <icon/>`)
 	b.Line(`  <properties>`)
 	b.Line(`    <propertyGroup caption="General">`)
 	for _, p := range spec.Properties {

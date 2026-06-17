@@ -175,7 +175,7 @@ func TestRenderPackageXML(t *testing.T) {
 		`name="MyPkg"`,
 		`version="1.0.0"`,
 		`<widgetFile path="MyPkg.xml"/>`,
-		`<file path="com/mendix/widget/custom/MyPkg/"/>`,
+		`<file path="com/mendix/widget/custom/mypkg/"/>`,
 	}
 	for _, want := range checks {
 		if !strings.Contains(xml, want) {
