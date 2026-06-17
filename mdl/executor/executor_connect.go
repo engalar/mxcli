@@ -40,7 +40,11 @@ func execConnect(ctx *ExecContext, s *ast.ConnectStmt) error {
 	// Auto-load graph snapshot if available — lets subsequent commands use the
 	// pre-built index without an explicit "refresh graph" command.
 	if s.Path != "" {
-		tryLoadGraphSnapshot(filepath.Dir(s.Path), ctx.Cache, &ctx.Graph)
+		if mgp, ok := ctx.Backend.(MxGraphProvider); ok {
+			tryLoadGraphSnapshot(filepath.Dir(s.Path), ctx.Cache, &ctx.Graph, mgp)
+		} else {
+			tryLoadGraphSnapshot(filepath.Dir(s.Path), ctx.Cache, &ctx.Graph)
+		}
 	}
 
 	// Reset project-scoped caches — previous project's catalog and theme

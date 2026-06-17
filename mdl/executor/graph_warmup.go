@@ -5,9 +5,16 @@ package executor
 import (
 	"os"
 
+	"github.com/mendixlabs/mxcli/internal/mxgraph"
 	"github.com/mendixlabs/mxcli/mdl/graphcatalog"
 	"github.com/mendixlabs/mxcli/model"
 )
+
+// MxGraphProvider is an optional interface backends can implement to expose
+// a pre-loaded mxgraph snapshot, avoiding a file read in tryLoadGraphSnapshot.
+type MxGraphProvider interface {
+	GetMxGraph() *mxgraph.Graph
+}
 
 // warmCacheFromGraph seeds executorCache name-lookup maps from the in-memory
 // graph, avoiding cold-start backend scans.
@@ -79,13 +86,29 @@ func warmCacheFromGraph(cache *executorCache, pg *graphcatalog.ProjectGraph) {
 }
 
 // tryLoadGraphSnapshot 尝试从项目目录的 .mxcli/graph.gob 加载图快照。
+// 如果 backend 实现了 MxGraphProvider，优先从 backend 的缓存读取。
 // 成功时预热 cache 并设置 *out；失败时静默返回（graph 是可选加速器）。
 //
 // 设计为独立函数（而非 execConnect 内联）方便单独测试。
-func tryLoadGraphSnapshot(projectDir string, cache *executorCache, out **graphcatalog.ProjectGraph) {
+func tryLoadGraphSnapshot(projectDir string, cache *executorCache, out **graphcatalog.ProjectGraph, providers ...MxGraphProvider) {
 	if projectDir == "" || cache == nil || out == nil {
 		return
 	}
+
+	// Fast path: get cached graph from a provider (e.g. MprBackend)
+	for _, p := range providers {
+		if p == nil {
+			continue
+		}
+		if g := p.GetMxGraph(); g != nil {
+			pg := graphcatalog.NewProjectGraph(mxgraph.NewIndexManagerFromGraph(g))
+			*out = pg
+			warmCacheFromGraph(cache, pg)
+			return
+		}
+	}
+
+	// Fallback: read snapshot file directly.
 	snapPath := graphcatalog.SnapshotPath(projectDir)
 	data, err := os.ReadFile(snapPath)
 	if err != nil {

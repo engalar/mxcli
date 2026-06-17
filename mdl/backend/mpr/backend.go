@@ -16,6 +16,7 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/backend/unitstore"
 	"github.com/mendixlabs/mxcli/mdl/linter"
 	"github.com/mendixlabs/mxcli/mdl/types"
+	"github.com/mendixlabs/mxcli/internal/mxgraph"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/modelsdk/codec"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
@@ -265,6 +266,14 @@ func (b *MprBackend) ProjectVersion() *types.ProjectVersion {
 	return convertProjectVersionFromMsdk(b.msdkReader.ProjectVersion())
 }
 func (b *MprBackend) GetMendixVersion() (string, error) { return b.msdkReader.GetMendixVersion() }
+
+// GetMxGraph returns the cached mxgraph snapshot from the reader, or nil.
+func (b *MprBackend) GetMxGraph() *mxgraph.Graph {
+	if b.reader != nil {
+		return b.reader.GetMxGraph()
+	}
+	return nil
+}
 
 // Commit is a no-op — the MPR writer auto-commits on each write operation.
 func (b *MprBackend) Commit() error { return nil }
