@@ -1,11 +1,4 @@
-package scaffold
-
-type GitignoreRenderer struct{}
-
-func (GitignoreRenderer) Render(spec Spec) []File {
-	return []File{{
-		Path: ".gitignore",
-		Content: []byte(`tests/testProject/
+tests/testProject/
 .DS_Store
 .idea
 .vscode
@@ -25,6 +18,3 @@ mendixProject
 **/screenshot-results
 **/tests/testProject
 **/artifacts
-`),
-	}}
-}

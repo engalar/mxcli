@@ -12,9 +12,8 @@ import (
 )
 
 func TestDetectToolchain_FindsSomething(t *testing.T) {
-	// Can't call detectToolchain directly since it's unexported in build package
-	// This is a placeholder to ensure the build package compiles
-	_ = build.PluggableWidgetsToolsBuilder{}
+	_ = build.InstallMPK
+	_ = build.FindMPKInCwd
 }
 
 func TestFindMPKInCwd_NoneFound(t *testing.T) {
@@ -112,24 +111,19 @@ func TestInstallMPK_OverwritesExistingFile(t *testing.T) {
 
 func TestRoundTrip_ScaffoldThenDiscover(t *testing.T) {
 	dir := t.TempDir()
-	spec := scaffoldSpec("RoundTrip", "com.test.widget.RoundTrip.RoundTrip")
-	if err := scaffold.Run(dir, spec, renderers); err != nil {
+	spec := scaffold.Spec{
+		Name:        "RoundTrip",
+		WidgetID:    "com.test.widget.RoundTrip.RoundTrip",
+		PackagePath: "com.mendix.widget.custom",
+		ProjectPath: "./tests/testProject",
+		PackageName: "roundtrip",
+	}
+	if err := scaffold.Run(dir, spec); err != nil {
 		t.Fatalf("scaffold.Run: %v", err)
 	}
 	for _, rel := range []string{"package.json", "src/package.xml", "src/RoundTrip.xml", "src/RoundTrip.jsx"} {
 		if _, err := os.Stat(filepath.Join(dir, rel)); err != nil {
 			t.Errorf("expected %s to exist: %v", rel, err)
 		}
-	}
-}
-
-// scaffoldSpec creates a Spec for testing.
-func scaffoldSpec(name, widgetID string) scaffold.Spec {
-	return scaffold.Spec{
-		Name:        name,
-		PackageName: name,
-		WidgetID:    widgetID,
-		PackagePath: "com.mendix.widget.custom",
-		ProjectPath: "./tests/testProject",
 	}
 }

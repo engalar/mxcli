@@ -10,9 +10,8 @@ import (
 )
 
 func TestRenderersListIsPopulated(t *testing.T) {
-	if len(renderers) == 0 {
-		t.Fatal("renderers list is empty")
-	}
+	// renderers list removed in template-based approach — just verify scaffold exists
+	_ = scaffold.DeriveWidgetID("Test")
 }
 
 func TestScaffoldThenDiscover(t *testing.T) {
@@ -24,7 +23,7 @@ func TestScaffoldThenDiscover(t *testing.T) {
 		PackagePath: "com.mendix.widget.custom",
 		ProjectPath: "./tests/testProject",
 	}
-	if err := scaffold.Run(dir, spec, renderers); err != nil {
+	if err := scaffold.Run(dir, spec); err != nil {
 		t.Fatalf("scaffold.Run: %v", err)
 	}
 	for _, rel := range []string{"package.json", "src/package.xml", "src/RoundTrip.xml", "src/RoundTrip.jsx"} {

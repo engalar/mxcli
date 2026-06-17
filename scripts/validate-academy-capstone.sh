@@ -204,13 +204,9 @@ if step_enabled exec; then
         "$CAPSTONE_DIR/08-workflow.mdl"
         "$CAPSTONE_DIR/08-java-actions.mdl"
         "$CAPSTONE_DIR/09-js-actions.mdl"
+        "$CAPSTONE_DIR/10-widget.mdl"
         "$CAPSTONE_DIR/99-seed-data.mdl"
     )
-
-    # 10-widget.mdl only included when widget MPK was successfully built
-    if [ -f "$REPO_ROOT/$PROJECT_NAME/widgets/TicketStatusBadge.mpk" ]; then
-        mdl_files+=("$CAPSTONE_DIR/10-widget.mdl")
-    fi
 
     echo "  exec ${#mdl_files[@]} MDL files..."
     run_mdlrun -p "$MPR" "${mdl_files[@]}"

@@ -12,21 +12,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var renderers = []scaffold.Renderer{
-	scaffold.PackageJSONRenderer{},
-	scaffold.PackageXMLRenderer{},
-	scaffold.WidgetXMLRenderer{},
-	scaffold.WidgetJSXRenderer{},
-	scaffold.ComponentSampleRenderer{},
-	scaffold.EditorConfigRenderer{},
-	scaffold.EditorPreviewRenderer{},
-	scaffold.WidgetCSSRenderer{},
-	scaffold.IconRenderer{},
-	scaffold.ReadmeRenderer{},
-	scaffold.GitignoreRenderer{},
-	scaffold.ConfigFilesRenderer{},
-}
-
 func runWidgetNew(cmd *cobra.Command, args []string) error {
 	if len(args) == 0 {
 		return fmt.Errorf("widget name required: mxcli widget new <name>")
@@ -80,7 +65,7 @@ func runWidgetNew(cmd *cobra.Command, args []string) error {
 		Description: description,
 	}
 
-	if err := scaffold.Run(outDir, spec, renderers); err != nil {
+	if err := scaffold.Run(outDir, spec); err != nil {
 		return fmt.Errorf("scaffold: %w", err)
 	}
 

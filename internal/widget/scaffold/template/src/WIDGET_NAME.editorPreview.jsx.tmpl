@@ -1,0 +1,9 @@
+import { WIDGET_NAMESample } from "./components/WIDGET_NAMESample";
+
+export function preview({ FIRST_PROP_KEY }) {
+    return <WIDGET_NAMESample FIRST_PROP_KEY={FIRST_PROP_KEY} />;
+}
+
+export function getPreviewCss() {
+    return require("./ui/WIDGET_NAME.css");
+}

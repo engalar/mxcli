@@ -1,29 +1,20 @@
-package scaffold
-
-import "fmt"
-
-type PackageJSONRenderer struct{}
-
-func (PackageJSONRenderer) Render(spec Spec) []File {
-	return []File{{
-		Path: "package.json",
-		Content: []byte(fmt.Sprintf(`{
-  "name": %q,
-  "widgetName": %q,
+{
+  "name": "PACKAGE_NAME",
+  "widgetName": "WIDGET_NAME",
   "version": "1.0.0",
-  "description": %q,
-  "copyright": "© Mendix Technology BV 2026. All rights reserved.",
-  "author": "",
+  "description": "DESCRIPTION",
+  "copyright": "COPYRIGHT",
+  "author": "AUTHOR",
   "engines": {
     "node": ">=16"
   },
   "license": "Apache-2.0",
   "config": {
-    "projectPath": %q,
+    "projectPath": "PROJECT_PATH",
     "mendixHost": "http://localhost:8080",
     "developmentPort": 3000
   },
-  "packagePath": %q,
+  "packagePath": "PACKAGE_PATH",
   "scripts": {
     "start": "pluggable-widgets-tools start:server",
     "dev": "pluggable-widgets-tools start:web",
@@ -47,7 +38,4 @@ func (PackageJSONRenderer) Render(spec Spec) []File {
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   }
-}
-`, spec.PackageName, spec.Name, spec.Description, spec.ProjectPath, spec.PackagePath)),
-	}}
 }

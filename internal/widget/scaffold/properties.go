@@ -6,17 +6,6 @@ import (
 	"unicode"
 )
 
-var ValidXMLTypes = map[string]bool{
-	"attribute":  true,
-	"string":     true,
-	"integer":    true,
-	"boolean":    true,
-	"action":     true,
-	"datasource": true,
-	"expression": true,
-	"widgets":    true,
-}
-
 // ParsePropertySpec parses a --property flag value of the form key:type[:subtype].
 func ParsePropertySpec(s string) (PropertySpec, error) {
 	parts := strings.SplitN(s, ":", 3)
@@ -24,7 +13,7 @@ func ParsePropertySpec(s string) (PropertySpec, error) {
 		return PropertySpec{}, fmt.Errorf("invalid property spec %q: must be key:type or key:type:subtype", s)
 	}
 	key, xmlType := parts[0], parts[1]
-	if !ValidXMLTypes[xmlType] {
+	if !validXMLTypes[xmlType] {
 		return PropertySpec{}, fmt.Errorf("invalid property type %q in %q: must be one of attribute, string, integer, boolean, action, datasource, expression, widgets", xmlType, s)
 	}
 	subtype := ""
@@ -58,16 +47,4 @@ func HumanizeWidgetName(name string) string {
 		b.WriteRune(r)
 	}
 	return b.String()
-}
-
-// xmlEscape escapes the five XML special characters in s.
-func xmlEscape(s string) string {
-	r := strings.NewReplacer(
-		"&", "&amp;",
-		"<", "&lt;",
-		">", "&gt;",
-		"\"", "&quot;",
-		"'", "&apos;",
-	)
-	return r.Replace(s)
 }
