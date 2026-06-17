@@ -51,5 +51,27 @@ bson dump 命令
 
 ### 后续方向
 
-- 将 snapshot 加载/保存下沉到 `mmpr.Reader` 层，让所有 reader 操作都受益
 - 添加 Workflow 相关的边（CALLS、TRIGGERS 等）增强图遍历能力
+
+## 第二次迭代：snapshot 下沉 + Workflow 边
+
+### snapshot 下沉到 mmpr.Reader
+
+`modelsdk/mpr/reader.go` 的 `OpenWithOptions` 自动加载 `.mxcli/graph.gob` 到 `r.mxGraph`。新增：
+- `GetMxGraph() *mxgraph.Graph` — 所有 reader 消费者共用
+- `SetMxGraph(g *mxgraph.Graph)` — 构建后注入
+
+`cmd_bson_dump.go` 改为调用 `reader.GetMxGraph()`，再回退到 `buildMxGraph()`。去掉了独立的 `tryLoadMxGraph()`。
+
+### WorkflowAdapter 边
+
+遍历 workflow 的 Flow → Activities 树，递归进入 outcome flows 和 boundary events：
+- `CallMicroflowTask` → `CALLS` 到对应的 microflow QN
+- `CallWorkflowActivity` → `CALLS` 到对应的 workflow QN
+
+### 关键踩坑
+
+4. **gen_imports.go 缺少 workflows**
+   - `internal/mxgraph/adapter/mpr/gen_imports.go` 空白导入 `gen/workflows` 以触发 codec registry 初始化
+   - 缺少时 `LoadUnit` 返回 `*element.Base` 而非 `*genWf.Workflow`，导致类型断言失败
+   - 同样影响边界事件解析——`BoundaryEvents` 子元素也需要 registry 才能正确解码

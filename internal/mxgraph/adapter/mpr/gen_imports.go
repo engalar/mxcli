@@ -12,4 +12,5 @@ import (
 	_ "github.com/mendixlabs/mxcli/modelsdk/gen/nanoflows"
 	_ "github.com/mendixlabs/mxcli/modelsdk/gen/pages"
 	_ "github.com/mendixlabs/mxcli/modelsdk/gen/security"
+	_ "github.com/mendixlabs/mxcli/modelsdk/gen/workflows"
 )

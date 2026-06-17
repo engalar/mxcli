@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/mendixlabs/mxcli/internal/mxgraph"
 	"github.com/mendixlabs/mxcli/modelsdk/mpr/version"
 
 	_ "modernc.org/sqlite"
@@ -66,6 +67,11 @@ type Reader struct {
 	// within the same import file see buffered (uncommitted) writes.
 	// nil means no overlay is active — zero cost on the normal path.
 	overlay map[string][]byte
+
+	// mxGraph is lazily loaded from the .mxcli/graph.gob snapshot.
+	// Provides O(1) lookup for bson dump and other fast-path consumers.
+	// Only populated when the snapshot exists; never built from scratch.
+	mxGraph *mxgraph.Graph
 }
 
 // cachedUnit stores metadata and content about a unit for fast filtering.
@@ -176,6 +182,14 @@ func OpenWithOptions(path string, opts OpenOptions) (*Reader, error) {
 	if err := r.verify(); err != nil {
 		r.Close()
 		return nil, err
+	}
+
+	// Load mxgraph snapshot (best-effort — silent when missing or corrupt)
+	snapPath := filepath.Join(dir, ".mxcli", "graph.gob")
+	if data, err := os.ReadFile(snapPath); err == nil {
+		if g, err := mxgraph.UnmarshalSnapshot(data); err == nil {
+			r.mxGraph = g
+		}
 	}
 
 	return r, nil

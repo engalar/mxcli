@@ -74,10 +74,13 @@ Examples:
 		}
 		defer reader.Close()
 
-		// Try mxgraph fast path — load snapshot, or build + save if missing
-		mxGraph := tryLoadMxGraph(projectPath)
+		// Try mxgraph fast path — use reader's cached snapshot, or build + save
+		mxGraph := reader.GetMxGraph()
 		if mxGraph == nil {
 			mxGraph = buildMxGraph(projectPath)
+			if mxGraph != nil {
+				reader.SetMxGraph(mxGraph)
+			}
 		}
 
 		// List objects
@@ -402,22 +405,6 @@ func mxTypeToLabel(objectType string) mxgraph.Label {
 		return "Enumeration"
 	}
 	return ""
-}
-
-// tryLoadMxGraph loads the mxgraph snapshot from the project directory.
-// Returns nil if the snapshot doesn't exist or can't be loaded.
-func tryLoadMxGraph(projectPath string) *mxgraph.Graph {
-	dir := filepath.Dir(projectPath)
-	snapPath := filepath.Join(dir, ".mxcli", "graph.gob")
-	data, err := os.ReadFile(snapPath)
-	if err != nil {
-		return nil
-	}
-	g, err := mxgraph.UnmarshalSnapshot(data)
-	if err != nil {
-		return nil
-	}
-	return g
 }
 
 // buildMxGraph builds the mxgraph from the MPR, saves a snapshot, and returns the graph.
