@@ -7,7 +7,7 @@
 原因：Workflow Engine 的 MDL 语法复杂，学习曲线较陡。微流状态机能清晰展示审批逻辑，
 是你在 Mendix 项目中最常见的实现方式，也是理解 Workflow Engine 的基础。
 
-Mendix Workflow Engine 的 MDL 实现请参考进阶文档（链接待补充）。
+Mendix Workflow Engine 的 MDL 实现请参考 `参考实现/escalation-workflow.mdl`。
 
 ## 与 Claude 协作的步骤
 
@@ -123,45 +123,49 @@ multi user task UT_SeniorCommitteeReview 'Senior Committee Review'
 
 `completion method majority` 表示超过一半成员完成任务即可继续（另有 `all` 要求所有人完成）。
 
-#### 等待通知
+#### 调用子工作流
 
 ```mdl
-wait for notification comment 'WaitForManagerAvailable';
+call workflow HD.WF_SUB_ManagerReview;
 ```
 
-可从外部微流通过 `notify workflow` 触发，适合需要等待外部信号的场景。
+子工作流将复杂审批逻辑封装为独立单元，父工作流等待其完成后继续执行。
 
-#### 并行分支
+#### 高级模式：并行分支与等待通知
 
+参考实现未包含这些模式（保持可运行），但 Mendix Workflow 支持：
+
+**并行分支：** 多条路径并行执行，均完成后 Workflow 继续。
 ```mdl
 parallel split
-  path 1 {
-    user task UT_NotifyCustomer 'Notify Customer' ...;
-  }
-  path 2 {
-    user task UT_LogAudit 'Log Audit Trail' ...;
-  }
-end parallel split;
+  path 1 { ... }
+  path 2 { ... }
+;
 ```
 
-两条路径并行执行，均完成后 Workflow 继续。
+**等待通知：** 配合 `notify workflow` 使用，等待外部系统触发继续。
+```mdl
+wait for notification comment 'WaitForExternalSignal';
+```
+
+在另一个微流中调用 `notify workflow` 解锁等待的活动。
 
 #### 边界事件（非中断型 / 中断型定时器）
 
 边界事件通过 `alter workflow` 附加到已有活动上：
 
 ```mdl
--- 非中断型：12 小时后发送提醒，活动继续正常执行
+-- 非中断型：12 小时后发送提醒，子工作流继续正常执行
 alter workflow HD.WF_TicketEscalation
-  insert boundary event on UT_PrimaryReview@1
+  insert boundary event on WF_SUB_ManagerReview@1
     non interrupting timer 'addHours([%CurrentDateTime%], 12)'
-  action microflow HD.WFA_SendReminderNotification;
+  call microflow HD.WFS_SendReminder;
 
--- 中断型：48 小时后终止活动，走拒绝分支
+-- 中断型：48 小时后终止子工作流，走拒绝分支
 alter workflow HD.WF_TicketEscalation
-  insert boundary event on UT_PrimaryReview@1
+  insert boundary event on WF_SUB_ManagerReview@1
     interrupting timer 'addHours([%CurrentDateTime%], 48)'
-  action microflow HD.WFA_AutoRejectEscalation;
+  call microflow HD.WFS_Reject;
 ```
 
 - `non interrupting`：触发后活动继续，适合"提醒"场景

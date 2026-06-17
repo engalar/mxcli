@@ -9,8 +9,8 @@
 --   title: 'Customers'，layout: Atlas_Core.Atlas_Default
 --   DataGrid：datasource = database from HD.Customer，sort by Name asc
 --   列：Name（文字过滤器）、Email、Company
---   操作列：Open 按钮（链接样式，打开 HD.Customer_Detail——暂不存在，先占位）
---   控制栏：New Customer 按钮（create_object HD.Customer then show_page HD.Customer_Detail）
+--   操作列：Edit 按钮（链接样式，打开 HD.Ticket_NewEdit——暂时创建一个空白 Customer）
+--   控制栏：New Customer 按钮（create_object HD.Customer then show_message '创建成功'）
 
 -- TODO：补全页面定义
 create or replace page HD.Customer_Overview

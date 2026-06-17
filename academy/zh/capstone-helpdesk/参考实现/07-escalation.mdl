@@ -114,7 +114,9 @@ create or modify microflow HD.ACT_Escalation_Approve
   change $EscalationRequest (ApprovalStatus = HD.EscalationStatus.Approved);
   commit $EscalationRequest;
 
-  retrieve $Ticket from $EscalationRequest/HD.EscalationRequest_Ticket;
+  retrieve $Ticket from HD.Ticket
+    where [HD.EscalationRequest_Ticket/HD.EscalationRequest = $EscalationRequest]
+    limit 1;
   if $Ticket != empty {
     change $Ticket (Priority = HD.TicketPriority.Critical);
     commit $Ticket;
@@ -186,8 +188,7 @@ create or modify microflow HD.DS_PendingEscalations
 {
   retrieve $List from HD.EscalationRequest
     where [ApprovalStatus = 'Pending']
-    sort by RequestedAt asc
-    limit 0;
+    sort by RequestedAt asc;
   return $List;
 }
 /
@@ -289,6 +290,21 @@ create or replace page HD.EscalationReject_Form
 };
 
 -- ============================================================
+-- 在工单详情页添加"发起升级"按钮
+-- 插入在 btnComment（添加评论）之后
+-- ============================================================
+
+alter page HD.Ticket_Detail {
+  insert after btnComment {
+    actionbutton btnEscalate (
+      caption:     'Escalate',
+      action:      microflow HD.ACT_OpenEscalationForm (Ticket: $currentObject),
+      buttonstyle: warning
+    )
+  }
+};
+
+-- ============================================================
 -- 升级功能权限
 -- HD.ManagerRole / HD.AgentRole 已在 05-security.mdl 创建
 -- ============================================================
@@ -314,7 +330,7 @@ create or replace navigation Responsive
   home page HD.MyTickets_Overview           for Customer
   home page HD.Ticket_Overview              for Agent
   home page HD.EscalationWorkflow_Overview  for Manager
-  home page MyFirstModule.Home_Web
+  home page HD.Ticket_Overview
   login page Administration.login
   menu (
     menu item 'My Tickets'       page HD.MyTickets_Overview;

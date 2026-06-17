@@ -25,7 +25,7 @@ create or modify nanoflow HD.NF_Ticket_QuickCreate
 /
 
 -- ============================================================
--- 工单搜索：返回匹配工单列表（简化版：全量检索）
+-- 工单搜索：按关键词/状态/优先级过滤
 -- ============================================================
 
 create or modify nanoflow HD.NF_TicketSearch_Apply
@@ -33,7 +33,13 @@ create or modify nanoflow HD.NF_TicketSearch_Apply
   returns list of HD.Ticket as $Tickets
   folder 'Ticket/Search'
 {
-  retrieve $Tickets from HD.Ticket limit 100;
+  retrieve $Tickets from HD.Ticket
+    where [($Search/SubjectKeyword = '' or $Search/SubjectKeyword = empty
+            or contains(Subject, $Search/SubjectKeyword))
+      and ($Search/StatusFilter = empty or Status = $Search/StatusFilter)
+      and ($Search/PriorityFilter = empty or Priority = $Search/PriorityFilter)]
+    sort by Subject asc
+    limit 100;
   return $Tickets;
 }
 /

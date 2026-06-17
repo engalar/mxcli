@@ -451,8 +451,14 @@ func (e *Executor) Execute(stmt ast.Statement) error {
 		err = mdlerrors.NewValidationf("statement timed out after %v", executeTimeout)
 	}
 
+	elapsed := time.Since(start)
+
 	if e.logger != nil {
-		e.logger.Command(stmtTypeName(stmt), stmtSummary(stmt), time.Since(start), err)
+		e.logger.Command(stmtTypeName(stmt), stmtSummary(stmt), elapsed, err)
+	}
+
+	if err != nil {
+		err = fmt.Errorf("%w (duration: %v)", err, elapsed)
 	}
 	return err
 }

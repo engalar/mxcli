@@ -1,17 +1,33 @@
 -- ============================================================
 -- 模块 09：JS Action 扩展 — 参考实现
--- 前提：
---   1. 先运行模块 01（HD 模块必须存在）
---   2. 在 Studio Pro 中已创建以下 JavaScript Action：
---      - HD.JSA_CopyToClipboard（参数：Text: string，返回 void）
---        源码：参见 AI协作指南.md 附录
---      - HD.JSA_NotifyHighPriority（参数：Subject: string，返回 void）
---      - HD.JSA_FormatRelativeTime（参数：DateTime: DateTime，返回 string）
+-- 前提：先运行模块 01（HD 模块必须存在）
 -- 运行：mxcli exec js-actions.mdl -p MyProject.mpr
+-- 注意：纯浏览器 API，无需外部依赖
 -- ============================================================
 
 -- ============================================================
--- 复制到剪贴板（调用 HD.JSA_CopyToClipboard JavaScript Action）
+-- JSA_CopyToClipboard：复制文本到剪贴板
+-- ============================================================
+
+create or modify javascript action HD.JSA_CopyToClipboard (
+  text: string not null
+) returns void
+platform 'Web'
+{
+  imports $$
+import "mx-global";
+  $$
+  code $$
+return navigator.clipboard.writeText(text).then(function() {
+  mx.ui.info('Copied to clipboard');
+}).catch(function(err) {
+  console.error('Copy failed: ' + err);
+});
+  $$
+};
+
+-- ============================================================
+-- 复制到剪贴板纳流
 -- ============================================================
 
 create or modify nanoflow HD.NF_CopyToClipboard
@@ -24,7 +40,32 @@ create or modify nanoflow HD.NF_CopyToClipboard
 /
 
 -- ============================================================
--- 浏览器桌面通知（调用 HD.JSA_NotifyHighPriority JavaScript Action）
+-- JSA_NotifyHighPriority：浏览器桌面通知
+-- ============================================================
+
+create or modify javascript action HD.JSA_NotifyHighPriority (
+  subject: string not null
+) returns void
+platform 'Web'
+{
+  imports $$
+import "mx-global";
+  $$
+  code $$
+if (Notification.permission === 'granted') {
+  new Notification('High Priority Ticket', { body: subject });
+} else if (Notification.permission !== 'denied') {
+  Notification.requestPermission().then(function(permission) {
+    if (permission === 'granted') {
+      new Notification('High Priority Ticket', { body: subject });
+    }
+  });
+}
+  $$
+};
+
+-- ============================================================
+-- 浏览器桌面通知纳流
 -- ============================================================
 
 create or modify nanoflow HD.NF_NotifyHighPriority
@@ -37,7 +78,35 @@ create or modify nanoflow HD.NF_NotifyHighPriority
 /
 
 -- ============================================================
--- 相对时间格式化（调用 HD.JSA_FormatRelativeTime JavaScript Action）
+-- JSA_FormatRelativeTime：相对时间格式化
+-- ============================================================
+
+create or modify javascript action HD.JSA_FormatRelativeTime (
+  dateTime: datetime not null
+) returns string
+platform 'Web'
+{
+  imports $$
+import "mx-global";
+  $$
+  code $$
+var now = new Date();
+var diff = now.getTime() - dateTime.getTime();
+var seconds = Math.floor(diff / 1000);
+if (seconds < 60) { return 'just now'; }
+var minutes = Math.floor(seconds / 60);
+if (minutes < 60) { return minutes + 'm ago'; }
+var hours = Math.floor(minutes / 60);
+if (hours < 24) { return hours + 'h ago'; }
+var days = Math.floor(hours / 24);
+if (days < 30) { return days + 'd ago'; }
+var months = Math.floor(days / 30);
+return months + 'mo ago';
+  $$
+};
+
+-- ============================================================
+-- 相对时间格式化纳流
 -- ============================================================
 
 create or modify nanoflow HD.NF_FormatRelativeTime

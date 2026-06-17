@@ -4,7 +4,7 @@
 -- 运行：mxcli exec escalation-workflow.mdl -p MyProject.mpr
 --
 -- 本文件演示 Mendix 原生 Workflow（WF_TicketEscalation），
--- 包含：子工作流、用户任务、决策、并行分支、边界事件（定时器）
+-- 包含：子工作流、用户任务、多人投票、决策、边界事件（非中断/中断定时器）
 -- ============================================================
 
 -- ============================================================
@@ -116,7 +116,7 @@ create or replace workflow HD.WF_SUB_ManagerReview
 
 -- ============================================================
 -- 父工作流：工单升级主流程
--- 展示要素：决策、等待通知、调用子工作流、并行分支、边界事件
+-- 展示要素：决策、调用子工作流、边界事件（非中断/中断定时器）
 -- ============================================================
 
 create or replace workflow HD.WF_TicketEscalation
@@ -130,25 +130,20 @@ create or replace workflow HD.WF_TicketEscalation
         call microflow HD.WFS_Reject with (EscalationRequest = '$WorkflowContext');
       }
       false -> {
-        wait for notification comment 'WaitForManagerAvailable';
         call workflow HD.WF_SUB_ManagerReview;
-        parallel split
-          path 1 { call microflow HD.WFS_Approve with (EscalationRequest = '$WorkflowContext'); }
-          path 2 { call microflow HD.WFS_SendReminder with (EscalationRequest = '$WorkflowContext'); }
-        ;
       }
   ;
 }
 /
 
--- 非中断型定时边界事件：12 小时后发送提醒
+-- 非中断型定时边界事件：子工作流开始 12 小时后发送提醒
 alter workflow HD.WF_TicketEscalation
-  insert boundary event on WaitForManagerAvailable@1
+  insert boundary event on WF_SUB_ManagerReview@1
     non interrupting timer 'addHours([%CurrentDateTime%], 12)' {
       call microflow HD.WFS_SendReminder with (EscalationRequest = '$WorkflowContext');
     };
 
--- 中断型定时边界事件：48 小时超时自动拒绝
+-- 中断型定时边界事件：子工作流开始 48 小时后超时自动拒绝
 alter workflow HD.WF_TicketEscalation
   insert boundary event on WF_SUB_ManagerReview@1
     interrupting timer 'addHours([%CurrentDateTime%], 48)' {

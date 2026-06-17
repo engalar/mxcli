@@ -1,0 +1,70 @@
+-- ============================================================
+-- 练习 02：Workflow Engine 审批
+-- 前提：先运行练习01（或 escalation-domain.mdl）
+-- 目标：创建一个简化版的原生 Workflow 审批流程
+-- ============================================================
+
+-- 场景：不需要升级机制，经理直接用 Workflow 审批升级申请。
+--
+-- 要求：
+--   1. 创建一个辅助微流 HD.WFA_NotifyManager：
+--      参数 ($workflow: System.Workflow, $ER: HD.EscalationRequest)
+--      返回 list of System.User
+--      简化实现：retrieve $Users from System.User limit 5
+--
+--   2. 创建一个 Workflow HD.WF_SimpleEscalation：
+--      parameter $WorkflowContext: HD.EscalationRequest
+--      display 'Simple Escalation Approval'
+--      overview page HD.EscalationWorkflow_Overview
+--      包含一个 user task UT_ManagerReview：
+--        page: HD.EscalationReview_Form
+--        targeting users microflow: HD.WFA_NotifyManager
+--        outcomes: 'Approve' → call microflow HD.WFS_Approve
+--                  'Reject'  → call microflow HD.WFS_Reject
+--
+--   3. 创建一个触发微流 HD.ACT_SimpleEscalation：
+--      参数和逻辑同 HD.ACT_StartEscalationWorkflow
+--      （创建 EscalationRequest + call workflow）
+
+-- TODO 1：补全辅助微流
+create or modify microflow HD.WFA_NotifyManager
+  ($workflow: System.Workflow, $ER: HD.EscalationRequest)
+  returns list of System.User as $Users
+  folder 'Escalation'
+{
+  -- 你的代码写在这里：
+  -- retrieve $Users from System.User limit 5;
+  -- return $Users;
+};
+/
+
+-- TODO 2：补全 Workflow 定义
+-- create or replace workflow HD.WF_SimpleEscalation
+--   parameter $WorkflowContext: HD.EscalationRequest
+--   display 'Simple Escalation Approval'
+--   overview page HD.EscalationWorkflow_Overview
+-- {
+--   -- 你的代码写在这里：
+--   -- user task UT_ManagerReview
+--   --   page HD.EscalationReview_Form
+--   --   targeting users microflow HD.WFA_NotifyManager
+--   --   outcomes
+--   --     'Approve' { call microflow HD.WFS_Approve with (EscalationRequest = '$WorkflowContext'); }
+--   --     'Reject'  { call microflow HD.WFS_Reject  with (EscalationRequest = '$WorkflowContext'); }
+--   -- ;
+-- }
+-- /
+
+-- TODO 3：补全触发微流
+-- create or modify microflow HD.ACT_SimpleEscalation
+--   ($Ticket: HD.Ticket, $Reason: string)
+--   returns boolean as $Success
+--   folder 'Escalation'
+-- {
+--   -- 你的代码写在这里：
+--   -- 参考 HD.ACT_StartEscalationWorkflow 的逻辑
+-- };
+
+-- 验证命令：
+--   mxcli check 练习02-工作流审批.mdl
+--   mxcli exec  练习02-工作流审批.mdl -p MyProject.mpr

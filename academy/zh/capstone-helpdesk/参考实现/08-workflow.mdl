@@ -1,0 +1,344 @@
+-- ============================================================
+-- Capstone 08（选修）：原生 Workflow Engine 集成交付
+-- 本文件是 07-escalation.mdl 的 Workflow 引擎替代版本，
+-- 用 Mendix Workflow 替换微流状态机实现升级审批。
+-- 与 07-escalation.mdl 二选一，不可同时运行。
+-- 前提：01-06 已执行
+-- 运行：mxcli exec 08-workflow.mdl -p MyProject.mpr
+-- ============================================================
+
+-- ============================================================
+-- 枚举：升级申请审批状态
+-- ============================================================
+
+create or modify enumeration HD.EscalationStatus (
+  Pending  'Pending',
+  Approved 'Approved',
+  Rejected 'Rejected'
+);
+
+-- ============================================================
+-- 实体：升级申请
+-- ============================================================
+
+create or modify persistent entity HD.EscalationRequest (
+  Reason:           string(1000) not null,
+  RequestedAt:      datetime,
+  ApprovalStatus:   HD.EscalationStatus default Pending,
+  RejectionReason:  string(1000)
+);
+
+-- 升级申请 → 工单（一个申请对应一张工单）
+create or modify association HD.EscalationRequest_Ticket
+  from HD.EscalationRequest to HD.Ticket
+  type reference
+  owner default;
+
+-- ============================================================
+-- 工作流辅助微流
+-- ============================================================
+
+create or modify microflow HD.WFS_Approve
+  ($EscalationRequest: HD.EscalationRequest)
+  folder 'Escalation'
+{
+  change $EscalationRequest (ApprovalStatus = HD.EscalationStatus.Approved);
+  commit $EscalationRequest;
+  retrieve $Ticket from HD.Ticket
+    where [HD.EscalationRequest_Ticket/HD.EscalationRequest = $EscalationRequest]
+    limit 1;
+  if $Ticket != empty {
+    change $Ticket (Priority = HD.TicketPriority.Critical);
+    commit $Ticket;
+  }
+  return;
+}
+/
+
+create or modify microflow HD.WFS_Reject
+  ($EscalationRequest: HD.EscalationRequest)
+  folder 'Escalation'
+{
+  change $EscalationRequest (ApprovalStatus = HD.EscalationStatus.Rejected);
+  commit $EscalationRequest;
+  return;
+}
+/
+
+create or modify microflow HD.WFA_GetManagerAssignees
+  ($workflow: System.Workflow, $EscalationRequest: HD.EscalationRequest)
+  returns list of System.User as $Users
+  folder 'Escalation'
+{
+  retrieve $Users from System.User limit 10;
+  return $Users;
+}
+/
+
+create or modify microflow HD.WFS_SendReminder
+  ($EscalationRequest: HD.EscalationRequest)
+  folder 'Escalation'
+{
+  log info 'Reminder: escalation request ' + toString($EscalationRequest/Reason) + ' awaiting manager review';
+  return;
+}
+/
+
+-- ============================================================
+-- 审批页面（工作流用户任务使用）
+-- Workflow 用户任务页面必须声明 System.WorkflowUserTask 参数
+-- ============================================================
+
+create or replace page HD.EscalationReview_Form
+(
+  title:  'Review Escalation',
+  layout: Atlas_Core.Atlas_Default,
+  folder: 'Escalation',
+  params: { $WorkflowUserTask: System.WorkflowUserTask }
+)
+{
+  layoutgrid lgMain {
+    row rMain {
+      column cMain (desktopwidth: 12) {
+        dynamictext txtTitle (content: 'Manager Review — Escalation Request', rendermode: H2)
+      }
+    }
+  }
+};
+
+-- ============================================================
+-- 升级审批概览（经理首页）
+-- ============================================================
+
+create or replace page HD.EscalationWorkflow_Overview
+(
+  title:  'Escalation Requests',
+  layout: Atlas_Core.Atlas_Default,
+  folder: 'Escalation'
+)
+{
+  layoutgrid lgMain {
+    row rHeader {
+      column cTitle (desktopwidth: 12) {
+        dynamictext txtTitle (content: 'Pending Escalation Requests', rendermode: H2)
+      }
+    }
+    row rMain {
+      column cMain (desktopwidth: 12) {
+        datagrid dgEscalations (
+          datasource: database from HD.EscalationRequest
+            where [ApprovalStatus = 'Pending']
+            sort by RequestedAt asc,
+          PageSize: 20
+        ) {
+          column colReason    (attribute: Reason,          caption: 'Reason')
+          column colStatus    (attribute: ApprovalStatus,  caption: 'Status')
+          column colRequested (attribute: RequestedAt,     caption: 'Requested At')
+        }
+      }
+    }
+  }
+};
+
+-- ============================================================
+-- 子工作流：经理审批（普通审批 + 多人投票升级）
+-- ============================================================
+
+create or replace workflow HD.WF_SUB_ManagerReview
+  parameter $WorkflowContext: HD.EscalationRequest
+  display 'Manager Review'
+  overview page HD.EscalationWorkflow_Overview
+{
+  user task UT_PrimaryReview 'Primary Review'
+    page HD.EscalationReview_Form
+    targeting users microflow HD.WFA_GetManagerAssignees
+    description 'Review escalation request and decide: Approve or Escalate to senior board'
+    outcomes
+      'Approve' {
+        call microflow HD.WFS_Approve with (EscalationRequest = '$WorkflowContext');
+      }
+      'Escalate' {
+        multi user task UT_SeniorReview 'Senior Board Review'
+          page HD.EscalationReview_Form
+          targeting users microflow HD.WFA_GetManagerAssignees
+          completion method majority
+          outcomes
+            'Approve' { call microflow HD.WFS_Approve with (EscalationRequest = '$WorkflowContext'); }
+            'Reject'  { call microflow HD.WFS_Reject  with (EscalationRequest = '$WorkflowContext'); }
+          ;
+      }
+  ;
+}
+/
+
+-- ============================================================
+-- 父工作流：工单升级主流程
+-- ============================================================
+
+create or replace workflow HD.WF_TicketEscalation
+  parameter $WorkflowContext: HD.EscalationRequest
+  display 'Ticket Escalation'
+  overview page HD.EscalationWorkflow_Overview
+{
+  decision '$WorkflowContext/Reason = empty'
+    outcomes
+      true -> {
+        call microflow HD.WFS_Reject with (EscalationRequest = '$WorkflowContext');
+      }
+      false -> {
+        call workflow HD.WF_SUB_ManagerReview;
+      }
+  ;
+}
+/
+
+-- 非中断型定时边界事件：子工作流开始 12 小时后发送提醒
+alter workflow HD.WF_TicketEscalation
+  insert boundary event on WF_SUB_ManagerReview@1
+    non interrupting timer 'addHours([%CurrentDateTime%], 12)' {
+      call microflow HD.WFS_SendReminder with (EscalationRequest = '$WorkflowContext');
+    };
+
+-- 中断型定时边界事件：子工作流开始 48 小时后超时自动拒绝
+alter workflow HD.WF_TicketEscalation
+  insert boundary event on WF_SUB_ManagerReview@1
+    interrupting timer 'addHours([%CurrentDateTime%], 48)' {
+      call microflow HD.WFS_Reject with (EscalationRequest = '$WorkflowContext');
+    };
+
+-- ============================================================
+-- 触发器：从按钮调用 Workflow
+-- ============================================================
+
+create or modify microflow HD.ACT_StartEscalationWorkflow
+  ($Ticket: HD.Ticket, $Reason: string)
+  returns boolean as $Success
+  folder 'Escalation'
+{
+  if $Ticket/Status != HD.TicketStatus.InProgress {
+    show message 'Only In Progress tickets can be escalated.' type warning;
+    return false;
+  }
+  $ER = create HD.EscalationRequest (
+    Reason       = $Reason,
+    RequestedAt  = '[%CurrentDateTime%]',
+    ApprovalStatus = HD.EscalationStatus.Pending,
+    HD.EscalationRequest_Ticket = $Ticket
+  );
+  commit $ER;
+  call workflow HD.WF_TicketEscalation (EscalationRequest = $ER);
+  return true;
+}
+/
+
+-- ============================================================
+-- 弹窗：填写升级原因（客服使用）
+-- ============================================================
+
+create or replace page HD.EscalationStart_WF_Form
+(
+  title:  'Escalate Ticket',
+  layout: Atlas_Core.PopupLayout,
+  folder: 'Escalation',
+  params: { $EscalationRequest: HD.EscalationRequest }
+)
+{
+  dataview dvForm (datasource: $EscalationRequest) {
+    textarea taReason (label: 'Reason for Escalation', attribute: Reason)
+    footer ftrButtons {
+      actionbutton btnSubmit (
+        caption:     'Submit',
+        action:      microflow HD.ACT_StartEscalation_WF_FromObject (EscalationRequest: $currentObject) close_page,
+        buttonstyle: primary
+      )
+      actionbutton btnCancel (caption: 'Cancel', action: cancel_changes close_page)
+    }
+  }
+};
+
+-- ============================================================
+-- 打开"发起升级"弹窗（Workflow 版）
+-- ============================================================
+
+create or modify microflow HD.ACT_OpenEscalationForm_WF
+  ($Ticket: HD.Ticket)
+  returns nothing
+  folder 'Escalation'
+{
+  if $Ticket/Status != HD.TicketStatus.InProgress {
+    show message 'Only In Progress tickets can be escalated.' type warning;
+    return;
+  }
+  $NewER = create HD.EscalationRequest (
+    RequestedAt                  = '[%CurrentDateTime%]',
+    ApprovalStatus               = HD.EscalationStatus.Pending,
+    HD.EscalationRequest_Ticket  = $Ticket
+  );
+  show page HD.EscalationStart_WF_Form (EscalationRequest: $NewER);
+}
+/
+
+-- ============================================================
+-- 提交升级申请并启动 Workflow（弹窗保存调用）
+-- ============================================================
+
+create or modify microflow HD.ACT_StartEscalation_WF_FromObject
+  ($EscalationRequest: HD.EscalationRequest)
+  returns boolean as $Success
+  folder 'Escalation'
+{
+  if $EscalationRequest/Reason = '' or $EscalationRequest/Reason = empty {
+    validation feedback $EscalationRequest/Reason message 'Please provide a reason for escalation.';
+    return false;
+  }
+  commit $EscalationRequest;
+  call workflow HD.WF_TicketEscalation (EscalationRequest = $EscalationRequest);
+  return true;
+}
+/
+
+-- ============================================================
+-- 在工单详情页添加"发起升级"按钮
+-- ============================================================
+
+alter page HD.Ticket_Detail {
+  insert after btnComment {
+    actionbutton btnEscalate (
+      caption:     'Escalate',
+      action:      microflow HD.ACT_OpenEscalationForm_WF (Ticket: $currentObject),
+      buttonstyle: warning
+    )
+  }
+};
+
+-- ============================================================
+-- 安全权限
+-- ============================================================
+
+grant HD.AgentRole   on HD.EscalationRequest (create, read *);
+grant HD.ManagerRole on HD.EscalationRequest (create, read *, write *, delete);
+
+grant execute on microflow HD.WFS_Approve                to HD.ManagerRole;
+grant execute on microflow HD.WFS_Reject                 to HD.ManagerRole;
+grant execute on microflow HD.WFA_GetManagerAssignees    to HD.ManagerRole;
+grant execute on microflow HD.ACT_OpenEscalationForm_WF    to HD.AgentRole, HD.ManagerRole;
+grant execute on microflow HD.ACT_StartEscalation_WF_FromObject to HD.AgentRole, HD.ManagerRole;
+grant execute on microflow HD.ACT_StartEscalationWorkflow to HD.AgentRole, HD.ManagerRole;
+
+grant view on page HD.EscalationReview_Form       to HD.ManagerRole;
+grant view on page HD.EscalationStart_WF_Form     to HD.AgentRole, HD.ManagerRole;
+grant view on page HD.EscalationWorkflow_Overview to HD.ManagerRole;
+
+-- 更新导航
+create or replace navigation Responsive
+  home page HD.MyTickets_Overview           for Customer
+  home page HD.Ticket_Overview              for Agent
+  home page HD.EscalationWorkflow_Overview  for Manager
+  home page HD.Ticket_Overview
+  login page Administration.login
+  menu (
+    menu item 'My Tickets'       page HD.MyTickets_Overview;
+    menu item 'All Tickets'      page HD.Ticket_Overview;
+    menu item 'Knowledge Base'   page KB.Article_Overview;
+    menu item 'Escalations'      page HD.EscalationWorkflow_Overview;
+  );

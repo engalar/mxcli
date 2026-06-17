@@ -114,11 +114,11 @@ return months + 'mo ago';
 
 create or modify nanoflow HD.NF_FormatRelativeTime
   ($DateTime: datetime)
-  returns boolean
+  returns string as $Result
   folder 'UI'
 {
-  call javascript action HD.JSA_FormatRelativeTime(DateTime = $DateTime);
-  return true;
+  $Result = call javascript action HD.JSA_FormatRelativeTime(DateTime = $DateTime);
+  return $Result;
 }
 /
 

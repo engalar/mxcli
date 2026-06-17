@@ -931,29 +931,58 @@ func describeJavaScriptActionGen(ctx *ExecContext, name ast.QualifiedName) error
 	}
 
 	// Code body block: { imports $$ $$ extra $$ $$ code $$ $$ }
-	userCode, extraCode, _ := readJavaScriptActionSource(ctx.MprPath, name.Module, name.Name)
+	userCode, extraCode, sourcePath := readJavaScriptActionSource(ctx.MprPath, name.Module, name.Name)
 	importsStr := readJavaScriptActionImports(ctx.MprPath, name.Module, name.Name)
 
+	// Determine whether the source file exists on disk so we know whether
+	// to emit body sections even when their content is empty.
+	sourceExists := false
+	if ctx.MprPath != "" {
+		projectRoot := filepath.Dir(ctx.MprPath)
+		primary := filepath.Join(projectRoot, "javascriptsource", name.Module, "actions", name.Name+".js")
+		if _, err := os.Stat(primary); err == nil {
+			sourceExists = true
+		} else {
+			fallback := filepath.Join(projectRoot, "javascriptsource", strings.ToLower(name.Module), "actions", name.Name+".js")
+			if _, err := os.Stat(fallback); err == nil {
+				sourceExists = true
+			}
+		}
+	}
+
 	sb.WriteString("\n{")
-	if importsStr != "" {
-		sb.WriteString("\nimports $$\n")
-		sb.WriteString(importsStr)
+	if sourceExists {
+		sb.WriteString("\nimports $$")
+		if importsStr != "" {
+			sb.WriteString("\n")
+			sb.WriteString(importsStr)
+		}
 		sb.WriteString("\n$$")
-	}
-	if extraCode != "" {
-		sb.WriteString("\nextra $$\n")
-		sb.WriteString(extraCode)
+
+		sb.WriteString("\nextra $$")
+		if extraCode != "" {
+			sb.WriteString("\n")
+			sb.WriteString(extraCode)
+		}
 		sb.WriteString("\n$$")
-	}
-	if userCode != "" {
-		sb.WriteString("\ncode $$\n")
-		sb.WriteString(userCode)
+
+		sb.WriteString("\ncode $$")
+		if userCode != "" {
+			sb.WriteString("\n")
+			sb.WriteString(userCode)
+		}
 		sb.WriteString("\n$$")
 	}
 	sb.WriteString("\n}")
 
 	sb.WriteString(";")
 	fmt.Fprintln(ctx.Output, sb.String())
+
+	fmt.Fprintf(ctx.Output, "-- source: %s", sourcePath)
+	if !sourceExists {
+		fmt.Fprintf(ctx.Output, " (NOT FOUND)")
+	}
+	fmt.Fprintln(ctx.Output)
 
 	if el := jsa.ExportLevel(); el != "" && el != "Hidden" {
 		fmt.Fprintf(ctx.Output, "-- export level: %s\n", el)

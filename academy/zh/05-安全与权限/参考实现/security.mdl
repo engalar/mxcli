@@ -106,7 +106,7 @@ create or replace navigation Responsive
   home page HD.MyTickets_Overview  for Customer
   home page HD.Ticket_Overview     for Agent
   home page HD.Ticket_Overview     for Manager
-  home page MyFirstModule.Home_Web
+  home page HD.Ticket_Overview
   login page Administration.login
   menu (
     menu item 'My Tickets'  page HD.MyTickets_Overview;
