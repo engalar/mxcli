@@ -81,3 +81,25 @@ bson dump 命令
    - mx check 认为返回类型为"未知"，而 workflow 的 `CallMicroflowTask` 有 `VoidConditionOutcome`
    - 两者不匹配 → CE6686
    - **修复**: 在 `cmd_microflows_create_v2.go` 的 `else` 分支中设置 `ReturnType="Nothing"` + `MicroflowReturnType=VoidType`
+
+6. **JS Action JavaReturnType 缺失**
+   - mxbuild 11.6.6 通过 legacy `JavaReturnType` BSON key 读取 JS action 返回类型
+   - genJSA.JavaScriptAction 没有 `javaReturnType` 字段，只有 `actionReturnType`
+   - 参考 NanoflowCommons.TimeBetween 的 BSON 对比发现差异
+   - **修复**: `supplements.json` 添加 `javaReturnType` 作为 `Part` 属性，BSON key 映射为 `JavaReturnType`；executor 调用 `SetJavaReturnType(rt)`
+
+7. **JS Action Call 输出变量 BSON key 错误**
+   - `supplements.json` 通配符 `*.outputVariableName → VariableName` 错误地覆盖了 `JavaScriptActionCallAction`
+   - 参考正确版 `NF_FormatRelativeTime_2` 的 BSON 对比发现差异：应为 `OutputVariableName` 非 `VariableName`
+   - **修复**: 添加 `JavaScriptActionCallAction.outputVariableName → OutputVariableName` 的特定覆盖
+
+### BSON 对比调试方法
+
+`bson dump --compare "LeftObject,RightObject" --format ndsl` 是调试 BSON 差异的核心工具：
+
+1. 两边 NDSL 并列输出，视觉对比字段差异
+2. 关注：
+   - BSON key 名称不同（如 `VariableName` vs `OutputVariableName`）
+   - 字段存在/缺失（如 `JavaReturnType` vs 无）
+   - 数组版本标记（`[marker=2]` vs `[marker=3]`）
+   - 嵌套结构差异（`BasicParameterType` 包装 vs 裸类型）

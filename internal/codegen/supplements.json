@@ -122,6 +122,7 @@
     "NoGeneralization.hasCreatedDate": "HasCreatedDateAttr",
     "NoGeneralization.hasOwner": "HasOwnerAttr",
     "NanoflowCallAction.outputVariableName": "OutputVariableName",
+    "JavaScriptActionCallAction.outputVariableName": "OutputVariableName",
     "GenerateJumpToOptionsAction.outputVariableName": "OutputVariableName",
     "ResultHandling.outputVariableName": "ResultVariableName",
     "ResultHandling.storeInVariable": "Bind",

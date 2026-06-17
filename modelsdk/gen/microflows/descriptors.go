@@ -887,7 +887,7 @@ func init() {
 			{Name: "javaScriptAction", BSONKey: "JavaScriptAction", Kind: codec.PropKindByNameRef, RefType: "JavaScriptActions$JavaScriptAction"},
 			{Name: "parameterMappings", BSONKey: "ParameterMappings", Kind: codec.PropKindPartList, RefType: ""},
 			{Name: "useReturnVariable", BSONKey: "UseReturnVariable", Kind: codec.PropKindBool, RefType: ""},
-			{Name: "outputVariableName", BSONKey: "VariableName", Kind: codec.PropKindString, RefType: ""},
+			{Name: "outputVariableName", BSONKey: "OutputVariableName", Kind: codec.PropKindString, RefType: ""},
 		},
 	})
 	codec.DefaultDescRegistry.Register("Microflows$JavaScriptActionParameterMapping", &codec.TypeDesc{

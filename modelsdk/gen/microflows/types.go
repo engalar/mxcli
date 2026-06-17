@@ -14809,7 +14809,7 @@ func initJavaScriptActionCallAction() *JavaScriptActionCallAction {
 	o.parameterMappings.Bind(&o.Base, 2)
 	o.useReturnVariable = property.NewPrimitive[bool]("UseReturnVariable", property.DecodeBool)
 	o.useReturnVariable.Bind(&o.Base, 3)
-	o.outputVariableName = property.NewPrimitive[string]("VariableName", property.DecodeString)
+	o.outputVariableName = property.NewPrimitive[string]("OutputVariableName", property.DecodeString)
 	o.outputVariableName.Bind(&o.Base, 4)
 	o.SetProperties([]element.Property{o.errorHandlingType, o.javaScriptAction, o.parameterMappings, o.useReturnVariable, o.outputVariableName})
 	return o
