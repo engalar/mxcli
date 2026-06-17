@@ -3,15 +3,17 @@
         supportedPlatform="Web"
         xmlns="http://www.mendix.com/widget/1.0/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:schemaLocation="http://www.mendix.com/widget/1.0/ ../node_modules/mendix/custom_widget.xsd">
-  <name>Ticket Status Badge</name>
-  <description>Colored status badge for Helpdesk ticket status values</description>
-  <properties>
-    <propertyGroup caption="General">
-      <property key="statusValue" type="attribute" required="true">
-        <caption>status Value</caption>
-        <description/>
-        <attributeTypes><attributeType name="Enum"/></attributeTypes>
-      </property>
-    </propertyGroup>
-  </properties>
+    <name>Ticket Status Badge</name>
+    <description>Colored status badge for Helpdesk ticket status values</description>
+    <icon/>
+    <properties>
+        <propertyGroup caption="General">
+            <property key="statusValue" type="attribute" required="true">
+                <caption>status Value</caption>
+                <description/>
+                <attributeTypes><attributeType name="Enum"/></attributeTypes>
+            </property>
+        </propertyGroup>
+
+    </properties>
 </widget>

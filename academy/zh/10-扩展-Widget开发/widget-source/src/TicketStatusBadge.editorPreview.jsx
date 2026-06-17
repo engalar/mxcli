@@ -1,7 +1,7 @@
 import { TicketStatusBadgeSample } from "./components/TicketStatusBadgeSample";
 
-export function preview() {
-    return <TicketStatusBadgeSample statusValue={"Open"} />;
+export function preview({ statusValue }) {
+    return <TicketStatusBadgeSample statusValue={statusValue} />;
 }
 
 export function getPreviewCss() {

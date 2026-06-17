@@ -5,7 +5,7 @@
             <widgetFile path="TicketStatusBadge.xml"/>
         </widgetFiles>
         <files>
-            <file path="com/helpdesk/widget/TicketStatusBadge/"/>
+            <file path="com/helpdesk/widget/ticketstatusbadge"/>
         </files>
     </clientModule>
 </package>
