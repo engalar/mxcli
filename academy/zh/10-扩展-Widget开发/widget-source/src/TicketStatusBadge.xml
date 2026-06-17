@@ -1,15 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
-<widget id="com.helpdesk.widget.TicketStatusBadge" pluginWidget="true" offlineCapable="false"
-        xmlns="http://www.mendix.com/widget/1.0/"
-        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:schemaLocation="http://www.mendix.com/widget/1.0/ ../../../../node_modules/mendix/custom_widget.xsd">
+<widget id="com.helpdesk.widget.TicketStatusBadge" pluginWidget="true" needsEntityContext="true" offlineCapable="false"
+        supportedPlatform="Web"
+        xmlns="http://www.mendix.com/widget/1.0/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.mendix.com/widget/1.0/ ../node_modules/mendix/custom_widget.xsd">
   <name>Ticket Status Badge</name>
   <description>Colored status badge for Helpdesk ticket status values</description>
   <properties>
     <propertyGroup caption="General">
       <property key="statusValue" type="attribute" required="true">
-        <caption>Status Value</caption>
-        <description>Bind to the ticket status enumeration attribute</description>
+        <caption>status Value</caption>
+        <description/>
         <attributeTypes><attributeType name="Enum"/></attributeTypes>
       </property>
     </propertyGroup>
