@@ -125,6 +125,10 @@ func (pb *pageBuilder) buildPageV3(s *ast.CreatePageStmtV3) (*genPg.Page, error)
 	page.SetDocumentation(s.Documentation)
 	page.SetExcluded(s.Excluded)
 	page.SetMarkAsUsed(false)
+	page.SetExportLevel("Hidden")
+	page.SetAppearance(newDefaultAppearance())
+	page.SetCanvasWidth(800)
+	page.SetCanvasHeight(600)
 	if s.URL != "" {
 		page.SetUrl(s.URL)
 	}
