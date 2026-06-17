@@ -12,6 +12,7 @@ import (
 	"sync"
 
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
+	"github.com/mendixlabs/mxcli/internal/mxgraph"
 	"github.com/mendixlabs/mxcli/modelsdk/widgets/definitions"
 	"github.com/mendixlabs/mxcli/modelsdk/widgets/mpk"
 )
@@ -32,6 +33,7 @@ type WidgetRegistry struct {
 	projectDir      string                          // project root for MPK fallback
 	mpkNameMap      map[string]string               // uppercase MDLName → widgetID (pre-scan, legacy)
 	mpkDiscovered   map[string]*DiscoveredWidget    // uppercase MDLName → full discovery info
+	mxGraph         *mxgraph.Graph                  // mxgraph index for fast widget lookup
 }
 
 // defaultKnownOperations is the set of operation names supported by the widget engine.
@@ -149,6 +151,20 @@ func (r *WidgetRegistry) GetByWidgetID(widgetID string) (*WidgetDefinition, bool
 	if def, ok := r.byWidgetID[widgetID]; ok {
 		return def, ok
 	}
+
+	// Fast path: check mxgraph index (populated from .mxcli/graph.gob snapshot)
+	if r.mxGraph != nil {
+		nodes := r.mxGraph.FindNodes("Widget", map[string]any{"WidgetID": widgetID})
+		if len(nodes) > 0 {
+			def := widgetDefinitionFromNode(nodes[0])
+			if def != nil {
+				r.byWidgetID[widgetID] = def
+				r.byMDLName[strings.ToUpper(def.MDLName)] = def
+				return def, true
+			}
+		}
+	}
+
 	if r.projectDir == "" {
 		return nil, false
 	}
@@ -345,6 +361,12 @@ func (r *WidgetRegistry) SetProjectDir(projectDir string) error {
 	return r.preScanWidgets(projectDir)
 }
 
+// SetMxGraph injects an mxgraph index for fast widget definition lookup.
+// Called by initPluggableEngine when a graph snapshot is available.
+func (r *WidgetRegistry) SetMxGraph(g *mxgraph.Graph) {
+	r.mxGraph = g
+}
+
 func (r *WidgetRegistry) preScanWidgets(projectDir string) error {
 	widgetsDir := filepath.Join(projectDir, "widgets")
 	matches, err := filepath.Glob(filepath.Join(widgetsDir, "*.mpk"))
@@ -395,6 +417,25 @@ func (r *WidgetRegistry) deriveFromMPK(widgetID string) (*WidgetDefinition, erro
 func lastIDSegment(widgetID string) string {
 	parts := strings.Split(widgetID, ".")
 	return strings.ToLower(parts[len(parts)-1])
+}
+
+// widgetDefinitionFromNode converts an mxgraph Widget node back to a
+// WidgetDefinition. Only populates fields that the index stores — the
+// caller gets a minimal definition sufficient for engine lookups.
+func widgetDefinitionFromNode(n *mxgraph.Node) *WidgetDefinition {
+	widgetID, _ := n.Props["WidgetID"].(string)
+	mdlName, _ := n.Props["MDLName"].(string)
+	widgetKind, _ := n.Props["WidgetKind"].(string)
+	if widgetID == "" {
+		return nil
+	}
+	return &WidgetDefinition{
+		WidgetID:        widgetID,
+		MDLName:         strings.ToLower(mdlName),
+		WidgetKind:      widgetKind,
+		TemplateFile:    strings.ToLower(mdlName) + ".json",
+		DefaultEditable: "Always",
+	}
 }
 
 func buildDefinitionFromMPK(mpkDef *mpk.WidgetDefinition) *WidgetDefinition {
