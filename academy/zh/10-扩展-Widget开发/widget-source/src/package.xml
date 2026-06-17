@@ -5,7 +5,7 @@
             <widgetFile path="TicketStatusBadge.xml"/>
         </widgetFiles>
         <files>
-            <file path="com/mendix/widget/custom/TicketStatusBadge/"/>
+            <file path="com/helpdesk/widget/TicketStatusBadge/"/>
         </files>
     </clientModule>
 </package>

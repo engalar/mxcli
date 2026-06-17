@@ -1,9 +1,6 @@
-.widget-badge {
-    white-space: nowrap;
-    user-select: none;
-}
+/*
+Place your custom CSS here
+*/
+.widget-ticketstatusbadge {
 
-.widget-badge--empty {
-    color: #ccc;
-    font-size: 14px;
 }

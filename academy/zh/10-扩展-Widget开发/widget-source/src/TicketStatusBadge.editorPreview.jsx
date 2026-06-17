@@ -1,10 +1,8 @@
 import { createElement } from 'react';
 import { TicketStatusBadgeSample } from "./components/TicketStatusBadgeSample";
 
-export function preview() {
-    return createElement(TicketStatusBadgeSample, {
-        statusValue: { value: "Open", status: "available" }
-    });
+export function preview({ placeholder }) {
+    return createElement(TicketStatusBadgeSample, { sampleText: placeholder });
 }
 
 export function getPreviewCss() {
