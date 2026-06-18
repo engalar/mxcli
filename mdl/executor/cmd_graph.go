@@ -11,6 +11,7 @@ import (
 
 	"github.com/mendixlabs/mxcli/internal/mxgraph"
 	mpradapter "github.com/mendixlabs/mxcli/internal/mxgraph/adapter/mpr"
+	designdprops "github.com/mendixlabs/mxcli/internal/mxgraph/adapter/designdprops"
 	themescss "github.com/mendixlabs/mxcli/internal/mxgraph/adapter/themescss"
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
@@ -68,6 +69,8 @@ func buildGraph(ctx *ExecContext) error {
 	mgr.RegisterAdapter(&mpradapter.WorkflowAdapter{Model: m})
 	mgr.RegisterAdapter(&mpradapter.WidgetAdapter{ProjectDir: projectDir})
 	mgr.RegisterAdapter(&themescss.ThemeScssAdapter{ProjectDir: projectDir})
+	mgr.RegisterAdapter(&designdprops.DesignPropertyAdapter{ProjectDir: projectDir})
+	mgr.RegisterAdapter(&mpradapter.WidgetInstanceAdapter{Model: m})
 
 	// Open delta log for event persistence during build.
 	if err := os.MkdirAll(filepath.Dir(deltaPath), 0700); err != nil {
