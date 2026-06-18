@@ -1,0 +1,121 @@
+-- ============================================================
+-- Capstone 12：集成 JS Actions 和 Java Actions 到实际业务流
+--   将 08、09 中定义的动作真正接入页面和业务逻辑
+-- 前提：01-11 已执行
+-- 运行：mxcli exec 12-integrate-actions.mdl -p MyProject.mpr
+-- ============================================================
+
+-- ============================================================
+-- 集成 1：Ticket_Detail 添加"复制标题"按钮
+-- 布局结构：lgMain → rContent → cActions 后追加 cActions2
+-- 用法：点击后调用 NF_CopyToClipboard → JSA_CopyToClipboard
+-- ============================================================
+
+alter page HD.Ticket_Detail {
+  insert after lgMain.rContent.cActions {
+    column cActions2 (desktopwidth: 4) {
+      dataview dvExtra (datasource: $Ticket) {
+        dynamictext txtQuickLabel (content: 'Quick Actions', rendermode: H4)
+        footer ftrExtra {
+          actionbutton btnCopySubject (
+            caption:     'Copy Subject',
+            action:      nanoflow HD.NF_CopyToClipboard (Text: $currentObject/Subject),
+            buttonstyle: default
+          )
+        }
+      }
+    }
+  }
+};
+
+
+-- ============================================================
+-- 集成 2：Ticket_Detail 评论区添加相对时间列
+-- 用法：点击调用 NF_FormatRelativeTime → JSA_FormatRelativeTime
+-- 说明：NF_FormatRelativeTime 返回相对时间文本（"5m ago"），
+-- 用 actionbutton/link 实现客户端调用
+-- ============================================================
+
+alter page HD.Ticket_Detail {
+  insert after dgComments.colIsInternal {
+    column colRelativeTime (caption: 'When', ShowContentAs: customContent, ColumnWidth: manual, Size: 100) {
+      actionbutton btnRelativeTime (
+        caption:     'show time',
+        action:      nanoflow HD.NF_FormatRelativeTime (DateTime: $currentObject/System.changedDate),
+        buttonstyle: link
+      )
+    }
+  }
+};
+
+
+-- ============================================================
+-- 集成 3：MyTickets_Overview 添加"复制标题"按钮
+-- 用法：快速复制工单主题到剪贴板
+-- ============================================================
+
+alter page HD.MyTickets_Overview {
+  set after column colActions {
+    column colCopy (caption: '', ShowContentAs: customContent, ColumnWidth: manual, Size: 60) {
+      actionbutton btnCopy (
+        caption:     'Copy',
+        action:      nanoflow HD.NF_CopyToClipboard (Text: $currentObject/Subject),
+        buttonstyle: link
+      )
+    }
+  }
+};
+
+
+-- ============================================================
+-- 集成 4：重新创建 ACT_Ticket_Submit（加入桌面通知）
+-- 高优工单提交后对客服发出浏览器桌面通知
+-- ============================================================
+
+create or replace microflow HD.ACT_Ticket_Submit
+  ($Ticket: HD.Ticket)
+  returns boolean as $Success
+  folder 'Ticket'
+{
+  if $Ticket/Subject = '' {
+    validation feedback $Ticket/Subject message 'Subject is required.';
+    return false;
+  }
+
+  if $Ticket/Priority = HD.TicketPriority.Critical {
+    change $Ticket (
+      Status   = HD.TicketStatus.Open,
+      SLADueAt = addHours('[%CurrentDateTime%]', @HD.SLA_CRITICAL_HOURS)
+    );
+  } else {
+    if $Ticket/Priority = HD.TicketPriority.High {
+      change $Ticket (
+        Status   = HD.TicketStatus.Open,
+        SLADueAt = addHours('[%CurrentDateTime%]', @HD.SLA_HIGH_HOURS)
+      );
+    } else {
+      change $Ticket (
+        Status   = HD.TicketStatus.Open,
+        SLADueAt = addHours('[%CurrentDateTime%]', 24)
+      );
+    }
+  }
+  commit $Ticket;
+
+  -- 新增：高优/紧急工单 → 桌面通知客服
+  if $Ticket/Priority = HD.TicketPriority.High or $Ticket/Priority = HD.TicketPriority.Critical then
+    call nanoflow HD.NF_NotifyHighPriority(Subject = $Ticket/Subject);
+  end if;
+
+  return true;
+}
+/
+
+
+-- ============================================================
+-- 安全权限：确保新用途有权限
+-- ============================================================
+
+grant execute on nanoflow HD.NF_CopyToClipboard     to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
+grant execute on nanoflow HD.NF_NotifyHighPriority   to HD.AgentRole, HD.ManagerRole;
+grant execute on nanoflow HD.NF_FormatRelativeTime    to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
