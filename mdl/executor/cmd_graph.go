@@ -19,8 +19,8 @@ import (
 
 // buildGraph constructs the in-memory project graph from the connected project,
 // registering all five domain adapters, and installs it as ctx.Graph.
-// It also persists a gob snapshot to <projectDir>/.mxcli/graph.gob so a later
-// session can reload without rebuilding.
+// It also persists a gob snapshot + delta log to <projectDir>/.mxcli/ so a
+// later session can reload without a full rebuild.
 //
 // The graph is built from a fresh read-only modelsdk.Model opened from MprPath
 // (matching cmd/mxcli/serve.go's buildProjectGraph). This avoids coupling the
@@ -29,6 +29,27 @@ import (
 func buildGraph(ctx *ExecContext) error {
 	if ctx.MprPath == "" {
 		return mdlerrors.NewNotConnected()
+	}
+
+	projectDir := filepath.Dir(ctx.MprPath)
+	snapPath := graphcatalog.SnapshotPath(projectDir)
+	deltaPath := graphcatalog.DeltaPath(projectDir)
+
+	// Fast path: restore from cached snapshot + delta log.
+	if g, err := mxgraph.RestoreFromSnapshot(snapPath, deltaPath); err != nil {
+		return mdlerrors.NewBackend("restore graph cache", err)
+	} else if g != nil {
+		mgr := mxgraph.NewIndexManagerFromGraph(g)
+		pg := graphcatalog.NewProjectGraph(mgr)
+		ctx.Graph = pg
+		if ctx.SyncGraph != nil {
+			ctx.SyncGraph(pg)
+		}
+		if !ctx.Quiet {
+			fmt.Fprintf(ctx.Output, "Graph restored: %d nodes, %d edges (from cache)\n",
+				len(g.AllNodes()), len(g.AllEdges()))
+		}
+		return nil
 	}
 
 	m, err := modelsdk.Open(ctx.MprPath)
@@ -44,12 +65,24 @@ func buildGraph(ctx *ExecContext) error {
 	mgr.RegisterAdapter(&mpradapter.SecurityAdapter{Model: m})
 	mgr.RegisterAdapter(&mpradapter.EnumerationAdapter{Model: m})
 	mgr.RegisterAdapter(&mpradapter.WorkflowAdapter{Model: m})
-	mgr.RegisterAdapter(&mpradapter.WidgetAdapter{ProjectDir: filepath.Dir(ctx.MprPath)})
+	mgr.RegisterAdapter(&mpradapter.WidgetAdapter{ProjectDir: projectDir})
+
+	// Open delta log for event persistence during build.
+	if err := os.MkdirAll(filepath.Dir(deltaPath), 0700); err != nil {
+		return mdlerrors.NewBackend("create cache directory", err)
+	}
+	deltaLog, err := mxgraph.OpenDeltaLog(deltaPath)
+	if err != nil {
+		return mdlerrors.NewBackend("open delta log", err)
+	}
+	defer deltaLog.Close()
+
+	sink := mxgraph.NewLoggingSink(mgr, deltaLog)
 
 	buildCtx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
 
-	if err := mgr.BuildAll(buildCtx); err != nil {
+	if err := mgr.BuildAll(buildCtx, sink); err != nil {
 		return mdlerrors.NewBackend("build graph", err)
 	}
 
@@ -59,13 +92,14 @@ func buildGraph(ctx *ExecContext) error {
 		ctx.SyncGraph(pg)
 	}
 
-	// Persist a gob snapshot next to the project (best-effort).
+	// Persist snapshot and reset delta log so future restores are fast.
 	if data, err := pg.MarshalSnapshot(); err == nil {
-		snapPath := graphcatalog.SnapshotPath(filepath.Dir(ctx.MprPath))
 		if mkErr := os.MkdirAll(filepath.Dir(snapPath), 0700); mkErr == nil {
 			_ = os.WriteFile(snapPath, data, 0600)
 		}
 	}
+	// After snapshot is saved the delta log is no longer needed; reset it.
+	_ = deltaLog.Reset()
 
 	if !ctx.Quiet {
 		g := mgr.Query()

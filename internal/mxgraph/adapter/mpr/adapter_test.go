@@ -48,7 +48,7 @@ func TestMprAdapterFindPath(t *testing.T) {
 	mg := mxgraph.NewIndexManager()
 	mg.RegisterAdapter(&DomainModelAdapter{Model: m})
 	ctx := context.Background()
-	if err := mg.BuildAll(ctx); err != nil {
+	if err := mg.BuildAll(ctx, mg); err != nil {
 		t.Fatalf("BuildAll: %v", err)
 	}
 

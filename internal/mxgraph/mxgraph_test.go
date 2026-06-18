@@ -270,7 +270,7 @@ func TestIndexManagerBuild(t *testing.T) {
 	})
 
 	ctx := context.Background()
-	if err := m.BuildAll(ctx); err != nil {
+	if err := m.BuildAll(ctx, m); err != nil {
 		t.Fatalf("BuildAll: %v", err)
 	}
 

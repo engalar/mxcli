@@ -49,21 +49,21 @@ func (m *IndexManager) RegisterAdapter(a IndexAdapter) {
 	m.adapters[a.Name()] = a
 }
 
-func (m *IndexManager) BuildAll(ctx context.Context) error {
+func (m *IndexManager) BuildAll(ctx context.Context, sink EventSink) error {
 	for name, a := range m.adapters {
-		if err := a.Build(ctx, m); err != nil {
+		if err := a.Build(ctx, sink); err != nil {
 			return fmt.Errorf("adapter %q Build: %w", name, err)
 		}
 	}
 	return nil
 }
 
-func (m *IndexManager) BuildOne(ctx context.Context, name string) error {
+func (m *IndexManager) BuildOne(ctx context.Context, name string, sink EventSink) error {
 	a, ok := m.adapters[name]
 	if !ok {
 		return fmt.Errorf("adapter %q not registered", name)
 	}
-	return a.Build(ctx, m)
+	return a.Build(ctx, sink)
 }
 
 func (m *IndexManager) Emit(events []Event) error {

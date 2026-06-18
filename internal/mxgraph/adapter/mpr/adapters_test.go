@@ -132,7 +132,7 @@ func TestDomainModelAdapter_EntityHasModuleAndQN(t *testing.T) {
 
 	mg := mxgraph.NewIndexManager()
 	mg.RegisterAdapter(&DomainModelAdapter{Model: m})
-	if err := mg.BuildAll(context.Background()); err != nil {
+	if err := mg.BuildAll(context.Background(), mg); err != nil {
 		t.Fatalf("BuildAll: %v", err)
 	}
 

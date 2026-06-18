@@ -8,6 +8,7 @@ import (
 	"html/template"
 	"math"
 	"net/http"
+	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -81,6 +82,17 @@ Examples:
 }
 
 func buildProjectGraph(projectPath string) (*graphcatalog.ProjectGraph, error) {
+	projectDir := filepath.Dir(projectPath)
+	snapPath := graphcatalog.SnapshotPath(projectDir)
+	deltaPath := graphcatalog.DeltaPath(projectDir)
+
+	if g, err := mxgraph.RestoreFromSnapshot(snapPath, deltaPath); err != nil {
+		return nil, fmt.Errorf("restore graph cache: %w", err)
+	} else if g != nil {
+		mgr := mxgraph.NewIndexManagerFromGraph(g)
+		return graphcatalog.NewProjectGraph(mgr), nil
+	}
+
 	m, err := modelsdk.Open(projectPath)
 	if err != nil {
 		return nil, fmt.Errorf("open project: %w", err)
@@ -93,12 +105,33 @@ func buildProjectGraph(projectPath string) (*graphcatalog.ProjectGraph, error) {
 	mgr.RegisterAdapter(&mpradapter.PageAdapter{Model: m})
 	mgr.RegisterAdapter(&mpradapter.EnumerationAdapter{Model: m})
 	mgr.RegisterAdapter(&mpradapter.WorkflowAdapter{Model: m})
-	mgr.RegisterAdapter(&mpradapter.WidgetAdapter{ProjectDir: filepath.Dir(projectPath)})
+	mgr.RegisterAdapter(&mpradapter.WidgetAdapter{ProjectDir: projectDir})
 
-	if err := mgr.BuildAll(context.Background()); err != nil {
+	if err := os.MkdirAll(filepath.Dir(deltaPath), 0700); err != nil {
+		return nil, fmt.Errorf("create cache dir: %w", err)
+	}
+	deltaLog, err := mxgraph.OpenDeltaLog(deltaPath)
+	if err != nil {
+		return nil, fmt.Errorf("open delta log: %w", err)
+	}
+	defer deltaLog.Close()
+
+	sink := mxgraph.NewLoggingSink(mgr, deltaLog)
+
+	if err := mgr.BuildAll(context.Background(), sink); err != nil {
 		return nil, fmt.Errorf("build graph: %w", err)
 	}
-	return graphcatalog.NewProjectGraph(mgr), nil
+
+	pg := graphcatalog.NewProjectGraph(mgr)
+
+	if data, err := pg.MarshalSnapshot(); err == nil {
+		if mkErr := os.MkdirAll(filepath.Dir(snapPath), 0700); mkErr == nil {
+			_ = os.WriteFile(snapPath, data, 0600)
+		}
+	}
+	_ = deltaLog.Reset()
+
+	return pg, nil
 }
 
 func serveTreemap(w http.ResponseWriter, r *http.Request, projectPath string) {

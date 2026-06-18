@@ -458,9 +458,18 @@ func mxTypeToLabel(objectType string) mxgraph.Label {
 	return ""
 }
 
-// buildMxGraph builds the mxgraph from the MPR, saves a snapshot, and returns the graph.
-// Falls back to nil on any error — the caller will use the O(N) scan path.
+// buildMxGraph builds the mxgraph from the MPR, saves a snapshot + delta log,
+// and returns the graph. Falls back to nil on any error — the caller will use
+// the O(N) scan path.
 func buildMxGraph(projectPath string) *mxgraph.Graph {
+	projectDir := filepath.Dir(projectPath)
+	snapPath := graphcatalog.SnapshotPath(projectDir)
+	deltaPath := graphcatalog.DeltaPath(projectDir)
+
+	if g, err := mxgraph.RestoreFromSnapshot(snapPath, deltaPath); err == nil && g != nil {
+		return g
+	}
+
 	m, err := modelsdk.Open(projectPath)
 	if err != nil {
 		return nil
@@ -473,22 +482,31 @@ func buildMxGraph(projectPath string) *mxgraph.Graph {
 	mgr.RegisterAdapter(&mpradapter.PageAdapter{Model: m})
 	mgr.RegisterAdapter(&mpradapter.EnumerationAdapter{Model: m})
 	mgr.RegisterAdapter(&mpradapter.WorkflowAdapter{Model: m})
-	mgr.RegisterAdapter(&mpradapter.WidgetAdapter{ProjectDir: filepath.Dir(projectPath)})
+	mgr.RegisterAdapter(&mpradapter.WidgetAdapter{ProjectDir: projectDir})
 
-	if err := mgr.BuildAll(context.Background()); err != nil {
+	if err := os.MkdirAll(filepath.Dir(deltaPath), 0700); err != nil {
+		return nil
+	}
+	deltaLog, err := mxgraph.OpenDeltaLog(deltaPath)
+	if err != nil {
+		return nil
+	}
+	defer deltaLog.Close()
+
+	sink := mxgraph.NewLoggingSink(mgr, deltaLog)
+
+	if err := mgr.BuildAll(context.Background(), sink); err != nil {
 		return nil
 	}
 	pg := graphcatalog.NewProjectGraph(mgr)
 
-	// Persist snapshot (best-effort)
-	data, snapErr := pg.MarshalSnapshot()
-	dir := filepath.Dir(projectPath)
-	snapPath := filepath.Join(dir, ".mxcli", "graph.gob")
-	if snapErr == nil {
+	if data, snapErr := pg.MarshalSnapshot(); snapErr == nil {
 		if mkErr := os.MkdirAll(filepath.Dir(snapPath), 0700); mkErr == nil {
 			_ = os.WriteFile(snapPath, data, 0600)
 		}
 	}
+	_ = deltaLog.Reset()
+
 	return mgr.Query()
 }
 

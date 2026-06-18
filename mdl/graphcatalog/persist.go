@@ -25,3 +25,8 @@ func UnmarshalSnapshot(data []byte) (*ProjectGraph, error) {
 func SnapshotPath(projectDir string) string {
 	return filepath.Join(projectDir, ".mxcli", "graph.gob")
 }
+
+// DeltaPath 返回给定项目目录下 delta.log 的标准路径。
+func DeltaPath(projectDir string) string {
+	return filepath.Join(projectDir, ".mxcli", "delta.log")
+}
