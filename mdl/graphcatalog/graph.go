@@ -23,6 +23,7 @@ var _ ThemeReader = (*ProjectGraph)(nil)
 var _ StylingReader = (*ProjectGraph)(nil)
 var _ EntityAccessReader = (*ProjectGraph)(nil)
 var _ DocumentGrantReader = (*ProjectGraph)(nil)
+var _ PageRefReader = (*ProjectGraph)(nil)
 
 // NewProjectGraph 创建 ProjectGraph，接管已构建的 IndexManager。
 func NewProjectGraph(mgr *mxgraph.IndexManager) *ProjectGraph {
@@ -654,16 +655,88 @@ func toAccessRuleNode(n *mxgraph.Node) AccessRuleNode {
 	}
 }
 
-// ── DocumentGrantReader (stub — Phases 2-3 will implement) ──
+// ── DocumentGrantReader ─────────────────────────────────────
 
 func (pg *ProjectGraph) PageAllowedRoles(pageQN string) []string {
-	return nil
+	g := pg.g()
+	// Find page node by QualifiedName
+	pageNodes := g.FindNodes("Page", map[string]any{"QualifiedName": pageQN})
+	if len(pageNodes) == 0 {
+		return nil
+	}
+	pageID := pageNodes[0].ID
+	edges := g.Edges(pageID, mxgraph.Outbound, "HAS_ALLOWED_ROLE")
+	var roles []string
+	for _, e := range edges {
+		qn := string(e.To)
+		if qn != "" {
+			roles = append(roles, qn)
+		}
+	}
+	return roles
 }
 
 func (pg *ProjectGraph) MFAllowedRoles(mfQN string) []string {
-	return nil
+	g := pg.g()
+	mfNodes := g.FindNodes("Microflow", map[string]any{"QualifiedName": mfQN})
+	if len(mfNodes) == 0 {
+		return nil
+	}
+	mfID := mfNodes[0].ID
+	edges := g.Edges(mfID, mxgraph.Outbound, "HAS_ALLOWED_ROLE")
+	var roles []string
+	for _, e := range edges {
+		qn := string(e.To)
+		if qn != "" {
+			roles = append(roles, qn)
+		}
+	}
+	return roles
 }
 
 func (pg *ProjectGraph) ApplyEntityAccess(mfQN string) bool {
-	return false
+	g := pg.g()
+	mfNodes := g.FindNodes("Microflow", map[string]any{"QualifiedName": mfQN})
+	if len(mfNodes) == 0 {
+		return false
+	}
+	return boolProp(mfNodes[0], "ApplyEntityAccess")
+}
+
+// ── PageRefReader ────────────────────────────────────────────
+
+func (pg *ProjectGraph) PageEntityRefs(pageQN string) []string {
+	g := pg.g()
+	pageNodes := g.FindNodes("Page", map[string]any{"QualifiedName": pageQN})
+	if len(pageNodes) == 0 {
+		return nil
+	}
+	pageID := pageNodes[0].ID
+	edges := g.Edges(pageID, mxgraph.Outbound, "READS_ENTITY")
+	var refs []string
+	for _, e := range edges {
+		qn := string(e.To)
+		if qn != "" {
+			refs = append(refs, qn)
+		}
+	}
+	return refs
+}
+
+func (pg *ProjectGraph) PageMFRefs(pageQN string) []string {
+	g := pg.g()
+	pageNodes := g.FindNodes("Page", map[string]any{"QualifiedName": pageQN})
+	if len(pageNodes) == 0 {
+		return nil
+	}
+	pageID := pageNodes[0].ID
+	edges := g.Edges(pageID, mxgraph.Outbound, "CALLS_MICROFLOW")
+	var refs []string
+	for _, e := range edges {
+		qn := string(e.To)
+		if qn != "" {
+			refs = append(refs, qn)
+		}
+	}
+	return refs
 }

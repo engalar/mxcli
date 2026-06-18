@@ -47,6 +47,12 @@ type EntityAccessReader interface {
 	EntitiesWithMissingAccessRules(module string) []EntityNode
 }
 
+// PageRefReader 读取页面 widget 树中的实体/微流引用。
+type PageRefReader interface {
+	PageEntityRefs(pageQN string) []string
+	PageMFRefs(pageQN string) []string
+}
+
 // DocumentGrantReader 读取页面/微流的授权信息。
 type DocumentGrantReader interface {
 	PageAllowedRoles(pageQN string) []string
