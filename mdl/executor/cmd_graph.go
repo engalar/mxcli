@@ -71,6 +71,7 @@ func buildGraph(ctx *ExecContext) error {
 	mgr.RegisterAdapter(&themescss.ThemeScssAdapter{ProjectDir: projectDir})
 	mgr.RegisterAdapter(&designdprops.DesignPropertyAdapter{ProjectDir: projectDir})
 	mgr.RegisterAdapter(&mpradapter.WidgetInstanceAdapter{Source: &mpradapter.ModelsdkUnitSource{Model: m}})
+	mgr.RegisterAdapter(&mpradapter.AccessRuleAdapter{Model: m})
 
 	// Open delta log for event persistence during build.
 	if err := os.MkdirAll(filepath.Dir(deltaPath), 0700); err != nil {

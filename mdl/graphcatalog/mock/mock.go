@@ -30,6 +30,14 @@ type MockProjectGraph struct {
 	WidgetInstancesFunc  func(pageQN string) []graphcatalog.WidgetInstanceNode
 	DesignPropertiesFunc func(widgetType string) []graphcatalog.DesignPropertyNode
 	DesignPropertyFunc   func(widgetType, name string) *graphcatalog.DesignPropertyNode
+	// EntityAccessReader
+	EntityAccessRulesFunc              func(entityQN string) []graphcatalog.AccessRuleNode
+	EntityAccessRulesForRoleFunc       func(moduleRoleQN string) []graphcatalog.AccessRuleNode
+	EntitiesWithMissingAccessRulesFunc func(module string) []graphcatalog.EntityNode
+	// DocumentGrantReader (stub)
+	PageAllowedRolesFunc  func(pageQN string) []string
+	MFAllowedRolesFunc    func(mfQN string) []string
+	ApplyEntityAccessFunc func(mfQN string) bool
 }
 
 // 编译期接口检查
@@ -37,6 +45,8 @@ var _ graphcatalog.LintReader = (*MockProjectGraph)(nil)
 var _ graphcatalog.TraversalReader = (*MockProjectGraph)(nil)
 var _ graphcatalog.ThemeReader = (*MockProjectGraph)(nil)
 var _ graphcatalog.StylingReader = (*MockProjectGraph)(nil)
+var _ graphcatalog.EntityAccessReader = (*MockProjectGraph)(nil)
+var _ graphcatalog.DocumentGrantReader = (*MockProjectGraph)(nil)
 
 func (m *MockProjectGraph) Entities(module string) []graphcatalog.EntityNode {
 	if m.EntitiesFunc != nil {
@@ -201,4 +211,50 @@ func (m *MockProjectGraph) DesignProperty(widgetType, name string) *graphcatalog
 		return m.DesignPropertyFunc(widgetType, name)
 	}
 	panic("MockProjectGraph.DesignProperty not configured")
+}
+
+// ── EntityAccessReader ──────────────────────────────────────
+
+func (m *MockProjectGraph) EntityAccessRules(entityQN string) []graphcatalog.AccessRuleNode {
+	if m.EntityAccessRulesFunc != nil {
+		return m.EntityAccessRulesFunc(entityQN)
+	}
+	panic("MockProjectGraph.EntityAccessRules not configured")
+}
+
+func (m *MockProjectGraph) EntityAccessRulesForRole(moduleRoleQN string) []graphcatalog.AccessRuleNode {
+	if m.EntityAccessRulesForRoleFunc != nil {
+		return m.EntityAccessRulesForRoleFunc(moduleRoleQN)
+	}
+	panic("MockProjectGraph.EntityAccessRulesForRole not configured")
+}
+
+func (m *MockProjectGraph) EntitiesWithMissingAccessRules(module string) []graphcatalog.EntityNode {
+	if m.EntitiesWithMissingAccessRulesFunc != nil {
+		return m.EntitiesWithMissingAccessRulesFunc(module)
+	}
+	panic("MockProjectGraph.EntitiesWithMissingAccessRules not configured")
+}
+
+// ── DocumentGrantReader (stub) ──────────────────────────────
+
+func (m *MockProjectGraph) PageAllowedRoles(pageQN string) []string {
+	if m.PageAllowedRolesFunc != nil {
+		return m.PageAllowedRolesFunc(pageQN)
+	}
+	panic("MockProjectGraph.PageAllowedRoles not configured")
+}
+
+func (m *MockProjectGraph) MFAllowedRoles(mfQN string) []string {
+	if m.MFAllowedRolesFunc != nil {
+		return m.MFAllowedRolesFunc(mfQN)
+	}
+	panic("MockProjectGraph.MFAllowedRoles not configured")
+}
+
+func (m *MockProjectGraph) ApplyEntityAccess(mfQN string) bool {
+	if m.ApplyEntityAccessFunc != nil {
+		return m.ApplyEntityAccessFunc(mfQN)
+	}
+	panic("MockProjectGraph.ApplyEntityAccess not configured")
 }

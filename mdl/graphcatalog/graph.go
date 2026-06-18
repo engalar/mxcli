@@ -21,6 +21,8 @@ var _ LintReader = (*ProjectGraph)(nil)
 var _ TraversalReader = (*ProjectGraph)(nil)
 var _ ThemeReader = (*ProjectGraph)(nil)
 var _ StylingReader = (*ProjectGraph)(nil)
+var _ EntityAccessReader = (*ProjectGraph)(nil)
+var _ DocumentGrantReader = (*ProjectGraph)(nil)
 
 // NewProjectGraph 创建 ProjectGraph，接管已构建的 IndexManager。
 func NewProjectGraph(mgr *mxgraph.IndexManager) *ProjectGraph {
@@ -605,4 +607,63 @@ func toDesignPropertyNode(n *mxgraph.Node) DesignPropertyNode {
 		ReferencedVars: refVars,
 		SourceModule:   strProp(n, "SourceModule"),
 	}
+}
+
+// ── EntityAccessReader ──────────────────────────────────────
+
+func (pg *ProjectGraph) EntityAccessRules(entityQN string) []AccessRuleNode {
+	nodes := pg.g().FindNodes("AccessRule", map[string]any{"EntityQN": entityQN})
+	result := make([]AccessRuleNode, 0, len(nodes))
+	for _, n := range nodes {
+		result = append(result, toAccessRuleNode(n))
+	}
+	return result
+}
+
+func (pg *ProjectGraph) EntityAccessRulesForRole(moduleRoleQN string) []AccessRuleNode {
+	nodes := pg.g().FindNodes("AccessRule", map[string]any{"ModuleRoleQN": moduleRoleQN})
+	result := make([]AccessRuleNode, 0, len(nodes))
+	for _, n := range nodes {
+		result = append(result, toAccessRuleNode(n))
+	}
+	return result
+}
+
+func (pg *ProjectGraph) EntitiesWithMissingAccessRules(module string) []EntityNode {
+	allEntities := pg.Entities(module)
+	var result []EntityNode
+	for _, e := range allEntities {
+		rules := pg.EntityAccessRules(e.QualifiedName)
+		if len(rules) == 0 {
+			result = append(result, e)
+		}
+	}
+	return result
+}
+
+func toAccessRuleNode(n *mxgraph.Node) AccessRuleNode {
+	return AccessRuleNode{
+		ID:              string(n.ID),
+		EntityQN:        strProp(n, "EntityQN"),
+		ModuleRoleQN:    strProp(n, "ModuleRoleQN"),
+		CanRead:         boolProp(n, "CanRead"),
+		CanWrite:        boolProp(n, "CanWrite"),
+		CanCreate:       boolProp(n, "CanCreate"),
+		CanDelete:       boolProp(n, "CanDelete"),
+		XPathConstraint: strProp(n, "XPathConstraint"),
+	}
+}
+
+// ── DocumentGrantReader (stub — Phases 2-3 will implement) ──
+
+func (pg *ProjectGraph) PageAllowedRoles(pageQN string) []string {
+	return nil
+}
+
+func (pg *ProjectGraph) MFAllowedRoles(mfQN string) []string {
+	return nil
+}
+
+func (pg *ProjectGraph) ApplyEntityAccess(mfQN string) bool {
+	return false
 }

@@ -40,6 +40,20 @@ type TraversalReader interface {
 	References(qualifiedName string) []RefEdge
 }
 
+// EntityAccessReader 读取实体访问规则。安全 lint 规则和 access gap 分析使用。
+type EntityAccessReader interface {
+	EntityAccessRules(entityQN string) []AccessRuleNode
+	EntityAccessRulesForRole(moduleRoleQN string) []AccessRuleNode
+	EntitiesWithMissingAccessRules(module string) []EntityNode
+}
+
+// DocumentGrantReader 读取页面/微流的授权信息。
+type DocumentGrantReader interface {
+	PageAllowedRoles(pageQN string) []string
+	MFAllowedRoles(mfQN string) []string
+	ApplyEntityAccess(mfQN string) bool
+}
+
 // LintReader 是 linter 所需的完整接口（聚合 4 个子接口）。
 type LintReader interface {
 	DomainReader
