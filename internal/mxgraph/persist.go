@@ -15,6 +15,7 @@ func init() {
 	gob.Register(&Node{})
 	gob.Register(&Edge{})
 	gob.Register(map[string]any{})
+	gob.Register(map[string]string{})
 	gob.Register([]any{})
 	gob.Register(NodeID(""))
 	gob.Register(element.ID(""))

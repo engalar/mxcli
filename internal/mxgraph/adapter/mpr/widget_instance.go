@@ -7,7 +7,9 @@ import (
 
 	"github.com/mendixlabs/mxcli/internal/mxgraph"
 	"github.com/mendixlabs/mxcli/modelsdk"
+	"github.com/mendixlabs/mxcli/modelsdk/codec"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 // WidgetInstanceAdapter 遍历页面和片段中的 widget 树，提取 Appearance 数据。
@@ -72,6 +74,9 @@ func (a *WidgetInstanceAdapter) Build(ctx context.Context, sink mxgraph.EventSin
 }
 
 // walkWidgets 递归遍历 widget 树，提取 Appearance 数据。
+// 优先使用 typed Properties() 遍历。
+// 额外扫描 raw BSON 查找 typed 路径未暴露的 widget 容器 key
+//（如 Forms$FormCallArgument 的 Widget/Widgets 字段）。
 func (a *WidgetInstanceAdapter) walkWidgets(
 	elem element.Element,
 	containerID mxgraph.NodeID,
@@ -80,6 +85,7 @@ func (a *WidgetInstanceAdapter) walkWidgets(
 ) []mxgraph.Event {
 	var events []mxgraph.Event
 
+	// 1. Typed 路径
 	for _, prop := range elem.Properties() {
 		switch p := prop.(type) {
 		case element.ChildProperty:
@@ -100,7 +106,147 @@ func (a *WidgetInstanceAdapter) walkWidgets(
 		}
 	}
 
+	// 2. Raw BSON 回退：查找 typed 路径可能遗漏的 widget 容器 key
+	//    （如 Forms$FormCallArgument 的 Widget/Widgets 字段在 typed 中不可见）
+	if len(elem.Raw()) > 0 {
+		rawEvents := a.walkRawBSON(elem.Raw(), containerID, containerLabel, module)
+		events = append(events, rawEvents...)
+	}
+
 	return events
+}
+
+// walkRawBSON 从 raw BSON 解码子元素，处理 FormCall/LayoutCall/Arguments 等未注册类型。
+func (a *WidgetInstanceAdapter) walkRawBSON(
+	raw bson.Raw,
+	containerID mxgraph.NodeID,
+	containerLabel mxgraph.Label,
+	module string,
+) []mxgraph.Event {
+	var events []mxgraph.Event
+
+	var doc bson.M
+	if err := bson.Unmarshal(raw, &doc); err != nil {
+		return nil
+	}
+
+	// 遍历已知的 widget 容器 key
+	for _, rawKey := range knownContainerKeys(doc) {
+		val := doc[rawKey]
+		_ = val
+
+		// bson.D 是 mongo driver v2 解码 sub-document 时的类型
+		if d, ok := val.(bson.D); ok {
+			if len(d) == 0 {
+				continue
+			}
+			a.processRawSubDoc(dToMap(d), containerID, containerLabel, module, &events)
+		}
+
+		// bson.A 是数组
+		if arr, ok := val.(bson.A); ok {
+			items := dropVersionPrefix(arr)
+			for _, item := range items {
+				switch v := item.(type) {
+				case bson.D:
+					a.processRawSubDoc(dToMap(v), containerID, containerLabel, module, &events)
+				case bson.M:
+					a.processRawSubDoc(v, containerID, containerLabel, module, &events)
+				}
+			}
+		}
+	}
+
+	return events
+}
+
+// knownContainerKeys 从 raw BSON doc 中找出已知的 widget 容器 key。
+func knownContainerKeys(doc map[string]any) []string {
+	candidates := []string{"FormCall", "LayoutCall", "Widget", "Widgets", "Arguments"}
+	var keys []string
+	for _, k := range candidates {
+		if _, ok := doc[k]; ok {
+			keys = append(keys, k)
+		}
+	}
+	return keys
+}
+
+// processRawSubDoc 处理单个 raw BSON sub-document。
+// 如果是已知 widget 类型 → typed decode → inspectWidget + 递归 walkWidgets。
+// 如果是未知容器类型（如 FormCall）→ 直接递归 walkRawBSON。
+func (a *WidgetInstanceAdapter) processRawSubDoc(
+	m map[string]any,
+	containerID mxgraph.NodeID,
+	containerLabel mxgraph.Label,
+	module string,
+	events *[]mxgraph.Event,
+) {
+	typeName, _ := m["$Type"].(string)
+	if typeName == "" {
+		return
+	}
+	if isWidgetType(typeName) {
+		// 已知 widget 类型，通过 codec 解码获取类型化 Properties
+		if child := a.decodeRawChild(m); child != nil {
+			evts := a.inspectWidget(child, containerID, containerLabel, module)
+			*events = append(*events, evts...)
+			*events = append(*events, a.walkWidgets(child, containerID, containerLabel, module)...)
+		}
+	} else {
+		// 未知容器类型（FormCall 等），将 raw BSON 重新编码后递归
+		raw, err := bson.Marshal(m)
+		if err != nil {
+			return
+		}
+		evts := a.walkRawBSON(raw, containerID, containerLabel, module)
+		*events = append(*events, evts...)
+	}
+}
+
+// decodeRawChild 通过 codec 解码 raw BSON map 为 typed element。
+// 仅用于 isWidgetType 返回 true 的类型。
+func (a *WidgetInstanceAdapter) decodeRawChild(m map[string]any) element.Element {
+	typeName, _ := m["$Type"].(string)
+	if typeName == "" {
+		return nil
+	}
+	// 跳过非 widget 类型
+	if !isWidgetType(typeName) {
+		return nil
+	}
+	// 用 codec 解码以获得类型化 Properties（包括 Appearance）
+	raw, err := bson.Marshal(m)
+	if err != nil {
+		return nil
+	}
+	decoder := codec.NewDecoder(codec.DefaultRegistry)
+	child, err := decoder.Decode(raw)
+	if err != nil {
+		return nil
+	}
+	return child
+}
+
+// dToMap 将 bson.D 转为 map[string]any（ToMap 在 v2 中不存在）。
+func dToMap(d bson.D) map[string]any {
+	m := make(map[string]any, len(d))
+	for _, e := range d {
+		m[e.Key] = e.Value
+	}
+	return m
+}
+
+// dropVersionPrefix 移除 Mendix BSON 数组开头的版本整数。
+func dropVersionPrefix(arr bson.A) []any {
+	if len(arr) == 0 {
+		return nil
+	}
+	// Mendix 数组格式：[int32(version), elem1, elem2, ...]
+	if _, ok := arr[0].(int32); ok {
+		return arr[1:]
+	}
+	return arr
 }
 
 // inspectWidget 检查单个元素，如果是 widget 且有 Appearance 则创建 WidgetInstance 节点。
@@ -276,13 +422,16 @@ func extractDesignPropsFromList(cl element.ChildListProperty) map[string]string 
 // isWidgetType 判断是否为可渲染的 widget 类型。
 func isWidgetType(typeName string) bool {
 	skipTypes := map[string]bool{
-		"Forms$LayoutCall":           true,
-		"Forms$FormCall":             true,
-		"Forms$Appearance":           true,
-		"Forms$DesignPropertyValue":  true,
-		"Forms$OptionDesignPropertyValue":  true,
-		"Forms$ToggleDesignPropertyValue": true,
+		"Forms$LayoutCall":                true,
+		"Forms$LayoutCallArgument":        true,
+		"Forms$FormCall":                  true,
+		"Forms$FormCallArgument":          true,
+		"Forms$Appearance":                true,
+		"Forms$DesignPropertyValue":       true,
+		"Forms$OptionDesignPropertyValue": true,
+		"Forms$ToggleDesignPropertyValue":  true,
 		"Forms$CustomDesignPropertyValue":  true,
+		"Forms$ConditionalVisibilityWidget": true,
 	}
 	if skipTypes[typeName] {
 		return false
