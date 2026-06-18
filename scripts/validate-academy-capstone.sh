@@ -27,6 +27,7 @@
 #   09     JS Action   — clipboard, notifications, relative time
 #   10     Widget      — TicketStatusBadge (built from source automatically)
 #   11     Theme       — brand SCSS appended to main.scss
+#   12     Integration — wire JS/Java actions into pages + logic
 #
 # Overrides:
 #   MXCLI=path/to/mxcli         use compiled binary instead of go run ./cmd/mxcli
@@ -205,6 +206,7 @@ if step_enabled exec; then
         "$CAPSTONE_DIR/08-java-actions.mdl"
         "$CAPSTONE_DIR/09-js-actions.mdl"
         "$CAPSTONE_DIR/10-widget.mdl"
+        "$CAPSTONE_DIR/12-integrate-actions.mdl"
         "$CAPSTONE_DIR/99-seed-data.mdl"
     )
 
