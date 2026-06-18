@@ -52,6 +52,7 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
+	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 	"github.com/mendixlabs/mxcli/modelsdk/version"
 )
@@ -161,6 +162,10 @@ type flowBuilderGen struct {
 	// property selection (e.g. notifyTarget introduced in 11.7.0).
 	// Zero value means treat as oldest supported version.
 	version version.Version
+
+	// dmCache caches domain models by module ID so consecutive member
+	// change resolutions in the same microflow share one backend fetch.
+	dmCache map[model.ID]*genDm.DomainModel
 }
 
 // pendingErrorHandlerStateGen is the gen-typed equivalent of

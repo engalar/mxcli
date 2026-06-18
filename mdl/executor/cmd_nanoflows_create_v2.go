@@ -62,7 +62,8 @@ func execCreateNanoflowGen(ctx *ExecContext, s *ast.CreateNanoflowStmt) error {
 
 	containerID := module.ID
 	if s.Folder != "" {
-		folderID, err := resolveFolder(ctx, module.ID, s.Folder)
+		h, _ := getHierarchy(ctx)
+		folderID, err := resolveFolder(ctx, module.ID, s.Folder, h)
 		if err != nil {
 			return mdlerrors.NewBackend("resolve folder "+s.Folder, err)
 		}
@@ -168,7 +169,7 @@ func execCreateNanoflowGen(ctx *ExecContext, s *ast.CreateNanoflowStmt) error {
 		// Resolve TypeEnumeration vs TypeEntity ambiguity: a bare qualified
 		// name (e.g. HD.Ticket) is parsed as TypeEnumeration — check the
 		// backend to determine the true kind.
-		paramType := resolveAmbiguousDataType(ctx.Backend, p.Type)
+		paramType := resolveAmbiguousDataType(ctx, ctx.Backend, p.Type)
 		if dt := convertASTToGenDataType(paramType); dt != nil {
 			param.SetParameterType(dt)
 		}

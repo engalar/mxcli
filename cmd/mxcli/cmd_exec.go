@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/mendixlabs/mxcli/mdl/executor"
 	"github.com/mendixlabs/mxcli/mdl/visitor"
@@ -68,6 +69,7 @@ Example:
 			return fmt.Errorf("parse failed with %d error(s)", len(errs))
 		}
 
+		progStart := time.Now()
 		if err := exec.ExecuteProgram(prog); err != nil {
 			if errors.Is(err, executor.ErrExit) {
 				return nil
@@ -75,6 +77,10 @@ Example:
 			fmt.Fprintf(errOut, "Error: %v\n", err)
 			return err
 		}
+		// Print performance report to stderr.
+		exec.PerfReport(errOut)
+		elapsed := time.Since(progStart)
+		fmt.Fprintf(errOut, "  Script time: %s\n", executor.FormatDuration(elapsed))
 		return nil
 	},
 }

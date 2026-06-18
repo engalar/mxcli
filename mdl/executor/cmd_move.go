@@ -50,7 +50,7 @@ func execMove(ctx *ExecContext, s *ast.MoveStmt) error {
 	// Resolve target container (folder or module root)
 	var targetContainerID model.ID
 	if s.Folder != "" {
-		targetContainerID, err = resolveFolder(ctx, targetModule.ID, s.Folder)
+		targetContainerID, err = resolveFolder(ctx, targetModule.ID, s.Folder, nil)
 		if err != nil {
 			return mdlerrors.NewBackend("resolve target folder", err)
 		}

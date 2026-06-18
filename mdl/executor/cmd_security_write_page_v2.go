@@ -38,6 +38,15 @@ func execGrantPageAccessGen(ctx *ExecContext, s *ast.GrantPageAccessStmt) error 
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}
 
+	// First, check session-created pages (avoids re-listing all pages
+	// when the page was created earlier in the same ExecuteProgram call).
+	if ctx.Cache != nil && ctx.Cache.createdPages != nil {
+		qualifiedName := s.Page.Module + "." + s.Page.Name
+		if info, ok := ctx.Cache.createdPages[qualifiedName]; ok {
+			return execGrantExistingPage(ctx, s, info.ID, info.ModuleName)
+		}
+	}
+
 	pgPairs, err := listPagesWithContainerGen(ctx)
 	if err != nil {
 		return mdlerrors.NewBackend("list pages", err)
@@ -51,36 +60,50 @@ func execGrantPageAccessGen(ctx *ExecContext, s *ast.GrantPageAccessStmt) error 
 			continue
 		}
 
-		var validRoles []ast.QualifiedName
-		for _, role := range s.Roles {
-			found, err := validateModuleRole(ctx, role)
-			if err != nil {
-				return err
-			}
-			if found {
-				validRoles = append(validRoles, role)
-			}
-		}
-		if len(validRoles) == 0 {
-			return nil
-		}
-
-		existing := filterAutoDocumentRoles(pg.AllowedRolesQualifiedNames())
-		merged, added := mergeAllowedRoles(existing, validRoles)
-
-		if err := ctx.SecurityEntityAccessManager.UpdateAllowedRoles(model.ID(pg.ID()), merged); err != nil {
-			return mdlerrors.NewBackend("update page access", err)
-		}
-
-		if len(added) == 0 {
-			fmt.Fprintf(ctx.Output, "All specified roles already have view access on %s.%s\n", modName, pg.Name())
-		} else {
-			fmt.Fprintf(ctx.Output, "Granted view access on %s.%s to %s\n", modName, pg.Name(), strings.Join(added, ", "))
-		}
-		return nil
+		return execGrantExistingPage(ctx, s, model.ID(pg.ID()), modName)
 	}
 
 	return mdlerrors.NewNotFound("page", s.Page.Module+"."+s.Page.Name)
+}
+
+// execGrantExistingPage applies role grants to a page identified by ID, deduplicating
+// the common grant-role-validation logic between session-created and backend pages.
+func execGrantExistingPage(ctx *ExecContext, s *ast.GrantPageAccessStmt, pageID model.ID, modName string) error {
+	var validRoles []ast.QualifiedName
+	for _, role := range s.Roles {
+		found, err := validateModuleRole(ctx, role)
+		if err != nil {
+			return err
+		}
+		if found {
+			validRoles = append(validRoles, role)
+		}
+	}
+	if len(validRoles) == 0 {
+		return nil
+	}
+
+	// Read the page to get current allowed roles for merging.
+	page, err := ctx.Pages.Get(pageID)
+	if err != nil {
+		return mdlerrors.NewBackend("get page", err)
+	}
+	if page == nil {
+		return mdlerrors.NewNotFound("page", s.Page.Module+"."+s.Page.Name)
+	}
+	existing := filterAutoDocumentRoles(page.AllowedRolesQualifiedNames())
+	merged, added := mergeAllowedRoles(existing, validRoles)
+
+	if err := ctx.SecurityEntityAccessManager.UpdateAllowedRoles(pageID, merged); err != nil {
+		return mdlerrors.NewBackend("update page access", err)
+	}
+
+	if len(added) == 0 {
+		fmt.Fprintf(ctx.Output, "All specified roles already have view access on %s.%s\n", modName, s.Page.Name)
+	} else {
+		fmt.Fprintf(ctx.Output, "Granted view access on %s.%s to %s\n", modName, s.Page.Name, strings.Join(added, ", "))
+	}
+	return nil
 }
 
 // execRevokePageAccessGen handles REVOKE VIEW ON PAGE Module.Page FROM roles.
@@ -93,6 +116,15 @@ func execRevokePageAccessGen(ctx *ExecContext, s *ast.RevokePageAccessStmt) erro
 	h, err := getHierarchy(ctx)
 	if err != nil {
 		return mdlerrors.NewBackend("build hierarchy", err)
+	}
+
+	// Check session-created pages first (same rationale as execGrantPageAccessGen).
+	pageID, err := lookupCreatedPageID(ctx, s.Page.Module+"."+s.Page.Name)
+	if err != nil {
+		return err
+	}
+	if pageID != "" {
+		return execRevokeExistingPage(ctx, s, pageID)
 	}
 
 	pgPairs2, err := listPagesWithContainerGen(ctx)
@@ -124,4 +156,40 @@ func execRevokePageAccessGen(ctx *ExecContext, s *ast.RevokePageAccessStmt) erro
 	}
 
 	return mdlerrors.NewNotFound("page", s.Page.Module+"."+s.Page.Name)
+}
+
+// lookupCreatedPageID finds a session-created page by qualified name and
+// returns its ID. Returns ("", nil) if the page is not found in the session cache.
+func lookupCreatedPageID(ctx *ExecContext, qualifiedName string) (model.ID, error) {
+	if ctx == nil || ctx.Cache == nil || ctx.Cache.createdPages == nil {
+		return "", nil
+	}
+	if info, ok := ctx.Cache.createdPages[qualifiedName]; ok {
+		return info.ID, nil
+	}
+	return "", nil
+}
+
+// execRevokeExistingPage applies role revocation to a page by ID.
+func execRevokeExistingPage(ctx *ExecContext, s *ast.RevokePageAccessStmt, pageID model.ID) error {
+	page, err := ctx.Pages.Get(pageID)
+	if err != nil {
+		return mdlerrors.NewBackend("get page", err)
+	}
+	if page == nil {
+		return mdlerrors.NewNotFound("page", s.Page.Module+"."+s.Page.Name)
+	}
+	existing := page.AllowedRolesQualifiedNames()
+	remaining, removed := filterAllowedRoles(existing, s.Roles)
+
+	if err := ctx.SecurityEntityAccessManager.UpdateAllowedRoles(pageID, remaining); err != nil {
+		return mdlerrors.NewBackend("update page access", err)
+	}
+
+	if len(removed) == 0 {
+		fmt.Fprintf(ctx.Output, "None of the specified roles had view access on %s.%s\n", s.Page.Module, s.Page.Name)
+	} else {
+		fmt.Fprintf(ctx.Output, "Revoked view access on %s.%s from %s\n", s.Page.Module, s.Page.Name, strings.Join(removed, ", "))
+	}
+	return nil
 }

@@ -1042,7 +1042,7 @@ func createODataClient(ctx *ExecContext, stmt *ast.CreateODataClientStmt) error 
 	// Resolve folder if specified
 	containerID := module.ID
 	if stmt.Folder != "" {
-		folderID, err := resolveFolder(ctx, module.ID, stmt.Folder)
+		folderID, err := resolveFolder(ctx, module.ID, stmt.Folder, nil)
 		if err != nil {
 			return mdlerrors.NewBackend(fmt.Sprintf("resolve folder %s", stmt.Folder), err)
 		}
@@ -1369,7 +1369,7 @@ func createODataService(ctx *ExecContext, stmt *ast.CreateODataServiceStmt) erro
 	// Resolve folder if specified
 	containerID := module.ID
 	if stmt.Folder != "" {
-		folderID, err := resolveFolder(ctx, module.ID, stmt.Folder)
+		folderID, err := resolveFolder(ctx, module.ID, stmt.Folder, nil)
 		if err != nil {
 			return mdlerrors.NewBackend(fmt.Sprintf("resolve folder %s", stmt.Folder), err)
 		}

@@ -208,7 +208,7 @@ func execCreatePublishedRestService(ctx *ExecContext, s *ast.CreatePublishedRest
 
 	containerID := module.ID
 	if s.Folder != "" {
-		folderID, err := resolveFolder(ctx, module.ID, s.Folder)
+		folderID, err := resolveFolder(ctx, module.ID, s.Folder, nil)
 		if err != nil {
 			return mdlerrors.NewBackend(fmt.Sprintf("resolve folder '%s'", s.Folder), err)
 		}

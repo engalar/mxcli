@@ -316,7 +316,7 @@ func createConstant(ctx *ExecContext, stmt *ast.CreateConstantStmt) error {
 
 	containerID := module.ID
 	if stmt.Folder != "" {
-		folderID, err := resolveFolder(ctx, module.ID, stmt.Folder)
+		folderID, err := resolveFolder(ctx, module.ID, stmt.Folder, nil)
 		if err != nil {
 			return mdlerrors.NewBackend(fmt.Sprintf("resolve folder %s", stmt.Folder), err)
 		}

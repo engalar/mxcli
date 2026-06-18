@@ -101,6 +101,18 @@ func genFlowContainerModule(ctx *ExecContext, h *ContainerHierarchy, id model.ID
 	if err != nil || containerID == "" {
 		return ""
 	}
+	return containerModuleName(h, containerID)
+}
+
+// containerModuleName resolves the module name from a known container
+// UUID using the in-memory container hierarchy.  This is the fast-path
+// half of genFlowContainerModule — callers that already hold the
+// container UUID (e.g. from listMicroflowsWithContainerGen) avoid the
+// SQL GetContainerUUID round-trip.
+func containerModuleName(h *ContainerHierarchy, containerID model.ID) string {
+	if h == nil || containerID == "" {
+		return ""
+	}
 	modID := h.FindModuleID(containerID)
 	return h.GetModuleName(modID)
 }

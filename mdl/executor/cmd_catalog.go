@@ -325,8 +325,11 @@ func loadCachedCatalog(ctx *ExecContext, cachePath string) error {
 
 // formatDuration formats a duration in a human-readable way.
 func formatDuration(d time.Duration) string {
+	if d < time.Second {
+		return fmt.Sprintf("%dms", d.Milliseconds())
+	}
 	if d < time.Minute {
-		return fmt.Sprintf("%.0fs", d.Seconds())
+		return fmt.Sprintf("%.2fs", d.Seconds())
 	}
 	if d < time.Hour {
 		return fmt.Sprintf("%.0fm", d.Minutes())
@@ -335,6 +338,13 @@ func formatDuration(d time.Duration) string {
 		return fmt.Sprintf("%.1fh", d.Hours())
 	}
 	return fmt.Sprintf("%.1fd", d.Hours()/24)
+}
+
+// FormatDuration is the exported equivalent of formatDuration.
+// It returns a human-readable duration string with millisecond precision
+// for sub-second values and second precision for longer values.
+func FormatDuration(d time.Duration) string {
+	return formatDuration(d)
 }
 
 // buildCatalog builds the catalog from the project.

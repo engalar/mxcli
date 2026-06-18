@@ -116,9 +116,17 @@ func findEntity(ctx *ExecContext, moduleName, entityName string) (*genDm.Entity,
 
 // resolveFolder resolves a folder path (e.g., "Resources/Images") to a folder ID.
 // The path is relative to the given module. If the folder doesn't exist, it creates it.
-func resolveFolder(ctx *ExecContext, moduleID model.ID, folderPath string) (model.ID, error) {
+func resolveFolder(ctx *ExecContext, moduleID model.ID, folderPath string, h *ContainerHierarchy) (model.ID, error) {
 	if folderPath == "" {
 		return moduleID, nil
+	}
+
+	// Fast path: resolve folders through the in-memory container hierarchy
+	// when available, avoiding a SQLite ListFolders round-trip.
+	if h != nil {
+		if id, ok := h.ResolveFolderPath(moduleID, folderPath); ok {
+			return id, nil
+		}
 	}
 
 	folders, err := ctx.FolderManager.ListFolders()

@@ -299,9 +299,11 @@ create or modify microflow HD.ACT_StartEscalation_WF_FromObject
 
 -- ============================================================
 -- 在工单详情页添加"发起升级"按钮
+-- 幂等安全：先删除已有按钮再插入，避免重复执行时的冲突
 -- ============================================================
 
 alter page HD.Ticket_Detail {
+  drop widget btnEscalate;
   insert after btnComment {
     actionbutton btnEscalate (
       caption:     'Escalate',

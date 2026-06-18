@@ -124,6 +124,32 @@ func (h *ContainerHierarchy) BuildFolderPath(containerID model.ID) string {
 	return strings.Join(parts, "/")
 }
 
+// ResolveFolderPath resolves a slash-separated folder path (e.g. "Ticket"
+// or "Escalation/Sub") under the given container to its folder ID, using the
+// in-memory hierarchy to avoid a SQLite ListFolders round-trip.
+// Returns (id, true) on success, ("", false) if any segment is unknown.
+func (h *ContainerHierarchy) ResolveFolderPath(containerID model.ID, folderPath string) (model.ID, bool) {
+	parts := strings.Split(folderPath, "/")
+	current := containerID
+	for _, part := range parts {
+		if part == "" {
+			continue
+		}
+		found := false
+		for id, name := range h.folderNames {
+			if name == part && h.containerParent[id] == current {
+				current = id
+				found = true
+				break
+			}
+		}
+		if !found {
+			return "", false
+		}
+	}
+	return current, true
+}
+
 // GetQualifiedName returns the fully qualified name for a document.
 func (h *ContainerHierarchy) GetQualifiedName(containerID model.ID, name string) string {
 	modID := h.FindModuleID(containerID)

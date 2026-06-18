@@ -21,8 +21,12 @@
 package executor
 
 import (
+	"strings"
+
 	"github.com/mendixlabs/mxcli/mdl/ast"
+	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
+	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 )
 
@@ -107,7 +111,40 @@ type resolvedMemberChange struct {
 // the legacy `flowBuilder.resolveMemberChange` was deleted with the
 // rest of the legacy builder family.
 func (fb *flowBuilderGen) resolveMemberChangeGen(memberName, entityQN string) resolvedMemberChange {
-	return resolveMemberChangeGenStandalone(fb.backend, memberName, entityQN)
+	// Try to use a cached domain model to avoid redundant GetDomainModelGen
+	// calls across consecutive member changes in the same change action.
+	dm := fb.cachedDMForEntityQN(entityQN)
+	return resolveMemberChangeGenStandalone(fb.backend, memberName, entityQN, dm)
+}
+
+// cachedDMForEntityQN returns the cached domain model for the module
+// referenced by entityQN, or nil on any error / missing data.  The
+// result is cached on this flowBuilderGen so that consecutive member
+// changes in the same change action share one backend call.
+func (fb *flowBuilderGen) cachedDMForEntityQN(entityQN string) *genDm.DomainModel {
+	if entityQN == "" || fb.backend == nil {
+		return nil
+	}
+	parts := strings.SplitN(entityQN, ".", 2)
+	if len(parts) != 2 {
+		return nil
+	}
+	mod, err := fb.backend.GetModuleByName(parts[0])
+	if err != nil || mod == nil {
+		return nil
+	}
+	if fb.dmCache == nil {
+		fb.dmCache = make(map[model.ID]*genDm.DomainModel)
+	}
+	if dm, ok := fb.dmCache[mod.ID]; ok {
+		return dm
+	}
+	dm, err := fb.backend.GetDomainModelGen(mod.ID)
+	if err != nil || dm == nil {
+		return nil
+	}
+	fb.dmCache[mod.ID] = dm
+	return dm
 }
 
 // applyResolvedMemberChangeGen overlays the resolved (attribute QN,

@@ -365,6 +365,18 @@ type Executor struct {
 	registry       *Registry                          // statement dispatch registry
 	catalogMu      sync.RWMutex                       // protects catalog field from background goroutine writes
 	catalogGen     uint64                             // monotonic generation counter for catalog swaps
+
+	// perfStats accumulates per-statement execution timing so the
+	// caller can print a summary when the script finishes.
+	perfStats []perfStmt
+}
+
+// perfStmt captures one statement's execution timing.
+type perfStmt struct {
+	Type     string
+	Summary  string
+	Duration time.Duration
+	Err      bool
 }
 
 // New creates a new executor with the given output writer.
@@ -412,6 +424,60 @@ func (e *Executor) SetLogger(l *diaglog.Logger) {
 	e.logger = l
 }
 
+// PerfReport returns a human-readable performance report of all
+// statements executed during this session. The report is written to w.
+func (e *Executor) PerfReport(w io.Writer) {
+	if len(e.perfStats) == 0 {
+		return
+	}
+	var total time.Duration
+	for _, ps := range e.perfStats {
+		total += ps.Duration
+	}
+
+	// Count statement types.
+	typeCount := make(map[string]int)
+	for _, ps := range e.perfStats {
+		typeCount[ps.Type]++
+	}
+	typeSummary := ""
+	first := true
+	for t, n := range typeCount {
+		if !first {
+			typeSummary += ", "
+		}
+		typeSummary += fmt.Sprintf("%d %s%s", n, t, pluralSuffix(n))
+		first = false
+	}
+	if typeSummary == "" {
+		typeSummary = "0 statements"
+	}
+
+	fmt.Fprintf(w, "\n── Performance ──────────────────────────────\n")
+	fmt.Fprintf(w, "  Statements: %s\n", typeSummary)
+	fmt.Fprintf(w, "  Total time: %s\n", formatDuration(total))
+	fmt.Fprintf(w, "  ── Per statement ──\n")
+	for _, ps := range e.perfStats {
+		mark := " "
+		if ps.Err {
+			mark = "✗"
+		}
+		dur := formatDuration(ps.Duration)
+		summary := ps.Summary
+		if len(summary) > 50 {
+			summary = summary[:47] + "..."
+		}
+		fmt.Fprintf(w, "  %s %s  %s  %s\n", mark, dur, ps.Type, summary)
+	}
+}
+
+func pluralSuffix(n int) string {
+	if n > 1 {
+		return "s"
+	}
+	return ""
+}
+
 // SetProgressOut sets the writer for real-time progress messages.
 // Defaults to os.Stderr. In daemon mode the caller wires this to a
 // "progress" frame writer so the launcher can print progress immediately.
@@ -456,6 +522,13 @@ func (e *Executor) Execute(stmt ast.Statement) error {
 	if e.logger != nil {
 		e.logger.Command(stmtTypeName(stmt), stmtSummary(stmt), elapsed, err)
 	}
+
+	e.perfStats = append(e.perfStats, perfStmt{
+		Type:     stmtTypeName(stmt),
+		Summary:  stmtSummary(stmt),
+		Duration: elapsed,
+		Err:      err != nil,
+	})
 
 	if err != nil {
 		err = fmt.Errorf("%w (duration: %v)", err, elapsed)

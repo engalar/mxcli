@@ -46,7 +46,7 @@ func TestResolveMemberChangeGen_AssocNotInCachedDM(t *testing.T) {
 	// Act: resolve a 1-dot association name not present in the (empty) DM.
 	memberName := "EndCustomerRegistration.EndCustomer_ApplicationCommonHeader"
 	entityQN := "EndCustomerRegistration.EndCustomer"
-	got := resolveMemberChangeGenStandalone(b, memberName, entityQN)
+	got := resolveMemberChangeGenStandalone(b, memberName, entityQN, nil)
 
 	// Assert: must return associationQN, NOT attributeQN.
 	if got.attributeQN != "" {
@@ -81,7 +81,7 @@ func TestResolveMemberChangeGen_TwoDotAttributePreserved(t *testing.T) {
 
 	memberName := "MyModule.MyEntity.MyAttr"
 	entityQN := "MyModule.MyEntity"
-	got := resolveMemberChangeGenStandalone(b, memberName, entityQN)
+	got := resolveMemberChangeGenStandalone(b, memberName, entityQN, nil)
 
 	if got.attributeQN != memberName {
 		t.Errorf("got attributeQN=%q, want %q — 2-dot name must be preserved as attribute",
@@ -127,5 +127,42 @@ func TestMemberChangeFallback_OneDotIsAssociation(t *testing.T) {
 			t.Errorf("memberChangeFallback(%q, %q).attributeQN = %q, want %q",
 				tc.memberName, tc.entityQN, got.attributeQN, tc.wantAttrQN)
 		}
+	}
+}
+
+// TestResolveMemberChangeGen_FetchesDMTwiceForBareAttribute proves
+// the performance bug: resolveMemberChangeGenStandalone fetches the
+// domain model TWICE for a single bare-attribute member change — once
+// directly (line 258) and once inside resolveAttributeInEntityHierarchyGen
+// (line 203). The fix must reduce this to a single fetch.
+func TestResolveMemberChangeGen_FetchesDMTwiceForBareAttribute(t *testing.T) {
+	mod := &model.Module{Name: "HD"}
+	mod.BaseElement.ID = "mod-1"
+
+	dm := genDm.NewDomainModel()
+	entity := mkEntityGen("Ticket")
+	attr := genDm.NewAttribute()
+	attr.SetName("Status")
+	entity.AddAttributes(attr)
+	dm.AddEntities(entity)
+
+	callCount := 0
+	b := &mock.MockBackend{
+		GetModuleByNameFunc: func(name string) (*model.Module, error) {
+			return mod, nil
+		},
+		GetDomainModelGenFunc: func(moduleID model.ID) (*genDm.DomainModel, error) {
+			callCount++
+			return dm, nil
+		},
+	}
+
+	// Act: resolve a single bare-attribute member change
+	_ = resolveMemberChangeGenStandalone(b, "Status", "HD.Ticket", nil)
+
+	// Assert: GetDomainModelGen must be called exactly once.
+	// Current bug: called 2x (double-fetch).
+	if callCount != 1 {
+		t.Errorf("GetDomainModelGen called %d times; want 1 (double-fetch bug: line 258 + line 203)", callCount)
 	}
 }

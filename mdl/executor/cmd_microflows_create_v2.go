@@ -72,7 +72,8 @@ func execCreateMicroflowGen(ctx *ExecContext, s *ast.CreateMicroflowStmt) error 
 
 	containerID := module.ID
 	if s.Folder != "" {
-		folderID, err := resolveFolder(ctx, module.ID, s.Folder)
+		h, _ := getHierarchy(ctx)
+		folderID, err := resolveFolder(ctx, module.ID, s.Folder, h)
 		if err != nil {
 			return mdlerrors.NewBackend("resolve folder "+s.Folder, err)
 		}
@@ -82,32 +83,34 @@ func execCreateMicroflowGen(ctx *ExecContext, s *ast.CreateMicroflowStmt) error 
 	qualifiedName := s.Name.Module + "." + s.Name.Name
 
 	// ── Existence + replace handling ──────────────────────────
+	// Uses listMicroflowsWithContainerGen (which caches the ListAll +
+	// GetContainerUUID pair) instead of raw ListAll + per-element
+	// genFlowContainerModule, so that consecutive statements in the same
+	// script reuse one batch fetch when the cache isn't invalidated.
 	var (
 		existing             *genMf.Microflow
 		existingContainerID  model.ID
 		existingAllowedRoles []string
 		preserveAllowedRoles bool
 	)
-	all, err := ctx.Microflows.ListAll()
+	items, err := listMicroflowsWithContainerGen(ctx)
 	if err != nil {
 		return mdlerrors.NewBackend("check existing microflows", err)
 	}
 	h, _ := getHierarchy(ctx)
-	for _, mf := range all {
-		if mf == nil {
+	for _, item := range items {
+		if item.MF == nil {
 			continue
 		}
-		modName := genFlowContainerModule(ctx, h, model.ID(mf.ID()))
-		if modName == s.Name.Module && mf.Name() == s.Name.Name {
+		modName := containerModuleName(h, item.ContainerUUID)
+		if modName == s.Name.Module && item.MF.Name() == s.Name.Name {
 			if !s.CreateOrModify {
 				return mdlerrors.NewAlreadyExistsMsg("microflow", qualifiedName,
 					"microflow '"+qualifiedName+"' already exists (use create or modify to overwrite)")
 			}
-			existing = mf
-			if cid, err := ctx.Microflows.GetContainerUUID(model.ID(mf.ID())); err == nil && cid != "" {
-				existingContainerID = cid
-			}
-			existingAllowedRoles = append([]string{}, mf.AllowedModuleRolesQualifiedNames()...)
+			existing = item.MF
+			existingContainerID = item.ContainerUUID
+			existingAllowedRoles = append([]string{}, item.MF.AllowedModuleRolesQualifiedNames()...)
 			preserveAllowedRoles = true
 			break
 		}
@@ -260,7 +263,7 @@ func execCreateMicroflowGen(ctx *ExecContext, s *ast.CreateMicroflowStmt) error 
 		// Resolve TypeEnumeration vs TypeEntity ambiguity: a bare qualified
 		// name (e.g. HD.Ticket) is parsed as TypeEnumeration — check the
 		// backend to determine the true kind.
-		paramType := resolveAmbiguousDataType(ctx.Backend, p.Type)
+		paramType := resolveAmbiguousDataType(ctx, ctx.Backend, p.Type)
 		if dt := convertASTToGenDataType(paramType); dt != nil {
 			param.SetParameterType(dt)
 		}
@@ -321,6 +324,12 @@ func execCreateMicroflowGen(ctx *ExecContext, s *ast.CreateMicroflowStmt) error 
 	ctx.trackCreatedMicroflow(s.Name.Module, s.Name.Name, model.ID(mf.ID()), containerID, returnEntityName)
 
 	invalidateHierarchy(ctx)
-	invalidateMicroflowsCache(ctx)
+	// Only invalidate microflow caches on CREATE (new name enters the
+	// project).  On MODIFY the name → ID mapping and container UUID are
+	// unchanged, so the cached list & container UUIDs remain valid and
+	// can serve subsequent statements without re-fetching.
+	if existing == nil {
+		invalidateMicroflowsCache(ctx)
+	}
 	return nil
 }

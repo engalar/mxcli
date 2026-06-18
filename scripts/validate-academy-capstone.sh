@@ -46,6 +46,7 @@ EXT_THEME_SRC="$REPO_ROOT/academy/zh/11-扩展-主题定制/theme/helpdesk-theme
 WIDGET_SOURCE_DIR="$REPO_ROOT/academy/zh/10-扩展-Widget开发/widget-source"
 BASELINE=""
 FROM_STEP="new"
+OVERRIDE_MPR=""
 
 # Parse flags
 while [ $# -gt 0 ]; do
@@ -57,17 +58,45 @@ while [ $# -gt 0 ]; do
         --from=*)
             FROM_STEP="${1#--from=}"
             ;;
+        -p|--project)
+            shift
+            OVERRIDE_MPR="${1:-}"
+            ;;
         --skip-create)
             FROM_STEP="widget"  # backwards compat (previously exec included widget build)
             ;;
+        --help|-h)
+            echo "Usage: $0 [--from new|widget|exec|check|build|run] [-p|--project <mpr-path>]"
+            echo ""
+            echo "End-to-end validation of academy/zh/capstone-helpdesk reference implementation."
+            echo ""
+            echo "Flags:"
+            echo "  --from STEP              start from a specific step (default: new)"
+            echo "  -p, --project PATH       use custom MPR project path instead of default"
+            echo ""
+            echo "Overrides:"
+            echo "  MXCLI=path/to/mxcli         use compiled mxcli binary"
+            echo "  MXCLI_LOCAL=path/to/local   use compiled mxcli-local binary"
+            exit 0
+            ;;
         *)
             echo "unknown flag: $1" >&2
-            echo "Usage: $0 [--from new|widget|exec|check|build|run]" >&2
+            echo "Usage: $0 [--from new|widget|exec|check|build|run] [-p|--project <mpr-path>]"
             exit 2
             ;;
     esac
     shift
 done
+
+# If a custom MPR is provided, override the project path and skip the new step.
+if [ -n "$OVERRIDE_MPR" ]; then
+    MPR="$OVERRIDE_MPR"
+    PROJECT_NAME="$(basename "$(dirname "$MPR")")"
+    # Custom project already exists — skip new step.
+    if [ "$FROM_STEP" = "new" ]; then
+        FROM_STEP="widget"
+    fi
+fi
 
 case "$FROM_STEP" in
     new|widget|exec|check|build|run) ;;

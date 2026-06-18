@@ -115,12 +115,14 @@ func isEntityGen(b backend.FullBackend, moduleName, entityName string) bool {
 //     similar non-entity type).
 //
 // Safe to call with any DataType; non-ambiguous kinds are returned unchanged.
-func resolveAmbiguousDataType(b backend.FullBackend, dt ast.DataType) ast.DataType {
+// Uses ctx to leverage the per-module DomainModel cache (getDomainModelGenCached)
+// so that consecutive calls for the same module share one backend fetch.
+func resolveAmbiguousDataType(ctx *ExecContext, b backend.FullBackend, dt ast.DataType) ast.DataType {
 	switch dt.Kind {
 	case ast.TypeEnumeration:
 		// Attribute/general context: TypeEnumeration may actually be an entity.
 		if dt.EnumRef != nil && b != nil {
-			if isEntityGen(b, dt.EnumRef.Module, dt.EnumRef.Name) {
+			if isEntityGenCached(ctx, b, dt.EnumRef.Module, dt.EnumRef.Name) {
 				return ast.DataType{Kind: ast.TypeEntity, EntityRef: dt.EnumRef}
 			}
 		}
@@ -129,12 +131,37 @@ func resolveAmbiguousDataType(b backend.FullBackend, dt ast.DataType) ast.DataTy
 		// for any bare QN, including enumerations. If the QN is not a known
 		// entity, treat it as TypeEnumeration.
 		if dt.EntityRef != nil && b != nil {
-			if !isEntityGen(b, dt.EntityRef.Module, dt.EntityRef.Name) {
+			if !isEntityGenCached(ctx, b, dt.EntityRef.Module, dt.EntityRef.Name) {
 				return ast.DataType{Kind: ast.TypeEnumeration, EnumRef: dt.EntityRef}
 			}
 		}
 	}
 	return dt
+}
+
+// isEntityGenCached is the cache-aware variant of isEntityGen.
+// It uses getDomainModelGenCached(ctx, moduleID) so that multiple
+// lookups against the same module hit the in-memory cache instead
+// of decoding BSON from the backend each time.
+func isEntityGenCached(ctx *ExecContext, b backend.FullBackend, moduleName, entityName string) bool {
+	if ctx == nil {
+		return isEntityGen(b, moduleName, entityName)
+	}
+	mod, err := b.GetModuleByName(moduleName)
+	if err != nil || mod == nil {
+		return false
+	}
+	dm, err := getDomainModelGenCached(ctx, mod.ID)
+	if err != nil || dm == nil {
+		return false
+	}
+	for _, item := range dm.EntitiesItems() {
+		e, ok := item.(*genDm.Entity)
+		if ok && e.Name() == entityName {
+			return true
+		}
+	}
+	return false
 }
 
 // lookupEnumRefGen returns the enumeration qualified name (e.g.,
@@ -181,11 +208,12 @@ func lookupEnumRefGen(b backend.FullBackend, entityQN, attrName string) string {
 // looking for an attribute named attrName, returning its fully
 // qualified name (Module.Entity.Attribute) on the first match.
 // Pure read.
-func resolveAttributeInEntityHierarchyGen(b backend.FullBackend, entityQN, attrName string) (string, bool) {
+func resolveAttributeInEntityHierarchyGen(b backend.FullBackend, entityQN, attrName string, dm *genDm.DomainModel) (string, bool) {
 	if b == nil || entityQN == "" || attrName == "" {
 		return "", false
 	}
 	seen := make(map[string]bool)
+	firstIteration := true
 	for currentQN := entityQN; currentQN != ""; {
 		if seen[currentQN] {
 			return "", false
@@ -196,15 +224,27 @@ func resolveAttributeInEntityHierarchyGen(b backend.FullBackend, entityQN, attrN
 		if len(parts) != 2 {
 			return "", false
 		}
-		mod, err := b.GetModuleByName(parts[0])
-		if err != nil || mod == nil {
-			return "", false
+
+		// Use the pre-fetched dm for the first iteration (avoids the
+		// double-fetch bug when called from resolveMemberChangeGenStandalone).
+		// For subsequent generalization-chain iterations that may cross
+		// modules, fall through to the backend.
+		var entity *genDm.Entity
+		if firstIteration && dm != nil {
+			entity = findEntityInDomainModelGen(dm, parts[1])
+		} else {
+			mod, err := b.GetModuleByName(parts[0])
+			if err != nil || mod == nil {
+				return "", false
+			}
+			resolvedDM, err := b.GetDomainModelGen(mod.ID)
+			if err != nil || resolvedDM == nil {
+				return "", false
+			}
+			entity = findEntityInDomainModelGen(resolvedDM, parts[1])
 		}
-		dm, err := b.GetDomainModelGen(mod.ID)
-		if err != nil || dm == nil {
-			return "", false
-		}
-		entity := findEntityInDomainModelGen(dm, parts[1])
+		firstIteration = false
+
 		if entity == nil {
 			return "", false
 		}
@@ -231,8 +271,13 @@ func resolveAttributeInEntityHierarchyGen(b backend.FullBackend, entityQN, attrN
 //  4. Two-dot author-qualified names like `Module.Entity.Attr` are
 //     preserved as attribute QNs even when entity metadata is missing.
 //
+// dm is an optional pre-fetched domain model. When non-nil the function
+// uses it directly instead of calling b.GetDomainModelGen, enabling
+// callers to cache the DM across multiple member-change resolutions.
+// Pass nil for the original fetch-from-backend behaviour.
+//
 // Pure read; no flowBuilder receiver needed.
-func resolveMemberChangeGenStandalone(b backend.FullBackend, memberName, entityQN string) resolvedMemberChange {
+func resolveMemberChangeGenStandalone(b backend.FullBackend, memberName, entityQN string, dm *genDm.DomainModel) resolvedMemberChange {
 	if entityQN == "" {
 		return memberChangeFallback(memberName, "")
 	}
@@ -255,7 +300,14 @@ func resolveMemberChangeGenStandalone(b backend.FullBackend, memberName, entityQ
 
 	if b != nil {
 		if mod, err := b.GetModuleByName(lookupModule); err == nil && mod != nil {
-			if dm, err := b.GetDomainModelGen(mod.ID); err == nil && dm != nil {
+			// Use caller-provided DM when available (avoids re-fetching
+			// the same domain model for every member change).
+			if dm == nil {
+				if fetchedDM, err := b.GetDomainModelGen(mod.ID); err == nil && fetchedDM != nil {
+					dm = fetchedDM
+				}
+			}
+			if dm != nil {
 				for _, item := range dm.AssociationsItems() {
 					a, ok := item.(*genDm.Association)
 					if ok && a.Name() == bareName {
@@ -273,7 +325,9 @@ func resolveMemberChangeGenStandalone(b backend.FullBackend, memberName, entityQ
 				if strings.Count(memberName, ".") >= 2 {
 					return resolvedMemberChange{attributeQN: memberName}
 				}
-				if attrQN, ok := resolveAttributeInEntityHierarchyGen(b, entityQN, memberName); ok {
+				// Pass the already-fetched dm to avoid a second backend
+				// call inside resolveAttributeInEntityHierarchyGen.
+				if attrQN, ok := resolveAttributeInEntityHierarchyGen(b, entityQN, memberName, dm); ok {
 					return resolvedMemberChange{attributeQN: attrQN}
 				}
 				// Neither attribute nor association found in the domain model

@@ -134,9 +134,10 @@ func (fb *flowBuilderGen) addIfStatementGen(s *ast.IfStmt) element.ID {
 	// ── ELSE branch ──
 	// Place ELSE below the THEN body's measured height so nested IFs
 	// inside THEN don't overlap with the ELSE branch.
+	// Use thenBounds.Height (already measured above) instead of calling
+	// measureStatements a second time on s.ThenBody.
 	if hasElseBody {
-		thenBoundsForElse := fb.measurer.measureStatements(s.ThenBody)
-		thenHeightForElse := thenBoundsForElse.Height
+		thenHeightForElse := thenBounds.Height
 		if thenHeightForElse < ActivityHeight {
 			thenHeightForElse = ActivityHeight
 		}
