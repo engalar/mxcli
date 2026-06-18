@@ -6,16 +6,66 @@ import (
 	"strings"
 
 	"github.com/mendixlabs/mxcli/internal/mxgraph"
-	"github.com/mendixlabs/mxcli/modelsdk"
-	"github.com/mendixlabs/mxcli/modelsdk/codec"
-	"github.com/mendixlabs/mxcli/modelsdk/element"
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
+// =============================================================================
+// 反模式说明：modelsdk 类型系统覆盖不全，需 raw BSON 回退
+// =============================================================================
+//
+// 根因：modelsdk 为 Forms$FormCallArgument 注册了类型，但它的 typed
+// Properties 只暴露了 Parameter/Variable/Argument 三个字段——Widget 和
+// Widgets 字段（承载实际的 widget 树）未在 generated type 中声明，因此
+// 通过 typed 路径（elem.Properties() → ChildListProperty → ChildElements()
+// → inspectWidget）永远无法到达 widget 树。
+//
+// 为什么 typed 路径不可用？
+//   - modelsdk.LoadUnit(unitID) → 完整 typed codec 解码 → 返回 Forms$Page
+//   - Forms$Page.layoutCall → Forms$LayoutCall (typed, Props=2)
+//   - LayoutCall.arguments → Forms$FormCallArgument (typed, Props=3)
+//   - FormCallArgument.Properties() → [Parameter, Variable, Argument] ← 没有 Widget!
+//   - 实际 BSON 中还藏了 Widget/Widgets 字段，但 typed 不可见。
+//
+// 解决方案（三级策略）：
+//   1. DIP（依赖倒置）：定义 RawUnitSource 接口取代直接依赖 modelsdk.Model，
+//      使 adapter 不依赖底层 BSON 实现。
+//   2. 绕过 codec（性能）：ModelsdkUnitSource 通过 modelsdk.GetRawUnitBytes()
+//      直接获取 raw BSON bytes，跳过 typed codec 解码（codec 解码会递归
+//      实例化整个 widget 树，拖慢 2s+）。
+//   3. raw BSON 导航 + map 字段读取：用 bson.Unmarshal 一次把整页 BSON 展开为
+//      map[string]any，然后走 knownContainerKeys → walkRawMap → 递归遍历。
+//      对每个 widget，直接用 extractAppearanceFromMap(m) 从 map 中读取
+//      Appearance.Class / .Style / .DesignProperties，不再经过 codec 的
+//      map→BSON→element 来回编解码（decodeRawChild 的反模式）。
+//
+// 为什么不直接用 modelsdk 的 typed 路径？
+//   - typed 路径不可到达 FormCallArgument 内的 Widgets（类型定义缺失）
+//   - 即使修复类型定义，typed 路径仍然要经过 codec 解码整个 widget 树，
+//     而 raw BSON 的 map 导航跳过 codec 直接访问字段，吞吐量高 1-2 个数量级。
+//
+// =============================================================================
+
+// RawUnit 是 WidgetInstanceAdapter 需要的页面/片段单元的最小接口。
+// 只暴露 ID、类型名、原始 BSON 数据——不依赖 modelsdk 的类型系统。
+// 遵循 DIP：高层模块不应依赖低层模块，两者都应依赖抽象。
+type RawUnit interface {
+	ID() string
+	TypeName() string
+	Raw() []byte
+}
+
+// RawUnitSource 是页面/片段单元的来源抽象。
+// WidgetInstanceAdapter 依赖此接口而非 modelsdk.Model。
+type RawUnitSource interface {
+	Units() []RawUnit
+	ResolveModuleName(unitID string) string
+}
+
 // WidgetInstanceAdapter 遍历页面和片段中的 widget 树，提取 Appearance 数据。
 // 每个带样式信息的 widget 实例生成一个 WidgetInstance 节点。
+// 只依赖 RawUnitSource 接口，不依赖 modelsdk。
 type WidgetInstanceAdapter struct {
-	Model *modelsdk.Model
+	Source RawUnitSource
 }
 
 func (a *WidgetInstanceAdapter) Name() string { return "widgetinstance" }
@@ -37,19 +87,14 @@ func (a *WidgetInstanceAdapter) Schema() *mxgraph.GraphSchema {
 func (a *WidgetInstanceAdapter) Build(ctx context.Context, sink mxgraph.EventSink) error {
 	var events []mxgraph.Event
 
-	for _, unit := range a.Model.Units() {
+	for _, unit := range a.Source.Units() {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
 		default:
 		}
 
-		elem, err := a.Model.LoadUnit(unit.ID)
-		if err != nil {
-			continue
-		}
-
-		typeName := elem.TypeName()
+		typeName := unit.TypeName()
 		var containerLabel mxgraph.Label
 		switch {
 		case strings.HasSuffix(typeName, "$Page") || strings.HasSuffix(typeName, "$Form"):
@@ -60,11 +105,13 @@ func (a *WidgetInstanceAdapter) Build(ctx context.Context, sink mxgraph.EventSin
 			continue
 		}
 
-		module := a.Model.ResolveModuleName(unit.ID)
-		containerID := mxgraph.NodeID(elem.ID())
+		module := a.Source.ResolveModuleName(unit.ID())
+		containerID := mxgraph.NodeID(unit.ID())
 
-		wiEvents := a.walkWidgets(elem, containerID, containerLabel, module)
-		events = append(events, wiEvents...)
+		if raw := unit.Raw(); len(raw) > 0 {
+			wiEvents := a.walkRawWidgets(raw, containerID, containerLabel, module)
+			events = append(events, wiEvents...)
+		}
 	}
 
 	if len(events) > 0 {
@@ -73,85 +120,51 @@ func (a *WidgetInstanceAdapter) Build(ctx context.Context, sink mxgraph.EventSin
 	return nil
 }
 
-// walkWidgets 递归遍历 widget 树，提取 Appearance 数据。
-// 优先使用 typed Properties() 遍历。
-// 额外扫描 raw BSON 查找 typed 路径未暴露的 widget 容器 key
-//（如 Forms$FormCallArgument 的 Widget/Widgets 字段）。
-func (a *WidgetInstanceAdapter) walkWidgets(
-	elem element.Element,
-	containerID mxgraph.NodeID,
-	containerLabel mxgraph.Label,
-	module string,
-) []mxgraph.Event {
-	var events []mxgraph.Event
-
-	// 1. Typed 路径
-	for _, prop := range elem.Properties() {
-		switch p := prop.(type) {
-		case element.ChildProperty:
-			if child := p.ChildElement(); child != nil {
-				evts := a.inspectWidget(child, containerID, containerLabel, module)
-				events = append(events, evts...)
-				events = append(events, a.walkWidgets(child, containerID, containerLabel, module)...)
-			}
-		case element.ChildListProperty:
-			for _, child := range p.ChildElements() {
-				if child == nil {
-					continue
-				}
-				evts := a.inspectWidget(child, containerID, containerLabel, module)
-				events = append(events, evts...)
-				events = append(events, a.walkWidgets(child, containerID, containerLabel, module)...)
-			}
-		}
-	}
-
-	// 2. Raw BSON 回退：查找 typed 路径可能遗漏的 widget 容器 key
-	//    （如 Forms$FormCallArgument 的 Widget/Widgets 字段在 typed 中不可见）
-	if len(elem.Raw()) > 0 {
-		rawEvents := a.walkRawBSON(elem.Raw(), containerID, containerLabel, module)
-		events = append(events, rawEvents...)
-	}
-
-	return events
-}
-
-// walkRawBSON 从 raw BSON 解码子元素，处理 FormCall/LayoutCall/Arguments 等未注册类型。
-func (a *WidgetInstanceAdapter) walkRawBSON(
+// walkRawWidgets 纯粹用 raw BSON 遍历 widget 树，
+// 直接从 map 中读取 Appearance（不经过 modelsdk codec 解码）。
+func (a *WidgetInstanceAdapter) walkRawWidgets(
 	raw bson.Raw,
 	containerID mxgraph.NodeID,
 	containerLabel mxgraph.Label,
 	module string,
 ) []mxgraph.Event {
-	var events []mxgraph.Event
-
-	var doc bson.M
+	var doc map[string]any
 	if err := bson.Unmarshal(raw, &doc); err != nil {
 		return nil
 	}
+	return a.walkRawMap(doc, containerID, containerLabel, module)
+}
 
-	// 遍历已知的 widget 容器 key
-	for _, rawKey := range knownContainerKeys(doc) {
-		val := doc[rawKey]
-		_ = val
+// walkRawMap 递归遍历 raw map 中的 widget 容器 key。
+func (a *WidgetInstanceAdapter) walkRawMap(
+	m map[string]any,
+	containerID mxgraph.NodeID,
+	containerLabel mxgraph.Label,
+	module string,
+) []mxgraph.Event {
+	var events []mxgraph.Event
 
-		// bson.D 是 mongo driver v2 解码 sub-document 时的类型
+	for _, rawKey := range knownContainerKeys(m) {
+		val := m[rawKey]
+
 		if d, ok := val.(bson.D); ok {
 			if len(d) == 0 {
 				continue
 			}
-			a.processRawSubDoc(dToMap(d), containerID, containerLabel, module, &events)
+			evts := a.processRawDoc(dToMap(d), containerID, containerLabel, module)
+			events = append(events, evts...)
 		}
 
-		// bson.A 是数组
 		if arr, ok := val.(bson.A); ok {
 			items := dropVersionPrefix(arr)
 			for _, item := range items {
 				switch v := item.(type) {
 				case bson.D:
-					a.processRawSubDoc(dToMap(v), containerID, containerLabel, module, &events)
+					evts := a.processRawDoc(dToMap(v), containerID, containerLabel, module)
+					events = append(events, evts...)
 				case bson.M:
-					a.processRawSubDoc(v, containerID, containerLabel, module, &events)
+					evts := a.processRawDoc(v, containerID, containerLabel, module)
+					events = append(events, evts...)
 				}
 			}
 		}
@@ -172,63 +185,189 @@ func knownContainerKeys(doc map[string]any) []string {
 	return keys
 }
 
-// processRawSubDoc 处理单个 raw BSON sub-document。
-// 如果是已知 widget 类型 → typed decode → inspectWidget + 递归 walkWidgets。
-// 如果是未知容器类型（如 FormCall）→ 直接递归 walkRawBSON。
-func (a *WidgetInstanceAdapter) processRawSubDoc(
+// processRawDoc 处理单个 raw BSON sub-document。
+// widget 类型 → inspectRawWidget（直接从 map 读 Appearance）。
+// 容器类型 → 递归 walkRawMap。
+func (a *WidgetInstanceAdapter) processRawDoc(
 	m map[string]any,
 	containerID mxgraph.NodeID,
 	containerLabel mxgraph.Label,
 	module string,
-	events *[]mxgraph.Event,
-) {
+) []mxgraph.Event {
 	typeName, _ := m["$Type"].(string)
 	if typeName == "" {
-		return
+		return nil
 	}
+
+	var events []mxgraph.Event
+
 	if isWidgetType(typeName) {
-		// 已知 widget 类型，通过 codec 解码获取类型化 Properties
-		if child := a.decodeRawChild(m); child != nil {
-			evts := a.inspectWidget(child, containerID, containerLabel, module)
-			*events = append(*events, evts...)
-			*events = append(*events, a.walkWidgets(child, containerID, containerLabel, module)...)
-		}
+		// 直接从 map 提取 Appearance，不经过 modelsdk
+		evts := a.inspectRawWidget(m, containerID, containerLabel, module)
+		events = append(events, evts...)
+		// 递归遍历子 widget（Widgets 数组）
+		events = append(events, a.walkRawMap(m, containerID, containerLabel, module)...)
 	} else {
-		// 未知容器类型（FormCall 等），将 raw BSON 重新编码后递归
-		raw, err := bson.Marshal(m)
-		if err != nil {
+		// 容器类型，递归进去
+		events = append(events, a.walkRawMap(m, containerID, containerLabel, module)...)
+	}
+
+	return events
+}
+
+// inspectRawWidget 直接从 raw map 读取 widget 的 Name, Class, Style, DesignProperties。
+// 不经过 modelsdk codec，无需 decodeRawChild 的 map→BSON→element 来回。
+func (a *WidgetInstanceAdapter) inspectRawWidget(
+	m map[string]any,
+	containerID mxgraph.NodeID,
+	containerLabel mxgraph.Label,
+	module string,
+) []mxgraph.Event {
+	typeName, _ := m["$Type"].(string)
+	if typeName == "" || !isWidgetType(typeName) {
+		return nil
+	}
+
+	widgetName, _ := m["Name"].(string)
+	if widgetName == "" {
+		return nil
+	}
+
+	// 直接从 map 提取 Appearance（不经过 codec）
+	class, style, dps := extractAppearanceFromMap(m)
+	if class == "" && style == "" && len(dps) == 0 {
+		return nil
+	}
+
+	// 用 $ID 或 Name 作为节点 ID
+	nodeID := mxgraph.NodeID(widgetName)
+	if id, ok := m["$ID"].(string); ok && id != "" {
+		nodeID = mxgraph.NodeID(id)
+	}
+	if bin, ok := m["$ID"].(bson.Binary); ok {
+		nodeID = mxgraph.NodeID(fmt.Sprintf("%x", bin.Data))
+	}
+
+	qn := fmt.Sprintf("%s.%s", module, widgetName)
+	if module == "" {
+		qn = widgetName
+	}
+
+	props := map[string]any{
+		"$Type":            "WidgetInstance",
+		"Name":             widgetName,
+		"WidgetType":       shortTypeName(typeName),
+		"Class":            class,
+		"Style":            style,
+		"DesignProperties": dps,
+		"QualifiedName":    qn,
+		"Module":           module,
+	}
+
+	var events []mxgraph.Event
+	events = append(events, mxgraph.Event{
+		Type: mxgraph.NodeCreated,
+		Node: &mxgraph.Node{ID: nodeID, Label: "WidgetInstance", Props: props},
+	})
+	events = append(events, mxgraph.Event{
+		Type: mxgraph.EdgeCreated,
+		Edge: &mxgraph.Edge{
+			ID:   mxgraph.NodeID(fmt.Sprintf("%s--HAS_WIDGET_INSTANCE-->%s", containerID, nodeID)),
+			From: containerID,
+			To:   nodeID,
+			Type: "HAS_WIDGET_INSTANCE",
+		},
+	})
+
+	return events
+}
+
+// extractAppearanceFromMap 直接从 raw map 的 Appearance 子文档提取 Class, Style, DesignProperties。
+// 不经过 modelsdk codec 解码，纯 map 访问。
+func extractAppearanceFromMap(m map[string]any) (class, style string, designProps map[string]string) {
+	appRaw, ok := m["Appearance"].(bson.D)
+	if !ok {
+		appMap, ok2 := m["Appearance"].(map[string]any)
+		if !ok2 {
+			// 也可能根本不存在
 			return
 		}
-		evts := a.walkRawBSON(raw, containerID, containerLabel, module)
-		*events = append(*events, evts...)
+		class, _ = appMap["Class"].(string)
+		style, _ = appMap["Style"].(string)
+		if dps, ok := appMap["DesignProperties"].(bson.A); ok {
+			designProps = extractRawDesignProps(dps)
+		}
+		return
 	}
+	app := dToMap(appRaw)
+	class, _ = app["Class"].(string)
+	style, _ = app["Style"].(string)
+	if dps, ok := app["DesignProperties"].(bson.A); ok {
+		designProps = extractRawDesignProps(dps)
+	}
+	return
 }
 
-// decodeRawChild 通过 codec 解码 raw BSON map 为 typed element。
-// 仅用于 isWidgetType 返回 true 的类型。
-func (a *WidgetInstanceAdapter) decodeRawChild(m map[string]any) element.Element {
-	typeName, _ := m["$Type"].(string)
-	if typeName == "" {
-		return nil
+// extractRawDesignProps 直接遍历 BSON 数组中的 DesignPropertyValue。
+func extractRawDesignProps(arr bson.A) map[string]string {
+	result := make(map[string]string)
+	items := dropVersionPrefix(arr)
+	for _, item := range items {
+		var dpMap map[string]any
+		switch v := item.(type) {
+		case bson.D:
+			dpMap = dToMap(v)
+		case map[string]any:
+			dpMap = v
+		default:
+			continue
+		}
+
+		key, _ := dpMap["Key"].(string)
+		if key == "" {
+			continue
+		}
+
+		// Value 子文档
+		valDoc, ok := dpMap["Value"].(bson.D)
+		if !ok {
+			valMap, ok2 := dpMap["Value"].(map[string]any)
+			if !ok2 {
+				result[key] = "ON"
+				continue
+			}
+			innerType, _ := valMap["$Type"].(string)
+			innerType = normalizeTypeName(innerType)
+			switch {
+			case strings.Contains(innerType, "ToggleDesignPropertyValue"):
+				result[key] = "ON"
+			case strings.Contains(innerType, "OptionDesignPropertyValue"):
+				if opt, ok := valMap["Option"].(string); ok {
+					result[key] = opt
+				}
+			default:
+				result[key] = "ON"
+			}
+			continue
+		}
+		valMap := dToMap(valDoc)
+		innerType, _ := valMap["$Type"].(string)
+		innerType = normalizeTypeName(innerType)
+		switch {
+		case strings.Contains(innerType, "ToggleDesignPropertyValue"):
+			result[key] = "ON"
+		case strings.Contains(innerType, "OptionDesignPropertyValue"):
+			if opt, ok := valMap["Option"].(string); ok {
+				result[key] = opt
+			}
+		default:
+			result[key] = "ON"
+		}
 	}
-	// 跳过非 widget 类型
-	if !isWidgetType(typeName) {
-		return nil
-	}
-	// 用 codec 解码以获得类型化 Properties（包括 Appearance）
-	raw, err := bson.Marshal(m)
-	if err != nil {
-		return nil
-	}
-	decoder := codec.NewDecoder(codec.DefaultRegistry)
-	child, err := decoder.Decode(raw)
-	if err != nil {
-		return nil
-	}
-	return child
+	return result
 }
 
-// dToMap 将 bson.D 转为 map[string]any（ToMap 在 v2 中不存在）。
+// dToMap 将 bson.D 转为 map[string]any。
 func dToMap(d bson.D) map[string]any {
 	m := make(map[string]any, len(d))
 	for _, e := range d {
@@ -249,176 +388,6 @@ func dropVersionPrefix(arr bson.A) []any {
 	return arr
 }
 
-// inspectWidget 检查单个元素，如果是 widget 且有 Appearance 则创建 WidgetInstance 节点。
-func (a *WidgetInstanceAdapter) inspectWidget(
-	widget element.Element,
-	containerID mxgraph.NodeID,
-	containerLabel mxgraph.Label,
-	module string,
-) []mxgraph.Event {
-	typeName := widget.TypeName()
-	if !isWidgetType(typeName) {
-		return nil
-	}
-
-	widgetName := getWidgetNameFromElement(widget)
-	if widgetName == "" {
-		return nil
-	}
-
-	class, style, dps := extractAppearanceData(widget)
-	if class == "" && style == "" && len(dps) == 0 {
-		return nil
-	}
-
-	widgetID := mxgraph.NodeID(widget.ID())
-	qn := fmt.Sprintf("%s.%s", module, widgetName)
-	if module == "" {
-		qn = widgetName
-	}
-
-	props := map[string]any{
-		"$Type":            "WidgetInstance",
-		"Name":             widgetName,
-		"WidgetType":       shortTypeName(typeName),
-		"Class":            class,
-		"Style":            style,
-		"DesignProperties": dps,
-		"ElementID":        string(widget.ID()),
-		"QualifiedName":    qn,
-		"Module":           module,
-	}
-
-	var events []mxgraph.Event
-	events = append(events, mxgraph.Event{
-		Type: mxgraph.NodeCreated,
-		Node: &mxgraph.Node{ID: widgetID, Label: "WidgetInstance", Props: props},
-	})
-	events = append(events, mxgraph.Event{
-		Type: mxgraph.EdgeCreated,
-		Edge: &mxgraph.Edge{
-			ID:   mxgraph.NodeID(fmt.Sprintf("%s--HAS_WIDGET_INSTANCE-->%s", containerID, widgetID)),
-			From: containerID,
-			To:   widgetID,
-			Type: "HAS_WIDGET_INSTANCE",
-		},
-	})
-
-	return events
-}
-
-// extractAppearanceData 从 widget 元素中提取 Class, Style, DesignProperties。
-func extractAppearanceData(widget element.Element) (class, style string, designProps map[string]string) {
-	for _, prop := range widget.Properties() {
-		if prop.Name() != "Appearance" {
-			continue
-		}
-		cp, ok := prop.(element.ChildProperty)
-		if !ok {
-			continue
-		}
-		app := cp.ChildElement()
-		if app == nil {
-			return
-		}
-
-		// 提取标量属性
-		for _, ap := range app.Properties() {
-			wp, ok := ap.(element.WritableProperty)
-			if !ok {
-				continue
-			}
-			v := wp.BSONValue()
-			if v == nil {
-				continue
-			}
-			switch ap.Name() {
-			case "Class":
-				class, _ = v.(string)
-			case "Style":
-				style, _ = v.(string)
-			}
-		}
-
-		// 提取 DesignProperties
-		for _, ap := range app.Properties() {
-			if ap.Name() != "DesignProperties" {
-				continue
-			}
-			cl, ok := ap.(element.ChildListProperty)
-			if !ok {
-				continue
-			}
-			designProps = extractDesignPropsFromList(cl)
-		}
-		return
-	}
-	return
-}
-
-// extractDesignPropsFromList 从 DesignProperties PartList 中提取 key→value map。
-func extractDesignPropsFromList(cl element.ChildListProperty) map[string]string {
-	result := make(map[string]string)
-	for _, dpv := range cl.ChildElements() {
-		if dpv == nil {
-			continue
-		}
-
-		var key string
-		var valueMap map[string]any
-
-		// 读取 Key
-		for _, dpProp := range dpv.Properties() {
-			if dpProp.Name() == "Key" {
-				if wp, ok := dpProp.(element.WritableProperty); ok {
-					if v := wp.BSONValue(); v != nil {
-						key, _ = v.(string)
-					}
-				}
-			}
-			// 读取嵌套 Value 子元素
-			if dpProp.Name() == "Value" {
-				cp, ok := dpProp.(element.ChildProperty)
-				if !ok {
-					continue
-				}
-				val := cp.ChildElement()
-				if val == nil {
-					continue
-				}
-				valueMap = make(map[string]any)
-				for _, vp := range val.Properties() {
-					if wp, ok := vp.(element.WritableProperty); ok {
-						if bv := wp.BSONValue(); bv != nil {
-							valueMap[vp.Name()] = bv
-						}
-					}
-				}
-			}
-		}
-
-		if key == "" {
-			continue
-		}
-
-		innerType, _ := valueMap["$Type"].(string)
-		innerType = normalizeTypeName(innerType)
-
-		switch {
-		case strings.Contains(innerType, "ToggleDesignPropertyValue"):
-			result[key] = "ON"
-		case strings.Contains(innerType, "OptionDesignPropertyValue"):
-			if opt, ok := valueMap["Option"].(string); ok {
-				result[key] = opt
-			}
-		default:
-			// Fallback: use "ON" for any unrecognized inner type
-			result[key] = "ON"
-		}
-	}
-	return result
-}
-
 // isWidgetType 判断是否为可渲染的 widget 类型。
 func isWidgetType(typeName string) bool {
 	skipTypes := map[string]bool{
@@ -437,21 +406,6 @@ func isWidgetType(typeName string) bool {
 		return false
 	}
 	return strings.HasPrefix(typeName, "Forms$") || strings.HasPrefix(typeName, "Pages$")
-}
-
-func getWidgetNameFromElement(elem element.Element) string {
-	for _, p := range elem.Properties() {
-		if p.Name() == "Name" {
-			if wp, ok := p.(element.WritableProperty); ok {
-				if v := wp.BSONValue(); v != nil {
-					if s, ok := v.(string); ok {
-						return s
-					}
-				}
-			}
-		}
-	}
-	return ""
 }
 
 func shortTypeName(bsonType string) string {
