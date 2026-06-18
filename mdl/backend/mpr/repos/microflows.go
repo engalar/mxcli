@@ -191,6 +191,11 @@ func (r *microflowRepo) GetContainerUUID(id model.ID) (model.ID, error) {
 	var blob []byte
 	err := r.r.DB().QueryRow("SELECT ContainerID FROM Unit WHERE UnitID = ?", bin.Data).Scan(&blob)
 	if err != nil {
+		// Fallback: check script-insert buffer for units created in the current
+		// script transaction but not yet committed to SQLite (Bug B).
+		if cid, ok := r.r.GetScriptInsertContainerID(string(id)); ok {
+			return model.ID(cid), nil
+		}
 		return "", fmt.Errorf("GetContainerUUID(%s): %w", id, err)
 	}
 	return model.ID(mmpr.BlobToUUID(blob)), nil

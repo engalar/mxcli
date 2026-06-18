@@ -148,6 +148,10 @@ func execCreatePageV3(ctx *ExecContext, s *ast.CreatePageStmtV3) error {
 	// Track the created page so it can be resolved by subsequent page references
 	ctx.trackCreatedPage(s.Name.Module, s.Name.Name, model.ID(genPage.ID()), moduleID)
 
+	// Invalidate cached page listing so subsequent findPageIDGen / grant page
+	// calls see the newly created page (Bug A — stale pagesWithContainerGen).
+	invalidatePagesGenCache(ctx)
+
 	fmt.Fprintf(ctx.Output, "Created page %s\n", s.Name.String())
 	return nil
 }

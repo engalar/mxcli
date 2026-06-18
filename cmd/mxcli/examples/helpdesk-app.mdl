@@ -746,7 +746,7 @@ create or modify microflow KB.SUB_Article_TruncateContent
   returns string as $Preview
   folder 'Article'
 {
-  declare $Preview: string = $Article/Content;
+  $Preview = $Article/Content;
   return $Preview;
 }
 /

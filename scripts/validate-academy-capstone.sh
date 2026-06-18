@@ -121,6 +121,10 @@ run_mxcli() {
     if [ -n "${MXCLI:-}" ]; then
         "$MXCLI" "$@"
     else
+        # ensure go:embed build artifacts exist before go run
+        if [ ! -f "$REPO_ROOT/cmd/mxcli/changelog.md" ]; then
+            make -C "$REPO_ROOT" sync-all 2>/dev/null
+        fi
         (cd "$REPO_ROOT" && go run ./cmd/mxcli "$@")
     fi
 }

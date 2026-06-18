@@ -502,6 +502,20 @@ func (r *Reader) ScriptOverlay() map[string][]byte { return r.scriptOverlay }
 // ScriptInserts returns the current script insert list (for tests).
 func (r *Reader) ScriptInserts() []ScriptInsertEntry { return r.scriptInserts }
 
+// GetScriptInsertContainerID looks up a unit ID in the script-insert buffer
+// and returns its container UUID if found. Returns ("", false) when the unit
+// is not a buffered insert. This allows GetContainerUUID implementations to
+// resolve container linkage for units created within an uncommitted script
+// transaction (Bug B — SQLite-only query misses buffered inserts).
+func (r *Reader) GetScriptInsertContainerID(unitID string) (string, bool) {
+	for _, e := range r.scriptInserts {
+		if e.ID == unitID {
+			return e.ContainerID, true
+		}
+	}
+	return "", false
+}
+
 // blobToUUIDSwapped converts a 16-byte blob to a UUID string using Microsoft GUID format.
 // The first 3 groups are little-endian (byte-swapped), last 2 groups are big-endian.
 // This is the format used by Mendix for file naming in mprcontents folder.
