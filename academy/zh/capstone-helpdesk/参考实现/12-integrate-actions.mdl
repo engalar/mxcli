@@ -55,7 +55,7 @@ alter page HD.Ticket_Detail {
 -- ============================================================
 
 alter page HD.MyTickets_Overview {
-  insert after colActions {
+  insert after dgMyTickets.colActions {
     column colCopy (caption: '', ShowContentAs: customContent, ColumnWidth: manual, Size: 60) {
       actionbutton btnCopy (
         caption:     'Copy',
