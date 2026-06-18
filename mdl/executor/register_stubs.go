@@ -431,7 +431,12 @@ func registerRepositoryHandlers(r *Registry) {
 		return execRefresh(ctx)
 	})
 	r.Register(&ast.RefreshCatalogStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return execRefreshCatalogStmt(ctx, stmt.(*ast.RefreshCatalogStmt))
+		// 先构建 SQLite catalog (兼容旧消费方)
+		if err := execRefreshCatalogStmt(ctx, stmt.(*ast.RefreshCatalogStmt)); err != nil {
+			return err
+		}
+		// 再构建 mxgraph (含主题/设计/样式索引)
+		return buildGraph(ctx)
 	})
 	r.Register(&ast.SearchStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
 		return execSearch(ctx, stmt.(*ast.SearchStmt))

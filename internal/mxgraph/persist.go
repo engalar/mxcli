@@ -8,6 +8,7 @@ import (
 	"io"
 
 	"github.com/mendixlabs/mxcli/modelsdk/element"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 func init() {
@@ -17,6 +18,8 @@ func init() {
 	gob.Register([]any{})
 	gob.Register(NodeID(""))
 	gob.Register(element.ID(""))
+	gob.Register(bson.Binary{})
+	gob.Register(bson.ObjectID{})
 }
 
 // ── Snapshot ────────────────────────────────────────────────
