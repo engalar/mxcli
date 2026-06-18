@@ -123,5 +123,5 @@ func extractReferencedVars(p rawDesignPropDef) []string {
 }
 
 func (a *DesignPropertyAdapter) Watch(ctx context.Context, sink mxgraph.EventSink) (func(), error) {
-	return func() {}, nil
+	return a.watchFiles(ctx, sink)
 }

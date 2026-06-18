@@ -133,5 +133,5 @@ func fileExists(path string) bool {
 }
 
 func (a *ThemeScssAdapter) Watch(ctx context.Context, sink mxgraph.EventSink) (func(), error) {
-	return func() {}, nil
+	return a.watchFiles(ctx, sink)
 }
