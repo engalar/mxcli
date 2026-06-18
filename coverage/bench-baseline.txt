@@ -2,111 +2,111 @@ goos: linux
 goarch: amd64
 pkg: github.com/mendixlabs/mxcli/modelsdk/codec
 cpu: Intel(R) Core(TM) i7-8700 CPU @ 3.20GHz
-BenchmarkEncodeCleanPassthrough-12    	277520084	         4.269 ns/op	       0 B/op	       0 allocs/op
-BenchmarkEncodeCleanPassthrough-12    	284084202	         4.480 ns/op	       0 B/op	       0 allocs/op
-BenchmarkEncodeCleanPassthrough-12    	277501128	         4.363 ns/op	       0 B/op	       0 allocs/op
-BenchmarkEncodeCleanPassthrough-12    	282062551	         4.246 ns/op	       0 B/op	       0 allocs/op
-BenchmarkEncodeCleanPassthrough-12    	272147702	         4.265 ns/op	       0 B/op	       0 allocs/op
-BenchmarkEncodeDirtyRebuild-12        	  843459	      2001 ns/op	     905 B/op	      15 allocs/op
-BenchmarkEncodeDirtyRebuild-12        	  727984	      2089 ns/op	     905 B/op	      15 allocs/op
-BenchmarkEncodeDirtyRebuild-12        	  670383	      1697 ns/op	     905 B/op	      15 allocs/op
-BenchmarkEncodeDirtyRebuild-12        	  604666	      1920 ns/op	     905 B/op	      15 allocs/op
-BenchmarkEncodeDirtyRebuild-12        	  775398	      1828 ns/op	     905 B/op	      15 allocs/op
-BenchmarkDecodeUnknownType-12         	 4381017	       337.0 ns/op	     168 B/op	       3 allocs/op
-BenchmarkDecodeUnknownType-12         	 4076127	       315.3 ns/op	     168 B/op	       3 allocs/op
-BenchmarkDecodeUnknownType-12         	 3912507	       325.4 ns/op	     168 B/op	       3 allocs/op
-BenchmarkDecodeUnknownType-12         	 4213665	       297.2 ns/op	     168 B/op	       3 allocs/op
-BenchmarkDecodeUnknownType-12         	 4292302	       246.3 ns/op	     168 B/op	       3 allocs/op
-BenchmarkDecodeRegisteredType-12      	 3224803	       395.3 ns/op	     208 B/op	       3 allocs/op
-BenchmarkDecodeRegisteredType-12      	 3184189	       438.1 ns/op	     208 B/op	       3 allocs/op
-BenchmarkDecodeRegisteredType-12      	 2754902	       384.8 ns/op	     208 B/op	       3 allocs/op
-BenchmarkDecodeRegisteredType-12      	 4147921	       388.0 ns/op	     208 B/op	       3 allocs/op
-BenchmarkDecodeRegisteredType-12      	 3893281	       403.0 ns/op	     208 B/op	       3 allocs/op
+BenchmarkEncodeCleanPassthrough-12    	282223395	         4.303 ns/op	       0 B/op	       0 allocs/op
+BenchmarkEncodeCleanPassthrough-12    	289190235	         4.214 ns/op	       0 B/op	       0 allocs/op
+BenchmarkEncodeCleanPassthrough-12    	287048054	         4.186 ns/op	       0 B/op	       0 allocs/op
+BenchmarkEncodeCleanPassthrough-12    	278704215	         4.246 ns/op	       0 B/op	       0 allocs/op
+BenchmarkEncodeCleanPassthrough-12    	287561874	         4.186 ns/op	       0 B/op	       0 allocs/op
+BenchmarkEncodeDirtyRebuild-12        	  816932	      1480 ns/op	     905 B/op	      15 allocs/op
+BenchmarkEncodeDirtyRebuild-12        	  645373	      1837 ns/op	     905 B/op	      15 allocs/op
+BenchmarkEncodeDirtyRebuild-12        	  690544	      1612 ns/op	     905 B/op	      15 allocs/op
+BenchmarkEncodeDirtyRebuild-12        	  602476	      1857 ns/op	     905 B/op	      15 allocs/op
+BenchmarkEncodeDirtyRebuild-12        	  729322	      1940 ns/op	     905 B/op	      15 allocs/op
+BenchmarkDecodeUnknownType-12         	 4220701	       333.4 ns/op	     168 B/op	       3 allocs/op
+BenchmarkDecodeUnknownType-12         	 3516724	       335.8 ns/op	     168 B/op	       3 allocs/op
+BenchmarkDecodeUnknownType-12         	 5216426	       224.3 ns/op	     168 B/op	       3 allocs/op
+BenchmarkDecodeUnknownType-12         	 4500968	       347.2 ns/op	     168 B/op	       3 allocs/op
+BenchmarkDecodeUnknownType-12         	 3650426	       365.1 ns/op	     168 B/op	       3 allocs/op
+BenchmarkDecodeRegisteredType-12      	 3882343	       370.5 ns/op	     208 B/op	       3 allocs/op
+BenchmarkDecodeRegisteredType-12      	 4199877	       307.2 ns/op	     208 B/op	       3 allocs/op
+BenchmarkDecodeRegisteredType-12      	 4193422	       349.9 ns/op	     208 B/op	       3 allocs/op
+BenchmarkDecodeRegisteredType-12      	 3905348	       299.5 ns/op	     208 B/op	       3 allocs/op
+BenchmarkDecodeRegisteredType-12      	 3101431	       324.8 ns/op	     208 B/op	       3 allocs/op
 PASS
-ok  	github.com/mendixlabs/mxcli/modelsdk/codec	35.617s
+ok  	github.com/mendixlabs/mxcli/modelsdk/codec	32.371s
 goos: linux
 goarch: amd64
 pkg: github.com/mendixlabs/mxcli/modelsdk/codec/poc
 cpu: Intel(R) Core(TM) i7-8700 CPU @ 3.20GHz
-BenchmarkBlocker3_FullEncode-12           	  145130	     12060 ns/op	   30779 B/op	      31 allocs/op
+BenchmarkBlocker3_FullEncode-12           	  137785	     11882 ns/op	   30786 B/op	      31 allocs/op
     blocker3_dirty_encode_bench_test.go:22: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 17 candidates)
     blocker3_dirty_encode_bench_test.go:22: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 17 candidates)
     blocker3_dirty_encode_bench_test.go:22: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 17 candidates)
     blocker3_dirty_encode_bench_test.go:22: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 17 candidates)
-BenchmarkBlocker3_FullEncode-12           	  148890	      9086 ns/op	   30733 B/op	      31 allocs/op
+BenchmarkBlocker3_FullEncode-12           	  139672	      8151 ns/op	   30734 B/op	      31 allocs/op
     blocker3_dirty_encode_bench_test.go:22: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 17 candidates)
     blocker3_dirty_encode_bench_test.go:22: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 17 candidates)
     blocker3_dirty_encode_bench_test.go:22: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 17 candidates)
     blocker3_dirty_encode_bench_test.go:22: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 17 candidates)
-BenchmarkBlocker3_FullEncode-12           	  152401	     10618 ns/op	   30733 B/op	      31 allocs/op
+BenchmarkBlocker3_FullEncode-12           	  145738	      9203 ns/op	   30728 B/op	      31 allocs/op
     blocker3_dirty_encode_bench_test.go:22: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 17 candidates)
     blocker3_dirty_encode_bench_test.go:22: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 17 candidates)
     blocker3_dirty_encode_bench_test.go:22: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 17 candidates)
     blocker3_dirty_encode_bench_test.go:22: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 17 candidates)
-BenchmarkBlocker3_FullEncode-12           	  151458	      9492 ns/op	   30736 B/op	      31 allocs/op
+BenchmarkBlocker3_FullEncode-12           	  139641	      8583 ns/op	   30728 B/op	      31 allocs/op
     blocker3_dirty_encode_bench_test.go:22: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 17 candidates)
     blocker3_dirty_encode_bench_test.go:22: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 17 candidates)
     blocker3_dirty_encode_bench_test.go:22: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 17 candidates)
     blocker3_dirty_encode_bench_test.go:22: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 17 candidates)
-BenchmarkBlocker3_FullEncode-12           	  140174	      9888 ns/op	   30725 B/op	      31 allocs/op
+BenchmarkBlocker3_FullEncode-12           	  148132	      8615 ns/op	   30727 B/op	      31 allocs/op
     blocker3_dirty_encode_bench_test.go:22: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 17 candidates)
     blocker3_dirty_encode_bench_test.go:22: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 17 candidates)
     blocker3_dirty_encode_bench_test.go:22: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 17 candidates)
     blocker3_dirty_encode_bench_test.go:22: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 17 candidates)
-BenchmarkBlocker3_IncrementalEncode-12    	  138171	     12908 ns/op	   30774 B/op	      31 allocs/op
+BenchmarkBlocker3_IncrementalEncode-12    	  137494	     11132 ns/op	   30786 B/op	      31 allocs/op
     blocker3_dirty_encode_bench_test.go:47: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 17 candidates)
     blocker3_dirty_encode_bench_test.go:47: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 17 candidates)
     blocker3_dirty_encode_bench_test.go:47: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 17 candidates)
     blocker3_dirty_encode_bench_test.go:47: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 17 candidates)
-BenchmarkBlocker3_IncrementalEncode-12    	  146688	      9330 ns/op	   30727 B/op	      31 allocs/op
+BenchmarkBlocker3_IncrementalEncode-12    	  149956	      8235 ns/op	   30733 B/op	      31 allocs/op
     blocker3_dirty_encode_bench_test.go:47: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 17 candidates)
     blocker3_dirty_encode_bench_test.go:47: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 17 candidates)
     blocker3_dirty_encode_bench_test.go:47: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 17 candidates)
     blocker3_dirty_encode_bench_test.go:47: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 17 candidates)
-BenchmarkBlocker3_IncrementalEncode-12    	  146812	      8882 ns/op	   30733 B/op	      31 allocs/op
+BenchmarkBlocker3_IncrementalEncode-12    	  143796	      8533 ns/op	   30730 B/op	      31 allocs/op
     blocker3_dirty_encode_bench_test.go:47: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 17 candidates)
     blocker3_dirty_encode_bench_test.go:47: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 17 candidates)
     blocker3_dirty_encode_bench_test.go:47: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 17 candidates)
     blocker3_dirty_encode_bench_test.go:47: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 17 candidates)
-BenchmarkBlocker3_IncrementalEncode-12    	  146493	      9122 ns/op	   30740 B/op	      31 allocs/op
+BenchmarkBlocker3_IncrementalEncode-12    	  146502	      8754 ns/op	   30730 B/op	      31 allocs/op
     blocker3_dirty_encode_bench_test.go:47: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 17 candidates)
     blocker3_dirty_encode_bench_test.go:47: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 17 candidates)
     blocker3_dirty_encode_bench_test.go:47: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 17 candidates)
     blocker3_dirty_encode_bench_test.go:47: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 17 candidates)
-BenchmarkBlocker3_IncrementalEncode-12    	  149596	      8724 ns/op	   30736 B/op	      31 allocs/op
+BenchmarkBlocker3_IncrementalEncode-12    	  145321	      8555 ns/op	   30729 B/op	      31 allocs/op
     blocker3_dirty_encode_bench_test.go:47: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 17 candidates)
     blocker3_dirty_encode_bench_test.go:47: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 17 candidates)
     blocker3_dirty_encode_bench_test.go:47: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 17 candidates)
     blocker3_dirty_encode_bench_test.go:47: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 17 candidates)
-BenchmarkBlocker3_CleanPassthrough-12     	227175918	         5.225 ns/op	       0 B/op	       0 allocs/op
+BenchmarkBlocker3_CleanPassthrough-12     	230845071	         5.367 ns/op	       0 B/op	       0 allocs/op
     blocker3_dirty_encode_bench_test.go:64: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 17 candidates)
     blocker3_dirty_encode_bench_test.go:64: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 17 candidates)
     blocker3_dirty_encode_bench_test.go:64: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 17 candidates)
     blocker3_dirty_encode_bench_test.go:64: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 17 candidates)
     blocker3_dirty_encode_bench_test.go:64: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 17 candidates)
     blocker3_dirty_encode_bench_test.go:64: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 17 candidates)
-BenchmarkBlocker3_CleanPassthrough-12     	230226777	         5.260 ns/op	       0 B/op	       0 allocs/op
+BenchmarkBlocker3_CleanPassthrough-12     	228871280	         5.210 ns/op	       0 B/op	       0 allocs/op
     blocker3_dirty_encode_bench_test.go:64: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 17 candidates)
     blocker3_dirty_encode_bench_test.go:64: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 17 candidates)
     blocker3_dirty_encode_bench_test.go:64: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 17 candidates)
     blocker3_dirty_encode_bench_test.go:64: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 17 candidates)
     blocker3_dirty_encode_bench_test.go:64: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 17 candidates)
     blocker3_dirty_encode_bench_test.go:64: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 17 candidates)
-BenchmarkBlocker3_CleanPassthrough-12     	229490797	         5.216 ns/op	       0 B/op	       0 allocs/op
+BenchmarkBlocker3_CleanPassthrough-12     	230802694	         5.164 ns/op	       0 B/op	       0 allocs/op
     blocker3_dirty_encode_bench_test.go:64: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 17 candidates)
     blocker3_dirty_encode_bench_test.go:64: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 17 candidates)
     blocker3_dirty_encode_bench_test.go:64: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 17 candidates)
     blocker3_dirty_encode_bench_test.go:64: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 17 candidates)
     blocker3_dirty_encode_bench_test.go:64: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 17 candidates)
     blocker3_dirty_encode_bench_test.go:64: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 17 candidates)
-BenchmarkBlocker3_CleanPassthrough-12     	225543748	         5.310 ns/op	       0 B/op	       0 allocs/op
+BenchmarkBlocker3_CleanPassthrough-12     	233051234	         5.211 ns/op	       0 B/op	       0 allocs/op
     blocker3_dirty_encode_bench_test.go:64: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 17 candidates)
     blocker3_dirty_encode_bench_test.go:64: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 17 candidates)
     blocker3_dirty_encode_bench_test.go:64: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 17 candidates)
     blocker3_dirty_encode_bench_test.go:64: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 17 candidates)
     blocker3_dirty_encode_bench_test.go:64: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 17 candidates)
     blocker3_dirty_encode_bench_test.go:64: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 17 candidates)
-BenchmarkBlocker3_CleanPassthrough-12     	224798707	         5.208 ns/op	       0 B/op	       0 allocs/op
+BenchmarkBlocker3_CleanPassthrough-12     	225853814	         5.275 ns/op	       0 B/op	       0 allocs/op
     blocker3_dirty_encode_bench_test.go:64: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 17 candidates)
     blocker3_dirty_encode_bench_test.go:64: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 17 candidates)
     blocker3_dirty_encode_bench_test.go:64: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 17 candidates)
@@ -114,25 +114,25 @@ BenchmarkBlocker3_CleanPassthrough-12     	224798707	         5.208 ns/op	      
     blocker3_dirty_encode_bench_test.go:64: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 17 candidates)
     blocker3_dirty_encode_bench_test.go:64: fixture microflow: id=f245497c-3d67-4e92-85a5-4a30a34292e7 len=25305 bytes (selected from 17 candidates)
 PASS
-ok  	github.com/mendixlabs/mxcli/modelsdk/codec/poc	30.885s
+ok  	github.com/mendixlabs/mxcli/modelsdk/codec/poc	29.464s
 goos: linux
 goarch: amd64
 pkg: github.com/mendixlabs/mxcli/modelsdk/property
 cpu: Intel(R) Core(TM) i7-8700 CPU @ 3.20GHz
-BenchmarkPrimitiveLazyDecode-12    	18595642	        61.31 ns/op	      16 B/op	       1 allocs/op
-BenchmarkPrimitiveLazyDecode-12    	20189847	        62.96 ns/op	      16 B/op	       1 allocs/op
-BenchmarkPrimitiveLazyDecode-12    	19623200	        61.06 ns/op	      16 B/op	       1 allocs/op
-BenchmarkPrimitiveLazyDecode-12    	19820352	        61.32 ns/op	      16 B/op	       1 allocs/op
-BenchmarkPrimitiveLazyDecode-12    	19004796	        60.46 ns/op	      16 B/op	       1 allocs/op
-BenchmarkPrimitiveSetGet-12        	340402168	         3.461 ns/op	       0 B/op	       0 allocs/op
-BenchmarkPrimitiveSetGet-12        	348796082	         3.436 ns/op	       0 B/op	       0 allocs/op
-BenchmarkPrimitiveSetGet-12        	344608677	         3.515 ns/op	       0 B/op	       0 allocs/op
-BenchmarkPrimitiveSetGet-12        	345679683	         3.442 ns/op	       0 B/op	       0 allocs/op
-BenchmarkPrimitiveSetGet-12        	346666482	         3.456 ns/op	       0 B/op	       0 allocs/op
-BenchmarkPrimitiveCachedGet-12     	747833707	         1.605 ns/op	       0 B/op	       0 allocs/op
-BenchmarkPrimitiveCachedGet-12     	721575580	         1.631 ns/op	       0 B/op	       0 allocs/op
-BenchmarkPrimitiveCachedGet-12     	740445800	         1.613 ns/op	       0 B/op	       0 allocs/op
-BenchmarkPrimitiveCachedGet-12     	751663496	         1.592 ns/op	       0 B/op	       0 allocs/op
-BenchmarkPrimitiveCachedGet-12     	734599362	         1.609 ns/op	       0 B/op	       0 allocs/op
+BenchmarkPrimitiveLazyDecode-12    	20119479	        61.67 ns/op	      16 B/op	       1 allocs/op
+BenchmarkPrimitiveLazyDecode-12    	17858151	        63.05 ns/op	      16 B/op	       1 allocs/op
+BenchmarkPrimitiveLazyDecode-12    	19581829	        61.37 ns/op	      16 B/op	       1 allocs/op
+BenchmarkPrimitiveLazyDecode-12    	19679204	        60.36 ns/op	      16 B/op	       1 allocs/op
+BenchmarkPrimitiveLazyDecode-12    	18312150	        61.43 ns/op	      16 B/op	       1 allocs/op
+BenchmarkPrimitiveSetGet-12        	347420850	         3.516 ns/op	       0 B/op	       0 allocs/op
+BenchmarkPrimitiveSetGet-12        	339976560	         3.589 ns/op	       0 B/op	       0 allocs/op
+BenchmarkPrimitiveSetGet-12        	335970613	         3.520 ns/op	       0 B/op	       0 allocs/op
+BenchmarkPrimitiveSetGet-12        	339065014	         3.502 ns/op	       0 B/op	       0 allocs/op
+BenchmarkPrimitiveSetGet-12        	338059892	         3.534 ns/op	       0 B/op	       0 allocs/op
+BenchmarkPrimitiveCachedGet-12     	737497477	         1.734 ns/op	       0 B/op	       0 allocs/op
+BenchmarkPrimitiveCachedGet-12     	706481523	         1.681 ns/op	       0 B/op	       0 allocs/op
+BenchmarkPrimitiveCachedGet-12     	729297092	         1.669 ns/op	       0 B/op	       0 allocs/op
+BenchmarkPrimitiveCachedGet-12     	739930771	         1.682 ns/op	       0 B/op	       0 allocs/op
+BenchmarkPrimitiveCachedGet-12     	720979298	         1.670 ns/op	       0 B/op	       0 allocs/op
 PASS
-ok  	github.com/mendixlabs/mxcli/modelsdk/property	20.828s
+ok  	github.com/mendixlabs/mxcli/modelsdk/property	20.988s

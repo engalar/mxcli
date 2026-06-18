@@ -6,9 +6,8 @@
 -- ============================================================
 
 -- ============================================================
--- 集成 1：Ticket_Detail 添加"复制标题"按钮
--- 布局结构：lgMain → rContent → cActions 后追加 cActions2
--- 用法：点击后调用 NF_CopyToClipboard → JSA_CopyToClipboard
+-- 集成 1：Ticket_Detail LayoutGrid 列后追加"快捷操作"列
+-- 布局结构：lgMain → rContent → cActions 后插入新列
 -- ============================================================
 
 alter page HD.Ticket_Detail {
@@ -30,14 +29,11 @@ alter page HD.Ticket_Detail {
 
 
 -- ============================================================
--- 集成 2：Ticket_Detail 评论区添加相对时间列
--- 用法：点击调用 NF_FormatRelativeTime → JSA_FormatRelativeTime
--- 说明：NF_FormatRelativeTime 返回相对时间文本（"5m ago"），
--- 用 actionbutton/link 实现客户端调用
+-- 集成 2：Ticket_Detail DataGrid 列后追加"相对时间"列
 -- ============================================================
 
 alter page HD.Ticket_Detail {
-  insert after dgComments.colIsInternal {
+  insert after dgComments.IsInternal {
     column colRelativeTime (caption: 'When', ShowContentAs: customContent, ColumnWidth: manual, Size: 100) {
       actionbutton btnRelativeTime (
         caption:     'show time',
@@ -50,26 +46,7 @@ alter page HD.Ticket_Detail {
 
 
 -- ============================================================
--- 集成 3：MyTickets_Overview 添加"复制标题"按钮
--- 用法：快速复制工单主题到剪贴板
--- ============================================================
-
-alter page HD.MyTickets_Overview {
-  insert after dgMyTickets.colActions {
-    column colCopy (caption: '', ShowContentAs: customContent, ColumnWidth: manual, Size: 60) {
-      actionbutton btnCopy (
-        caption:     'Copy',
-        action:      nanoflow HD.NF_CopyToClipboard (Text: $currentObject/Subject),
-        buttonstyle: link
-      )
-    }
-  }
-};
-
-
--- ============================================================
--- 集成 4：重新创建 ACT_Ticket_Submit（加入桌面通知）
--- 高优工单提交后对客服发出浏览器桌面通知
+-- 集成 3：重新创建 ACT_Ticket_Submit（加入桌面通知）
 -- ============================================================
 
 create or replace microflow HD.ACT_Ticket_Submit
@@ -113,7 +90,7 @@ create or replace microflow HD.ACT_Ticket_Submit
 
 
 -- ============================================================
--- 安全权限：确保新用途有权限
+-- 集成 4：安全权限：确保新用途有权限
 -- ============================================================
 
 grant execute on nanoflow HD.NF_CopyToClipboard     to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;

@@ -223,6 +223,15 @@ func applyInsertWidgetMutator(ctx *ExecContext, mutator backend.PageMutator, op 
 		return mdlerrors.NewBackend("build widgets", err)
 	}
 
+	// Layout grid column insertion (3-part ref: grid.row.column).
+	if op.Target.IsLayoutGridColumn() {
+		type lgInserter interface {
+			InsertLayoutGridColumnGen(gridName, rowRef, colRef string, position backend.InsertPosition, widgets []element.Element) error
+		}
+		if li, ok := mutator.(lgInserter); ok {
+			return li.InsertLayoutGridColumnGen(op.Target.Widget, op.Target.Row, op.Target.Column, backend.InsertPosition(op.Position), widgets)
+		}
+	}
 	return mutator.InsertWidgetGen(op.Target.Widget, op.Target.Column, backend.InsertPosition(op.Position), widgets)
 }
 

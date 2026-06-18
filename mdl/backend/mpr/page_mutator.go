@@ -175,6 +175,76 @@ func (m *mprPageMutator) InsertWidgetGen(widgetRef string, columnRef string, pos
 	return nil
 }
 
+// InsertLayoutGridColumnGen inserts new widgets into a layout grid row's Columns array
+// after the column identified by gridName.rowRef.colRef (e.g. "lgMain.rContent.cActions").
+// The row/column names are stored in Class as "_mdlRow:<name>" / "_mdlCol:<name>"
+// during page building (buildLayoutGridRowV3 / buildLayoutGridColumnV3).
+func (m *mprPageMutator) InsertLayoutGridColumnGen(gridName, rowRef, colRef string, position backend.InsertPosition, widgets []element.Element) error {
+	grid := m.widgetFinder(m.rawData, gridName)
+	if grid == nil {
+		return fmt.Errorf("layout grid %q not found", gridName)
+	}
+
+	rows := dGetArrayElements(dGet(grid.widget, "Rows"))
+	if rows == nil {
+		return fmt.Errorf("layout grid %q has no rows", gridName)
+	}
+
+	// Find row by class name.
+	var rowDoc bson.D
+	for _, r := range rows {
+		rd, ok := r.(bson.D)
+		if !ok {
+			continue
+		}
+		cls := dGetString(rd, "Class")
+		if cls == "_mdlRow:"+rowRef {
+			rowDoc = rd
+			break
+		}
+	}
+	if rowDoc == nil {
+		return fmt.Errorf("row %q not found in layout grid %q", rowRef, gridName)
+	}
+
+	cols := dGetArrayElements(dGet(rowDoc, "Columns"))
+	// Find column by class name.
+	var colIdx int
+	found := false
+	for i, c := range cols {
+		cd, ok := c.(bson.D)
+		if !ok {
+			continue
+		}
+		cls := dGetString(cd, "Class")
+		if cls == "_mdlCol:"+colRef {
+			colIdx = i
+			found = true
+			break
+		}
+	}
+	if !found {
+		return fmt.Errorf("column %q not found in layout grid %q row %q", colRef, gridName, rowRef)
+	}
+
+	newBsonWidgets, err := serializeWidgetsGen(widgets)
+	if err != nil {
+		return fmt.Errorf("serialize widgets: %w", err)
+	}
+
+	insertIdx := colIdx
+	if strings.EqualFold(string(position), "after") {
+		insertIdx++
+	}
+
+	newArr := make([]any, 0, len(cols)+len(newBsonWidgets))
+	newArr = append(newArr, cols[:insertIdx]...)
+	newArr = append(newArr, newBsonWidgets...)
+	newArr = append(newArr, cols[insertIdx:]...)
+	dSetArray(rowDoc, "Columns", newArr)
+	return nil
+}
+
 func (m *mprPageMutator) ReplaceWidgetGen(widgetRef string, columnRef string, widgets []element.Element) error {
 	var result *bsonWidgetResult
 	if columnRef != "" {

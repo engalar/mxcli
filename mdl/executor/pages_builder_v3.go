@@ -1207,6 +1207,9 @@ func (pb *pageBuilder) buildLayoutGridRowV3(w *ast.WidgetV3) (element.Element, e
 	row.SetHorizontalAlignment("None")
 	row.SetVerticalAlignment("None")
 	row.SetSpacingBetweenColumns(true)
+	if w.Name != "" {
+		row.SetClass("_mdlRow:" + w.Name)
+	}
 
 	var desktopSum int
 	var hasExplicit bool
@@ -1244,6 +1247,9 @@ func (pb *pageBuilder) buildLayoutGridColumnV3(w *ast.WidgetV3) (element.Element
 		col.SetAppearance(newDefaultAppearance())
 	}
 	col.SetVerticalAlignment("None")
+	if w.Name != "" {
+		col.SetClass("_mdlCol:" + w.Name)
+	}
 
 	// Studio Pro defaults all size fields to -1 (AutoFill) when unset.
 	// Apply the same defaults so our BSON matches SP output.
