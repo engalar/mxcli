@@ -48,6 +48,7 @@ func NewRegistry() *Registry {
 	registerDataTransformerHandlers(r)
 	registerQueryHandlers(r)
 	registerStylingHandlers(r)
+	registerThemeCommandHandlers(r)
 	registerRepositoryHandlers(r)
 	registerSessionHandlers(r)
 	registerLintHandlers(r)

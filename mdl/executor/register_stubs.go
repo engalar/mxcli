@@ -417,6 +417,12 @@ func registerStylingHandlers(r *Registry) {
 	})
 }
 
+func registerThemeCommandHandlers(r *Registry) {
+	r.Register(&ast.ShowThemeVariablesStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
+		return execShowThemeVariables(ctx, stmt.(*ast.ShowThemeVariablesStmt))
+	})
+}
+
 func registerRepositoryHandlers(r *Registry) {
 	r.Register(&ast.UpdateStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
 		return execUpdate(ctx)

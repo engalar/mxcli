@@ -277,6 +277,7 @@ func allKnownStatements() []ast.Statement {
 		&ast.SetStmt{},
 		&ast.ShowDesignPropertiesStmt{},
 		&ast.ShowFeaturesStmt{},
+		&ast.ShowThemeVariablesStmt{},
 		&ast.ShowStmt{},
 		&ast.ShowWidgetsStmt{},
 		&ast.ShowInstalledWidgetsStmt{},

@@ -198,6 +198,14 @@ func stmtSummary(stmt ast.Statement) string {
 		return summary
 	case *ast.AlterStylingStmt:
 		return fmt.Sprintf("alter styling on %s %s widget %s", s.ContainerType, s.ContainerName, s.WidgetName)
+	case *ast.ShowThemeVariablesStmt:
+		if s.ShowDefaults {
+			return "show theme variables default"
+		}
+		if s.LikePattern != "" {
+			return fmt.Sprintf("show theme variables like '%s'", s.LikePattern)
+		}
+		return "show theme variables"
 
 	// ALTER PAGE / ALTER SNIPPET
 	case *ast.AlterPageStmt:
