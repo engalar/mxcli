@@ -5,10 +5,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"sync"
 
 	"github.com/mendixlabs/mxcli/internal/fkg"
-	_ "github.com/mendixlabs/mxcli/internal/fkg/concepts" // register all adapters
+	"github.com/mendixlabs/mxcli/internal/fkg/concepts"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 )
 
 func init() {
@@ -18,7 +20,54 @@ func init() {
 	ontoCmd.AddCommand(ontoPathCmd)
 	ontoCmd.AddCommand(ontoGuideCmd)
 	ontoCmd.AddCommand(ontoPlanCmd)
+	ontoCmd.AddCommand(ontoOrchestrateCmd)
 	ontoExploreCmd.Flags().Int("depth", 2, "Traversal depth (default 2)")
+
+	// Note: command tree registration happens lazily via initMXCLICmds.
+	// This ensures all init() functions across the package have completed
+	// before we read the command tree.
+}
+
+var mxcliCmdsOnce sync.Once
+
+// initMXCLICmds registers the mxcli command tree into FKG.
+// Called lazily before the first onto query so all init() functions have run.
+func initMXCLICmds() {
+	mxcliCmdsOnce.Do(func() {
+		registerMXCLICommands(rootCmd, "")
+	})
+}
+
+// registerMXCLICommands recursively walks the cobra command tree and registers
+// each command with FKG so that "onto explore cmd:exec" etc. can discover them.
+func registerMXCLICommands(cmd *cobra.Command, parent string) {
+	use := cmd.Use
+	// Use the first word of Use as the canonical command name
+	// (e.g., "exec <file>" → "exec", "show <type> [name]" → "show")
+	name := use
+	for i, r := range use {
+		if r == ' ' || r == '\t' {
+			name = use[:i]
+			break
+		}
+	}
+	if name == "" {
+		return
+	}
+
+	flags := []string{}
+	func() {
+		defer func() { recover() }() // ignore flagset collisions in cobra internals
+		cmd.LocalFlags().VisitAll(func(f *pflag.Flag) {
+			flags = append(flags, "--"+f.Name)
+		})
+	}()
+
+	concepts.RegisterMXCLICmd(name, cmd.Short, cmd.Long, parent, flags)
+
+	for _, sub := range cmd.Commands() {
+		registerMXCLICommands(sub, name)
+	}
 }
 
 var ontoCmd = &cobra.Command{
@@ -80,11 +129,17 @@ Examples:
 	},
 }
 
+// ontoNew builds the FKG, ensuring the mxcli command tree is registered first.
+func ontoNew() (fkg.Querier, error) {
+	initMXCLICmds()
+	return fkg.New()
+}
+
 var ontoSchemaCmd = &cobra.Command{
 	Use:   "schema",
 	Short: "Show the full ontology skeleton (node types, edge types, root concepts)",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		q, err := fkg.New()
+		q, err := ontoNew()
 		if err != nil {
 			return err
 		}
@@ -115,7 +170,7 @@ var ontoExploreCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		depth, _ := cmd.Flags().GetInt("depth")
-		q, err := fkg.New()
+		q, err := ontoNew()
 		if err != nil {
 			return err
 		}
@@ -153,7 +208,7 @@ var ontoPathCmd = &cobra.Command{
 	Short: "Discover structural path schemas between two nodes",
 	Args:  cobra.ExactArgs(2),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		q, err := fkg.New()
+		q, err := ontoNew()
 		if err != nil {
 			return err
 		}

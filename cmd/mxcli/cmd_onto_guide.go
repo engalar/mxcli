@@ -19,7 +19,7 @@ var ontoGuideCmd = &cobra.Command{
 	Short: "Show implementation guidance for a concept",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		q, err := fkg.New()
+		q, err := ontoNew()
 		if err != nil {
 			return err
 		}

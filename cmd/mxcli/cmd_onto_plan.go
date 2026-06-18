@@ -19,7 +19,7 @@ var ontoPlanCmd = &cobra.Command{
 	Short: "Show curriculum plan for a learning module",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		q, err := fkg.New()
+		q, err := ontoNew()
 		if err != nil {
 			return err
 		}

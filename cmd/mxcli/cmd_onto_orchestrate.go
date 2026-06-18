@@ -20,7 +20,7 @@ var ontoOrchestrateCmd = &cobra.Command{
 	Short: "Ordered implementation plan across multiple concepts",
 	Args:  cobra.MinimumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		q, err := fkg.New()
+		q, err := ontoNew()
 		if err != nil {
 			return err
 		}
