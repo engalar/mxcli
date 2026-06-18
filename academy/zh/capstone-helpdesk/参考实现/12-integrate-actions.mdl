@@ -29,15 +29,16 @@ alter page HD.Ticket_Detail {
 
 
 -- ============================================================
--- 集成 2：Ticket_Detail DataGrid 列后追加"相对时间"列
+-- 集成 2：Ticket_Detail 评论区追加"显示相对时间"按钮
+-- 在评论标题 txtCommentsTitle 后插入操作列
 -- ============================================================
 
 alter page HD.Ticket_Detail {
-  insert after dgComments.IsInternal {
-    column colRelativeTime (caption: 'When', ShowContentAs: customContent, ColumnWidth: manual, Size: 100) {
+  insert after txtCommentsTitle {
+    container cRelativeTime {
       actionbutton btnRelativeTime (
         caption:     'show time',
-        action:      nanoflow HD.NF_FormatRelativeTime (DateTime: $currentObject/System.changedDate),
+        action:      nanoflow HD.NF_FormatRelativeTime (DateTime: $Ticket/changedDate),
         buttonstyle: link
       )
     }
@@ -78,11 +79,6 @@ create or replace microflow HD.ACT_Ticket_Submit
     }
   }
   commit $Ticket;
-
-  -- 新增：高优/紧急工单 → 桌面通知客服
-  if $Ticket/Priority = HD.TicketPriority.High or $Ticket/Priority = HD.TicketPriority.Critical then
-    call nanoflow HD.NF_NotifyHighPriority(Subject = $Ticket/Subject);
-  end if;
 
   return true;
 }

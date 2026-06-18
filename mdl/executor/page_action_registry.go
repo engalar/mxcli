@@ -3,6 +3,7 @@
 package executor
 
 import (
+	"fmt"
 	"log"
 	"strings"
 
@@ -131,24 +132,24 @@ var actionBuilders = map[string]actionBuilderFn{
 		act.SetNanoflowQualifiedName(action.Target)
 
 		for _, arg := range action.Args {
+			if strVal, ok := arg.Value.(string); ok {
+				if err := validateNanoflowArgExpression(strVal); err != nil {
+					return nil, mdlerrors.NewValidation(err.Error())
+				}
+			}
+
 			nm := genPg.NewNanoflowParameterMapping()
 			assignFreshID(nm)
 			// Use the fully-qualified "Module.NanoflowName.ParamName" form. A bare
 			// param name leaves Mendix unable to resolve the Parameter reference and
 			// makes `mx check` crash with "Parameter property ... null". Mirrors the
 			// microflow path above.
-			// TODO: CE0115 nanoflow arg matching still broken; needs Studio Pro BSON sample
 			nm.SetParameterQualifiedName(action.Target + "." + arg.Name)
 
 			if strVal, ok := arg.Value.(string); ok {
-				if strings.HasPrefix(strVal, "$") {
-					pv := genPg.NewPageVariable()
-					assignFreshID(pv)
-					pv.SetPageParameterQualifiedName(strVal)
-					nm.SetVariable(pv)
-				} else {
-					nm.SetExpression(strVal)
-				}
+				// Use Expression for all values (not Variable sub-object) — matches
+				// the microflow path and avoids CE0115 arg-matching errors from mx check.
+				nm.SetExpression(strVal)
 			}
 			act.AddParameterMappings(nm)
 		}
@@ -178,6 +179,34 @@ var actionBuilders = map[string]actionBuilderFn{
 		act.SetOutcomeValue(action.OutcomeValue)
 		return act, nil
 	},
+}
+
+// validateNanoflowArgExpression checks that a nanoflow parameter expression value
+// does not contain invalid attribute path patterns. System attributes like
+// `changedDate` must be accessed without the `System.` module prefix —
+// `$var/changedDate` is valid, `$var/System.changedDate` is not.
+func validateNanoflowArgExpression(expr string) error {
+	if !strings.HasPrefix(expr, "$") {
+		return nil
+	}
+	idx := strings.Index(expr, "/")
+	if idx < 0 {
+		return nil
+	}
+	pathStr := expr[idx+1:]
+	if pathStr == "" {
+		return nil
+	}
+	for _, seg := range strings.Split(pathStr, "/") {
+		if idx := strings.Index(seg, "."); idx >= 0 {
+			if seg[:idx] == "System" {
+				short := seg[idx+1:]
+				return fmt.Errorf("invalid nanoflow parameter expression %q: system attribute %q must be accessed without module prefix (use %q instead)",
+					expr, seg, short)
+			}
+		}
+	}
+	return nil
 }
 
 // ActionBuilders returns the action builder map (exported for tests).

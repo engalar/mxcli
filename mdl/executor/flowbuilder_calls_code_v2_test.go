@@ -113,7 +113,7 @@ func TestAddCallJavaScriptActionActionGenSetsCallAndMappings(t *testing.T) {
 		t.Fatalf("mappings = %d, want 1", len(mappings))
 	}
 	pm := mappings[0].(*genMf.JavaScriptActionParameterMapping)
-	if pm.ParameterQualifiedName() != "JS.DoIt.Arg1" {
+	if pm.ParameterQualifiedName() != "JS.DoIt.arg1" {
 		t.Fatalf("param QN = %q", pm.ParameterQualifiedName())
 	}
 	value, ok := pm.ParameterValue().(*genMf.BasicCodeActionParameterValue)

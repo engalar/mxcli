@@ -3,6 +3,7 @@
 package executor
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
@@ -460,5 +461,56 @@ func TestBuildClientActionV3_NanoflowParamQualifiedName(t *testing.T) {
 	want := "MyMod.SomeNF.Order"
 	if got != want {
 		t.Errorf("ParameterQualifiedName = %q, want %q (bare name regresses to the mx check crash)", got, want)
+	}
+}
+
+// TestBuildClientActionV3_NanoflowInvalidAttrPath verifies that attribute paths
+// using a module prefix for system attributes (e.g. $currentObject/System.changedDate)
+// are rejected as invalid syntax during action building.
+func TestBuildClientActionV3_NanoflowInvalidAttrPath(t *testing.T) {
+	tests := []struct {
+		name    string
+		value   string
+		wantErr string
+	}{
+		{
+			name:    "system attribute with module prefix",
+			value:   "$currentObject/System.changedDate",
+			wantErr: "System.changedDate",
+		},
+		{
+			name:    "valid attribute path is accepted",
+			value:   "$currentObject",
+			wantErr: "",
+		},
+		{
+			name:    "valid parameter variable is accepted",
+			value:   "$Ticket/Subject",
+			wantErr: "",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			pb := newPageBuilderWithNanoflowStub("MyMod.SomeNF")
+			pb.paramEntityNames = map[string]string{"Ticket": "HD.Ticket"}
+			action := &ast.ActionV3{
+				Type:   "nanoflow",
+				Target: "MyMod.SomeNF",
+				Args:   []ast.FlowArgV3{{Name: "Order", Value: tt.value}},
+			}
+			_, err := pb.buildClientActionV3(action)
+			if tt.wantErr != "" {
+				if err == nil {
+					t.Fatalf("expected error containing %q, got nil", tt.wantErr)
+				}
+				if !strings.Contains(err.Error(), tt.wantErr) {
+					t.Fatalf("error = %q, want containing %q", err.Error(), tt.wantErr)
+				}
+			} else {
+				if err != nil {
+					t.Fatalf("unexpected error: %v", err)
+				}
+			}
+		})
 	}
 }

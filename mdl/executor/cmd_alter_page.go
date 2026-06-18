@@ -217,20 +217,63 @@ func applyInsertWidgetMutator(ctx *ExecContext, mutator backend.PageMutator, op 
 	// Find entity context from enclosing DataView/DataGrid/ListView
 	entityCtx := mutator.EnclosingEntity(op.Target.Widget)
 
-	// Build new widgets from AST
-	widgets, err := buildWidgetsFromASTGen(ctx, op.Widgets, moduleName, moduleID, entityCtx, mutator)
-	if err != nil {
-		return mdlerrors.NewBackend("build widgets", err)
-	}
-
 	// Layout grid column insertion (3-part ref: grid.row.column).
+	// Build column widgets as bare LayoutGridColumn elements instead of
+	// DivContainer wrappers (buildContainerWithColumnV3) — the layout grid
+	// row's Columns array requires LayoutGridColumn, not DivContainer.
 	if op.Target.IsLayoutGridColumn() {
+		paramScope, paramEntityNames := mutator.ParamScope()
+		widgetScope := mutator.WidgetScope()
+		ctx.WidgetBuilder.BeginPageBuild()
+		defer ctx.WidgetBuilder.EndPageBuild()
+
+		pb := &pageBuilder{
+			backend:          ctx.Backend,
+			moduleID:         moduleID,
+			moduleName:       moduleName,
+			entityContext:    entityCtx,
+			widgetScope:      widgetScope,
+			paramScope:       paramScope,
+			paramEntityNames: paramEntityNames,
+			execCache:        ctx.Cache,
+			fragments:        ctx.Fragments,
+			themeRegistry:    ctx.GetThemeRegistry(),
+			widgetBackend:    ctx.Backend,
+			snippetsRepo:     ctx.Snippets,
+			mxGraph:          ctx.Graph.MxGraph(),
+		}
+
+		var genWidgets []element.Element
+		for _, w := range op.Widgets {
+			var widget element.Element
+			var err error
+			switch strings.ToLower(w.Type) {
+			case "column":
+				widget, err = pb.buildLayoutGridColumnV3(w)
+			default:
+				widget, err = pb.buildWidgetV3(w)
+			}
+			if err != nil {
+				return mdlerrors.NewBackend("build widget", err)
+			}
+			if widget != nil {
+				genWidgets = append(genWidgets, widget)
+			}
+		}
+
 		type lgInserter interface {
 			InsertLayoutGridColumnGen(gridName, rowRef, colRef string, position backend.InsertPosition, widgets []element.Element) error
 		}
 		if li, ok := mutator.(lgInserter); ok {
-			return li.InsertLayoutGridColumnGen(op.Target.Widget, op.Target.Row, op.Target.Column, backend.InsertPosition(op.Position), widgets)
+			return li.InsertLayoutGridColumnGen(op.Target.Widget, op.Target.Row, op.Target.Column, backend.InsertPosition(op.Position), genWidgets)
 		}
+		return fmt.Errorf("mutator %T does not support InsertLayoutGridColumnGen", mutator)
+	}
+
+	// Default path: build via generic builder
+	widgets, err := buildWidgetsFromASTGen(ctx, op.Widgets, moduleName, moduleID, entityCtx, mutator)
+	if err != nil {
+		return mdlerrors.NewBackend("build widgets", err)
 	}
 	return mutator.InsertWidgetGen(op.Target.Widget, op.Target.Column, backend.InsertPosition(op.Position), widgets)
 }
