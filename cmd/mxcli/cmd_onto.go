@@ -189,7 +189,7 @@ var ontoExploreCmd = &cobra.Command{
 		for _, n := range result.Nodes {
 			byLabel[n.Label] = append(byLabel[n.Label], n)
 		}
-		for _, label := range []string{"Concept", "SyntaxFeature", "Skill", "Doc"} {
+		for _, label := range []string{"Concept", "SyntaxFeature", "Pattern", "ImplDetail", "Skill", "CodeExtension", "Doc"} {
 			nodes := byLabel[label]
 			if len(nodes) == 0 {
 				continue

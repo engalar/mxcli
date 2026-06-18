@@ -87,6 +87,7 @@ func (a *CurriculumAcademyAdapter) Build(_ context.Context, sink mxgraph.EventSi
 		edge("curriculum:academy-06-kb", "curriculum:academy-05-security", Depends),
 		edge("curriculum:academy-06-kb", "entity", Teaches),
 		edge("curriculum:academy-06-kb", "security", Teaches),
+		edge("curriculum:academy-06-kb", "skill:manage-security", Teaches),
 		edge("curriculum:academy-06-kb", "pattern:self-ref-association", Teaches),
 		edge("curriculum:academy-06-kb", "pattern:many-to-many", Teaches),
 

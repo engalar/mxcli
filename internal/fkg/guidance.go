@@ -119,13 +119,14 @@ func (q *fkgQuerier) Orchestrate(conceptIDs []string) (*OrchestrationPlan, error
 		})
 	}
 
-	// Build dependency graph from REQUIRES edges only (hard dependencies).
-	// RELATED_TO is excluded because it creates bidirectional cycles.
+	// Build dependency graph from REQUIRES inbound edges.
+	// If A→REQUIRES→B, then A must be implemented before B's security rules can be configured.
+	// So B depends on A (A comes first). We use Inbound to capture the "depends on who requires me" relationship.
 	for _, info := range nodes {
-		for _, e := range q.graph.Edges(info.node.ID, mxgraph.Outbound, concepts.Requires) {
-			targetID := string(e.To)
-			if _, ok := nodeIndex[targetID]; ok {
-				info.deps[targetID] = true
+		for _, e := range q.graph.Edges(info.node.ID, mxgraph.Inbound, concepts.Requires) {
+			sourceID := string(e.From)
+			if _, ok := nodeIndex[sourceID]; ok {
+				info.deps[sourceID] = true
 			}
 		}
 	}

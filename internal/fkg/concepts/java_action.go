@@ -31,6 +31,31 @@ func (a *JavaActionAdapter) Build(_ context.Context, sink mxgraph.EventSink) err
 
 		skillNode("extend-with-java", "Java Action creation, parameters, return types, external JAR dependencies"),
 
+		// ── Pattern ─────────────────────────────────────────────────────────────
+		patternNode("extend-with-java", "Java Action Extension Pattern",
+			"Create Java Action definition → implement Java code → call from microflow"),
+
+		// ── Step nodes ─────────────────────────────────────────────────────────
+		stepNode("ja-create", "Create Java Action definition",
+			"CREATE OR MODIFY JAVA ACTION with parameters, return type, imports and code blocks",
+			1, "create", "JavaAction", "HD.JA_HashPassword",
+			"create or modify java action HD.JA_HashPassword (Password: string not null) returns string imports $$ ... $$ code $$ ... $$"),
+		stepNode("ja-implement", "Implement Java code",
+			"Write imports and code blocks for hashing, encryption, or custom logic",
+			2, "configure", "JavaCode", "implementation",
+			"imports $$ import java.security.MessageDigest; $$ code $$ MessageDigest digest = MessageDigest.getInstance(\\\"SHA-256\\\"); ... $$"),
+		stepNode("ja-call-from-mf", "Call from microflow",
+			"Use CALL JAVA ACTION in microflow to invoke the extension",
+			3, "wire", "Microflow", "VerifyPassword",
+			"call java action HD.JA_VerifyPassword(Password = $Password, HashedPassword = $HashedPassword);"),
+		stepNode("ja-deploy-jar", "Deploy external JAR",
+			"Place third-party JAR files in project's userlib/ directory for Java Action imports",
+			4, "configure", "Dependency", "bcrypt.jar",
+			"cp bcrypt-0.9.jar ./userlib/"),
+
+		// ── Edges ──────────────────────────────────────────────────────────────
+		edge("java-action", "pattern:extend-with-java", HasPattern),
+
 		edge("java-action", "ext:java-action", HasExt),
 		edge("java-action", "ext:java-action.bcrypt", HasExt),
 		edge("java-action", "ext:java-action.sha256", HasExt),
@@ -39,5 +64,10 @@ func (a *JavaActionAdapter) Build(_ context.Context, sink mxgraph.EventSink) err
 		edge("java-action", "skill:extend-with-java", HasSkill),
 		edge("java-action", "microflow", RelatedTo),
 		edge("java-action", "entity", RelatedTo),
+
+		edge("pattern:extend-with-java", "step:ja-create", HasSyntax),
+		edge("pattern:extend-with-java", "step:ja-implement", HasSyntax),
+		edge("pattern:extend-with-java", "step:ja-call-from-mf", HasSyntax),
+		edge("pattern:extend-with-java", "step:ja-deploy-jar", HasSyntax),
 	})
 }

@@ -71,6 +71,33 @@ func (a *MicroflowPatternsAdapter) Build(_ context.Context, sink mxgraph.EventSi
 			2, "configure", "Feedback", "UI message",
 			"validation feedback $Ticket/Subject message 'Subject is required'; return false;"),
 
+		// ── Nanoflow pattern (P2) ──────────────────────────────────────────────
+		patternNode("nanoflow-quick-create", "Nanoflow Quick-Create Pattern",
+			"Client-side object creation: create → commit → return, no server round-trip"),
+
+		stepNode("nf-create", "Create Nanoflow definition",
+			"CREATE OR MODIFY NANOFLOW with parameters and return type",
+			1, "create", "Nanoflow", "HD.NF_Ticket_QuickCreate",
+			"create or modify nanoflow HD.NF_Ticket_QuickCreate ($Customer: HD.Customer, $Subject: string) returns HD.Ticket as $Ticket { ... }"),
+		stepNode("nf-create-obj", "Create object client-side",
+			"Use create + commit for client-side object creation without microflow",
+			2, "configure", "Object", "HD.Ticket",
+			"$Ticket = create HD.Ticket (Subject = $Subject, Status = HD.TicketStatus.Draft); commit $Ticket;"),
+		stepNode("nf-return", "Return result",
+			"Return the created object to the nanoflow caller (page or microflow)",
+			3, "configure", "Return", "$Ticket",
+			"return $Ticket;"),
+		stepNode("nf-search", "Client-side search",
+			"Retrieve with contains() filter and client-side sort/limit",
+			4, "configure", "Search", "Tickets",
+			"retrieve $Tickets from HD.Ticket where [contains(Subject, $Search/SubjectKeyword)] sort by Subject asc limit 100;"),
+
+		edge("nanoflow", "pattern:nanoflow-quick-create", HasPattern),
+		edge("pattern:nanoflow-quick-create", "step:nf-create", HasSyntax),
+		edge("pattern:nanoflow-quick-create", "step:nf-create-obj", HasSyntax),
+		edge("pattern:nanoflow-quick-create", "step:nf-return", HasSyntax),
+		edge("pattern:nanoflow-quick-create", "step:nf-search", HasSyntax),
+
 		// ── Edges: pattern → step ───────────────────────────────────────────
 		edge("pattern:state-machine-sla", "step:sla-define-entity", HasSyntax),
 		edge("pattern:state-machine-sla", "step:sla-create-mf", HasSyntax),

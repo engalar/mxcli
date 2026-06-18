@@ -32,6 +32,27 @@ func (a *JavaScriptActionAdapter) Build(_ context.Context, sink mxgraph.EventSin
 
 		skillNode("extend-with-javascript", "JS Action creation, browser API integration, platform declaration"),
 
+		// ── Pattern ─────────────────────────────────────────────────────────────
+		patternNode("extend-with-js", "JS Action Extension Pattern",
+			"Create JS Action with platform 'Web' → implement browser API code → call from nanoflow"),
+
+		// ── Step nodes ─────────────────────────────────────────────────────────
+		stepNode("js-create", "Create JavaScript Action",
+			"CREATE OR MODIFY JAVASCRIPT ACTION with platform 'Web' and parameter types",
+			1, "create", "JavaScriptAction", "HD.JSA_CopyToClipboard",
+			"create or modify javascript action HD.JSA_CopyToClipboard (text: string not null) returns void platform 'Web' { imports $$ ... $$ code $$ ... $$ }"),
+		stepNode("js-implement", "Implement browser API call",
+			"Write JavaScript code using browser APIs (Clipboard, Notification, Date formatting)",
+			2, "configure", "JavaScriptCode", "implementation",
+			"imports $$ import \\\"mx-global\\\"; $$ code $$ navigator.clipboard.writeText(text); $$"),
+		stepNode("js-call-from-nf", "Call from nanoflow",
+			"Use CALL JAVASCRIPT ACTION in nanoflow with parameters and return value",
+			3, "wire", "Nanoflow", "NF_CopyToClipboard",
+			"call javascript action HD.JSA_CopyToClipboard(Text = $Ticket/Subject);"),
+
+		// ── Edges ──────────────────────────────────────────────────────────────
+		edge("js-action", "pattern:extend-with-js", HasPattern),
+
 		edge("js-action", "ext:js-action", HasExt),
 		edge("js-action", "ext:js-action.clipboard", HasExt),
 		edge("js-action", "ext:js-action.notification", HasExt),
@@ -41,5 +62,9 @@ func (a *JavaScriptActionAdapter) Build(_ context.Context, sink mxgraph.EventSin
 		edge("js-action", "skill:extend-with-javascript", HasSkill),
 		edge("js-action", "nanoflow", RelatedTo),
 		edge("js-action", "page", RelatedTo),
+
+		edge("pattern:extend-with-js", "step:js-create", HasSyntax),
+		edge("pattern:extend-with-js", "step:js-implement", HasSyntax),
+		edge("pattern:extend-with-js", "step:js-call-from-nf", HasSyntax),
 	})
 }
