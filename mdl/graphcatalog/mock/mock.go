@@ -2,7 +2,7 @@ package mock
 
 import "github.com/mendixlabs/mxcli/mdl/graphcatalog"
 
-// MockProjectGraph 实现 graphcatalog.LintReader 和 graphcatalog.TraversalReader。
+// MockProjectGraph 实现 graphcatalog 的所有读取接口。
 // 每个方法对应一个 Func 字段；未配置时 panic 给出明确错误。
 type MockProjectGraph struct {
 	EntitiesFunc            func(module string) []graphcatalog.EntityNode
@@ -22,11 +22,21 @@ type MockProjectGraph struct {
 	CalleesFunc             func(qualifiedName string, transitive bool) []graphcatalog.CallEdge
 	ImpactFunc              func(qualifiedName string) []graphcatalog.RefEdge
 	ReferencesFunc          func(qualifiedName string) []graphcatalog.RefEdge
+	// ThemeReader
+	ThemeVariablesFunc   func(module string, filter graphcatalog.ThemeVarFilter) []graphcatalog.ThemeVariableNode
+	ThemeVariableFunc    func(name string) *graphcatalog.ThemeVariableNode
+	OverriddenVariablesFunc func() []graphcatalog.ThemeVariableNode
+	// StylingReader
+	WidgetInstancesFunc  func(pageQN string) []graphcatalog.WidgetInstanceNode
+	DesignPropertiesFunc func(widgetType string) []graphcatalog.DesignPropertyNode
+	DesignPropertyFunc   func(widgetType, name string) *graphcatalog.DesignPropertyNode
 }
 
 // 编译期接口检查
 var _ graphcatalog.LintReader = (*MockProjectGraph)(nil)
 var _ graphcatalog.TraversalReader = (*MockProjectGraph)(nil)
+var _ graphcatalog.ThemeReader = (*MockProjectGraph)(nil)
+var _ graphcatalog.StylingReader = (*MockProjectGraph)(nil)
 
 func (m *MockProjectGraph) Entities(module string) []graphcatalog.EntityNode {
 	if m.EntitiesFunc != nil {
@@ -145,4 +155,50 @@ func (m *MockProjectGraph) References(qn string) []graphcatalog.RefEdge {
 		return m.ReferencesFunc(qn)
 	}
 	panic("MockProjectGraph.References not configured")
+}
+
+// ── ThemeReader ──────────────────────────────────────────────
+
+func (m *MockProjectGraph) ThemeVariables(module string, filter graphcatalog.ThemeVarFilter) []graphcatalog.ThemeVariableNode {
+	if m.ThemeVariablesFunc != nil {
+		return m.ThemeVariablesFunc(module, filter)
+	}
+	panic("MockProjectGraph.ThemeVariables not configured")
+}
+
+func (m *MockProjectGraph) ThemeVariable(name string) *graphcatalog.ThemeVariableNode {
+	if m.ThemeVariableFunc != nil {
+		return m.ThemeVariableFunc(name)
+	}
+	panic("MockProjectGraph.ThemeVariable not configured")
+}
+
+func (m *MockProjectGraph) OverriddenVariables() []graphcatalog.ThemeVariableNode {
+	if m.OverriddenVariablesFunc != nil {
+		return m.OverriddenVariablesFunc()
+	}
+	panic("MockProjectGraph.OverriddenVariables not configured")
+}
+
+// ── StylingReader ───────────────────────────────────────────
+
+func (m *MockProjectGraph) WidgetInstances(pageQN string) []graphcatalog.WidgetInstanceNode {
+	if m.WidgetInstancesFunc != nil {
+		return m.WidgetInstancesFunc(pageQN)
+	}
+	panic("MockProjectGraph.WidgetInstances not configured")
+}
+
+func (m *MockProjectGraph) DesignProperties(widgetType string) []graphcatalog.DesignPropertyNode {
+	if m.DesignPropertiesFunc != nil {
+		return m.DesignPropertiesFunc(widgetType)
+	}
+	panic("MockProjectGraph.DesignProperties not configured")
+}
+
+func (m *MockProjectGraph) DesignProperty(widgetType, name string) *graphcatalog.DesignPropertyNode {
+	if m.DesignPropertyFunc != nil {
+		return m.DesignPropertyFunc(widgetType, name)
+	}
+	panic("MockProjectGraph.DesignProperty not configured")
 }

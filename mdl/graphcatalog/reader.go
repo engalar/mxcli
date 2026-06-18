@@ -47,3 +47,17 @@ type LintReader interface {
 	SecurityReader
 	ExtensionReader
 }
+
+// ThemeReader 读取主题变量。SHOW THEME 命令和 AI 工具使用。
+type ThemeReader interface {
+	ThemeVariables(module string, filter ThemeVarFilter) []ThemeVariableNode
+	ThemeVariable(name string) *ThemeVariableNode
+	OverriddenVariables() []ThemeVariableNode
+}
+
+// StylingReader 读取 widget 样式信息。
+type StylingReader interface {
+	WidgetInstances(pageQN string) []WidgetInstanceNode
+	DesignProperties(widgetType string) []DesignPropertyNode
+	DesignProperty(widgetType, name string) *DesignPropertyNode
+}

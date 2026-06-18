@@ -1,6 +1,8 @@
 package graphcatalog
 
 import (
+	"strings"
+
 	"github.com/mendixlabs/mxcli/internal/mxgraph"
 )
 
@@ -17,6 +19,8 @@ type ProjectGraph struct {
 // 编译期接口检查
 var _ LintReader = (*ProjectGraph)(nil)
 var _ TraversalReader = (*ProjectGraph)(nil)
+var _ ThemeReader = (*ProjectGraph)(nil)
+var _ StylingReader = (*ProjectGraph)(nil)
 
 // NewProjectGraph 创建 ProjectGraph，接管已构建的 IndexManager。
 func NewProjectGraph(mgr *mxgraph.IndexManager) *ProjectGraph {
@@ -440,5 +444,165 @@ func entityFromNode(n *mxgraph.Node) EntityNode {
 		QualifiedName: nodeToQN(n),
 		Module:        strProp(n, "Module"),
 		IsExternal:    isExt,
+	}
+}
+
+// ── ThemeReader ──────────────────────────────────────────────
+
+func (pg *ProjectGraph) ThemeVariables(module string, filter ThemeVarFilter) []ThemeVariableNode {
+	var nodes []*mxgraph.Node
+	if filter.Source != "" {
+		nodes = pg.g().FindNodes("ThemeVariable", map[string]any{"Source": filter.Source})
+	} else {
+		nodes = pg.g().FindNodes("ThemeVariable", nil)
+	}
+	var result []ThemeVariableNode
+	for _, n := range nodes {
+		if filter.ActiveOnly {
+			if active := boolProp(n, "IsActive"); !active {
+				continue
+			}
+		}
+		if filter.Like != "" {
+			name := strProp(n, "Name")
+			if !strings.Contains(name, filter.Like) {
+				continue
+			}
+		}
+		if module != "" {
+			m := strProp(n, "Module")
+			if m != module {
+				continue
+			}
+		}
+		result = append(result, toThemeVarNode(n))
+	}
+	return result
+}
+
+func (pg *ProjectGraph) ThemeVariable(name string) *ThemeVariableNode {
+	nodes := pg.g().FindNodes("ThemeVariable", map[string]any{"Name": name})
+	if len(nodes) == 0 {
+		return nil
+	}
+	r := toThemeVarNode(nodes[0])
+	return &r
+}
+
+func (pg *ProjectGraph) OverriddenVariables() []ThemeVariableNode {
+	nodes := pg.g().FindNodes("ThemeVariable", nil)
+	var result []ThemeVariableNode
+	for _, n := range nodes {
+		src := strProp(n, "Source")
+		if src == "atlas-core-default" || src == "" {
+			continue
+		}
+		if active := boolProp(n, "IsActive"); !active {
+			continue
+		}
+		result = append(result, toThemeVarNode(n))
+	}
+	return result
+}
+
+func toThemeVarNode(n *mxgraph.Node) ThemeVariableNode {
+	lineNum, _ := n.Props["LineNumber"].(int)
+	return ThemeVariableNode{
+		Name:         strProp(n, "Name"),
+		Value:        strProp(n, "Value"),
+		VariableType: strProp(n, "VariableType"),
+		IsDefault:    boolProp(n, "IsDefault"),
+		IsActive:     boolProp(n, "IsActive"),
+		Source:       strProp(n, "Source"),
+		Module:       strProp(n, "Module"),
+		Category:     strProp(n, "Category"),
+		FilePath:     strProp(n, "FilePath"),
+		LineNumber:   lineNum,
+	}
+}
+
+func boolProp(n *mxgraph.Node, key string) bool {
+	if v, ok := n.Props[key].(bool); ok {
+		return v
+	}
+	return false
+}
+
+// ── StylingReader ────────────────────────────────────────────
+
+func (pg *ProjectGraph) WidgetInstances(pageQN string) []WidgetInstanceNode {
+	nodes := pg.g().FindNodes("WidgetInstance", nil)
+	var result []WidgetInstanceNode
+	for _, n := range nodes {
+		if pageQN != "" {
+			qn := strProp(n, "QualifiedName")
+			if !strings.HasPrefix(qn, pageQN) {
+				continue
+			}
+		}
+		result = append(result, toWidgetInstanceNode(n))
+	}
+	return result
+}
+
+func (pg *ProjectGraph) DesignProperties(widgetType string) []DesignPropertyNode {
+	filter := map[string]any{}
+	if widgetType != "" {
+		filter["WidgetType"] = widgetType
+	}
+	nodes := pg.g().FindNodes("DesignProperty", filter)
+	result := make([]DesignPropertyNode, 0, len(nodes))
+	for _, n := range nodes {
+		result = append(result, toDesignPropertyNode(n))
+	}
+	return result
+}
+
+func (pg *ProjectGraph) DesignProperty(widgetType, name string) *DesignPropertyNode {
+	nodes := pg.g().FindNodes("DesignProperty", map[string]any{
+		"WidgetType": widgetType,
+		"Name":       name,
+	})
+	if len(nodes) == 0 {
+		return nil
+	}
+	r := toDesignPropertyNode(nodes[0])
+	return &r
+}
+
+func toWidgetInstanceNode(n *mxgraph.Node) WidgetInstanceNode {
+	dps, _ := n.Props["DesignProperties"].(map[string]string)
+	if dps == nil {
+		dps = make(map[string]string)
+	}
+	return WidgetInstanceNode{
+		ID:               string(n.ID),
+		Name:             strProp(n, "Name"),
+		WidgetType:       strProp(n, "WidgetType"),
+		Class:            strProp(n, "Class"),
+		Style:            strProp(n, "Style"),
+		DesignProperties: dps,
+		Page:             strProp(n, "Page"),
+	}
+}
+
+func toDesignPropertyNode(n *mxgraph.Node) DesignPropertyNode {
+	refVars, _ := n.Props["ReferencedVars"].([]string)
+	opts, _ := n.Props["Options"].([]string)
+	if opts == nil {
+		opts = []string{}
+	}
+	if refVars == nil {
+		refVars = []string{}
+	}
+	return DesignPropertyNode{
+		WidgetType:     strProp(n, "WidgetType"),
+		Name:           strProp(n, "Name"),
+		Type:           strProp(n, "Type"),
+		Category:       strProp(n, "Category"),
+		Description:    strProp(n, "Description"),
+		Options:        opts,
+		ReferencedVars: refVars,
+		SourceModule:   strProp(n, "SourceModule"),
 	}
 }
