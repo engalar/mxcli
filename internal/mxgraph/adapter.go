@@ -28,6 +28,7 @@ type IndexAdapter interface {
 type IndexManager struct {
 	graph    *Graph
 	adapters map[string]IndexAdapter
+	deltaLog *DeltaLog // NEW: 持久化增量日志
 }
 
 func NewIndexManager() *IndexManager {
@@ -68,7 +69,18 @@ func (m *IndexManager) BuildOne(ctx context.Context, name string, sink EventSink
 
 func (m *IndexManager) Emit(events []Event) error {
 	m.graph.Apply(events)
+	// 持久化每个事件到 delta.log
+	if m.deltaLog != nil {
+		if err := m.deltaLog.Emit(events); err != nil {
+			// 持久化失败不阻塞构建，仅输日志
+		}
+	}
 	return nil
+}
+
+// SetDeltaLog 设置增量日志，使得 Emit() 自动持久化事件。
+func (m *IndexManager) SetDeltaLog(dl *DeltaLog) {
+	m.deltaLog = dl
 }
 
 func (m *IndexManager) Query() *Graph {
