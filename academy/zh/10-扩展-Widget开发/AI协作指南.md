@@ -19,15 +19,18 @@ cd academy/zh/10-扩展-Widget开发/widget-source
 # 步骤 2：构建 widget（自动 npm install + pluggable-widgets-tools 编译，产出 .mpk）
 mxcli widget build
 
+# 国内环境加速（推荐）：
+mxcli widget build --registry https://registry.npmmirror.com
+
 # 步骤 3：安装到 Mendix 项目 widgets/ 目录
+mxcli widget build --install -p /path/to/MyProject.mpr
+# 或先构建再手动复制：
 cp dist/1.0.0/com.helpdesk.widget.TicketStatusBadge.mpk /path/to/MyProject/widgets/
-# 或直接通过 mxcli 安装：
-mxcli widget build --install --project /path/to/MyProject.mpr
 
 # 步骤 4a：空应用独立验证（创建测试模块 + 页面）
 mxcli exec 参考实现/test-widget-standalone.mdl -p /path/to/MyProject.mpr
 
-# 步骤 4b：Helpdesk 集成（需要先运行模块 01-05）
+# 步骤 4b：Helpdesk 集成（需要先运行模块 01-09）
 mxcli exec 参考实现/use-widget.mdl -p /path/to/MyProject.mpr
 ```
 
@@ -46,7 +49,7 @@ mxcli widget build --registry http://npm-registry.internal:4873
 ### 路径 B：修改 Widget 源码（完整开发路径）
 
 1. 修改 `widget-source/src/TicketStatusBadge.jsx`（主逻辑）、`components/TicketStatusBadgeSample.jsx`（渲染组件）或 `TicketStatusBadge.xml`（属性定义）
-2. `cd widget-source && mxcli widget build --install --project /path/to/MyProject.mpr`
+2. `cd widget-source && mxcli widget build --install -p /path/to/MyProject.mpr`
 3. 再次执行 MDL 脚本测试
 
 ## Widget 工作原理
@@ -58,18 +61,18 @@ widget-source/
 ├── README.md
 ├── src/
 │   ├── package.xml                    ← MPK manifest（含 <files> 段，Mendix 11 必需）
-│   ├── TicketStatusBadge.xml          ← 属性定义
+│   ├── TicketStatusBadge.xml          ← 属性定义（widget ID 含小写包名段）
 │   ├── TicketStatusBadge.jsx          ← 主入口（React 函数组件）
 │   ├── TicketStatusBadge.editorConfig.js    ← Studio Pro 设计时配置
 │   ├── TicketStatusBadge.editorPreview.jsx  ← Studio Pro 预览（JSX 格式）
 │   ├── TicketStatusBadge.{icon,tile}.png    ← 图标
 │   ├── components/
-│   │   └── TicketStatusBadgeSample.jsx      ← 渲染组件
+│   │   └── TicketStatusBadgeSample.jsx      ← 渲染组件（读取 attribute 对象的 .displayValue）
 │   └── ui/
-│       └── TicketStatusBadge.css            ← 样式
+│       └── TicketStatusBadge.css            ← 徽章样式
 
 mxcli widget build
-  └─→ npm install（首次自动执行）
+  └─→ npm install（检测到 @mendix/pluggable-widgets-tools 缺失时自动执行）
   └─→ pluggable-widgets-tools build:web
       ├─→ rollup 编译 .jsx → .js (AMD) + .mjs (ESM) 双格式
       └─→ 打包 XML + bundle → dist/1.0.0/*.mpk
@@ -78,7 +81,43 @@ mxcli widget build
 
 MyProject/widgets/com.helpdesk.widget.TicketStatusBadge.mpk
   └─→ mxcli exec 时自动发现（无需 extract）
-  └─→ PLUGGABLEWIDGET 'com.helpdesk.widget.TicketStatusBadge' name (statusValue: Status)
+  └─→ PLUGGABLEWIDGET 'com.helpdesk.widget.ticketstatusbadge.TicketStatusBadge' name (statusValue: Status)
+```
+
+## Widget ID 格式规则
+
+Mendix 要求 widget ID 与 JS 文件路径严格对应：
+
+| 字段 | 值 |
+|------|----|
+| `packagePath`（package.json） | `com.helpdesk.widget` |
+| 构建输出路径 | `com/helpdesk/widget/ticketstatusbadge/TicketStatusBadge.mjs` |
+| **widget ID（XML + MDL）** | `com.helpdesk.widget.ticketstatusbadge.TicketStatusBadge` |
+
+规律：**widget ID = `{packagePath}.{小写名称}.{WidgetName}`**，中间段必须与输出目录名一致（全小写）。
+
+`mxcli widget new` 会自动按此规则生成正确的 widget ID。
+
+## Mendix Attribute 属性对象
+
+在 Mendix pluggable widget 中，`attribute` 类型的 prop 是一个**对象**，而不是原始值：
+
+```js
+// statusValue 不是字符串，而是 Mendix attribute 对象：
+// {
+//   value: "Open",            // 枚举 key（XML 中定义的 key）
+//   displayValue: "进行中",   // 本地化显示文本
+//   status: "available",      // "available" | "loading" | "unavailable"
+//   readOnly: false,
+//   ...
+// }
+
+// 正确写法：
+const key   = statusValue?.value;          // 枚举 key，用于逻辑判断
+const label = statusValue?.displayValue;   // 显示文本，用于渲染
+
+// 错误写法（会触发 React error #31）：
+return <span>{statusValue}</span>;         // ❌ 不能直接渲染对象
 ```
 
 ## Widget 使用的 MDL 语法
@@ -86,18 +125,18 @@ MyProject/widgets/com.helpdesk.widget.TicketStatusBadge.mpk
 ```mdl
 -- 在 DataGrid column 中使用 TicketStatusBadge
 column colStatus (attribute: Status, caption: 'Status', ShowContentAs: customContent, ColumnWidth: manual, Size: 140) {
-  PLUGGABLEWIDGET 'com.helpdesk.widget.TicketStatusBadge' wdgStatus (statusValue: Status)
+  PLUGGABLEWIDGET 'com.helpdesk.widget.ticketstatusbadge.TicketStatusBadge' wdgStatus (statusValue: Status)
 }
 ```
 
-- `'com.helpdesk.widget.TicketStatusBadge'` — widget ID（与 XML 中 id 属性一致）
+- `'com.helpdesk.widget.ticketstatusbadge.TicketStatusBadge'` — widget ID（与 XML 中 id 属性一致）
 - `statusValue: Status` — 属性绑定：将 `Status` 枚举属性绑定到 `statusValue` 属性
 
 ## 与 Claude 协作
 
 ```
 我有一个自定义 Widget TicketStatusBadge，
-widget ID 是 com.helpdesk.widget.TicketStatusBadge，
+widget ID 是 com.helpdesk.widget.ticketstatusbadge.TicketStatusBadge，
 MPK 已放在项目的 widgets/ 目录下。
 属性：statusValue（枚举类型，XML key 为 statusValue）。
 
@@ -115,17 +154,19 @@ mxcli widget list -p MyProject.mpr
 ```
 --- Discovered in widgets/*.mpk (not yet extracted) ---
 
-MDL Name (auto)   Display Name          Widget ID                              Description
-ticketstatusbadge Ticket Status Badge   com.helpdesk.widget.TicketStatusBadge  Colored status badge...
+MDL Name (auto)   Display Name          Widget ID                                              Description
+ticketstatusbadge Ticket Status Badge   com.helpdesk.widget.ticketstatusbadge.TicketStatusBadge  Colored status badge...
 ```
 
 ## 常见问题
 
 | 问题 | 解决方案 |
 |------|----------|
-| `mxcli widget build` 卡在 `npm install` | 检查网络，或设置 `--https-proxy`/`--registry` |
-| `mxcli widget build` 构建慢 | `@mendix/pluggable-widgets-tools` 依赖 1400+ 包，首次安装约 3 分钟 |
+| `mxcli widget build` 卡在 `npm install` | 设置 `--registry https://registry.npmmirror.com`（国内推荐） |
+| `mxcli widget build` 构建慢 | `@mendix/pluggable-widgets-tools` 依赖 1000+ 包，首次安装约 5~30 秒（npmmirror） |
 | widget 在 `mxcli widget list` 看不到 | 确认 `.mpk` 在项目的 `widgets/` 子目录中 |
 | `statusValue: Status` 不生效 | 确认实体有 `Status` 枚举属性，且 enum 类型正确 |
-| `mxcli widget build` 报 widget ID 格式错误 | Widget ID 必须有 4+ 段（如 `com.helpdesk.widget.TicketStatusBadge`） |
-| `exit handler never called` | npm 11 + HTTPS proxy 已知 bug，去掉 `--loglevel verbose` 可避免 |
+| React error #31 / Objects are not valid as child | widget 代码直接渲染了 attribute 对象，改用 `statusValue.displayValue` |
+| 部署报 "no definition for widget ..." | MDL 中 widget ID 拼写错误，确认使用含小写包名段的完整 ID |
+| 部署报 "ES6 modules" 错误 | widget ID 与 JS 输出路径不匹配，检查 `src/TicketStatusBadge.xml` 中的 id 属性 |
+| `exit handler never called` | npm 11 + HTTPS proxy 已知 bug，改用 `--registry` 方式替代 `--https-proxy` |

@@ -58,7 +58,7 @@ create or modify page WTest.WidgetTest (
           column colTitle  (attribute: Title,  caption: 'Title')
           -- statusValue 绑定到 WTest.TicketStatus 枚举属性
           column colStatus (attribute: Status, caption: 'Status', ShowContentAs: customContent, ColumnWidth: manual, Size: 140) {
-            PLUGGABLEWIDGET 'com.helpdesk.widget.TicketStatusBadge' wdgStatus (statusValue: Status)
+            PLUGGABLEWIDGET 'com.helpdesk.widget.ticketstatusbadge.TicketStatusBadge' wdgStatus (statusValue: Status)
           }
         }
       }
