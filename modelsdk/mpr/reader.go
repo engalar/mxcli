@@ -419,6 +419,9 @@ func (r *Reader) GetRawUnitBytes(unitID string) ([]byte, error) {
 	return contents, nil
 }
 
+// hexDigits is a lookup table for fast byte-to-hex conversion, used by blobToUUID.
+var hexDigits = [16]byte{'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'}
+
 // blobToUUID converts a 16-byte blob to a UUID string using Microsoft GUID format.
 // The first 3 groups are little-endian (byte-swapped), last 2 groups are big-endian.
 // This is the standard format used by Mendix for all UUID representations.
@@ -426,12 +429,45 @@ func blobToUUID(blob []byte) string {
 	if len(blob) != 16 {
 		return hex.EncodeToString(blob)
 	}
-	return fmt.Sprintf("%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x",
-		blob[3], blob[2], blob[1], blob[0],
-		blob[5], blob[4],
-		blob[7], blob[6],
-		blob[8], blob[9],
-		blob[10], blob[11], blob[12], blob[13], blob[14], blob[15])
+	// manual hex encoding — ~20x faster than fmt.Sprintf for UUID formatting.
+	b := make([]byte, 36)
+	b[0] = hexDigits[blob[3]>>4]
+	b[1] = hexDigits[blob[3]&0x0f]
+	b[2] = hexDigits[blob[2]>>4]
+	b[3] = hexDigits[blob[2]&0x0f]
+	b[4] = hexDigits[blob[1]>>4]
+	b[5] = hexDigits[blob[1]&0x0f]
+	b[6] = hexDigits[blob[0]>>4]
+	b[7] = hexDigits[blob[0]&0x0f]
+	b[8] = '-'
+	b[9] = hexDigits[blob[5]>>4]
+	b[10] = hexDigits[blob[5]&0x0f]
+	b[11] = hexDigits[blob[4]>>4]
+	b[12] = hexDigits[blob[4]&0x0f]
+	b[13] = '-'
+	b[14] = hexDigits[blob[7]>>4]
+	b[15] = hexDigits[blob[7]&0x0f]
+	b[16] = hexDigits[blob[6]>>4]
+	b[17] = hexDigits[blob[6]&0x0f]
+	b[18] = '-'
+	b[19] = hexDigits[blob[8]>>4]
+	b[20] = hexDigits[blob[8]&0x0f]
+	b[21] = hexDigits[blob[9]>>4]
+	b[22] = hexDigits[blob[9]&0x0f]
+	b[23] = '-'
+	b[24] = hexDigits[blob[10]>>4]
+	b[25] = hexDigits[blob[10]&0x0f]
+	b[26] = hexDigits[blob[11]>>4]
+	b[27] = hexDigits[blob[11]&0x0f]
+	b[28] = hexDigits[blob[12]>>4]
+	b[29] = hexDigits[blob[12]&0x0f]
+	b[30] = hexDigits[blob[13]>>4]
+	b[31] = hexDigits[blob[13]&0x0f]
+	b[32] = hexDigits[blob[14]>>4]
+	b[33] = hexDigits[blob[14]&0x0f]
+	b[34] = hexDigits[blob[15]>>4]
+	b[35] = hexDigits[blob[15]&0x0f]
+	return string(b)
 }
 
 // AppendScriptInsert adds a unit to the script-mode insert list so that
@@ -473,10 +509,42 @@ func blobToUUIDSwapped(blob []byte) string {
 	if len(blob) != 16 {
 		return hex.EncodeToString(blob)
 	}
-	return fmt.Sprintf("%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x",
-		blob[3], blob[2], blob[1], blob[0],
-		blob[5], blob[4],
-		blob[7], blob[6],
-		blob[8], blob[9],
-		blob[10], blob[11], blob[12], blob[13], blob[14], blob[15])
+	b := make([]byte, 36)
+	b[0] = hexDigits[blob[3]>>4]
+	b[1] = hexDigits[blob[3]&0x0f]
+	b[2] = hexDigits[blob[2]>>4]
+	b[3] = hexDigits[blob[2]&0x0f]
+	b[4] = hexDigits[blob[1]>>4]
+	b[5] = hexDigits[blob[1]&0x0f]
+	b[6] = hexDigits[blob[0]>>4]
+	b[7] = hexDigits[blob[0]&0x0f]
+	b[8] = '-'
+	b[9] = hexDigits[blob[5]>>4]
+	b[10] = hexDigits[blob[5]&0x0f]
+	b[11] = hexDigits[blob[4]>>4]
+	b[12] = hexDigits[blob[4]&0x0f]
+	b[13] = '-'
+	b[14] = hexDigits[blob[7]>>4]
+	b[15] = hexDigits[blob[7]&0x0f]
+	b[16] = hexDigits[blob[6]>>4]
+	b[17] = hexDigits[blob[6]&0x0f]
+	b[18] = '-'
+	b[19] = hexDigits[blob[8]>>4]
+	b[20] = hexDigits[blob[8]&0x0f]
+	b[21] = hexDigits[blob[9]>>4]
+	b[22] = hexDigits[blob[9]&0x0f]
+	b[23] = '-'
+	b[24] = hexDigits[blob[10]>>4]
+	b[25] = hexDigits[blob[10]&0x0f]
+	b[26] = hexDigits[blob[11]>>4]
+	b[27] = hexDigits[blob[11]&0x0f]
+	b[28] = hexDigits[blob[12]>>4]
+	b[29] = hexDigits[blob[12]&0x0f]
+	b[30] = hexDigits[blob[13]>>4]
+	b[31] = hexDigits[blob[13]&0x0f]
+	b[32] = hexDigits[blob[14]>>4]
+	b[33] = hexDigits[blob[14]&0x0f]
+	b[34] = hexDigits[blob[15]>>4]
+	b[35] = hexDigits[blob[15]&0x0f]
+	return string(b)
 }

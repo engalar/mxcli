@@ -40,6 +40,15 @@ type Writer struct {
 	// callback instead of going to disk. Used by import-style flows that
 	// want to batch many unit updates into a single transaction.
 	sessionBuf func(unitID string, contents []byte) error
+
+	// scriptInsertBuf, when non-nil, diverts insertUnit calls to a buffering
+	// callback. Used by EXECUTE SCRIPT to batch CREATEs via ScriptBuffer
+	// instead of doing per-statement file I/O + SQL + cache invalidation.
+	scriptInsertBuf func(unitID, containerID, containmentName, unitType string, contents []byte) error
+
+	// scriptUpdateBuf, when non-nil, diverts updateUnit calls to a buffering
+	// callback (same goal as scriptInsertBuf for ALTER/REPLACE operations).
+	scriptUpdateBuf func(unitID string, contents []byte) error
 }
 
 // SetSessionBuf installs a callback that intercepts every updateUnit call.
@@ -56,6 +65,22 @@ func (w *Writer) SetSessionBuf(fn func(unitID string, contents []byte) error) {
 // updateUnit calls resume normal disk-backed writes.
 func (w *Writer) ClearSessionBuf() {
 	w.sessionBuf = nil
+}
+
+// SetScriptBuf installs callbacks that intercept insertUnit and updateUnit
+// while a script transaction is active. When set, inserts and updates are
+// routed to the callback (typically ScriptBuffer.AddInsert/AddUpdate)
+// instead of going through file I/O + SQL. Pass nil for both to disable.
+func (w *Writer) SetScriptBuf(insertFn func(unitID, containerID, containmentName, unitType string, contents []byte) error, updateFn func(unitID string, contents []byte) error) {
+	w.scriptInsertBuf = insertFn
+	w.scriptUpdateBuf = updateFn
+}
+
+// ClearScriptBuf removes any installed script buffer callback so subsequent
+// insertUnit/updateUnit calls resume normal disk-backed writes.
+func (w *Writer) ClearScriptBuf() {
+	w.scriptInsertBuf = nil
+	w.scriptUpdateBuf = nil
 }
 
 // NewWriter creates a new writer from a reader opened in read-write mode.
@@ -412,6 +437,13 @@ func (w *Writer) insertUnit(unitID, containerID, containmentName, unitType strin
 		return err
 	}
 
+	// Script batch mode: divert to ScriptBuffer (EXECUTE SCRIPT) so all
+	// CREATEs within a script commit as one atomic batch instead of doing
+	// per-statement file I/O + SQL + cache invalidation.
+	if w.scriptInsertBuf != nil {
+		return w.scriptInsertBuf(unitID, containerID, containmentName, unitType, contents)
+	}
+
 	// Convert UUID strings to 16-byte blobs for database
 	unitIDBlob := uuidToBlob(unitID)
 	containerIDBlob := uuidToBlob(containerID)
@@ -489,6 +521,11 @@ func (w *Writer) updateUnit(unitID string, contents []byte) error {
 	// The caller (e.g. ImportProject) is responsible for flushing later.
 	if w.sessionBuf != nil {
 		return w.sessionBuf(unitID, contents)
+	}
+
+	// Script batch mode: divert to ScriptBuffer for EXECUTE SCRIPT.
+	if w.scriptUpdateBuf != nil {
+		return w.scriptUpdateBuf(unitID, contents)
 	}
 
 	// Convert UUID string to 16-byte blob

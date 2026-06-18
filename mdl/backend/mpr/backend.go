@@ -1645,6 +1645,10 @@ func (b *MprBackend) commitScriptBuffer() error {
 	if b.scriptBuf == nil {
 		return fmt.Errorf("commitScriptBuffer: no active script buffer")
 	}
+	// Clear Writer interceptors before flushing so BatchWrite goes direct.
+	if w, ok := b.concreteWriter(); ok {
+		w.ClearScriptBuf()
+	}
 	ops := b.scriptBuf.toBatchOps()
 	b.scriptBuf = nil
 	b.msdkReader.ClearScriptMode()
