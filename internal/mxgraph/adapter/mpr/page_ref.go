@@ -14,7 +14,8 @@ import (
 //
 // 已检测的模式（raw BSON 路径）：
 //   - Widget 的 DataSource 子文档中 entity 或 entityId 字段 → READS_ENTITY
-//   - Widget 的 OnClickMicroflow 或 OnClickAction 子文档中 microflow 字段 → CALLS_MICROFLOW
+//   - Widget 的 OnClickMicroflow/OnClickAction/Action 中 microflow 字段 → CALLS_MICROFLOW
+//   - Widget 的 Action 中 FormAction → SHOWS_PAGE（页面级导航）
 //   - DataGrid 的 DataSource 子文档中 entity 字段 → READS_ENTITY
 type PageRefAdapter struct {
 	Model    *modelsdk.Model
@@ -32,6 +33,7 @@ func (a *PageRefAdapter) Schema() *mxgraph.GraphSchema {
 		}{
 			{"READS_ENTITY", "Page", "Entity"},
 			{"CALLS_MICROFLOW", "Page", "Microflow"},
+			{"SHOWS_PAGE", "Page", "Page"},
 		},
 	}
 }
@@ -132,9 +134,10 @@ func (a *PageRefAdapter) walkPageDoc(doc map[string]any, pageID mxgraph.NodeID, 
 func (a *PageRefAdapter) walkWidgetMap(w map[string]any, pageID mxgraph.NodeID, module string) []mxgraph.Event {
 	var events []mxgraph.Event
 
-	// 1. 提取 DataSource 中的 entity 引用
+	// 1. 提取 DataSource 中的 entity/EntityRef 引用
 	if ds := toMap(w["DataSource"]); ds != nil {
-		if entityQN, ok := ds["entity"].(string); ok && entityQN != "" {
+		entityQN := a.extractEntityRef(ds, module)
+		if entityQN != "" {
 			qn := qualifyName(entityQN, module)
 			events = append(events, mxgraph.Event{
 				Type: mxgraph.EdgeCreated,
@@ -148,35 +151,8 @@ func (a *PageRefAdapter) walkWidgetMap(w map[string]any, pageID mxgraph.NodeID, 
 		}
 	}
 
-	// 2. 提取 OnClick 中的 microflow 引用
-	if action := toMap(w["OnClickMicroflow"]); action != nil {
-		if mfQN, ok := action["microflow"].(string); ok && mfQN != "" {
-			qn := qualifyName(mfQN, module)
-			events = append(events, mxgraph.Event{
-				Type: mxgraph.EdgeCreated,
-				Edge: &mxgraph.Edge{
-					ID:   mxgraph.NodeID(fmt.Sprintf("%s--CALLS_MICROFLOW-->%s", pageID, qn)),
-					From: pageID,
-					To:   mxgraph.NodeID(qn),
-					Type: "CALLS_MICROFLOW",
-				},
-			})
-		}
-	}
-	if action := toMap(w["OnClickAction"]); action != nil {
-		if mfQN, ok := action["microflow"].(string); ok && mfQN != "" {
-			qn := qualifyName(mfQN, module)
-			events = append(events, mxgraph.Event{
-				Type: mxgraph.EdgeCreated,
-				Edge: &mxgraph.Edge{
-					ID:   mxgraph.NodeID(fmt.Sprintf("%s--CALLS_MICROFLOW-->%s", pageID, qn)),
-					From: pageID,
-					To:   mxgraph.NodeID(qn),
-					Type: "CALLS_MICROFLOW",
-				},
-			})
-		}
-	}
+	// 2. 提取 OnClick / Action 中的 microflow/page 引用
+	events = append(events, a.extractActionRefs(w, pageID, module)...)
 
 	// 3. 递归子 widget
 	for _, key := range []string{"Widgets", "widgets"} {
@@ -187,13 +163,153 @@ func (a *PageRefAdapter) walkWidgetMap(w map[string]any, pageID mxgraph.NodeID, 
 			}
 		}
 	}
-	// 单个 Widget（LayoutGrid child 等）
 	if childMap := toMap(w["Widget"]); childMap != nil {
 		evts := a.walkWidgetMap(childMap, pageID, module)
 		events = append(events, evts...)
 	}
+	// DataGrid columns
+	if cols := arrayVal(w, "Columns"); len(cols) > 0 {
+		for _, col := range cols {
+			if colMap := toMap(col); colMap != nil {
+				evts := a.walkWidgetMap(colMap, pageID, module)
+				events = append(events, evts...)
+			}
+		}
+	}
+	// TabControl sub-widgets
+	for _, tp := range arrayVal(w, "TabPages") {
+		if tpMap := toMap(tp); tpMap != nil {
+			for _, tw := range arrayVal(tpMap, "Widgets") {
+				if twMap := toMap(tw); twMap != nil {
+					evts := a.walkWidgetMap(twMap, pageID, module)
+					events = append(events, evts...)
+				}
+			}
+		}
+	}
+	// LayoutGrid sub-widgets
+	for _, row := range arrayVal(w, "Rows") {
+		if rowMap := toMap(row); rowMap != nil {
+			for _, col := range arrayVal(rowMap, "Columns") {
+				if colMap := toMap(col); colMap != nil {
+					for _, cw := range arrayVal(colMap, "Widgets") {
+						if cwMap := toMap(cw); cwMap != nil {
+							evts := a.walkWidgetMap(cwMap, pageID, module)
+							events = append(events, evts...)
+						}
+					}
+				}
+			}
+		}
+	}
 
 	return events
+}
+
+// extractActionRefs 提取 widget 的操作引用（OnClick + Action）。
+// 返回的事件包含 CALLS_MICROFLOW（调微流）和 SHOWS_PAGE（开页面）。
+func (a *PageRefAdapter) extractActionRefs(w map[string]any, pageID mxgraph.NodeID, module string) []mxgraph.Event {
+	var events []mxgraph.Event
+
+	// 综合检查所有可能的操作字段（从现代到遗留）
+	actionSources := []struct {
+		sourceKey string      // BSON 字段名
+		innerKey  string      // 字段内部的操作类型 key（"" 表示直接是操作）
+	}{
+		{"Action", ""},              // 现代 ActionButton/LinkButton
+		{"OnClickMicroflow", "microflow"},
+		{"OnClickAction", "microflow"},
+	}
+
+	for _, src := range actionSources {
+		action := toMap(w[src.sourceKey])
+		if action == nil {
+			continue
+		}
+
+		actionType, _ := action["$Type"].(string)
+		mfQN := ""
+		pageQN := ""
+
+		switch {
+		case actionType == "" && src.innerKey != "":
+			// 遗留格式：OnClickMicroflow → { microflow: "..." }
+			mfQN, _ = action[src.innerKey].(string)
+
+		case strings.HasSuffix(actionType, "MicroflowAction"),
+			strings.HasSuffix(actionType, "MicroflowClientAction"):
+			if ms := toMap(action["MicroflowSettings"]); ms != nil {
+				mfQN, _ = ms["Microflow"].(string)
+			}
+
+		case strings.HasSuffix(actionType, "FormAction"),
+			strings.HasSuffix(actionType, "PageClientAction"):
+			if fs := toMap(action["FormSettings"]); fs != nil {
+				pageQN, _ = fs["Form"].(string)
+			}
+
+		case strings.HasSuffix(actionType, "NanoflowAction"),
+			strings.HasSuffix(actionType, "NanoflowClientAction"):
+			if ns := toMap(action["NanoflowSettings"]); ns != nil {
+				mfQN, _ = ns["Nanoflow"].(string)
+			}
+
+		case strings.HasSuffix(actionType, "OpenLinkAction"),
+			strings.HasSuffix(actionType, "OpenLinkClientAction"):
+			// URL 打开，不产生边
+
+		case strings.HasSuffix(actionType, "NoAction"),
+			strings.HasSuffix(actionType, "NoClientAction"):
+			// 无操作
+		}
+
+		if mfQN != "" {
+			qn := qualifyName(mfQN, module)
+			events = append(events, mxgraph.Event{
+				Type: mxgraph.EdgeCreated,
+				Edge: &mxgraph.Edge{
+					ID:   mxgraph.NodeID(fmt.Sprintf("%s--CALLS_MICROFLOW-->%s", pageID, qn)),
+					From: pageID,
+					To:   mxgraph.NodeID(qn),
+					Type: "CALLS_MICROFLOW",
+				},
+			})
+		}
+		if pageQN != "" {
+			qn := qualifyName(pageQN, module)
+			events = append(events, mxgraph.Event{
+				Type: mxgraph.EdgeCreated,
+				Edge: &mxgraph.Edge{
+					ID:   mxgraph.NodeID(fmt.Sprintf("%s--SHOWS_PAGE-->%s", pageID, qn)),
+					From: pageID,
+					To:   mxgraph.NodeID(qn),
+					Type: "SHOWS_PAGE",
+				},
+			})
+		}
+	}
+
+	return events
+}
+
+// extractEntityRef 从 DataSource 中提取实体引用。
+func (a *PageRefAdapter) extractEntityRef(ds map[string]any, module string) string {
+	// 1. 直接 entity 字段（遗留格式）
+	if e, ok := ds["entity"].(string); ok && e != "" {
+		return e
+	}
+	// 2. EntityRef.Entity（DatabaseSource 等现代格式）
+	if ref := toMap(ds["EntityRef"]); ref != nil {
+		if e, ok := ref["Entity"].(string); ok && e != "" {
+			return e
+		}
+	}
+	// 3. EntityPath（AssociationSource）
+	if e, ok := ds["EntityPath"].(string); ok && e != "" {
+		parts := strings.Split(e, "/")
+		return parts[len(parts)-1]
+	}
+	return ""
 }
 
 // qualifyName 确保名称包含模块前缀。

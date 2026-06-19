@@ -123,47 +123,56 @@ func (pg *ProjectGraph) NavigationHomePage(profileName string) *NavigationHomePa
 }
 
 // PagesReferencedByNavigation returns all pages that have at least one inbound
-// TARGETS_PAGE edge from navigation profiles or menu items.
+// TARGETS_PAGE or SHOWS_PAGE or CALLS_MICROFLOW edge.
 func (pg *ProjectGraph) PagesReferencedByNavigation() []string {
 	g := pg.g()
 	if g == nil {
 		return nil
 	}
-	// Find all pages that have an inbound TARGETS_PAGE edge
 	pages := g.FindNodes("Page", nil)
-	var refs []string
+	edgeTypes := []mxgraph.RelType{"TARGETS_PAGE", "SHOWS_PAGE", "CALLS_MICROFLOW"}
+	seen := map[string]bool{}
+
+	// Check by element ID
 	for _, p := range pages {
-		edges := g.Edges(p.ID, mxgraph.Inbound, "TARGETS_PAGE")
+		edges := g.Edges(p.ID, mxgraph.Inbound, edgeTypes...)
 		if len(edges) > 0 {
-			refs = append(refs, nodeToQN(p))
+			seen[nodeToQN(p)] = true
 		}
 	}
-	// Also check microflow-based navigation that shows pages
+	// Also check by QN (for ref edges that store QN as To)
 	for _, p := range pages {
 		qn := nodeToQN(p)
-		edges := g.Edges(mxgraph.NodeID(qn), mxgraph.Inbound, "TARGETS_PAGE")
-		if len(edges) > 0 && !contains(refs, qn) {
-			refs = append(refs, qn)
+		if seen[qn] {
+			continue
 		}
+		edges := g.Edges(mxgraph.NodeID(qn), mxgraph.Inbound, edgeTypes...)
+		if len(edges) > 0 {
+			seen[qn] = true
+		}
+	}
+
+	refs := make([]string, 0, len(seen))
+	for qn := range seen {
+		refs = append(refs, qn)
 	}
 	sort.Strings(refs)
 	return refs
 }
 
-// OrphanPages returns pages with no inbound navigation or microflow SHOWS_PAGE edges.
+// OrphanPages returns pages with no inbound navigation/microflow/page-action edges.
 func (pg *ProjectGraph) OrphanPages() []string {
 	g := pg.g()
 	if g == nil {
 		return nil
 	}
 	pages := g.FindNodes("Page", nil)
+	edgeTypes := []mxgraph.RelType{"TARGETS_PAGE", "SHOWS_PAGE", "CALLS_MICROFLOW"}
 	var orphans []string
 	for _, p := range pages {
 		qn := nodeToQN(p)
-		// Check inbound TARGETS_PAGE (navigation) or SHOWS_PAGE (microflow) or CALLS_MICROFLOW
-		targetEdges := g.Edges(p.ID, mxgraph.Inbound, "TARGETS_PAGE", "SHOWS_PAGE")
-		// Also check by qualified name
-		qnEdges := g.Edges(mxgraph.NodeID(qn), mxgraph.Inbound, "TARGETS_PAGE", "SHOWS_PAGE")
+		targetEdges := g.Edges(p.ID, mxgraph.Inbound, edgeTypes...)
+		qnEdges := g.Edges(mxgraph.NodeID(qn), mxgraph.Inbound, edgeTypes...)
 		if len(targetEdges) == 0 && len(qnEdges) == 0 {
 			orphans = append(orphans, qn)
 		}
