@@ -154,7 +154,11 @@ func (a *PageRefAdapter) walkWidgetMap(w map[string]any, pageID mxgraph.NodeID, 
 	// 2. 提取 OnClick / Action 中的 microflow/page 引用
 	events = append(events, a.extractActionRefs(w, pageID, module)...)
 
-	// 3. 递归子 widget
+	// 3. 提取插拔式 widget（DataGrid2/Gallery 等）的 Object.Properties 中的操作引用
+	evts3 := a.extractPluggableActions(w, pageID, module)
+	events = append(events, evts3...)
+
+	// 4. 递归子 widget
 	for _, key := range []string{"Widgets", "widgets"} {
 		for _, child := range arrayVal(w, key) {
 			if childMap := toMap(child); childMap != nil {
@@ -364,6 +368,197 @@ func arrayVal(m map[string]any, key string) []any {
 		return arr
 	}
 	return nil
+}
+
+// extractPluggableActions 从插拔式 widget（DataGrid2/Gallery 等）的
+// Object.Properties 中提取操作引用。
+//
+// 使用 TypePointer → PropertyKey 映射找到正确属性，再遍历属性值中的操作引用。
+func (a *PageRefAdapter) extractPluggableActions(w map[string]any, pageID mxgraph.NodeID, module string) []mxgraph.Event {
+	obj := toMap(w["Object"])
+	if obj == nil {
+		return nil
+	}
+
+	propKeyMap := a.buildPropTypeKeyMap(w)
+	if len(propKeyMap) == 0 {
+		return nil
+	}
+
+	var events []mxgraph.Event
+	for _, prop := range arrayVal(obj, "Properties") {
+		propMap := toMap(prop)
+		if propMap == nil {
+			continue
+		}
+		typePtr := extractBinaryIDFromMap(propMap["TypePointer"])
+		key := propKeyMap[typePtr]
+		if key == "" {
+			continue
+		}
+		value := toMap(propMap["Value"])
+		if value == nil {
+			continue
+		}
+
+		switch {
+		case key == "onClick" || key == "onChange" || key == "action":
+			// 直接操作属性
+			evts := a.extractActionRefsFromMap(value, pageID, module)
+			events = append(events, evts...)
+
+		case key == "columns" || key == "DataGridColumns":
+			// 列定义，每列可能有 onClick
+			for _, col := range arrayVal(value, "columns") {
+				if colMap := toMap(col); colMap != nil {
+					if onClick := toMap(colMap["onClick"]); onClick != nil {
+						evts := a.extractActionRefsFromMap(onClick, pageID, module)
+						events = append(events, evts...)
+					}
+				}
+			}
+
+		case key == "filtersPlaceholder" || key == "content":
+			// 嵌套 widget 区域
+			for _, wgt := range arrayVal(value, "Widgets") {
+				if wgtMap := toMap(wgt); wgtMap != nil {
+					evts := a.walkWidgetMap(wgtMap, pageID, module)
+					events = append(events, evts...)
+				}
+			}
+		}
+	}
+	return events
+}
+
+// buildPropTypeKeyMap 构建 TypePointer ID → 属性名的映射。
+// 用于解析插拔式 widget 的 Object.Properties。
+func (a *PageRefAdapter) buildPropTypeKeyMap(w map[string]any) map[string]string {
+	result := make(map[string]string)
+	typeObj := toMap(w["Type"])
+	if typeObj == nil {
+		return result
+	}
+	objType := toMap(typeObj["ObjectType"])
+	if objType == nil {
+		return result
+	}
+	for _, pt := range arrayVal(objType, "PropertyTypes") {
+		ptMap := toMap(pt)
+		if ptMap == nil {
+			continue
+		}
+		key, _ := ptMap["PropertyKey"].(string)
+		if key == "" {
+			continue
+		}
+		id := extractBinaryIDFromMap(ptMap["$ID"])
+		if id != "" {
+			result[id] = key
+		}
+	}
+	return result
+}
+
+// extractBinaryIDFromMap 从 BSON map 值中提取二进制 ID 的字符串表示。
+func extractBinaryIDFromMap(v any) string {
+	if v == nil {
+		return ""
+	}
+	switch val := v.(type) {
+	case string:
+		return val
+	case []byte:
+		return fmt.Sprintf("%x", val)
+	case bson.Binary:
+		return fmt.Sprintf("%x", val.Data)
+	case map[string]any:
+		if id, ok := val["$ID"].(string); ok {
+			return id
+		}
+		if b, ok := val["$ID"].(bson.Binary); ok {
+			return fmt.Sprintf("%x", b.Data)
+		}
+	}
+	return ""
+}
+
+// extractActionRefsFromMap 从 map 中提取微流/页面引用并返回事件。
+// 与 extractActionRefs 逻辑相同但直接操作 map。
+func (a *PageRefAdapter) extractActionRefsFromMap(m map[string]any, pageID mxgraph.NodeID, module string) []mxgraph.Event {
+	var events []mxgraph.Event
+
+	actionType, _ := m["$Type"].(string)
+
+	// 直接 microflow 字段（简化格式）
+	if mfQN, ok := m["microflow"].(string); ok && mfQN != "" {
+		qn := qualifyName(mfQN, module)
+		events = append(events, mxgraph.Event{
+			Type: mxgraph.EdgeCreated,
+			Edge: &mxgraph.Edge{
+				ID:   mxgraph.NodeID(fmt.Sprintf("%s--CALLS_MICROFLOW-->%s", pageID, qn)),
+				From: pageID,
+				To:   mxgraph.NodeID(qn),
+				Type: "CALLS_MICROFLOW",
+			},
+		})
+	}
+
+	// 按 $Type 解析
+	switch {
+	case strings.HasSuffix(actionType, "MicroflowAction"),
+		strings.HasSuffix(actionType, "MicroflowClientAction"):
+		if ms := toMap(m["MicroflowSettings"]); ms != nil {
+			if mfQN, ok := ms["Microflow"].(string); ok && mfQN != "" {
+				qn := qualifyName(mfQN, module)
+				events = append(events, mxgraph.Event{
+					Type: mxgraph.EdgeCreated,
+					Edge: &mxgraph.Edge{
+						ID:   mxgraph.NodeID(fmt.Sprintf("%s--CALLS_MICROFLOW-->%s", pageID, qn)),
+						From: pageID,
+						To:   mxgraph.NodeID(qn),
+						Type: "CALLS_MICROFLOW",
+					},
+				})
+			}
+		}
+
+	case strings.HasSuffix(actionType, "FormAction"),
+		strings.HasSuffix(actionType, "PageClientAction"):
+		if fs := toMap(m["FormSettings"]); fs != nil {
+			if pageQN, ok := fs["Form"].(string); ok && pageQN != "" {
+				qn := qualifyName(pageQN, module)
+				events = append(events, mxgraph.Event{
+					Type: mxgraph.EdgeCreated,
+					Edge: &mxgraph.Edge{
+						ID:   mxgraph.NodeID(fmt.Sprintf("%s--SHOWS_PAGE-->%s", pageID, qn)),
+						From: pageID,
+						To:   mxgraph.NodeID(qn),
+						Type: "SHOWS_PAGE",
+					},
+				})
+			}
+		}
+
+	case strings.HasSuffix(actionType, "NanoflowAction"),
+		strings.HasSuffix(actionType, "NanoflowClientAction"):
+		if ns := toMap(m["NanoflowSettings"]); ns != nil {
+			if nfQN, ok := ns["Nanoflow"].(string); ok && nfQN != "" {
+				qn := qualifyName(nfQN, module)
+				events = append(events, mxgraph.Event{
+					Type: mxgraph.EdgeCreated,
+					Edge: &mxgraph.Edge{
+						ID:   mxgraph.NodeID(fmt.Sprintf("%s--CALLS_MICROFLOW-->%s", pageID, qn)),
+						From: pageID,
+						To:   mxgraph.NodeID(qn),
+						Type: "CALLS_MICROFLOW",
+					},
+				})
+			}
+		}
+	}
+
+	return events
 }
 
 func (a *PageRefAdapter) Watch(ctx context.Context, sink mxgraph.EventSink) (func(), error) {
