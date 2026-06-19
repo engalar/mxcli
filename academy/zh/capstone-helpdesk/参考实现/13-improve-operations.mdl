@@ -1,0 +1,103 @@
+-- ============================================================
+-- 模块 13：操作补全 — Assign 指配、Delete 删除、Search 搜索
+-- 前提：01-12 已执行
+-- ============================================================
+
+-- 打开指配选择弹窗
+create or modify microflow HD.ACT_OpenAssignForm
+  ($Ticket: HD.Ticket)
+  returns nothing
+  folder 'Ticket'
+{
+  show page HD.SelectAgent_Form;
+}
+/
+
+create or replace page HD.SelectAgent_Form
+(
+  title:  'Select Agent',
+  layout: Atlas_Core.PopupLayout,
+  folder: 'Ticket'
+)
+{
+  layoutgrid lgMain {
+    row rHeader {
+      column cTitle (desktopwidth: 12) {
+        dynamictext txtTitle (content: 'Select an Agent to Assign', rendermode: H3)
+      }
+    }
+    row rList {
+      column cList (desktopwidth: 12) {
+        datagrid dgAgents (
+          datasource: database from HD.Agent
+        ) {
+          column colName  (attribute: Name,      caption: 'Name')
+          column colEmail (attribute: Email,     caption: 'Email')
+          column colActive(attribute: IsActive,  caption: 'Active')
+          column colAction (caption: '', ShowContentAs: customContent) {
+            actionbutton btnSelect (
+              caption:     'Select',
+              action:      microflow HD.ACT_DoAssign (Ticket: $Ticket, Agent: $currentObject) close_page,
+              buttonstyle: primary
+            )
+          }
+        }
+      }
+    }
+  }
+};
+
+create or modify microflow HD.ACT_DoAssign
+  ($Ticket: HD.Ticket, $Agent: HD.Agent)
+  returns boolean as $Success
+  folder 'Ticket'
+{
+  $Result = call microflow HD.ACT_Ticket_Assign(Ticket = $Ticket, Agent = $Agent);
+  $Success = $Result;
+}
+/
+
+alter page HD.Ticket_Detail {
+  insert after btnSubmit {
+    actionbutton btnAssign (
+      caption:     'Assign',
+      action:      microflow HD.ACT_OpenAssignForm (Ticket: $currentObject),
+      buttonstyle: default
+    )
+  }
+};
+
+alter page HD.Ticket_NewEdit {
+  insert after taDescription {
+    dropdown ddPriority (
+      label:     'Priority',
+      attribute: Priority
+    )
+  }
+};
+
+create or modify microflow HD.ACT_Ticket_Delete
+  ($Ticket: HD.Ticket)
+  returns boolean as $Success
+  folder 'Ticket'
+{
+  delete $Ticket;
+  commit $Ticket;
+  return true;
+}
+/
+
+grant execute on microflow HD.ACT_Ticket_Delete to HD.ManagerRole;
+
+alter page HD.Ticket_Detail {
+  insert after btnClose {
+    actionbutton btnDelete (
+      caption:     'Delete',
+      action:      microflow HD.ACT_Ticket_Delete (Ticket: $currentObject) close_page,
+      buttonstyle: danger
+    )
+  }
+};
+
+grant execute on microflow HD.ACT_OpenAssignForm to HD.AgentRole, HD.ManagerRole;
+grant execute on microflow HD.ACT_DoAssign       to HD.AgentRole, HD.ManagerRole;
