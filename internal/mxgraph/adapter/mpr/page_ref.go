@@ -417,10 +417,44 @@ func (a *PageRefAdapter) extractPluggableActions(w map[string]any, pageID mxgrap
 			events = append(events, evts...)
 
 		case key == "columns" || key == "DataGridColumns":
-			// 列定义，每列可能有 onClick
-			for _, col := range arrayVal(value, "columns") {
-				if colMap := toMap(col); colMap != nil {
-					if onClick := toMap(colMap["onClick"]); onClick != nil {
+			// DataGrid2 的列的存储路径：Value.Objects[]，每个列对象内有 Properties[] 数组
+			// 每个 Property 的 {TypePointer, Value}，Value 中可能含 Action/Microflow/Form
+			for _, obj := range arrayVal(value, "Objects") {
+				colObj := toMap(obj)
+				if colObj == nil { continue }
+
+				// 方式1：列直接有 Microflow/Form 字符串属性
+				if mf, ok := colObj["Microflow"].(string); ok && mf != "" {
+					qn := qualifyName(mf, module)
+					events = append(events, mkCallsMF(pageID, qn))
+				}
+				if f, ok := colObj["Form"].(string); ok && f != "" {
+					qn := qualifyName(f, module)
+					events = append(events, mkShowsPage(pageID, qn))
+				}
+
+				// 方式2：列 Properties 数组中可能包含 Action
+				for _, colProp := range arrayVal(colObj, "Properties") {
+					cp := toMap(colProp)
+					if cp == nil { continue }
+					cv := toMap(cp["Value"])
+					if cv == nil { continue }
+					// Value 中可能有 Action 子文档
+					if action := toMap(cv["Action"]); action != nil {
+						evts := a.extractActionRefsFromMap(action, pageID, module)
+						events = append(events, evts...)
+					}
+					// 也可能直接在 Value 中有 Microflow/Form 字段
+					if mf, ok := cv["Microflow"].(string); ok && mf != "" {
+						qn := qualifyName(mf, module)
+						events = append(events, mkCallsMF(pageID, qn))
+					}
+					if f, ok := cv["Form"].(string); ok && f != "" {
+						qn := qualifyName(f, module)
+						events = append(events, mkShowsPage(pageID, qn))
+					}
+					// onClick 子文档
+					if onClick := toMap(cv["onClick"]); onClick != nil {
 						evts := a.extractActionRefsFromMap(onClick, pageID, module)
 						events = append(events, evts...)
 					}
@@ -568,6 +602,26 @@ func (a *PageRefAdapter) extractActionRefsFromMap(m map[string]any, pageID mxgra
 	}
 
 	return events
+}
+
+func mkCallsMF(pageID mxgraph.NodeID, targetQN string) mxgraph.Event {
+	return mxgraph.Event{
+		Type: mxgraph.EdgeCreated,
+		Edge: &mxgraph.Edge{
+			ID:   mxgraph.NodeID(fmt.Sprintf("%s--CALLS_MICROFLOW-->%s", pageID, targetQN)),
+			From: pageID, To: mxgraph.NodeID(targetQN), Type: "CALLS_MICROFLOW",
+		},
+	}
+}
+
+func mkShowsPage(pageID mxgraph.NodeID, targetQN string) mxgraph.Event {
+	return mxgraph.Event{
+		Type: mxgraph.EdgeCreated,
+		Edge: &mxgraph.Edge{
+			ID:   mxgraph.NodeID(fmt.Sprintf("%s--SHOWS_PAGE-->%s", pageID, targetQN)),
+			From: pageID, To: mxgraph.NodeID(targetQN), Type: "SHOWS_PAGE",
+		},
+	}
 }
 
 func (a *PageRefAdapter) Watch(ctx context.Context, sink mxgraph.EventSink) (func(), error) {
