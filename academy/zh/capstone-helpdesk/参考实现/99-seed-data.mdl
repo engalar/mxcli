@@ -127,18 +127,19 @@ create or modify microflow HD.ACT_SeedDemoData ()
 
 grant execute on microflow HD.ACT_SeedDemoData to HD.ManagerRole;
 
--- 在导航中加入"初始化演示数据"菜单项
+-- 在导航中加入 Dashboard 和"初始化演示数据"菜单项
 create or replace navigation Responsive
+  home page HD.Dashboard_Home              for Agent
+  home page HD.Dashboard_Home              for Manager
   home page HD.MyTickets_Overview           for Customer
-  home page HD.Ticket_Overview              for Agent
-  home page HD.EscalationWorkflow_Overview  for Manager
   home page MyFirstModule.Home_Web
   login page Administration.login
   menu (
-    menu item 'My Tickets'         page HD.MyTickets_Overview;
-    menu item 'All Tickets'        page HD.Ticket_Overview;
-    menu item 'Knowledge Base'     page KB.Article_Overview;
-    menu item 'Escalations'        page HD.EscalationWorkflow_Overview;
+    menu item 'Dashboard'           page HD.Dashboard_Home;
+    menu item 'My Tickets'          page HD.MyTickets_Overview;
+    menu item 'All Tickets'         page HD.Ticket_Overview;
+    menu item 'Knowledge Base'      page KB.Article_Overview;
+    menu item 'Escalations'         page HD.EscalationWorkflow_Overview;
     menu 'Admin' (
       menu item 'Initialize Demo Data' microflow HD.ACT_SeedDemoData;
     );

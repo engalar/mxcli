@@ -95,7 +95,7 @@ alter page HD.Ticket_Detail {
   insert after btnClose {
     actionbutton btnDelete (
       caption:     'Delete',
-      action:      microflow HD.ACT_Ticket_Delete (Ticket: $currentObject) close_page,
+      action:      microflow HD.ACT_Ticket_Delete (Ticket: $currentObject),
       buttonstyle: danger
     )
   }
