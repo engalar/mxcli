@@ -137,3 +137,6 @@ create or replace navigation Responsive
 
 grant execute on microflow HD.DS_DashboardStats to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
 grant view on page HD.Dashboard_Home to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
+grant HD.CustomerRole on HD.DashboardStats (read *);
+grant HD.AgentRole    on HD.DashboardStats (read *);
+grant HD.ManagerRole  on HD.DashboardStats (read *);
