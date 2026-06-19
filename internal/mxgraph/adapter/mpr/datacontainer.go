@@ -491,6 +491,11 @@ func (a *DataContainerAdapter) emitDataContainer(w map[string]any, state *dcWalk
 			a.processWidgetNode(cMap, subState, events)
 		}
 	}
+	for _, fw := range arrayVal(w, "FooterWidgets") {
+		if fwMap := toMap(fw); fwMap != nil {
+			a.processWidgetNode(fwMap, subState, events)
+		}
+	}
 
 	a.walkExtraChildren(w, subState, events)
 }

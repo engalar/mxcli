@@ -159,7 +159,7 @@ func (a *PageRefAdapter) walkWidgetMap(w map[string]any, pageID mxgraph.NodeID, 
 	events = append(events, evts3...)
 
 	// 4. 递归子 widget
-	for _, key := range []string{"Widgets", "widgets"} {
+	for _, key := range []string{"Widgets", "widgets", "FooterWidgets"} {
 		for _, child := range arrayVal(w, key) {
 			if childMap := toMap(child); childMap != nil {
 				evts := a.walkWidgetMap(childMap, pageID, module)
@@ -203,6 +203,15 @@ func (a *PageRefAdapter) walkWidgetMap(w map[string]any, pageID mxgraph.NodeID, 
 						}
 					}
 				}
+			}
+		}
+	}
+	// ScrollContainer sub-widgets
+	if center := toMap(w["CenterRegion"]); center != nil {
+		for _, cw := range arrayVal(center, "Widgets") {
+			if cwMap := toMap(cw); cwMap != nil {
+				evts := a.walkWidgetMap(cwMap, pageID, module)
+				events = append(events, evts...)
 			}
 		}
 	}
