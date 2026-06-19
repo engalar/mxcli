@@ -7,6 +7,7 @@ import (
 	"github.com/mendixlabs/mxcli/internal/mxgraph"
 	"github.com/mendixlabs/mxcli/modelsdk"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
+	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 )
 
 // DomainModelAdapter emits DomainModel / Entity / Attribute / Association nodes
@@ -34,6 +35,8 @@ func (a *DomainModelAdapter) Schema() *mxgraph.GraphSchema {
 			{"HAS_ENTITY", "DomainModel", "Entity"},
 			{"HAS_ATTRIBUTE", "Entity", "Attribute"},
 			{"HAS_ASSOCIATION", "DomainModel", "Association"},
+			{"HAS_ASSOCIATION", "Entity", "Association"},
+			{"ASSOCIATES_TO", "Association", "Entity"},
 		},
 	}
 }
@@ -126,6 +129,7 @@ func (a *DomainModelAdapter) Build(ctx context.Context, sink mxgraph.EventSink) 
 					if child == nil {
 						continue
 					}
+
 					assocNode := nodeForElement(child, "Association")
 					setDerived(assocNode, module)
 					events = append(events, mxgraph.Event{Type: mxgraph.NodeCreated, Node: assocNode})
@@ -138,6 +142,52 @@ func (a *DomainModelAdapter) Build(ctx context.Context, sink mxgraph.EventSink) 
 							Type: "HAS_ASSOCIATION",
 						},
 					})
+
+					// 提取 parent/child 实体引用，创建 ASSOCIATES_TO 边
+					if assoc, ok := child.(*genDm.Association); ok {
+						parentID := assoc.ParentRefID()
+						childID := assoc.ChildRefID()
+						if parentID != "" {
+							events = append(events, mxgraph.Event{
+								Type: mxgraph.EdgeCreated,
+								Edge: &mxgraph.Edge{
+									ID:   mxgraph.NodeID(fmt.Sprintf("%s--HAS_ASSOCIATION-->%s", parentID, assocNode.ID)),
+									From: mxgraph.NodeID(parentID),
+									To:   assocNode.ID,
+									Type: "HAS_ASSOCIATION",
+								},
+							})
+							events = append(events, mxgraph.Event{
+								Type: mxgraph.EdgeCreated,
+								Edge: &mxgraph.Edge{
+									ID:   mxgraph.NodeID(fmt.Sprintf("%s--ASSOCIATES_TO-->%s", assocNode.ID, parentID)),
+									From: assocNode.ID,
+									To:   mxgraph.NodeID(parentID),
+									Type: "ASSOCIATES_TO",
+								},
+							})
+						}
+						if childID != "" {
+							events = append(events, mxgraph.Event{
+								Type: mxgraph.EdgeCreated,
+								Edge: &mxgraph.Edge{
+									ID:   mxgraph.NodeID(fmt.Sprintf("%s--HAS_ASSOCIATION-->%s", childID, assocNode.ID)),
+									From: mxgraph.NodeID(childID),
+									To:   assocNode.ID,
+									Type: "HAS_ASSOCIATION",
+								},
+							})
+							events = append(events, mxgraph.Event{
+								Type: mxgraph.EdgeCreated,
+								Edge: &mxgraph.Edge{
+									ID:   mxgraph.NodeID(fmt.Sprintf("%s--ASSOCIATES_TO-->%s", assocNode.ID, childID)),
+									From: assocNode.ID,
+									To:   mxgraph.NodeID(childID),
+									Type: "ASSOCIATES_TO",
+								},
+							})
+						}
+					}
 				}
 			}
 		}

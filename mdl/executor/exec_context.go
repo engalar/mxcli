@@ -60,6 +60,8 @@ type ExecConnection struct {
 	// graphcatalog.TraversalReader (executor code-search) and LintReader
 	// (linter), so a single concrete-typed field serves both consumers.
 	Graph *graphcatalog.ProjectGraph
+	// Perf collects timing statistics when non-nil.
+	Perf *PerfTimer
 }
 
 // ExecCallbacks holds function references for recursive execution.

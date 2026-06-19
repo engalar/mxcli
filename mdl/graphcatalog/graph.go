@@ -24,6 +24,10 @@ var _ StylingReader = (*ProjectGraph)(nil)
 var _ EntityAccessReader = (*ProjectGraph)(nil)
 var _ DocumentGrantReader = (*ProjectGraph)(nil)
 var _ PageRefReader = (*ProjectGraph)(nil)
+var _ NavigationReader = (*ProjectGraph)(nil)
+var _ DataContainerReader = (*ProjectGraph)(nil)
+var _ DataFlowReader = (*ProjectGraph)(nil)
+var _ TransitiveFlowReader = (*ProjectGraph)(nil)
 
 // NewProjectGraph 创建 ProjectGraph，接管已构建的 IndexManager。
 func NewProjectGraph(mgr *mxgraph.IndexManager) *ProjectGraph {

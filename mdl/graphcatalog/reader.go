@@ -81,3 +81,85 @@ type StylingReader interface {
 	DesignProperties(widgetType string) []DesignPropertyNode
 	DesignProperty(widgetType, name string) *DesignPropertyNode
 }
+
+// NavigationReader 读取导航树结构。
+type NavigationReader interface {
+	NavigationProfiles() []NavigationProfileNode
+	NavigationMenuTree(profileName string) *NavigationTree
+	NavigationHomePage(profileName string) *NavigationHomePageNode
+	PagesReferencedByNavigation() []string
+	OrphanPages() []string
+}
+
+// DataContainerReader 读取页面数据容器层次。
+type DataContainerReader interface {
+	PageDataContainerTree(pageQN string) []DataContainerNode
+	PageContextVariables(pageQN string) []VariableScope
+	EntityPages(entityQN string) []EntityPageRef
+}
+
+// DataFlowReader 读取端到端数据流。
+type DataFlowReader interface {
+	EntityDataFlow(entityQN string) *EntityDataFlow
+	PageDataFlow(pageQN string) *PageDataFlowSummary
+	NavigationEntityFlow(entityQN string) []PageDataFlowSummary
+}
+
+// FlowStep 描述传递式数据流中的一步。
+type FlowStep struct {
+	NodeType  string // "NavProfile" | "MenuItem" | "Page" | "Microflow" | "Nanoflow" | "Workflow" | "DataContainer"
+	NodeName  string // QN or caption
+	EdgeType  string // what led here: "TARGETS_PAGE" | "TARGETS_MICROFLOW" | "SHOWS_PAGE" | "CALLS_MICROFLOW" | "CALLS" | "HAS_DATASOURCE_MICROFLOW" | "HAS_DATA_CONTAINER"
+	Depth     int
+}
+
+// FlowChain 是一条完整的入口→...→页面 链。
+type FlowChain struct {
+	EntryPoint string // "navigation:Responsive" | "workflow:MyWF" | "event:btnClick"
+	Steps      []FlowStep
+	TerminalPage string // final reachable page QN
+}
+
+// EntryPoint 描述一个应用入口点。
+type EntryPoint struct {
+	Kind string // "navigation" | "workflow" | "event" | "microflow"
+	Name string // profile name / workflow QN / microflow QN
+	Description string
+}
+
+// TransitiveFlowReader 执行多边类型传递式数据流分析。
+type TransitiveFlowReader interface {
+	// AllEntryPoints 返回所有已知入口点。
+	AllEntryPoints() []EntryPoint
+
+	// ReachablePagesFromEntry 从入口点出发，传递式遍历所有可达页面。
+	// 返回完整的 FlowChain（含中间步骤）。
+	ReachablePagesFromEntry(entryKind, entryName string) []FlowChain
+
+	// AllReachablePages 从所有入口点出发，计算所有可达页面的并集。
+	AllReachablePages() map[string][]string // pageQN → entry sources
+
+	// EntryPointReachability 从指定入口做 N 层传递式 BFS。
+	// maxDepth=0 表示无限制。
+	EntryPointReachability(entryKind, entryName string, maxDepth int) (*FlowGraph, error)
+}
+
+// FlowGraph 是全量可达性的中间表示（去重的节点+边）。
+type FlowGraph struct {
+	Nodes []FlowGraphNode
+	Edges []FlowGraphEdge
+}
+
+// FlowGraphNode 是流图中的节点。
+type FlowGraphNode struct {
+	ID    string
+	Label string // "Page" | "Microflow" | "NavProfile" | "MenuItem"
+	QN    string
+}
+
+// FlowGraphEdge 是流图中的边。
+type FlowGraphEdge struct {
+	From string
+	To   string
+	Type string
+}

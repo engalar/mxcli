@@ -253,15 +253,20 @@ func (a *WidgetInstanceAdapter) inspectRawWidget(
 		qn = widgetName
 	}
 
+	condVis := extractConditionalVisibility(m)
+	condEdit := extractConditionalEditability(m)
+
 	props := map[string]any{
-		"$Type":            "WidgetInstance",
-		"Name":             widgetName,
-		"WidgetType":       shortTypeName(typeName),
-		"Class":            class,
-		"Style":            style,
-		"DesignProperties": dps,
-		"QualifiedName":    qn,
-		"Module":           module,
+		"$Type":             "WidgetInstance",
+		"Name":              widgetName,
+		"WidgetType":        shortTypeName(typeName),
+		"Class":             class,
+		"Style":             style,
+		"DesignProperties":  dps,
+		"ConditionalVisibility":  condVis,
+		"ConditionalEditability": condEdit,
+		"QualifiedName":     qn,
+		"Module":            module,
 	}
 
 	var events []mxgraph.Event
@@ -425,6 +430,26 @@ func normalizeTypeName(name string) string {
 		return name
 	}
 	return "$" + parts[len(parts)-1]
+}
+
+// extractConditionalVisibility 从 raw widget map 提取条件可见性表达式。
+func extractConditionalVisibility(m map[string]any) string {
+	if cvs := toMap(m["ConditionalVisibilitySettings"]); cvs != nil {
+		if expr, ok := cvs["Expression"].(string); ok && expr != "" {
+			return expr
+		}
+	}
+	return ""
+}
+
+// extractConditionalEditability 从 raw widget map 提取条件可编辑性表达式。
+func extractConditionalEditability(m map[string]any) string {
+	if ces := toMap(m["ConditionalEditabilitySettings"]); ces != nil {
+		if expr, ok := ces["Expression"].(string); ok && expr != "" {
+			return expr
+		}
+	}
+	return ""
 }
 
 func (a *WidgetInstanceAdapter) Watch(ctx context.Context, sink mxgraph.EventSink) (func(), error) {

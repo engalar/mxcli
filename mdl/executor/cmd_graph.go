@@ -74,6 +74,13 @@ func buildGraph(ctx *ExecContext) error {
 	mgr.RegisterAdapter(&mpradapter.AccessRuleAdapter{Model: m})
 	mgr.RegisterAdapter(&mpradapter.DocumentGrantAdapter{Model: m})
 	mgr.RegisterAdapter(&mpradapter.PageRefAdapter{Model: m})
+	mgr.RegisterAdapter(&mpradapter.NavigationAdapter{
+		Source: &mpradapter.ModelsdkUnitSource{Model: m},
+	})
+	mgr.RegisterAdapter(&mpradapter.DataContainerAdapter{
+		Source: &mpradapter.ModelsdkUnitSource{Model: m},
+		Model:  m,
+	})
 
 	// Open delta log for event persistence during build.
 	if err := os.MkdirAll(filepath.Dir(deltaPath), 0700); err != nil {
