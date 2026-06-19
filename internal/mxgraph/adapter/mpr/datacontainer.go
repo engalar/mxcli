@@ -27,8 +27,9 @@ var jsonBufPool = sync.Pool{
 // 不依赖 typed modelsdk 路径，走 raw BSON 遍历（与 WidgetInstanceAdapter
 // 和 PageRefAdapter 相同的模式）。
 type DataContainerAdapter struct {
-	Source RawUnitSource
-	Model  *modelsdk.Model // 用于解析 module 和 entity QN
+	Source   RawUnitSource
+	Model    *modelsdk.Model  // 用于解析 module 和 entity QN
+	DocCache BsonDocCache     // 可选：共享 BSON 解码缓存
 }
 
 // childWidgetSummary 描述数据容器内一个子 widget 的外观和条件性配置。
@@ -104,16 +105,28 @@ func (a *DataContainerAdapter) Build(ctx context.Context, sink mxgraph.EventSink
 			continue
 		}
 
-		raw := unit.Raw()
-		if len(raw) == 0 {
-			continue
-		}
-
 		module := a.Source.ResolveModuleName(unit.ID())
+		uid := unit.ID()
 
+		// 尝试从缓存获取已解码文档
 		var doc map[string]any
-		if err := bson.Unmarshal(raw, &doc); err != nil {
-			continue
+		useCache := a.DocCache != nil
+		if useCache {
+			if cached, ok := a.DocCache.Get(uid); ok {
+				doc = cached
+			}
+		}
+		if doc == nil {
+			raw := unit.Raw()
+			if len(raw) == 0 {
+				continue
+			}
+			if err := bson.Unmarshal(raw, &doc); err != nil {
+				continue
+			}
+			if useCache {
+				a.DocCache.Set(uid, doc)
+			}
 		}
 
 		pageName, _ := doc["Name"].(string)

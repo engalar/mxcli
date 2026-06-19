@@ -65,7 +65,8 @@ type RawUnitSource interface {
 // 每个带样式信息的 widget 实例生成一个 WidgetInstance 节点。
 // 只依赖 RawUnitSource 接口，不依赖 modelsdk。
 type WidgetInstanceAdapter struct {
-	Source RawUnitSource
+	Source   RawUnitSource
+	DocCache BsonDocCache // 可选：共享 BSON 解码缓存
 }
 
 func (a *WidgetInstanceAdapter) Name() string { return "widgetinstance" }
@@ -107,11 +108,31 @@ func (a *WidgetInstanceAdapter) Build(ctx context.Context, sink mxgraph.EventSin
 
 		module := a.Source.ResolveModuleName(unit.ID())
 		containerID := mxgraph.NodeID(unit.ID())
+		uid := unit.ID()
 
-		if raw := unit.Raw(); len(raw) > 0 {
-			wiEvents := a.walkRawWidgets(raw, containerID, containerLabel, module)
-			events = append(events, wiEvents...)
+		// 尝试从缓存获取已解码文档
+		var doc map[string]any
+		useCache := a.DocCache != nil
+		if useCache {
+			if cached, ok := a.DocCache.Get(uid); ok {
+				doc = cached
+			}
 		}
+		if doc == nil {
+			if raw := unit.Raw(); len(raw) > 0 {
+				if err := bson.Unmarshal(raw, &doc); err != nil {
+					continue
+				}
+				if useCache {
+					a.DocCache.Set(uid, doc)
+				}
+			} else {
+				continue
+			}
+		}
+
+		wiEvents := a.walkDoc(doc, containerID, containerLabel, module)
+		events = append(events, wiEvents...)
 	}
 
 	if len(events) > 0 {
@@ -120,16 +141,15 @@ func (a *WidgetInstanceAdapter) Build(ctx context.Context, sink mxgraph.EventSin
 	return nil
 }
 
-// walkRawWidgets 纯粹用 raw BSON 遍历 widget 树，
+// walkDoc 从已解码的 map 遍历 widget 树，
 // 直接从 map 中读取 Appearance（不经过 modelsdk codec 解码）。
-func (a *WidgetInstanceAdapter) walkRawWidgets(
-	raw bson.Raw,
+func (a *WidgetInstanceAdapter) walkDoc(
+	doc map[string]any,
 	containerID mxgraph.NodeID,
 	containerLabel mxgraph.Label,
 	module string,
 ) []mxgraph.Event {
-	var doc map[string]any
-	if err := bson.Unmarshal(raw, &doc); err != nil {
+	if doc == nil {
 		return nil
 	}
 	return a.walkRawMap(doc, containerID, containerLabel, module)

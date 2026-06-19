@@ -17,7 +17,8 @@ import (
 //   - Widget 的 OnClickMicroflow 或 OnClickAction 子文档中 microflow 字段 → CALLS_MICROFLOW
 //   - DataGrid 的 DataSource 子文档中 entity 字段 → READS_ENTITY
 type PageRefAdapter struct {
-	Model *modelsdk.Model
+	Model    *modelsdk.Model
+	DocCache BsonDocCache // 可选：共享 BSON 解码缓存
 }
 
 func (a *PageRefAdapter) Name() string { return "pageref" }
@@ -62,8 +63,26 @@ func (a *PageRefAdapter) Build(ctx context.Context, sink mxgraph.EventSink) erro
 
 		pageID := mxgraph.NodeID(elem.ID())
 		module := a.Model.ResolveModuleName(unit.ID)
+		uid := string(elem.ID())
 
-		evts := a.walkPageRaw(raw, pageID, module)
+		// 优先用缓存
+		var doc map[string]any
+		useCache := a.DocCache != nil
+		if useCache {
+			if cached, ok := a.DocCache.Get(uid); ok {
+				doc = cached
+			}
+		}
+		if doc == nil {
+			if err := bson.Unmarshal(raw, &doc); err != nil {
+				continue
+			}
+			if useCache {
+				a.DocCache.Set(uid, doc)
+			}
+		}
+
+		evts := a.walkPageDoc(doc, pageID, module)
 		events = append(events, evts...)
 	}
 
@@ -73,13 +92,8 @@ func (a *PageRefAdapter) Build(ctx context.Context, sink mxgraph.EventSink) erro
 	return nil
 }
 
-func (a *PageRefAdapter) walkPageRaw(raw bson.Raw, pageID mxgraph.NodeID, module string) []mxgraph.Event {
+func (a *PageRefAdapter) walkPageDoc(doc map[string]any, pageID mxgraph.NodeID, module string) []mxgraph.Event {
 	var events []mxgraph.Event
-
-	var doc map[string]any
-	if err := bson.Unmarshal(raw, &doc); err != nil {
-		return nil
-	}
 
 	// 找到 FormCall/LayoutCall → Arguments → Widgets/Widget 树
 	for _, key := range []string{"FormCall", "LayoutCall"} {

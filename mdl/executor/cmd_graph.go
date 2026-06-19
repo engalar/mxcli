@@ -70,16 +70,27 @@ func buildGraph(ctx *ExecContext) error {
 	mgr.RegisterAdapter(&mpradapter.WidgetAdapter{ProjectDir: projectDir})
 	mgr.RegisterAdapter(&themescss.ThemeScssAdapter{ProjectDir: projectDir})
 	mgr.RegisterAdapter(&designdprops.DesignPropertyAdapter{ProjectDir: projectDir})
-	mgr.RegisterAdapter(&mpradapter.WidgetInstanceAdapter{Source: &mpradapter.ModelsdkUnitSource{Model: m}})
+	// 共享 BSON 解码缓存：3 个 page-walking adapter 共用同一份解码 map，
+	// 避免重复 bson.Unmarshal。首次解码的 adapter 存入 cache，后续命中。
+	docCache := mpradapter.NewBsonDocCache()
+
+	mgr.RegisterAdapter(&mpradapter.WidgetInstanceAdapter{
+		Source:   &mpradapter.ModelsdkUnitSource{Model: m},
+		DocCache: docCache,
+	})
 	mgr.RegisterAdapter(&mpradapter.AccessRuleAdapter{Model: m})
 	mgr.RegisterAdapter(&mpradapter.DocumentGrantAdapter{Model: m})
-	mgr.RegisterAdapter(&mpradapter.PageRefAdapter{Model: m})
+	mgr.RegisterAdapter(&mpradapter.PageRefAdapter{
+		Model:    m,
+		DocCache: docCache,
+	})
 	mgr.RegisterAdapter(&mpradapter.NavigationAdapter{
 		Source: &mpradapter.ModelsdkUnitSource{Model: m},
 	})
 	mgr.RegisterAdapter(&mpradapter.DataContainerAdapter{
-		Source: &mpradapter.ModelsdkUnitSource{Model: m},
-		Model:  m,
+		Source:   &mpradapter.ModelsdkUnitSource{Model: m},
+		Model:    m,
+		DocCache: docCache,
 	})
 
 	// Open delta log for event persistence during build.
