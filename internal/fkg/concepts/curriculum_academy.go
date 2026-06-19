@@ -125,14 +125,42 @@ func (a *CurriculumAcademyAdapter) Build(_ context.Context, sink mxgraph.EventSi
 		curriculumNode("academy-11-theme", "11-扩展-主题定制 (Theme Customization)",
 			"Atlas UI CSS variable override, brand colors, button border-radius"),
 		edge("curriculum:academy-11-theme", "curriculum:academy-04-pages", Depends),
-		edge("curriculum:academy-11-theme", "page", Teaches),
-		// Theme is pure CSS — no FKG concept node, listed as extension
+		edge("curriculum:academy-11-theme", "theme", Teaches),
 		edge("curriculum:academy-11-theme", "ext:css-theme", Teaches),
 
 		// ── Module 12: AI Collaboration ────────────────────────────────────────
 		curriculumNode("academy-12-ai-collab", "12-AI协作模式 (AI Collaboration Patterns)",
 			"Prompt engineering, verification-driven development, error debugging patterns"),
 		edge("curriculum:academy-12-ai-collab", "curriculum:academy-00-getting-started", Depends),
+
+		// ── Module 13–15: Capstone refinements ─────────────────────────────────
+		curriculumNode("academy-13-improve-ops", "13-操作补全 (Operation Improvements)",
+			"Assign agent, Delete ticket, Priority selector, Search"),
+		edge("curriculum:academy-13-improve-ops", "curriculum:academy-04-pages", Depends),
+		edge("curriculum:academy-13-improve-ops", "curriculum:academy-02-microflows", Depends),
+		edge("curriculum:academy-13-improve-ops", "microflow", Teaches),
+		edge("curriculum:academy-13-improve-ops", "page", Teaches),
+		edge("curriculum:academy-13-improve-ops", "skill:alter-page", Teaches),
+
+		curriculumNode("academy-14-beautify", "14-页面美化 (Page Beautification)",
+			"DataGrid column styling, dynamic text replacement, ALTER PAGE with DROP+INSERT"),
+		edge("curriculum:academy-14-beautify", "curriculum:academy-04-pages", Depends),
+		edge("curriculum:academy-14-beautify", "page", Teaches),
+		edge("curriculum:academy-14-beautify", "skill:alter-page", Teaches),
+
+		curriculumNode("academy-15-dashboard", "15-Dashboard 仪表盘 (Dashboard)",
+			"Non-persistent entity for stats, microflow data source, stat cards, overdue alerts"),
+		edge("curriculum:academy-15-dashboard", "curriculum:academy-04-pages", Depends),
+		edge("curriculum:academy-15-dashboard", "curriculum:academy-02-microflows", Depends),
+		edge("curriculum:academy-15-dashboard", "entity", Teaches),
+		edge("curriculum:academy-15-dashboard", "microflow", Teaches),
+		edge("curriculum:academy-15-dashboard", "page", Teaches),
+
+		curriculumNode("academy-16-brand-theme", "16-品牌主题 (Brand Theme)",
+			"Atlas 3 CSS Custom Properties theming, _brand-theme.scss partial, Google Fonts, color variants"),
+		edge("curriculum:academy-16-brand-theme", "curriculum:academy-11-theme", Depends),
+		edge("curriculum:academy-16-brand-theme", "theme", Teaches),
+		edge("curriculum:academy-16-brand-theme", "skill:theme-branding", Teaches),
 
 		// ── Capstone ───────────────────────────────────────────────────────────
 		curriculumNode("academy-capstone", "Capstone: Helpdesk Full Delivery",
