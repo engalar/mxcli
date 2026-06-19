@@ -283,22 +283,38 @@ fi
 # ── step 5: extensions (theme + optional widget) ──────────────────────────
 
 if step_enabled check; then
-    # Always append theme CSS to main.scss (module 11) — idempotent: skip if already present
     THEME_DEST="$REPO_ROOT/$PROJECT_NAME/theme/web/main.scss"
-    if [ -f "$EXT_THEME_SRC" ] && [ -f "$THEME_DEST" ] && ! grep -q "helpdesk-theme (module 11)" "$THEME_DEST" 2>/dev/null; then
-        echo "" >> "$THEME_DEST"
-        echo "// -- helpdesk-theme (module 11) --" >> "$THEME_DEST"
-        cat "$EXT_THEME_SRC" >> "$THEME_DEST"
-        echo "  theme: helpdesk-theme.scss appended to $THEME_DEST"
-    fi
-
-    # Append brand theme SCSS (module 16) — idempotent: skip if already present
+    EXT_THEME_SRC="$REPO_ROOT/academy/zh/11-扩展-主题定制/theme/helpdesk-theme.scss"
     BRAND_THEME_SRC="$CAPSTONE_DIR/16-brand-theme.scss"
-    if [ -f "$BRAND_THEME_SRC" ] && [ -f "$THEME_DEST" ] && ! grep -q "brand-theme (module 16)" "$THEME_DEST" 2>/dev/null; then
-        echo "" >> "$THEME_DEST"
-        echo "// -- brand-theme (module 16) --" >> "$THEME_DEST"
-        cat "$BRAND_THEME_SRC" >> "$THEME_DEST"
-        echo "  theme: 16-brand-theme.scss appended to $THEME_DEST"
+
+    # Regenerate theme section from scratch to guarantee append order.
+    # Keep the original header (imports only, before any theme comment).
+    if [ -f "$THEME_DEST" ]; then
+        ORIG_HEADER=$(mktemp)
+        # Take everything up to (but not including) the first line starting with //
+        # that isn't an @import — that's the theme section boundary.
+        while IFS= read -r line; do
+            case "$line" in
+                @import*) echo "$line" >> "$ORIG_HEADER" ;;
+                '') echo "" >> "$ORIG_HEADER" ;;
+                //*) break ;;  # theme section starts here — stop
+                *) echo "$line" >> "$ORIG_HEADER" ;;
+            esac
+        done < "$THEME_DEST"
+
+        echo "" >> "$ORIG_HEADER"
+        echo "// -- helpdesk-theme (module 11) --" >> "$ORIG_HEADER"
+        if [ -f "$EXT_THEME_SRC" ]; then
+            cat "$EXT_THEME_SRC" >> "$ORIG_HEADER"
+        fi
+        echo "" >> "$ORIG_HEADER"
+        echo "// -- brand-theme (module 16) --" >> "$ORIG_HEADER"
+        if [ -f "$BRAND_THEME_SRC" ]; then
+            cat "$BRAND_THEME_SRC" >> "$ORIG_HEADER"
+        fi
+
+        mv "$ORIG_HEADER" "$THEME_DEST"
+        echo "  theme: helpdesk-theme + brand appended to $THEME_DEST"
     fi
 
     if [ -f "$REPO_ROOT/$PROJECT_NAME/widgets/TicketStatusBadge.mpk" ]; then
