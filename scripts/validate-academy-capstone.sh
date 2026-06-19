@@ -248,13 +248,10 @@ if step_enabled exec; then
     )
 
     echo "  check ${#mdl_files[@]} MDL files (syntax + semantics)..."
-    for f in "${mdl_files[@]}"; do
-        if ! run_mxcli check -p "$MPR" "$f" >/dev/null 2>&1; then
-            echo "  ✗ check failed: $f" >&2
-            run_mxcli check -p "$MPR" "$f" 2>&1 || true
-            exit 1
-        fi
-    done
+    if ! run_mxcli check -p "$MPR" "${mdl_files[@]}" 2>&1; then
+        echo "  ✗ some checks failed" >&2
+        exit 1
+    fi
     echo "  all checks passed."
 
     echo "  exec ${#mdl_files[@]} MDL files..."

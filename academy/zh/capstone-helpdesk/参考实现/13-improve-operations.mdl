@@ -13,6 +13,16 @@ create or modify microflow HD.ACT_OpenAssignForm
 }
 /
 
+create or modify microflow HD.ACT_DoAssign
+  ($Ticket: HD.Ticket, $Agent: HD.Agent)
+  returns boolean
+  folder 'Ticket'
+{
+  call microflow HD.ACT_Ticket_Assign(Ticket = $Ticket, Agent = $Agent);
+  return true;
+}
+/
+
 create or replace page HD.SelectAgent_Form
 (
   title:  'Select Agent',
@@ -47,18 +57,8 @@ create or replace page HD.SelectAgent_Form
   }
 };
 
-create or modify microflow HD.ACT_DoAssign
-  ($Ticket: HD.Ticket, $Agent: HD.Agent)
-  returns boolean as $Success
-  folder 'Ticket'
-{
-  $Result = call microflow HD.ACT_Ticket_Assign(Ticket = $Ticket, Agent = $Agent);
-  $Success = $Result;
-  return $Success;
-}
-/
-
 alter page HD.Ticket_Detail {
+  drop widget btnAssign;
   insert after btnSubmit {
     actionbutton btnAssign (
       caption:     'Assign',
@@ -69,6 +69,7 @@ alter page HD.Ticket_Detail {
 };
 
 alter page HD.Ticket_NewEdit {
+  drop widget ddPriority;
   insert after taDescription {
     dropdown ddPriority (
       label:     'Priority',
@@ -79,11 +80,10 @@ alter page HD.Ticket_NewEdit {
 
 create or modify microflow HD.ACT_Ticket_Delete
   ($Ticket: HD.Ticket)
-  returns boolean as $Success
+  returns boolean
   folder 'Ticket'
 {
   delete $Ticket;
-  commit $Ticket;
   return true;
 }
 /
@@ -91,6 +91,7 @@ create or modify microflow HD.ACT_Ticket_Delete
 grant execute on microflow HD.ACT_Ticket_Delete to HD.ManagerRole;
 
 alter page HD.Ticket_Detail {
+  drop widget btnDelete;
   insert after btnClose {
     actionbutton btnDelete (
       caption:     'Delete',

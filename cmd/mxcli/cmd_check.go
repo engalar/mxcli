@@ -16,36 +16,33 @@ import (
 )
 
 var checkCmd = &cobra.Command{
-	Use:   "check <file>",
-	Short: "Check an MDL script for errors without executing it",
-	Long: `Check an MDL script file for syntax errors and optionally validate references.
+	Use:   "check <file1> [<file2> ...]",
+	Short: "Check MDL scripts for errors without executing them",
+	Long: `Check one or more MDL script files for syntax errors and optionally validate references.
 
-By default, only checks syntax (parsing). Use --references to also validate
-that all referenced modules, entities, etc. exist in the project.
+Without --references, only performs syntax and static validation (no project required).
+With -p and --references, also validates cross-file references against a project.
 
 Reference validation is smart: it automatically skips references to objects
-that are created within the script itself. For example, if your script creates
-a module "MyModule" and then creates entities in it, no error will be reported
-for the module reference.
+that are created within the script itself.
 
 Output includes structured rule IDs (MDL prefix) for each validation issue.
 
 Examples:
-  # Check syntax only (no project needed)
+  # Check a single file
   mxcli check script.mdl
 
-  # Check syntax and validate references against a project
+  # Check multiple files
+  mxcli check file1.mdl file2.mdl file3.mdl
+
+  # Check with reference validation against a project
   mxcli check script.mdl -p app.mpr --references
 
-  # Output as JSON or SARIF
+  # JSON output
   mxcli check script.mdl --format json
-  mxcli check script.mdl --format sarif
 `,
-	Args: cobra.ExactArgs(1),
+	Args: cobra.MinimumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		startTotal := time.Now()
-
-		filePath := args[0]
 		projectPath, _ := cmd.Flags().GetString("project")
 		checkRefs, _ := cmd.Flags().GetBool("references")
 		format := resolveFormat(cmd, "text")
@@ -57,191 +54,181 @@ Examples:
 		outputFormat := linter.OutputFormat(format)
 		formatter := linter.GetFormatter(outputFormat, !isStructured)
 
-		// Read the file
-		startRead := time.Now()
-		content, err := os.ReadFile(filePath)
-		if err != nil {
-			return fmt.Errorf("reading file: %w", err)
-		}
-		readTime := time.Since(startRead)
+		var aggregateErr error
+		multiFile := len(args) > 1
+		overallStart := time.Now()
+		overallStmts := 0
 
-		// Parse the script
-		startParse := time.Now()
-		if !isStructured {
-			fmt.Fprintf(out, "Checking syntax: %s\n", filePath)
-		}
-		prog, errs := visitor.Build(string(content))
-		parseTime := time.Since(startParse)
-		if len(errs) > 0 {
-			if isStructured {
-				var parseViolations []linter.Violation
-				for _, parseErr := range errs {
-					parseViolations = append(parseViolations, linter.Violation{
-						RuleID:   "MDL-SYNTAX",
-						Severity: linter.SeverityError,
-						Message:  parseErr.Error(),
-					})
-				}
-				formatter.Format(parseViolations, errOut)
-			} else {
-				fmt.Fprintf(errOut, "Syntax errors found:\n")
-				for _, parseErr := range errs {
-					fmt.Fprintf(errOut, "  - %v\n", parseErr)
-				}
-				// Hint: if script contains IMPORT/QUERY with single $ but not $$, suggest dollar-quoting
-				src := string(content)
-				if (strings.Contains(src, "IMPORT") || strings.Contains(src, "import")) &&
-					(strings.Contains(src, "QUERY") || strings.Contains(src, "query")) &&
-					strings.Contains(src, "$") && !strings.Contains(src, "$$") {
-					fmt.Fprintf(errOut, "\nHint: SQL queries in IMPORT statements should use dollar-quoting ($$...$$) instead of single quotes.\n")
-					fmt.Fprintf(errOut, "  Example: IMPORT FROM alias QUERY $$SELECT * FROM table$$ INTO Module.Entity MAP (...)\n")
-				}
-			}
-			return fmt.Errorf("syntax check failed with %d error(s)", len(errs))
-		}
-		stmtCount := len(prog.Statements)
+		for fi, filePath := range args {
+			fileStart := time.Now()
 
-		// Validate statements (doesn't require project connection)
-		var violations []linter.Violation
-		for _, stmt := range prog.Statements {
-			// Check enumeration values for reserved words
-			if enumStmt, ok := stmt.(*ast.CreateEnumerationStmt); ok {
-				violations = append(violations, executor.ValidateEnumeration(enumStmt)...)
-			}
-			// Check entity attributes for reserved system names
-			if entityStmt, ok := stmt.(*ast.CreateEntityStmt); ok {
-				violations = append(violations, executor.ValidateEntity(entityStmt)...)
-			}
-			// Check microflow body for common issues
-			if mfStmt, ok := stmt.(*ast.CreateMicroflowStmt); ok {
-				violations = append(violations, executor.ValidateMicroflow(mfStmt)...)
-			}
-			// Check view entity OQL
-			if viewStmt, ok := stmt.(*ast.CreateViewEntityStmt); ok {
-				if viewStmt.Query.RawQuery != "" {
-					violations = append(violations, executor.ValidateOQLSyntax(viewStmt.Query.RawQuery)...)
-					violations = append(violations, executor.ValidateOQLTypes(viewStmt.Query.RawQuery, viewStmt.Attributes)...)
-				}
-			}
-		}
-
-		// Check for intra-script duplicate definitions (CREATE X … CREATE X without DROP)
-		startValidate := time.Now()
-		violations = append(violations, executor.CheckScriptDuplicates(prog)...)
-		validateTime := time.Since(startValidate)
-
-		if isStructured {
-			// Always emit structured output (even when clean)
-			formatter.Format(violations, errOut)
-		} else if len(violations) > 0 {
-			fmt.Fprintln(errOut)
-			formatter.Format(violations, errOut)
-		}
-
-		if len(violations) > 0 {
-			summary := linter.Summarize(violations)
-			if summary.Errors > 0 {
-				return fmt.Errorf("check failed with %d error(s)", summary.Errors)
-			}
-		}
-
-		// If reference checking requested
-		var refTime time.Duration
-		startRef := time.Now()
-		if checkRefs {
-			if projectPath == "" {
-				return fmt.Errorf("--project (-p) is required for reference checking")
+			if !isStructured && multiFile {
+				fmt.Fprintf(out, "\n--- %s ---\n", filePath)
 			}
 
-			if !isStructured {
-				fmt.Fprintf(out, "\nValidating references against: %s\n", projectPath)
-				fmt.Fprintf(out, "(Note: References to objects created within the script are skipped)\n")
+			// Read the file
+			readStart := time.Now()
+			content, err := os.ReadFile(filePath)
+			if err != nil {
+				return fmt.Errorf("reading file %s: %w", filePath, err)
 			}
-			exec, logger := buildExec("check", out)
-			defer logger.Close()
-			defer exec.Close()
+			readTime := time.Since(readStart)
 
-			// Connect to project
-			connectProg, _ := visitor.Build(fmt.Sprintf("CONNECT LOCAL '%s'", projectPath))
-			for _, stmt := range connectProg.Statements {
-				if err := exec.Execute(stmt); err != nil {
-					return fmt.Errorf("connecting to project: %w", err)
-				}
+			// Parse
+			parseStart := time.Now()
+			if !isStructured && !multiFile {
+				fmt.Fprintf(out, "Checking syntax: %s\n", filePath)
 			}
+			prog, errs := visitor.Build(string(content))
+			parseTime := time.Since(parseStart)
 
-			// Validate the program (considers objects defined within the script)
-			validationErrors := exec.ValidateProgram(prog)
-
-			// Check for project conflicts: plain CREATE where the document already exists
-			validationErrors = append(validationErrors, exec.CheckProjectConflicts(prog)...)
-
-			if len(validationErrors) > 0 {
+			if len(errs) > 0 {
 				if isStructured {
-					var refViolations []linter.Violation
-					for _, vErr := range validationErrors {
-						refViolations = append(refViolations, linter.Violation{
-							RuleID:   "MDL-REF",
+					var parseViolations []linter.Violation
+					for _, parseErr := range errs {
+						parseViolations = append(parseViolations, linter.Violation{
+							RuleID:   "MDL-SYNTAX",
 							Severity: linter.SeverityError,
-							Message:  vErr.Error(),
+							Message:  parseErr.Error(),
 						})
 					}
-					formatter.Format(refViolations, errOut)
+					formatter.Format(parseViolations, errOut)
 				} else {
-					fmt.Fprintf(errOut, "Reference errors:\n")
-					for _, vErr := range validationErrors {
-						fmt.Fprintf(errOut, "  %v\n", vErr)
+					fmt.Fprintf(errOut, "Syntax errors found:\n")
+					for _, parseErr := range errs {
+						fmt.Fprintf(errOut, "  - %v\n", parseErr)
 					}
-					fmt.Fprintf(errOut, "\n✗ %d reference error(s) found\n", len(validationErrors))
+					src := string(content)
+					if (strings.Contains(src, "IMPORT") || strings.Contains(src, "import")) &&
+						(strings.Contains(src, "QUERY") || strings.Contains(src, "query")) &&
+						strings.Contains(src, "$") && !strings.Contains(src, "$$") {
+						fmt.Fprintf(errOut, "\nHint: SQL queries in IMPORT statements should use dollar-quoting ($$...$$) instead of single quotes.\n")
+						fmt.Fprintf(errOut, "  Example: IMPORT FROM alias QUERY $$SELECT * FROM table$$ INTO Module.Entity MAP (...)\n")
+					}
 				}
-				return fmt.Errorf("reference check failed with %d error(s)", len(validationErrors))
+				if aggregateErr == nil {
+					aggregateErr = fmt.Errorf("check failed for %d file(s)", len(args)-fi)
+				}
+				continue
 			}
-			if !isStructured {
-				fmt.Fprintf(out, "✓ All references valid\n")
+			stmtCount := len(prog.Statements)
+			overallStmts += stmtCount
+
+			// Validate statements
+			var violations []linter.Violation
+			for _, stmt := range prog.Statements {
+				if enumStmt, ok := stmt.(*ast.CreateEnumerationStmt); ok {
+					violations = append(violations, executor.ValidateEnumeration(enumStmt)...)
+				}
+				if entityStmt, ok := stmt.(*ast.CreateEntityStmt); ok {
+					violations = append(violations, executor.ValidateEntity(entityStmt)...)
+				}
+				if mfStmt, ok := stmt.(*ast.CreateMicroflowStmt); ok {
+					violations = append(violations, executor.ValidateMicroflow(mfStmt)...)
+				}
+				if viewStmt, ok := stmt.(*ast.CreateViewEntityStmt); ok {
+					if viewStmt.Query.RawQuery != "" {
+						violations = append(violations, executor.ValidateOQLSyntax(viewStmt.Query.RawQuery)...)
+						violations = append(violations, executor.ValidateOQLTypes(viewStmt.Query.RawQuery, viewStmt.Attributes)...)
+					}
+				}
 			}
 
-			// Access gap analysis
-			if !isStructured {
-				gaps, warnings, aErr := exec.AnalyzeAccess()
-				if aErr != nil {
-					fmt.Fprintf(errOut, "Warning: access analysis failed: %v\n", aErr)
-				} else {
-					if len(warnings) > 0 {
-						fmt.Fprintf(out, "WARNING: %d page(s) skipped due to parse errors:\n", len(warnings))
-						for _, w := range warnings {
-							fmt.Fprintf(out, "  • %s\n", w)
-						}
+			validateStart := time.Now()
+			violations = append(violations, executor.CheckScriptDuplicates(prog)...)
+			validateTime := time.Since(validateStart)
+
+			if isStructured {
+				formatter.Format(violations, errOut)
+			} else if len(violations) > 0 {
+				fmt.Fprintln(errOut)
+				formatter.Format(violations, errOut)
+			}
+
+			hasFatal := false
+			if len(violations) > 0 {
+				summary := linter.Summarize(violations)
+				if summary.Errors > 0 {
+					hasFatal = true
+				}
+			}
+
+			// Reference checking
+			if checkRefs && !hasFatal {
+				if projectPath == "" {
+					return fmt.Errorf("--project (-p) is required for reference checking")
+				}
+				if !isStructured && !multiFile {
+					fmt.Fprintf(out, "\nValidating references against: %s\n", projectPath)
+				}
+				exec, logger := buildExec("check", out)
+				defer logger.Close()
+				defer exec.Close()
+
+				connectProg, _ := visitor.Build(fmt.Sprintf("CONNECT LOCAL '%s'", projectPath))
+				for _, stmt := range connectProg.Statements {
+					if err := exec.Execute(stmt); err != nil {
+						return fmt.Errorf("connecting to project: %w", err)
 					}
-					if len(gaps) > 0 {
-						fmt.Fprintf(out, "\nAccess analysis:\n")
-						for _, g := range gaps {
-							fmt.Fprintf(out, "[%s] %s: no %s access\n  → Fix: %s\n\n",
-								g.RuleID(), g.Path, accessGapDesc(g.GapType), g.SuggestedMDL())
+				}
+
+				validationErrors := exec.ValidateProgram(prog)
+				validationErrors = append(validationErrors, exec.CheckProjectConflicts(prog)...)
+
+				if len(validationErrors) > 0 {
+					if isStructured {
+						var refViolations []linter.Violation
+						for _, vErr := range validationErrors {
+							refViolations = append(refViolations, linter.Violation{
+								RuleID:   "MDL-REF",
+								Severity: linter.SeverityError,
+								Message:  vErr.Error(),
+							})
 						}
-						fmt.Fprintf(out, "%d access gap(s) found. Apply fixes and re-run check.\n", len(gaps))
+						formatter.Format(refViolations, errOut)
 					} else {
-						fmt.Fprintf(out, "✓ No access gaps found.\n")
+						fmt.Fprintf(errOut, "Reference errors:\n")
+						for _, vErr := range validationErrors {
+							fmt.Fprintf(errOut, "  %v\n", vErr)
+						}
 					}
+					hasFatal = true
 				}
 			}
-		}
-		if checkRefs {
-			refTime = time.Since(startRef)
-		}
-		totalTime := time.Since(startTotal)
 
-		if !isStructured {
-			fmt.Fprintf(out, "✓ Check passed! (%d statements)\n", stmtCount)
-			fmt.Fprintf(out, "\n── Performance ──────────────────────────\n")
-			fmt.Fprintf(out, "  Read:      %v\n", roundDuration(readTime))
-			fmt.Fprintf(out, "  Parse:     %v\n", roundDuration(parseTime))
-			fmt.Fprintf(out, "  Validate:  %v\n", roundDuration(validateTime))
-			if checkRefs {
-				fmt.Fprintf(out, "  Refs:      %v\n", roundDuration(refTime))
+			if !isStructured {
+				if hasFatal {
+					fmt.Fprintf(errOut, "  ✗ failed\n")
+				} else {
+					fmt.Fprintf(out, "  ✓ Check passed! (%d statements)\n", stmtCount)
+				}
 			}
-			fmt.Fprintf(out, "  ───────────────────────────────\n")
-			fmt.Fprintf(out, "  Total:     %v\n", roundDuration(totalTime))
+
+			if hasFatal {
+				if aggregateErr == nil {
+					aggregateErr = fmt.Errorf("check failed for %d file(s)", len(args)-fi)
+				}
+			}
+
+			if !isStructured {
+				elapsed := time.Since(fileStart)
+				fmt.Fprintf(out, "  ─ Performance: read %v, parse %v, validate %v, total %v ─\n",
+					roundDuration(readTime), roundDuration(parseTime),
+					roundDuration(validateTime), roundDuration(elapsed))
+			}
 		}
-		return nil
+
+		if !isStructured && multiFile {
+			overallTime := time.Since(overallStart)
+			if aggregateErr == nil {
+				fmt.Fprintf(out, "\n✓ All checks passed! (%d statements in %d files, %s)\n",
+					overallStmts, len(args), roundDuration(overallTime))
+			} else {
+				fmt.Fprintf(errOut, "\n✗ %d files checked, some failed (%s)\n",
+					len(args), roundDuration(overallTime))
+			}
+		}
+		return aggregateErr
 	},
 }
 

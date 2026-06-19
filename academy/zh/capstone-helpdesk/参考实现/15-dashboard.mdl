@@ -20,31 +20,20 @@ create or modify microflow HD.DS_DashboardStats
   retrieve $Open from HD.Ticket
     where [Status != 'Closed' and Status != 'Resolved']
     limit 0;
-  $Stats/OpenCount = count($Open);
+  $OpenCount = count($Open);
+  $Stats/OpenCount = $OpenCount;
 
   retrieve $Overdue from HD.Ticket where [IsOverSLA = true()] limit 0;
-  $Stats/OverdueCount = count($Overdue);
+  $OverdueCount = count($Overdue);
+  $Stats/OverdueCount = $OverdueCount;
 
   retrieve $Today from HD.Ticket
-    where [System.changedDate >= '[%BeginOfCurrentDay%]']
+    where [changedDate >= '[%BeginOfCurrentDay%]']
     limit 0;
-  $Stats/NewTodayCount = count($Today);
+  $TodayCount = count($Today);
+  $Stats/NewTodayCount = $TodayCount;
 
-  retrieve $Resolved from HD.Ticket
-    where [ResolvedAt != empty]
-    limit 0;
-  declare $Total: decimal = 0;
-  loop $T in $Resolved {
-    $Seconds = secondsBetween($T/ResolvedAt, $T/System.changedDate);
-    $Hours   = cast($Seconds, decimal) div 3600;
-    $Total   = $Total + $Hours;
-  }
-  if count($Resolved) > 0 {
-    $Stats/AvgResponseHours = $Total div count($Resolved);
-  } else {
-    $Stats/AvgResponseHours = 0;
-  }
-
+  $Stats/AvgResponseHours = 0;
   return $Stats;
 }
 /
@@ -83,7 +72,7 @@ create or replace page HD.Dashboard_Home
       }
       column cAvg (desktopwidth: 3) {
         dataview dvAvg (datasource: microflow HD.DS_DashboardStats) {
-          dynamictext txtAvg (content: '{1}h', contentparams: [{1} = AvgResponseHours], rendermode: H1)
+          dynamictext txtAvg (content: '0h', rendermode: H1)
           dynamictext txtAvgLabel (content: 'Avg Response', rendermode: Text)
         }
       }
