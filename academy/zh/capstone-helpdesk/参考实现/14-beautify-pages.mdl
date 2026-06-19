@@ -1,12 +1,19 @@
 -- ============================================================
 -- 模块 14：页面美化
 -- 前提：01-13 已执行
+--
+-- 注意：DataGrid2 列 REPLACE 被执行器限制阻止
+--       （DivContainer vs DataGrid2Column BSON），
+--       因此 DataGrid 列中的 TicketStatusBadge 和 Priority
+--       dynamictext 无法通过 ALTER PAGE 注入。
+--       这些需要在页面创建时处理（在 04-pages.mdl 和
+--       10-widget.mdl 中），而非通过 ALTER PAGE。
 -- ============================================================
 
 -- ============================================================
--- Step 1: Ticket_Overview — Status 列属性调整
+-- Step 1: Ticket_Overview — Status 列宽调整（140→120）
 -- Note: TicketStatusBadge widget 已由 10-widget.mdl 安装，
--- 此处仅调整列宽（140→120）。
+-- 此处仅调整列宽。
 -- ============================================================
 
 alter page HD.Ticket_Overview {
@@ -14,19 +21,7 @@ alter page HD.Ticket_Overview {
 };
 
 -- ============================================================
--- Step 2: MyTickets_Overview — 列属性统一
--- ============================================================
-
-alter page HD.MyTickets_Overview {
-  set size = 120 on dgMyTickets.Status
-};
-
-alter page HD.MyTickets_Overview {
-  set size = 100 on dgMyTickets.Priority
-};
-
--- ============================================================
--- Step 3: Ticket_Detail — 美化（idempotent：先 DROP 再重建）
+-- Step 2: Ticket_Detail — 美化（idempotent：先 DROP 再重建）
 -- ============================================================
 
 alter page HD.Ticket_Detail {
@@ -55,21 +50,35 @@ alter page HD.Ticket_Detail {
 };
 
 -- ============================================================
--- Step 4: KB.Article_Overview — Published 列宽统一
+-- Step 3: KB.Article_Overview — 统一列属性
+-- 注意：DataGrid2 REPLACE 被执行器限制阻止，
+-- 因此使用 SET 代替 REPLACE 设置所有列属性。
 -- ============================================================
+
+alter page KB.Article_Overview {
+  set attribute = PublishedAt on dgArticles.PublishedAt
+};
+
+alter page KB.Article_Overview {
+  set Caption = 'Published' on dgArticles.PublishedAt
+};
+
+alter page KB.Article_Overview {
+  set ColumnWidth = manual on dgArticles.PublishedAt
+};
 
 alter page KB.Article_Overview {
   set size = 140 on dgArticles.PublishedAt
 };
 
 -- ============================================================
--- Step 5: KB.Article_Detail — 操作按钮已在 06-kb.mdl 正确配置
+-- Step 4: KB.Article_Detail — 操作按钮已在 06-kb.mdl 正确配置
 -- DataView 的 FooterWidgets 以展开形式存储，没有 "ftrActions"
 -- 命名的 BSON 节点，因此无需替换。
 -- ============================================================
 
 -- ============================================================
--- Step 6: Ticket_NewEdit — 表单区域分隔线
+-- Step 5: Ticket_NewEdit — 表单区域分隔线
 -- ============================================================
 
 alter page HD.Ticket_NewEdit {

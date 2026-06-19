@@ -386,3 +386,88 @@ func TestAlterPage_ReplaceWidget_SameName_Allowed(t *testing.T) {
 		t.Error("expected ReplaceWidgetGen to be called")
 	}
 }
+
+// ---------------------------------------------------------------------------
+// collectWidgetNamesV3 unit tests
+// ---------------------------------------------------------------------------
+
+func TestCollectWidgetNamesV3(t *testing.T) {
+	tests := []struct {
+		name     string
+		widgets  []*ast.WidgetV3
+		expected []string
+	}{
+		{
+			name:     "empty",
+			widgets:  nil,
+			expected: nil,
+		},
+		{
+			name: "single named widget",
+			widgets: []*ast.WidgetV3{
+				{Name: "btnSave", Type: "actionbutton"},
+			},
+			expected: []string{"btnSave"},
+		},
+		{
+			name: "unnamed widget skipped",
+			widgets: []*ast.WidgetV3{
+				{Type: "dynamictext", Properties: map[string]any{"content": "hello"}},
+			},
+			expected: nil,
+		},
+		{
+			name: "widget with children",
+			widgets: []*ast.WidgetV3{
+				{
+					Name: "parent",
+					Children: []*ast.WidgetV3{
+						{Name: "child1"},
+						{Name: "child2"},
+					},
+				},
+			},
+			expected: []string{"parent", "child1", "child2"},
+		},
+		{
+			name: "deep nesting",
+			widgets: []*ast.WidgetV3{
+				{
+					Name: "a",
+					Children: []*ast.WidgetV3{
+						{Name: "b", Children: []*ast.WidgetV3{
+							{Name: "c"},
+						}},
+					},
+				},
+			},
+			expected: []string{"a", "b", "c"},
+		},
+		{
+			name: "mixed named and unnamed",
+			widgets: []*ast.WidgetV3{
+				{Name: "w1"},
+				{Type: "text", Name: ""},
+				{Name: "w2", Children: []*ast.WidgetV3{
+					{Type: "inner", Name: ""},
+					{Name: "w3"},
+				}},
+			},
+			expected: []string{"w1", "w2", "w3"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := collectWidgetNamesV3(tt.widgets)
+			if len(got) != len(tt.expected) {
+				t.Fatalf("collectWidgetNamesV3() = %v (len=%d), want %v (len=%d)", got, len(got), tt.expected, len(tt.expected))
+			}
+			for i := range got {
+				if got[i] != tt.expected[i] {
+					t.Errorf("collectWidgetNamesV3()[%d] = %q, want %q", i, got[i], tt.expected[i])
+				}
+			}
+		})
+	}
+}
