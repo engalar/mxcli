@@ -283,13 +283,22 @@ fi
 # ── step 5: extensions (theme + optional widget) ──────────────────────────
 
 if step_enabled check; then
-    # Always append theme CSS to main.scss (module 11)
+    # Always append theme CSS to main.scss (module 11) — idempotent: skip if already present
     THEME_DEST="$REPO_ROOT/$PROJECT_NAME/theme/web/main.scss"
-    if [ -f "$EXT_THEME_SRC" ] && [ -f "$THEME_DEST" ]; then
+    if [ -f "$EXT_THEME_SRC" ] && [ -f "$THEME_DEST" ] && ! grep -q "helpdesk-theme (module 11)" "$THEME_DEST" 2>/dev/null; then
         echo "" >> "$THEME_DEST"
         echo "// -- helpdesk-theme (module 11) --" >> "$THEME_DEST"
         cat "$EXT_THEME_SRC" >> "$THEME_DEST"
         echo "  theme: helpdesk-theme.scss appended to $THEME_DEST"
+    fi
+
+    # Append brand theme SCSS (module 16) — idempotent: skip if already present
+    BRAND_THEME_SRC="$CAPSTONE_DIR/16-brand-theme.scss"
+    if [ -f "$BRAND_THEME_SRC" ] && [ -f "$THEME_DEST" ] && ! grep -q "brand-theme (module 16)" "$THEME_DEST" 2>/dev/null; then
+        echo "" >> "$THEME_DEST"
+        echo "// -- brand-theme (module 16) --" >> "$THEME_DEST"
+        cat "$BRAND_THEME_SRC" >> "$THEME_DEST"
+        echo "  theme: 16-brand-theme.scss appended to $THEME_DEST"
     fi
 
     if [ -f "$REPO_ROOT/$PROJECT_NAME/widgets/TicketStatusBadge.mpk" ]; then

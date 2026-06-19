@@ -1,0 +1,55 @@
+// ============================================================
+// HelpDesk Brand Theme (模块 16)
+// SCSS variables 需要定义在 Atlas_Core 编译之前才能生效，
+// 因此这里用 CSS 选择器覆盖方式直接改写渲染样式。
+// ============================================================
+
+// Fonts
+@import url('https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&family=Source+Sans+3:wght@400;600&display=swap');
+
+h1, h2, h3, h4, h5, h6, .mx-title, .mx-datagrid-header {
+  font-family: 'Lexend', sans-serif;
+}
+body, .mx-text, .mx-button {
+  font-family: 'Source Sans 3', sans-serif;
+}
+
+// Brand colors
+$brand-primary: #0891B2;
+$brand-secondary: #22D3EE;
+$brand-success: #22C55E;
+$brand-bg: #ECFEFF;
+$brand-text: #164E63;
+
+// Primary buttons
+.btn-primary, .mx-button.btn-primary {
+  background-color: #0891B2 !important;
+  border-color: #0891B2 !important;
+}
+.btn-primary:hover, .mx-button.btn-primary:hover {
+  background-color: #067394 !important;
+}
+
+// Success/CTA buttons
+.btn-success, .mx-button.btn-success {
+  background-color: #22C55E !important;
+  border-color: #22C55E !important;
+}
+
+// Status colors
+$status-open: #3B82F6;
+$status-inprogress: #F59E0B;
+$status-resolved: #22C55E;
+$status-closed: #6B7280;
+$status-draft: #94A3B8;
+
+// Priority colors
+$priority-low: #94A3B8;
+$priority-normal: #3B82F6;
+$priority-high: #F97316;
+$priority-critical: #EF4444;
+
+// Background
+.mx-layoutbody {
+  background-color: #ECFEFF;
+}
