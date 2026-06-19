@@ -35,10 +35,12 @@ create or modify microflow HD.DS_DashboardStats
     limit 0;
   declare $Total: decimal = 0;
   loop $T in $Resolved {
-    $Total = $Total + secondsBetween($T/ResolvedAt, $T/System.changedDate) div 3600.0;
+    $Seconds = secondsBetween($T/ResolvedAt, $T/System.changedDate);
+    $Hours   = cast($Seconds, decimal) div 3600;
+    $Total   = $Total + $Hours;
   }
   if count($Resolved) > 0 {
-    $Stats/AvgResponseHours = $Total / count($Resolved);
+    $Stats/AvgResponseHours = $Total div count($Resolved);
   } else {
     $Stats/AvgResponseHours = 0;
   }

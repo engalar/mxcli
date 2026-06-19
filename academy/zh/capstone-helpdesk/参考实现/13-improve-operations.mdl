@@ -54,6 +54,7 @@ create or modify microflow HD.ACT_DoAssign
 {
   $Result = call microflow HD.ACT_Ticket_Assign(Ticket = $Ticket, Agent = $Agent);
   $Success = $Result;
+  return $Success;
 }
 /
 

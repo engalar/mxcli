@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	"github.com/mendixlabs/mxcli/mdl/executor"
@@ -42,6 +43,8 @@ Examples:
 `,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
+		startTotal := time.Now()
+
 		filePath := args[0]
 		projectPath, _ := cmd.Flags().GetString("project")
 		checkRefs, _ := cmd.Flags().GetBool("references")
@@ -55,16 +58,20 @@ Examples:
 		formatter := linter.GetFormatter(outputFormat, !isStructured)
 
 		// Read the file
+		startRead := time.Now()
 		content, err := os.ReadFile(filePath)
 		if err != nil {
 			return fmt.Errorf("reading file: %w", err)
 		}
+		readTime := time.Since(startRead)
 
 		// Parse the script
+		startParse := time.Now()
 		if !isStructured {
 			fmt.Fprintf(out, "Checking syntax: %s\n", filePath)
 		}
 		prog, errs := visitor.Build(string(content))
+		parseTime := time.Since(startParse)
 		if len(errs) > 0 {
 			if isStructured {
 				var parseViolations []linter.Violation
@@ -119,7 +126,9 @@ Examples:
 		}
 
 		// Check for intra-script duplicate definitions (CREATE X … CREATE X without DROP)
+		startValidate := time.Now()
 		violations = append(violations, executor.CheckScriptDuplicates(prog)...)
+		validateTime := time.Since(startValidate)
 
 		if isStructured {
 			// Always emit structured output (even when clean)
@@ -137,6 +146,8 @@ Examples:
 		}
 
 		// If reference checking requested
+		var refTime time.Duration
+		startRef := time.Now()
 		if checkRefs {
 			if projectPath == "" {
 				return fmt.Errorf("--project (-p) is required for reference checking")
@@ -213,12 +224,29 @@ Examples:
 				}
 			}
 		}
+		if checkRefs {
+			refTime = time.Since(startRef)
+		}
+		totalTime := time.Since(startTotal)
 
 		if !isStructured {
 			fmt.Fprintf(out, "✓ Check passed! (%d statements)\n", stmtCount)
+			fmt.Fprintf(out, "\n── Performance ──────────────────────────\n")
+			fmt.Fprintf(out, "  Read:      %v\n", roundDuration(readTime))
+			fmt.Fprintf(out, "  Parse:     %v\n", roundDuration(parseTime))
+			fmt.Fprintf(out, "  Validate:  %v\n", roundDuration(validateTime))
+			if checkRefs {
+				fmt.Fprintf(out, "  Refs:      %v\n", roundDuration(refTime))
+			}
+			fmt.Fprintf(out, "  ───────────────────────────────\n")
+			fmt.Fprintf(out, "  Total:     %v\n", roundDuration(totalTime))
 		}
 		return nil
 	},
+}
+
+func roundDuration(d time.Duration) time.Duration {
+	return d.Round(time.Microsecond)
 }
 
 func accessGapDesc(gt executor.GapType) string {

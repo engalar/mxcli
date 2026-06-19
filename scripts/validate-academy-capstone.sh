@@ -240,8 +240,22 @@ if step_enabled exec; then
         "$CAPSTONE_DIR/09-js-actions.mdl"
         "$CAPSTONE_DIR/10-widget.mdl"
         "$CAPSTONE_DIR/12-integrate-actions.mdl"
+        "$CAPSTONE_DIR/13-improve-operations.mdl"
+        "$CAPSTONE_DIR/14-beautify-pages.mdl"
+        "$CAPSTONE_DIR/15-dashboard.mdl"
+        "$CAPSTONE_DIR/16-brand-theme.mdl"
         "$CAPSTONE_DIR/99-seed-data.mdl"
     )
+
+    echo "  check ${#mdl_files[@]} MDL files (syntax + semantics)..."
+    for f in "${mdl_files[@]}"; do
+        if ! run_mxcli check -p "$MPR" "$f" >/dev/null 2>&1; then
+            echo "  ✗ check failed: $f" >&2
+            run_mxcli check -p "$MPR" "$f" 2>&1 || true
+            exit 1
+        fi
+    done
+    echo "  all checks passed."
 
     echo "  exec ${#mdl_files[@]} MDL files..."
     run_mdlrun -p "$MPR" "${mdl_files[@]}"
