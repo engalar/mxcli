@@ -285,36 +285,26 @@ fi
 if step_enabled check; then
     THEME_DEST="$REPO_ROOT/$PROJECT_NAME/theme/web/main.scss"
     EXT_THEME_SRC="$REPO_ROOT/academy/zh/11-扩展-主题定制/theme/helpdesk-theme.scss"
-    BRAND_THEME_SRC="$CAPSTONE_DIR/16-brand-theme.scss"
+    BRAND_SRC="$CAPSTONE_DIR/16-brand-theme.scss"
 
-    # Regenerate theme section from scratch to guarantee append order.
-    # Keep the original header (imports only, before any theme comment).
-    if [ -f "$THEME_DEST" ]; then
-        ORIG_HEADER=$(mktemp)
-        # Take everything up to (but not including) the first line starting with //
-        # that isn't an @import — that's the theme section boundary.
-        while IFS= read -r line; do
-            case "$line" in
-                @import*) echo "$line" >> "$ORIG_HEADER" ;;
-                '') echo "" >> "$ORIG_HEADER" ;;
-                //*) break ;;  # theme section starts here — stop
-                *) echo "$line" >> "$ORIG_HEADER" ;;
-            esac
-        done < "$THEME_DEST"
+    # Append module 11 theme to main.scss (skip if already present)
+    if [ -f "$EXT_THEME_SRC" ] && [ -f "$THEME_DEST" ] && ! grep -q "helpdesk-theme (module 11)" "$THEME_DEST" 2>/dev/null; then
+        echo "" >> "$THEME_DEST"
+        echo "// -- helpdesk-theme (module 11) --" >> "$THEME_DEST"
+        cat "$EXT_THEME_SRC" >> "$THEME_DEST"
+        echo "  theme: helpdesk-theme.scss appended to $THEME_DEST"
+    fi
 
-        echo "" >> "$ORIG_HEADER"
-        echo "// -- helpdesk-theme (module 11) --" >> "$ORIG_HEADER"
-        if [ -f "$EXT_THEME_SRC" ]; then
-            cat "$EXT_THEME_SRC" >> "$ORIG_HEADER"
-        fi
-        echo "" >> "$ORIG_HEADER"
-        echo "// -- brand-theme (module 16) --" >> "$ORIG_HEADER"
-        if [ -f "$BRAND_THEME_SRC" ]; then
-            cat "$BRAND_THEME_SRC" >> "$ORIG_HEADER"
-        fi
-
-        mv "$ORIG_HEADER" "$THEME_DEST"
-        echo "  theme: helpdesk-theme + brand appended to $THEME_DEST"
+    # Copy brand SCSS partial into project so main.scss can @import it
+    BRAND_THEME_PARTIAL="$REPO_ROOT/$PROJECT_NAME/theme/web/_brand-theme.scss"
+    if [ -f "$BRAND_SRC" ]; then
+        cp "$BRAND_SRC" "$BRAND_THEME_PARTIAL"
+        echo "  theme: 16-brand-theme.scss copied to theme/web/_brand-theme.scss"
+    fi
+    # Add @import for brand partial (skip if already present)
+    if [ -f "$THEME_DEST" ] && ! grep -q '@import "brand-theme"' "$THEME_DEST" 2>/dev/null; then
+        echo '@import "brand-theme";' >> "$THEME_DEST"
+        echo "  theme: @import 'brand-theme' added to main.scss"
     fi
 
     if [ -f "$REPO_ROOT/$PROJECT_NAME/widgets/TicketStatusBadge.mpk" ]; then

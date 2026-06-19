@@ -1,8 +1,11 @@
 -- ============================================================
 -- 模块 16：品牌主题
 -- 前提：01-15 已执行
--- 注意：本模块在 mxcli 执行后将 SCSS 样式追加到 main.scss 文件
+--
+-- 品牌 SCSS 定义在 16-brand-theme.scss，由验证脚本的 step 5
+-- 复制到 theme/web/_brand-theme.scss 并用 @import 'brand-theme'
+-- 追加到 main.scss 末尾。
 -- ============================================================
 
--- 品牌主题色、字体、状态/优先级配色通过 theme/web/main.scss 覆盖
--- Atlas_Core 主题变量实现。参考 academy/zh/11-主题扩展 的 theme 目录。
+-- 品牌主题色、字体、状态/优先级配色通过 _brand-theme.scss
+-- 覆盖 Atlas_Core 样式实现。
