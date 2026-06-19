@@ -69,9 +69,9 @@ alter page HD.Ticket_Detail {
 };
 
 alter page HD.Ticket_NewEdit {
-  drop widget ddPriority;
+  drop widget rbPriority;
   insert after taDescription {
-    dropdown ddPriority (
+    radiobuttons rbPriority (
       label:     'Priority',
       attribute: Priority
     )

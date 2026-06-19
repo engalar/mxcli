@@ -35,8 +35,8 @@ alter page HD.Ticket_Detail {
     )
   }
   insert after txtStatus {
-    pluggablewidget 'com.helpdesk.widget.ticketstatusbadge.TicketStatusBadge' badgeStatus (
-      datasource: $currentObject/Status
+    dynamictext badgeStatus (
+      content: '[{1}]', contentparams: [{1} = Status]
     )
   }
 };
@@ -86,7 +86,7 @@ alter page HD.Ticket_NewEdit {
 };
 
 alter page HD.Ticket_NewEdit {
-  insert after ddPriority {
+  insert after rbPriority {
     dynamictext txtDivider (content: '───', rendermode: Text)
   }
 };
