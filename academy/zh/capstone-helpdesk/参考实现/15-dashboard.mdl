@@ -1,0 +1,148 @@
+-- ============================================================
+-- 模块 15：Dashboard 仪表盘
+-- 前提：01-14 已执行
+-- ============================================================
+
+create or modify non-persistent entity HD.DashboardStats (
+  OpenCount:        integer,
+  OverdueCount:     integer,
+  NewTodayCount:    integer,
+  AvgResponseHours: decimal
+);
+
+create or modify microflow HD.DS_DashboardStats
+  ()
+  returns HD.DashboardStats as $Stats
+  folder 'Dashboard'
+{
+  $Stats = create HD.DashboardStats;
+
+  retrieve $Open from HD.Ticket
+    where [Status != 'Closed' and Status != 'Resolved']
+    limit 0;
+  $Stats/OpenCount = count($Open);
+
+  retrieve $Overdue from HD.Ticket where [IsOverSLA = true()] limit 0;
+  $Stats/OverdueCount = count($Overdue);
+
+  retrieve $Today from HD.Ticket
+    where [System.changedDate >= '[%BeginOfCurrentDay%]']
+    limit 0;
+  $Stats/NewTodayCount = count($Today);
+
+  retrieve $Resolved from HD.Ticket
+    where [ResolvedAt != empty]
+    limit 0;
+  declare $Total: decimal = 0;
+  loop $T in $Resolved {
+    $Total = $Total + secondsBetween($T/ResolvedAt, $T/System.changedDate) div 3600.0;
+  }
+  if count($Resolved) > 0 {
+    $Stats/AvgResponseHours = $Total / count($Resolved);
+  } else {
+    $Stats/AvgResponseHours = 0;
+  }
+
+  return $Stats;
+}
+/
+
+create or replace page HD.Dashboard_Home
+(
+  title:  'Dashboard',
+  layout: Atlas_Core.Atlas_Default,
+  folder: 'Dashboard'
+)
+{
+  layoutgrid lgMain {
+    row rHeader {
+      column cTitle (desktopwidth: 12) {
+        dynamictext txtTitle (content: 'HelpDesk Dashboard', rendermode: H2)
+      }
+    }
+    row rStats {
+      column cOpen (desktopwidth: 3) {
+        dataview dvOpen (datasource: microflow HD.DS_DashboardStats) {
+          dynamictext txtOpen (content: '{1}', contentparams: [{1} = OpenCount], rendermode: H1)
+          dynamictext txtOpenLabel (content: 'Open Tickets', rendermode: Text)
+        }
+      }
+      column cOverdue (desktopwidth: 3) {
+        dataview dvOverdue (datasource: microflow HD.DS_DashboardStats) {
+          dynamictext txtOverdue (content: '{1}', contentparams: [{1} = OverdueCount], rendermode: H1)
+          dynamictext txtOverdueLabel (content: 'Overdue', rendermode: Text)
+        }
+      }
+      column cNew (desktopwidth: 3) {
+        dataview dvNew (datasource: microflow HD.DS_DashboardStats) {
+          dynamictext txtNew (content: '{1}', contentparams: [{1} = NewTodayCount], rendermode: H1)
+          dynamictext txtNewLabel (content: 'New Today', rendermode: Text)
+        }
+      }
+      column cAvg (desktopwidth: 3) {
+        dataview dvAvg (datasource: microflow HD.DS_DashboardStats) {
+          dynamictext txtAvg (content: '{1}h', contentparams: [{1} = AvgResponseHours], rendermode: H1)
+          dynamictext txtAvgLabel (content: 'Avg Response', rendermode: Text)
+        }
+      }
+    }
+    row rOverdue {
+      column cOverdueList (desktopwidth: 12) {
+        dynamictext txtOverdueTitle (content: '⚠ Overdue Alerts', rendermode: H3)
+        datagrid dgOverdue (
+          datasource: database from HD.Ticket
+            where [IsOverSLA = true()]
+            sort by SLADueAt asc,
+          PageSize: 5
+        ) {
+          column colSubject  (attribute: Subject,          caption: 'Ticket')
+          column colPriority (attribute: Priority,         caption: 'Priority', ColumnWidth: manual, Size: 100)
+          column colSLADue   (attribute: SLADueAt,         caption: 'SLA Due',  ColumnWidth: manual, Size: 140)
+          column colActions  (caption: '', ShowContentAs: customContent, ColumnWidth: manual, Size: 60) {
+            actionbutton btnOpen (
+              caption:     'Open',
+              action:      show_page HD.Ticket_Detail (Ticket: $currentObject),
+              buttonstyle: link
+            )
+          }
+        }
+      }
+    }
+    row rActions {
+      column cActions (desktopwidth: 12) {
+        dynamictext txtQuickTitle (content: 'Quick Actions', rendermode: H3)
+        actionbutton btnNewTicket (
+          caption:     'New Ticket',
+          action:      create_object HD.Ticket then show_page HD.Ticket_NewEdit,
+          buttonstyle: primary
+        )
+        actionbutton btnAllTickets (
+          caption:     'All Tickets',
+          action:      show_page HD.Ticket_Overview,
+          buttonstyle: default
+        )
+        actionbutton btnKnowledgeBase (
+          caption:     'Knowledge Base',
+          action:      show_page KB.Article_Overview,
+          buttonstyle: default
+        )
+      }
+    }
+  }
+};
+
+create or replace navigation Responsive
+  home page HD.MyTickets_Overview    for Customer
+  home page HD.Dashboard_Home        for Agent
+  home page HD.Dashboard_Home        for Manager
+  home page HD.MyTickets_Overview
+  login page Administration.login
+  menu (
+    menu item 'Dashboard'       page HD.Dashboard_Home;
+    menu item 'My Tickets'      page HD.MyTickets_Overview;
+    menu item 'All Tickets'     page HD.Ticket_Overview;
+    menu item 'Knowledge Base'  page KB.Article_Overview;
+  );
+
+grant execute on microflow HD.DS_DashboardStats to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
+grant view on page HD.Dashboard_Home to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
