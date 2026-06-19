@@ -308,20 +308,35 @@ func applyDropWidgetMutator(mutator backend.PageMutator, op *ast.DropWidgetOp) e
 // ============================================================================
 
 func applyReplaceWidgetMutator(ctx *ExecContext, mutator backend.PageMutator, op *ast.ReplaceWidgetOp, moduleName string, moduleID model.ID) error {
-	// Check for duplicate widget names (skip the widget being replaced)
+	// Collect all widget names from the replacement subtree — the entire
+	// target subtree will be removed, so any name that previously existed
+	// inside it is freed for reuse. Collecting these names recursively lets
+	// us exclude them from both the duplicate-name check and the widget
+	// scope so child names (e.g. btnPublish inside a replaced ftrActions)
+	// can be reused without false-positive "duplicate name" errors.
+	newNames := collectWidgetNamesV3(op.NewWidgets)
+
+	// Check for duplicate widget names using the global scope minus the names
+	// that will be freed by the replacement.
+	scope := mutator.WidgetScope()
+	for _, n := range newNames {
+		delete(scope, n)
+	}
 	for _, w := range op.NewWidgets {
-		if w.Name != "" && w.Name != op.Target.Widget && mutator.FindWidget(w.Name) {
-			return mdlerrors.NewAlreadyExistsMsg("widget", w.Name, fmt.Sprintf("duplicate widget name '%s': a widget with this name already exists on the page", w.Name))
+		if w.Name != "" {
+			if _, exists := scope[w.Name]; exists {
+				return mdlerrors.NewAlreadyExistsMsg("widget", w.Name, fmt.Sprintf("duplicate widget name '%s': a widget with this name already exists on the page", w.Name))
+			}
 		}
 	}
 
 	// Find entity context from enclosing DataView/DataGrid/ListView
 	entityCtx := mutator.EnclosingEntity(op.Target.Widget)
 
-	// Build new widgets from AST. Pass the replaced widget's name as excluded
-	// scope so the replacement may reuse the same name without tripping the
-	// duplicate-name check.
-	widgets, err := buildWidgetsFromASTGen(ctx, op.NewWidgets, moduleName, moduleID, entityCtx, mutator, op.Target.Widget)
+	// Build new widgets from AST. Pass all replacement names as excluded scope
+	// so reused names from the replaced subtree don't trip the duplicate-name
+	// check in registerWidgetName.
+	widgets, err := buildWidgetsFromASTGen(ctx, op.NewWidgets, moduleName, moduleID, entityCtx, mutator, newNames...)
 	if err != nil {
 		return mdlerrors.NewBackend("build replacement widgets", err)
 	}
@@ -406,4 +421,16 @@ func parseDesktopWidth(propName string, value any) (int, error) {
 		return n, nil
 	}
 	return 0, fmt.Errorf("unsupported DesktopWidth value type %T", value)
+}
+
+// collectWidgetNamesV3 recursively collects all widget names from a list of WidgetV3.
+func collectWidgetNamesV3(widgets []*ast.WidgetV3) []string {
+	var names []string
+	for _, w := range widgets {
+		if w.Name != "" {
+			names = append(names, w.Name)
+		}
+		names = append(names, collectWidgetNamesV3(w.Children)...)
+	}
+	return names
 }

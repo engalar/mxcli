@@ -1,0 +1,83 @@
+-- ============================================================
+-- 模块 14：页面美化
+-- 前提：01-13 已执行
+-- ============================================================
+
+-- ============================================================
+-- Step 1: Ticket_Overview — Status 列属性调整
+-- Note: TicketStatusBadge widget 已由 10-widget.mdl 安装，
+-- 此处仅调整列宽（140→120）。
+-- ============================================================
+
+alter page HD.Ticket_Overview {
+  set size = 120 on dgTickets.Status
+};
+
+-- ============================================================
+-- Step 2: MyTickets_Overview — 列属性统一
+-- ============================================================
+
+alter page HD.MyTickets_Overview {
+  set size = 120 on dgMyTickets.Status
+};
+
+alter page HD.MyTickets_Overview {
+  set size = 100 on dgMyTickets.Priority
+};
+
+-- ============================================================
+-- Step 3: Ticket_Detail — 美化（idempotent：先 DROP 再重建）
+-- ============================================================
+
+alter page HD.Ticket_Detail {
+  drop widget badgeStatus, txtPriorityColor
+};
+
+alter page HD.Ticket_Detail {
+  replace txtStatus with {
+    dynamictext txtStatus (
+      content: 'Status: {1}', contentparams: [{1} = Status]
+    )
+  }
+  insert after txtStatus {
+    pluggablewidget 'com.helpdesk.widget.ticketstatusbadge.TicketStatusBadge' badgeStatus (
+      datasource: $currentObject/Status
+    )
+  }
+};
+
+alter page HD.Ticket_Detail {
+  insert after badgeStatus {
+    dynamictext txtPriorityColor (
+      content: 'Priority: {1}', contentparams: [{1} = Priority]
+    )
+  }
+};
+
+-- ============================================================
+-- Step 4: KB.Article_Overview — Published 列宽统一
+-- ============================================================
+
+alter page KB.Article_Overview {
+  set size = 140 on dgArticles.PublishedAt
+};
+
+-- ============================================================
+-- Step 5: KB.Article_Detail — 操作按钮已在 06-kb.mdl 正确配置
+-- DataView 的 FooterWidgets 以展开形式存储，没有 "ftrActions"
+-- 命名的 BSON 节点，因此无需替换。
+-- ============================================================
+
+-- ============================================================
+-- Step 6: Ticket_NewEdit — 表单区域分隔线
+-- ============================================================
+
+alter page HD.Ticket_NewEdit {
+  drop widget txtDivider
+};
+
+alter page HD.Ticket_NewEdit {
+  insert after ddPriority {
+    dynamictext txtDivider (content: '───', rendermode: Text)
+  }
+};
