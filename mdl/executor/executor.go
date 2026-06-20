@@ -486,33 +486,25 @@ func (e *Executor) SetProgressOut(w io.Writer) {
 }
 
 // Execute runs a single MDL statement with output-line and wall-clock guards.
-// Each statement gets a fresh line budget. If the statement exceeds maxOutputLines
-// lines of output or runs longer than the configured timeout, it is aborted with an error.
 func (e *Executor) Execute(stmt ast.Statement) error {
 	start := time.Now()
 
-	// Reset per-statement line counter.
 	if e.guard != nil {
 		e.guard.reset()
 	}
 
-	// Enforce wall-clock timeout via context.WithTimeout.
-	// The goroutine pattern is retained because handlers are not yet
-	// context-aware; threading context through handlers is a follow-up.
 	executeTimeout := configuredExecuteTimeout()
 	ctx, cancel := context.WithTimeout(context.Background(), executeTimeout)
 	defer cancel()
 
-	type result struct{ err error }
-	ch := make(chan result, 1)
-	go func() {
-		ch <- result{e.executeInner(ctx, stmt)}
-	}()
-
 	var err error
+	done := make(chan struct{}, 1)
+	go func() {
+		err = e.executeInner(ctx, stmt)
+		done <- struct{}{}
+	}()
 	select {
-	case r := <-ch:
-		err = r.err
+	case <-done:
 	case <-ctx.Done():
 		err = mdlerrors.NewValidationf("statement timed out after %v", executeTimeout)
 	}
@@ -520,11 +512,11 @@ func (e *Executor) Execute(stmt ast.Statement) error {
 	elapsed := time.Since(start)
 
 	if e.logger != nil {
-		e.logger.Command(stmtTypeName(stmt), stmtSummary(stmt), elapsed, err)
+		e.logger.Command(stmt.TypeName(), stmtSummary(stmt), elapsed, err)
 	}
 
 	e.perfStats = append(e.perfStats, perfStmt{
-		Type:     stmtTypeName(stmt),
+		Type:     stmt.TypeName(),
 		Summary:  stmtSummary(stmt),
 		Duration: elapsed,
 		Err:      err != nil,

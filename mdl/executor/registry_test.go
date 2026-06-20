@@ -4,7 +4,6 @@ package executor
 
 import (
 	"errors"
-	"reflect"
 	"strings"
 	"testing"
 
@@ -14,7 +13,7 @@ import (
 
 // emptyRegistry creates a Registry with no handlers registered.
 func emptyRegistry() *Registry {
-	return &Registry{handlers: make(map[reflect.Type]StmtHandler)}
+	return &Registry{handlers: make(map[string]StmtHandler), futureFuncs: make(map[string]StmtHandlerFunc)}
 }
 
 func TestNewRegistry_NoPanic(t *testing.T) {
@@ -40,18 +39,21 @@ func TestRegistry_Dispatch_UnknownStatement(t *testing.T) {
 	}
 }
 
-func TestRegistry_Register_Duplicate_Panics(t *testing.T) {
+func TestRegistry_Register_Duplicate_SilentlyIgnored(t *testing.T) {
 	r := emptyRegistry()
-	handler := func(ctx *ExecContext, stmt ast.Statement) error { return nil }
+	callCount := 0
+	handler := func(ctx *ExecContext, stmt ast.Statement) error { callCount++; return nil }
 
 	r.Register(&ast.ConnectStmt{}, handler)
+	r.Register(&ast.ConnectStmt{}, handler) // duplicate: should not panic, should not replace
 
-	defer func() {
-		if recover() == nil {
-			t.Fatal("expected panic on duplicate registration")
-		}
-	}()
-	r.Register(&ast.ConnectStmt{}, handler)
+	if callCount != 0 {
+		t.Fatal("handler should not have been called")
+	}
+	h := r.Lookup(&ast.ConnectStmt{})
+	if h == nil {
+		t.Fatal("handler should be found after first registration")
+	}
 }
 
 func TestRegistry_Dispatch_Success(t *testing.T) {

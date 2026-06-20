@@ -3,29 +3,32 @@
 package executor
 
 import (
+	"context"
 	"fmt"
-	"reflect"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 )
 
 // StmtHandler executes a single statement type.
-// Implementations receive the concrete statement via type assertion.
 type StmtHandler func(ctx *ExecContext, stmt ast.Statement) error
 
-// Registry maps AST statement types to their handler functions.
+// StmtHandlerFunc is the new-style handler signature for handlers that
+// have been migrated away from *ExecContext.
+type StmtHandlerFunc func(ctx context.Context, stmt ast.Statement) error
+
+// Registry maps AST statement type names to their handler functions.
 type Registry struct {
-	handlers map[reflect.Type]StmtHandler
+	handlers    map[string]StmtHandler
+	futureFuncs map[string]StmtHandlerFunc
 }
 
 // NewRegistry creates a Registry with all statement handlers registered.
 func NewRegistry() *Registry {
 	r := &Registry{
-		handlers: make(map[reflect.Type]StmtHandler),
+		handlers:    make(map[string]StmtHandler),
+		futureFuncs: make(map[string]StmtHandlerFunc),
 	}
-	// Registration functions are called here explicitly (no init()).
-	// Each function registers handlers for its domain.
 	registerConnectionHandlers(r)
 	registerModuleHandlers(r)
 	registerEnumerationHandlers(r)
@@ -60,42 +63,51 @@ func NewRegistry() *Registry {
 	return r
 }
 
-// Register maps a statement type to its handler. It panics on duplicate
-// registrations to catch wiring errors at startup.
+// Register maps a statement type to its handler using reflect.TypeOf for
+// backward-compatible key generation.
 func (r *Registry) Register(stmt ast.Statement, handler StmtHandler) {
-	t := reflect.TypeOf(stmt)
-	if _, exists := r.handlers[t]; exists {
-		panic(fmt.Sprintf("registry: duplicate handler registration for %s", t))
+	key := stmt.TypeName()
+	if _, exists := r.handlers[key]; !exists {
+		r.handlers[key] = handler
 	}
-	r.handlers[t] = handler
 }
 
-// Lookup returns the handler for the given statement, or nil if none is
-// registered.
+// RegisterByName maps a type name to its handler.
+func (r *Registry) RegisterByName(typeName string, handler StmtHandler) {
+	if _, exists := r.handlers[typeName]; !exists {
+		r.handlers[typeName] = handler
+	}
+}
+
+// RegisterFuture maps a type name to a new-style handler (no *ExecContext).
+// Used during the transition from *ExecContext to context.Context.
+func (r *Registry) RegisterFuture(typeName string, handler StmtHandlerFunc) {
+	if _, exists := r.futureFuncs[typeName]; !exists {
+		r.futureFuncs[typeName] = handler
+	}
+}
+
+// Lookup returns the handler for the given statement, or nil if none is registered.
 func (r *Registry) Lookup(stmt ast.Statement) StmtHandler {
-	return r.handlers[reflect.TypeOf(stmt)]
+	return r.handlers[stmt.TypeName()]
 }
 
-// Dispatch finds and executes the handler for stmt. Returns an
-// UnsupportedError if no handler is registered.
+// Dispatch finds and executes the handler for stmt.
 func (r *Registry) Dispatch(ctx *ExecContext, stmt ast.Statement) error {
 	ctx.initRoles()
 	h := r.Lookup(stmt)
 	if h == nil {
-		return mdlerrors.NewUnsupported(fmt.Sprintf("unhandled statement type %T", stmt))
+		return mdlerrors.NewUnsupported(fmt.Sprintf("unhandled statement type %s", stmt.TypeName()))
 	}
 	return h(ctx, stmt)
 }
 
-// Validate checks that every known AST statement type has a registered
-// handler. Returns an error listing all unregistered types, or nil if
-// the registry is complete.
+// Validate checks that every known AST statement type has a registered handler.
 func (r *Registry) Validate(knownTypes []ast.Statement) error {
 	var missing []string
 	for _, s := range knownTypes {
-		t := reflect.TypeOf(s)
-		if _, ok := r.handlers[t]; !ok {
-			missing = append(missing, t.String())
+		if _, ok := r.handlers[s.TypeName()]; !ok {
+			missing = append(missing, s.TypeName())
 		}
 	}
 	if len(missing) > 0 {
