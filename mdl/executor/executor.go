@@ -344,7 +344,7 @@ func configuredExecuteTimeout() time.Duration {
 }
 
 // BackendFactory creates a new backend instance for connecting to a project.
-type BackendFactory func() backend.FullBackend
+type BackendFactory func() backend.ConnectionBackend
 
 // Executor executes MDL statements against a Mendix project.
 type Executor struct {
@@ -404,8 +404,8 @@ func (e *Executor) SetBackendFactory(f BackendFactory) {
 // ensures the executor cache is initialized. Used by callers (e.g.
 // `mxcli export`) that own the backend lifecycle outside the normal
 // Connect/Disconnect MDL flow.
-func (e *Executor) SetBackend(b backend.FullBackend) {
-	e.backend = b
+func (e *Executor) SetBackend(b backend.ConnectionBackend) {
+	e.backend = b.(backend.FullBackend)
 	if e.cache == nil {
 		e.cache = &executorCache{}
 	}

@@ -49,7 +49,7 @@ Examples:
 		defer func() { _ = be.Disconnect() }()
 
 		exec := executor.New(os.Stdout)
-		exec.SetBackendFactory(func() backend.FullBackend { return mprbackend.New() })
+		exec.SetBackendFactory(func() backend.ConnectionBackend { return mprbackend.New() })
 		exec.SetBackend(be)
 
 		start := time.Now()

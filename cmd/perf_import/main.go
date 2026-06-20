@@ -360,7 +360,7 @@ var _ element.Element = nil
 func newExec(mprPath string) *executor.Executor {
 	out := &bytes.Buffer{}
 	exec := executor.New(out)
-	exec.SetBackendFactory(func() backend.FullBackend { return mprbackend.New() })
+	exec.SetBackendFactory(func() backend.ConnectionBackend { return mprbackend.New() })
 	if err := exec.Execute(&ast.ConnectStmt{Path: mprPath}); err != nil {
 		fatalf("connect: %v", err)
 	}

@@ -175,8 +175,7 @@ func (b *MprBackend) createModuleViaModelsdk(module *model.Module) error {
 		return fmt.Errorf("failed to get project root: %w", err)
 	}
 
-	w, ok := b.concreteWriter()
-	if !ok {
+	if b.writer == nil {
 		return fmt.Errorf("modelsdk writer not initialized")
 	}
 
@@ -188,14 +187,14 @@ func (b *MprBackend) createModuleViaModelsdk(module *model.Module) error {
 	genModule.SetAppStoreGuid(module.AppStoreGuid)
 	genModule.SetAppStoreVersion(module.AppStoreVersion)
 	genModule.SetIsReusableComponent(module.IsReusableComponent)
-	if err := mprrepos.NewModuleRepository(w).Create(projectRootID, "Modules", genModule); err != nil {
+	if err := mprrepos.NewModuleRepository(b.writer).Create(projectRootID, "Modules", genModule); err != nil {
 		return fmt.Errorf("failed to insert module unit: %w", err)
 	}
 
 	// DomainModel unit — gen-native
 	dm := genDm.NewDomainModel()
 	dm.SetID(element.ID(modelsdkmpr.GenerateID()))
-	if err := mprrepos.NewDomainModelRepository(w).Create(string(module.ID), "DomainModel", dm); err != nil {
+	if err := mprrepos.NewDomainModelRepository(b.writer).Create(string(module.ID), "DomainModel", dm); err != nil {
 		return fmt.Errorf("failed to insert domain model unit: %w", err)
 	}
 
@@ -246,8 +245,7 @@ func (b *MprBackend) createFolderViaModelsdk(folder *model.Folder) error {
 		folder.ID = model.ID(modelsdkmpr.GenerateID())
 	}
 
-	w, ok := b.concreteWriter()
-	if !ok {
+	if b.writer == nil {
 		return fmt.Errorf("modelsdk writer not initialized")
 	}
 
@@ -255,7 +253,7 @@ func (b *MprBackend) createFolderViaModelsdk(folder *model.Folder) error {
 	genFolder := msdkprojects.NewFolder()
 	genFolder.SetID(element.ID(folder.ID))
 	genFolder.SetName(folder.Name)
-	if err := mprrepos.NewFolderRepository(w).Create(string(folder.ContainerID), "Folders", genFolder); err != nil {
+	if err := mprrepos.NewFolderRepository(b.writer).Create(string(folder.ContainerID), "Folders", genFolder); err != nil {
 		return fmt.Errorf("failed to insert folder unit: %w", err)
 	}
 

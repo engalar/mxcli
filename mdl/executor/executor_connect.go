@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
+	"github.com/mendixlabs/mxcli/mdl/backend"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 )
 
@@ -23,7 +24,7 @@ func execConnect(ctx *ExecContext, s *ast.ConnectStmt) error {
 		if err := b.Connect(s.Path); err != nil {
 			return mdlerrors.NewBackend("connect", err)
 		}
-		ctx.Backend = b
+		ctx.Backend = b.(backend.FullBackend)
 		ctx.initRoles() // populate role interfaces from the new backend
 	} else if ctx.Backend != nil {
 		// Persistent backend (per-MPR daemon): Connect is a no-op on noOpConnectBackend.
@@ -85,7 +86,7 @@ func reconnect(ctx *ExecContext) error {
 		if err := b.Connect(ctx.MprPath); err != nil {
 			return mdlerrors.NewBackend("reconnect", err)
 		}
-		ctx.Backend = b
+		ctx.Backend = b.(backend.FullBackend)
 		ctx.initRoles() // populate role interfaces from the new backend
 	} else if ctx.Backend != nil {
 		// Persistent backend: Connect is a no-op on noOpConnectBackend.

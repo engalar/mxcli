@@ -45,11 +45,10 @@ func (b *MprBackend) createAgentEditorModelViaModelsdk(m *types.Model) error {
 	}
 	doc := newAgentBlobDoc(string(m.ID), m.Name, m.Documentation, m.Excluded, m.ExportLevel,
 		types.CustomTypeModel, types.ReadableModel, contentsJSON)
-	w, ok := b.concreteWriter()
-	if !ok {
+	if b.writer == nil {
 		return fmt.Errorf("modelsdk writer not initialized")
 	}
-	return mprrepos.NewAgentRepository(w).Create(string(m.ContainerID), customBlobContainmentName, doc)
+	return mprrepos.NewAgentRepository(b.writer).Create(string(m.ContainerID), customBlobContainmentName, doc)
 }
 
 func (b *MprBackend) updateAgentEditorModelViaModelsdk(m *types.Model) error {
@@ -62,11 +61,10 @@ func (b *MprBackend) updateAgentEditorModelViaModelsdk(m *types.Model) error {
 	}
 	doc := newAgentBlobDoc(string(m.ID), m.Name, m.Documentation, m.Excluded, m.ExportLevel,
 		types.CustomTypeModel, types.ReadableModel, contentsJSON)
-	w, ok := b.concreteWriter()
-	if !ok {
+	if b.writer == nil {
 		return fmt.Errorf("modelsdk writer not initialized")
 	}
-	return mprrepos.NewAgentRepository(w).Update(doc)
+	return mprrepos.NewAgentRepository(b.writer).Update(doc)
 }
 
 // ── Agent Editor Knowledge Base ───────────────────────────────────────────
@@ -93,11 +91,10 @@ func (b *MprBackend) createAgentEditorKnowledgeBaseViaModelsdk(k *types.Knowledg
 	}
 	doc := newAgentBlobDoc(string(k.ID), k.Name, k.Documentation, k.Excluded, k.ExportLevel,
 		types.CustomTypeKnowledgeBase, types.ReadableKnowledgeBase, contentsJSON)
-	w, ok := b.concreteWriter()
-	if !ok {
+	if b.writer == nil {
 		return fmt.Errorf("modelsdk writer not initialized")
 	}
-	return mprrepos.NewAgentRepository(w).Create(string(k.ContainerID), customBlobContainmentName, doc)
+	return mprrepos.NewAgentRepository(b.writer).Create(string(k.ContainerID), customBlobContainmentName, doc)
 }
 
 func (b *MprBackend) updateAgentEditorKnowledgeBaseViaModelsdk(k *types.KnowledgeBase) error {
@@ -110,11 +107,10 @@ func (b *MprBackend) updateAgentEditorKnowledgeBaseViaModelsdk(k *types.Knowledg
 	}
 	doc := newAgentBlobDoc(string(k.ID), k.Name, k.Documentation, k.Excluded, k.ExportLevel,
 		types.CustomTypeKnowledgeBase, types.ReadableKnowledgeBase, contentsJSON)
-	w, ok := b.concreteWriter()
-	if !ok {
+	if b.writer == nil {
 		return fmt.Errorf("modelsdk writer not initialized")
 	}
-	return mprrepos.NewAgentRepository(w).Update(doc)
+	return mprrepos.NewAgentRepository(b.writer).Update(doc)
 }
 
 // ── Agent Editor Consumed MCP Service ─────────────────────────────────────
@@ -138,11 +134,10 @@ func (b *MprBackend) createAgentEditorConsumedMCPServiceViaModelsdk(c *types.Con
 	}
 	doc := newAgentBlobDoc(string(c.ID), c.Name, c.Documentation, c.Excluded, c.ExportLevel,
 		types.CustomTypeConsumedMCPService, types.ReadableConsumedMCPService, contentsJSON)
-	w, ok := b.concreteWriter()
-	if !ok {
+	if b.writer == nil {
 		return fmt.Errorf("modelsdk writer not initialized")
 	}
-	return mprrepos.NewAgentRepository(w).Create(string(c.ContainerID), customBlobContainmentName, doc)
+	return mprrepos.NewAgentRepository(b.writer).Create(string(c.ContainerID), customBlobContainmentName, doc)
 }
 
 func (b *MprBackend) updateAgentEditorConsumedMCPServiceViaModelsdk(c *types.ConsumedMCPService) error {
@@ -155,11 +150,10 @@ func (b *MprBackend) updateAgentEditorConsumedMCPServiceViaModelsdk(c *types.Con
 	}
 	doc := newAgentBlobDoc(string(c.ID), c.Name, c.Documentation, c.Excluded, c.ExportLevel,
 		types.CustomTypeConsumedMCPService, types.ReadableConsumedMCPService, contentsJSON)
-	w, ok := b.concreteWriter()
-	if !ok {
+	if b.writer == nil {
 		return fmt.Errorf("modelsdk writer not initialized")
 	}
-	return mprrepos.NewAgentRepository(w).Update(doc)
+	return mprrepos.NewAgentRepository(b.writer).Update(doc)
 }
 
 // ── Agent Editor Agent ────────────────────────────────────────────────────
@@ -183,11 +177,10 @@ func (b *MprBackend) createAgentEditorAgentViaModelsdk(a *types.Agent) error {
 	}
 	doc := newAgentBlobDoc(string(a.ID), a.Name, a.Documentation, a.Excluded, a.ExportLevel,
 		types.CustomTypeAgent, types.ReadableAgent, contentsJSON)
-	w, ok := b.concreteWriter()
-	if !ok {
+	if b.writer == nil {
 		return fmt.Errorf("modelsdk writer not initialized")
 	}
-	return mprrepos.NewAgentRepository(w).Create(string(a.ContainerID), customBlobContainmentName, doc)
+	return mprrepos.NewAgentRepository(b.writer).Create(string(a.ContainerID), customBlobContainmentName, doc)
 }
 
 func (b *MprBackend) updateAgentEditorAgentViaModelsdk(a *types.Agent) error {
@@ -200,9 +193,8 @@ func (b *MprBackend) updateAgentEditorAgentViaModelsdk(a *types.Agent) error {
 	}
 	doc := newAgentBlobDoc(string(a.ID), a.Name, a.Documentation, a.Excluded, a.ExportLevel,
 		types.CustomTypeAgent, types.ReadableAgent, contentsJSON)
-	w, ok := b.concreteWriter()
-	if !ok {
+	if b.writer == nil {
 		return fmt.Errorf("modelsdk writer not initialized")
 	}
-	return mprrepos.NewAgentRepository(w).Update(doc)
+	return mprrepos.NewAgentRepository(b.writer).Update(doc)
 }

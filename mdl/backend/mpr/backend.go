@@ -48,6 +48,7 @@ type MprBackend struct {
 	reader     *modelsdkmpr.Reader
 	msdkReader *modelsdkmpr.Reader // alias of reader; kept for *_compat.go ergonomics
 	msdkWriter modelsdkmpr.UnitWriter
+	writer     *modelsdkmpr.Writer // concrete writer, set in Connect()
 	path       string
 	scriptBuf  *ScriptBuffer
 	unitBuf    *unitstore.BufferedUnitStore
@@ -136,6 +137,7 @@ func (b *MprBackend) Connect(path string) error {
 	b.reader = r
 	b.msdkReader = r
 	b.msdkWriter = mw
+	b.writer = mw
 	b.path = path
 
 	// Eagerly create all sub-backends — no lazy init overhead on every call.
@@ -230,6 +232,7 @@ func (b *MprBackend) Disconnect() error {
 	b.reader = nil
 	b.msdkReader = nil
 	b.msdkWriter = nil
+	b.writer = nil
 	b.path = ""
 	return err
 }
@@ -501,22 +504,20 @@ func (b *MprBackend) CreatePageGen(parentUUID, containmentName string, page *gen
 	if page == nil {
 		return fmt.Errorf("CreatePageGen: nil Page")
 	}
-	w, ok := b.concreteWriter()
-	if !ok {
+	if b.writer == nil {
 		return fmt.Errorf("CreatePageGen: no modelsdk writer")
 	}
-	return mprrepos.NewPageRepository(w).Create(parentUUID, containmentName, page)
+	return mprrepos.NewPageRepository(b.writer).Create(parentUUID, containmentName, page)
 }
 
 func (b *MprBackend) UpdatePageGen(page *genPg.Page) error {
 	if page == nil {
 		return fmt.Errorf("UpdatePageGen: nil Page")
 	}
-	w, ok := b.concreteWriter()
-	if !ok {
+	if b.writer == nil {
 		return fmt.Errorf("UpdatePageGen: no modelsdk writer")
 	}
-	return mprrepos.NewPageRepository(w).Update(page)
+	return mprrepos.NewPageRepository(b.writer).Update(page)
 }
 
 func (b *MprBackend) ListLayoutsGen() ([]*genPg.Layout, error) {
@@ -533,22 +534,20 @@ func (b *MprBackend) CreateLayoutGen(parentUUID, containmentName string, layout 
 	if layout == nil {
 		return fmt.Errorf("CreateLayoutGen: nil Layout")
 	}
-	w, ok := b.concreteWriter()
-	if !ok {
+	if b.writer == nil {
 		return fmt.Errorf("CreateLayoutGen: no modelsdk writer")
 	}
-	return mprrepos.NewLayoutRepository(w).Create(parentUUID, containmentName, layout)
+	return mprrepos.NewLayoutRepository(b.writer).Create(parentUUID, containmentName, layout)
 }
 
 func (b *MprBackend) UpdateLayoutGen(layout *genPg.Layout) error {
 	if layout == nil {
 		return fmt.Errorf("UpdateLayoutGen: nil Layout")
 	}
-	w, ok := b.concreteWriter()
-	if !ok {
+	if b.writer == nil {
 		return fmt.Errorf("UpdateLayoutGen: no modelsdk writer")
 	}
-	return mprrepos.NewLayoutRepository(w).Update(layout)
+	return mprrepos.NewLayoutRepository(b.writer).Update(layout)
 }
 
 func (b *MprBackend) ListSnippetsGen() ([]*genPg.Snippet, error) {
@@ -565,22 +564,20 @@ func (b *MprBackend) CreateSnippetGen(parentUUID, containmentName string, snippe
 	if snippet == nil {
 		return fmt.Errorf("CreateSnippetGen: nil Snippet")
 	}
-	w, ok := b.concreteWriter()
-	if !ok {
+	if b.writer == nil {
 		return fmt.Errorf("CreateSnippetGen: no modelsdk writer")
 	}
-	return mprrepos.NewSnippetRepository(w).Create(parentUUID, containmentName, snippet)
+	return mprrepos.NewSnippetRepository(b.writer).Create(parentUUID, containmentName, snippet)
 }
 
 func (b *MprBackend) UpdateSnippetGen(snippet *genPg.Snippet) error {
 	if snippet == nil {
 		return fmt.Errorf("UpdateSnippetGen: nil Snippet")
 	}
-	w, ok := b.concreteWriter()
-	if !ok {
+	if b.writer == nil {
 		return fmt.Errorf("UpdateSnippetGen: no modelsdk writer")
 	}
-	return mprrepos.NewSnippetRepository(w).Update(snippet)
+	return mprrepos.NewSnippetRepository(b.writer).Update(snippet)
 }
 
 // GetPageContainerUUID exposes the gen-native PageRepository's
@@ -1133,11 +1130,10 @@ func (b *MprBackend) CreateJavaActionGen(parentUUID, containmentName string, ja 
 	if ja == nil {
 		return fmt.Errorf("CreateJavaActionGen: nil JavaAction")
 	}
-	w, ok := b.concreteWriter()
-	if !ok {
+	if b.writer == nil {
 		return fmt.Errorf("CreateJavaActionGen: no modelsdk writer")
 	}
-	return mprrepos.NewJavaActionRepository(w).Create(parentUUID, containmentName, ja)
+	return mprrepos.NewJavaActionRepository(b.writer).Create(parentUUID, containmentName, ja)
 }
 
 // UpdateJavaActionGen mirrors CreateJavaActionGen — gen-native repo Update.
@@ -1145,11 +1141,10 @@ func (b *MprBackend) UpdateJavaActionGen(ja *genJA.JavaAction) error {
 	if ja == nil {
 		return fmt.Errorf("UpdateJavaActionGen: nil JavaAction")
 	}
-	w, ok := b.concreteWriter()
-	if !ok {
-		return fmt.Errorf("UpdateJavaActionGen: no modelsdk writer")
+	if b.writer == nil {
+		return fmt.Errorf("UpdateJavaActionGen: nil JavaAction")
 	}
-	return mprrepos.NewJavaActionRepository(w).Update(ja)
+	return mprrepos.NewJavaActionRepository(b.writer).Update(ja)
 }
 
 func (b *MprBackend) WriteJavaSourceFileGen(moduleName, actionName string, javaCode string, params []*genJA.JavaActionParameter, returnType element.Element, extraImports []string, extraCode string) error {
@@ -1170,22 +1165,20 @@ func (b *MprBackend) CreateJavaScriptActionGen(parentUUID, containmentName strin
 	if jsa == nil {
 		return fmt.Errorf("CreateJavaScriptActionGen: nil JavaScriptAction")
 	}
-	w, ok := b.concreteWriter()
-	if !ok {
+	if b.writer == nil {
 		return fmt.Errorf("CreateJavaScriptActionGen: no modelsdk writer")
 	}
-	return mprrepos.NewJavaScriptActionRepository(w).Create(parentUUID, containmentName, jsa)
+	return mprrepos.NewJavaScriptActionRepository(b.writer).Create(parentUUID, containmentName, jsa)
 }
 
 func (b *MprBackend) UpdateJavaScriptActionGen(jsa *genJSA.JavaScriptAction) error {
 	if jsa == nil {
 		return fmt.Errorf("UpdateJavaScriptActionGen: nil JavaScriptAction")
 	}
-	w, ok := b.concreteWriter()
-	if !ok {
+	if b.writer == nil {
 		return fmt.Errorf("UpdateJavaScriptActionGen: no modelsdk writer")
 	}
-	return mprrepos.NewJavaScriptActionRepository(w).Update(jsa)
+	return mprrepos.NewJavaScriptActionRepository(b.writer).Update(jsa)
 }
 
 func (b *MprBackend) ReadJavaSourceFile(moduleName, actionName string) (string, error) {
@@ -1219,22 +1212,20 @@ func (b *MprBackend) CreateWorkflowGen(parentUUID, containmentName string, wf *g
 	if wf == nil {
 		return fmt.Errorf("CreateWorkflowGen: nil Workflow")
 	}
-	w, ok := b.concreteWriter()
-	if !ok {
+	if b.writer == nil {
 		return fmt.Errorf("CreateWorkflowGen: no modelsdk writer")
 	}
-	return mprrepos.NewWorkflowRepository(w).Create(parentUUID, containmentName, wf)
+	return mprrepos.NewWorkflowRepository(b.writer).Create(parentUUID, containmentName, wf)
 }
 
 func (b *MprBackend) UpdateWorkflowGen(wf *genWf.Workflow) error {
 	if wf == nil {
 		return fmt.Errorf("UpdateWorkflowGen: nil Workflow")
 	}
-	w, ok := b.concreteWriter()
-	if !ok {
+	if b.writer == nil {
 		return fmt.Errorf("UpdateWorkflowGen: no modelsdk writer")
 	}
-	return mprrepos.NewWorkflowRepository(w).Update(wf)
+	return mprrepos.NewWorkflowRepository(b.writer).Update(wf)
 }
 
 // ---------------------------------------------------------------------------
@@ -1627,20 +1618,20 @@ func (b *MprBackend) EnableImportBuffer() *unitstore.BufferedUnitStore {
 	buf := unitstore.New(b.NewUnitPersistence())
 	b.unitBuf = buf
 	// Wire the gen-type write path (UpdateDomainModelGen → repo.Update →
-	// concreteWriter().WriteUnit → updateUnit) to route through the buffer.
+	// b.writer.WriteUnit → updateUnit) to route through the buffer.
 	// The low-level path (writeUnitContents) checks b.unitBuf separately.
-	if w, ok := b.concreteWriter(); ok {
-		w.SetSessionBuf(func(unitID string, data []byte) error {
+	if b.writer != nil {
+		b.writer.SetSessionBuf(func(unitID string, data []byte) error {
 			if err := buf.Write(model.ID(unitID), data); err != nil {
 				return err
 			}
 			// Set overlay on both readers: b.msdkReader (Reader A, used by
-			// GetRawUnitBytes / low-level paths) and w.ConcreteReader() (Reader B,
+			// GetRawUnitBytes / low-level paths) and b.writer.ConcreteReader() (Reader B,
 			// the writer's internal reader used by mprrepos.DomainModelRepository
 			// and other gen-type repos). Connect() opens them separately from the
 			// same DB, so overlays are not shared between the two instances.
 			b.msdkReader.SetOverlay(unitID, data)
-			w.ConcreteReader().SetOverlay(unitID, data)
+			b.writer.ConcreteReader().SetOverlay(unitID, data)
 			return nil
 		})
 	}
@@ -1651,9 +1642,9 @@ func (b *MprBackend) EnableImportBuffer() *unitstore.BufferedUnitStore {
 func (b *MprBackend) DisableImportBuffer() {
 	// ClearSessionBuf first: prevents any in-flight write from reaching
 	// a buf that is about to be discarded.
-	if w, ok := b.concreteWriter(); ok {
-		w.ClearSessionBuf()
-		w.ConcreteReader().ClearAllOverlays()
+	if b.writer != nil {
+		b.writer.ClearSessionBuf()
+		b.writer.ConcreteReader().ClearAllOverlays()
 	}
 	if b.unitBuf != nil {
 		b.unitBuf.Discard()
@@ -1678,8 +1669,8 @@ func (b *MprBackend) commitScriptBuffer() error {
 		return fmt.Errorf("commitScriptBuffer: no active script buffer")
 	}
 	// Clear Writer interceptors before flushing so BatchWrite goes direct.
-	if w, ok := b.concreteWriter(); ok {
-		w.ClearScriptBuf()
+	if b.writer != nil {
+		b.writer.ClearScriptBuf()
 	}
 	ops := b.scriptBuf.toBatchOps()
 	b.scriptBuf = nil

@@ -22,8 +22,8 @@ func (b *MprBackend) BeginScriptTransaction() (backend.ScriptTransaction, error)
 	b.scriptBuf = newScriptBuffer(b.reader)
 	// Install interceptors on the Writer so repo CREATE/UPDATE operations
 	// route through the ScriptBuffer instead of direct file I/O + SQL.
-	if w, ok := b.concreteWriter(); ok {
-		w.SetScriptBuf(b.scriptBuf.AddInsert, b.scriptBuf.AddUpdate)
+	if b.writer != nil {
+		b.writer.SetScriptBuf(b.scriptBuf.AddInsert, b.scriptBuf.AddUpdate)
 	}
 	return &mprScriptTx{b: b}, nil
 }

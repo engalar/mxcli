@@ -23,8 +23,7 @@ func (b *MprBackend) createEnumerationGen(enum *model.Enumeration) error {
 	if enum.ID == "" {
 		enum.ID = model.ID(modelsdkmpr.GenerateID())
 	}
-	w, ok := b.concreteWriter()
-	if !ok {
+	if b.writer == nil {
 		return fmt.Errorf("modelsdk writer not initialized")
 	}
 	genEnum := genEn.NewEnumeration()
@@ -61,7 +60,7 @@ func (b *MprBackend) createEnumerationGen(enum *model.Enumeration) error {
 		genEnum.AddValues(val)
 	}
 
-	if err := mprrepos.NewEnumerationRepository(w).Create(
+	if err := mprrepos.NewEnumerationRepository(b.writer).Create(
 		string(enum.ContainerID), "Documents", genEnum,
 	); err != nil {
 		return err
@@ -77,8 +76,7 @@ func (b *MprBackend) createConstantGen(c *model.Constant) error {
 	if c.ID == "" {
 		c.ID = model.ID(modelsdkmpr.GenerateID())
 	}
-	w, ok := b.concreteWriter()
-	if !ok {
+	if b.writer == nil {
 		return fmt.Errorf("modelsdk writer not initialized")
 	}
 	genC := genCo.NewConstant()
@@ -98,7 +96,7 @@ func (b *MprBackend) createConstantGen(c *model.Constant) error {
 	}
 	genC.SetType(typeElem)
 
-	if err := mprrepos.NewConstantRepository(w).Create(
+	if err := mprrepos.NewConstantRepository(b.writer).Create(
 		string(c.ContainerID), "Documents", genC,
 	); err != nil {
 		return err

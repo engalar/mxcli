@@ -11,12 +11,12 @@ import (
 )
 
 // BackendIface is an alias for backward compatibility.
-type BackendIface = backend.FullBackend
+type BackendIface = backend.ConnectionBackend
 
 // Builder assembles an Executor with a fluent API.
 type Builder struct {
 	out      io.Writer
-	backend  backend.FullBackend
+	backend  backend.ConnectionBackend
 	factory  BackendFactory
 	progress io.Writer
 	logger   *diaglog.Logger
@@ -30,7 +30,7 @@ func Build() *Builder {
 
 func (b *Builder) Out(w io.Writer) *Builder                        { b.out = w; return b }
 func (b *Builder) ProgressOut(w io.Writer) *Builder                 { b.progress = w; return b }
-func (b *Builder) WithBackend(be backend.FullBackend) *Builder      { b.backend = be; return b }
+func (b *Builder) WithBackend(be backend.ConnectionBackend) *Builder      { b.backend = be; return b }
 func (b *Builder) WithFactory(f BackendFactory) *Builder            { b.factory = f; return b }
 func (b *Builder) WithLogger(l *diaglog.Logger) *Builder            { b.logger = l; return b }
 func (b *Builder) Format(f OutputFormat) *Builder                   { b.format = f; return b }

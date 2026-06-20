@@ -227,7 +227,7 @@ func buildExec(mode string, out io.Writer) (*executor.Executor, *diaglog.Logger)
 	if persistentDaemonBackend != nil {
 		b = b.WithBackend(&noOpConnectBackend{persistentDaemonBackend})
 	} else {
-		b = b.WithFactory(func() backend.FullBackend { return mprbackend.New() })
+		b = b.WithFactory(func() backend.ConnectionBackend { return mprbackend.New() })
 	}
 	if globalJSONFlag {
 		b = b.Format(executor.FormatJSON)

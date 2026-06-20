@@ -29,8 +29,7 @@ func (b *MprBackend) createJsonStructureGen(js *types.JsonStructure) error {
 	if js.ID == "" {
 		js.ID = model.ID(modelsdkmpr.GenerateID())
 	}
-	w, ok := b.concreteWriter()
-	if !ok {
+	if b.writer == nil {
 		return fmt.Errorf("modelsdk writer not initialized")
 	}
 	g := genJS.NewJsonStructure()
@@ -45,7 +44,7 @@ func (b *MprBackend) createJsonStructureGen(js *types.JsonStructure) error {
 	for _, e := range js.Elements {
 		g.AddElements(jsonElementToGen(e))
 	}
-	return mprrepos.NewServiceRepository(w).Create(string(js.ContainerID), "Documents", g)
+	return mprrepos.NewServiceRepository(b.writer).Create(string(js.ContainerID), "Documents", g)
 }
 
 // jsonElementToGen converts a parsed types.JsonElement tree into the gen
@@ -80,8 +79,7 @@ func (b *MprBackend) createDatabaseConnectionGen(conn *model.DatabaseConnection)
 	if conn.ID == "" {
 		conn.ID = model.ID(modelsdkmpr.GenerateID())
 	}
-	w, ok := b.concreteWriter()
-	if !ok {
+	if b.writer == nil {
 		return fmt.Errorf("modelsdk writer not initialized")
 	}
 	g := genDB.NewDatabaseConnection()
@@ -134,7 +132,7 @@ func (b *MprBackend) createDatabaseConnectionGen(conn *model.DatabaseConnection)
 		g.AddQueries(gq)
 	}
 
-	return mprrepos.NewServiceRepository(w).Create(string(conn.ContainerID), "Documents", g)
+	return mprrepos.NewServiceRepository(b.writer).Create(string(conn.ContainerID), "Documents", g)
 }
 
 // ── BusinessEventService ──────────────────────────────────────────────────
@@ -143,8 +141,7 @@ func (b *MprBackend) createBusinessEventServiceGen(svc *model.BusinessEventServi
 	if svc.ID == "" {
 		svc.ID = model.ID(modelsdkmpr.GenerateID())
 	}
-	w, ok := b.concreteWriter()
-	if !ok {
+	if b.writer == nil {
 		return fmt.Errorf("modelsdk writer not initialized")
 	}
 	g := genBE.NewBusinessEventService()
@@ -162,7 +159,7 @@ func (b *MprBackend) createBusinessEventServiceGen(svc *model.BusinessEventServi
 		g.AddOperationImplementations(buildBEServiceOperation(op))
 	}
 
-	return mprrepos.NewServiceRepository(w).Create(string(svc.ContainerID), "Documents", g)
+	return mprrepos.NewServiceRepository(b.writer).Create(string(svc.ContainerID), "Documents", g)
 }
 
 // buildBEDefinition converts a model.BusinessEventDefinition to its gen element.

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // Stage 3.1 cutover plumbing: extract modelsdk-native repositories from
-// a backend.FullBackend implementation that supports them. Defined as a
+// a backend.ConnectionBackend implementation that supports them. Defined as a
 // standalone interface check so the executor doesn't import the concrete
 // mprbackend package — keeps the dependency direction
 // (executor → backend interface, never executor → concrete impl).
@@ -78,7 +78,7 @@ type snippetsRepoProvider interface {
 // nil and fall back to ctx.Backend during the Stage 3.x incremental
 // cutover — once every microflow handler migrates, this fallback can
 // be removed and the field can be made non-nil-required.
-func extractMicroflowsRepo(b backend.FullBackend) repos.MicroflowRepository {
+func extractMicroflowsRepo(b backend.ConnectionBackend) repos.MicroflowRepository {
 	if b == nil {
 		return nil
 	}
@@ -89,7 +89,7 @@ func extractMicroflowsRepo(b backend.FullBackend) repos.MicroflowRepository {
 }
 
 // extractNanoflowsRepo mirrors extractMicroflowsRepo for nanoflows.
-func extractNanoflowsRepo(b backend.FullBackend) repos.NanoflowRepository {
+func extractNanoflowsRepo(b backend.ConnectionBackend) repos.NanoflowRepository {
 	if b == nil {
 		return nil
 	}
@@ -100,7 +100,7 @@ func extractNanoflowsRepo(b backend.FullBackend) repos.NanoflowRepository {
 }
 
 // extractSecurityRepo mirrors extractMicroflowsRepo for the security domain.
-func extractSecurityRepo(b backend.FullBackend) repos.SecurityRepository {
+func extractSecurityRepo(b backend.ConnectionBackend) repos.SecurityRepository {
 	if b == nil {
 		return nil
 	}
@@ -112,7 +112,7 @@ func extractSecurityRepo(b backend.FullBackend) repos.SecurityRepository {
 
 // extractJavaActionsRepo mirrors extractMicroflowsRepo for Java actions
 // (Stage 3.3.2 A0).
-func extractJavaActionsRepo(b backend.FullBackend) repos.JavaActionRepository {
+func extractJavaActionsRepo(b backend.ConnectionBackend) repos.JavaActionRepository {
 	if b == nil {
 		return nil
 	}
@@ -123,7 +123,7 @@ func extractJavaActionsRepo(b backend.FullBackend) repos.JavaActionRepository {
 }
 
 // extractJavaScriptActionsRepo mirrors extractJavaActionsRepo for JS actions.
-func extractJavaScriptActionsRepo(b backend.FullBackend) repos.JavaScriptActionRepository {
+func extractJavaScriptActionsRepo(b backend.ConnectionBackend) repos.JavaScriptActionRepository {
 	if b == nil {
 		return nil
 	}
@@ -135,7 +135,7 @@ func extractJavaScriptActionsRepo(b backend.FullBackend) repos.JavaScriptActionR
 
 // extractDomainModelsRepo mirrors extractMicroflowsRepo for the
 // domainmodel domain (Stage 3.3.4 A0).
-func extractDomainModelsRepo(b backend.FullBackend) repos.DomainModelRepository {
+func extractDomainModelsRepo(b backend.ConnectionBackend) repos.DomainModelRepository {
 	if b == nil {
 		return nil
 	}
@@ -147,7 +147,7 @@ func extractDomainModelsRepo(b backend.FullBackend) repos.DomainModelRepository 
 
 // extractWorkflowsRepo mirrors extractMicroflowsRepo for the workflows
 // domain (Stage 3.3.3 A0).
-func extractWorkflowsRepo(b backend.FullBackend) repos.WorkflowRepository {
+func extractWorkflowsRepo(b backend.ConnectionBackend) repos.WorkflowRepository {
 	if b == nil {
 		return nil
 	}
@@ -159,7 +159,7 @@ func extractWorkflowsRepo(b backend.FullBackend) repos.WorkflowRepository {
 
 // extractPagesRepo mirrors extractMicroflowsRepo for the pages domain
 // (Stage 3.3.5 A0).
-func extractPagesRepo(b backend.FullBackend) repos.PageRepository {
+func extractPagesRepo(b backend.ConnectionBackend) repos.PageRepository {
 	if b == nil {
 		return nil
 	}
@@ -170,7 +170,7 @@ func extractPagesRepo(b backend.FullBackend) repos.PageRepository {
 }
 
 // extractLayoutsRepo mirrors extractPagesRepo for layouts.
-func extractLayoutsRepo(b backend.FullBackend) repos.LayoutRepository {
+func extractLayoutsRepo(b backend.ConnectionBackend) repos.LayoutRepository {
 	if b == nil {
 		return nil
 	}
@@ -181,7 +181,7 @@ func extractLayoutsRepo(b backend.FullBackend) repos.LayoutRepository {
 }
 
 // extractSnippetsRepo mirrors extractPagesRepo for snippets.
-func extractSnippetsRepo(b backend.FullBackend) repos.SnippetRepository {
+func extractSnippetsRepo(b backend.ConnectionBackend) repos.SnippetRepository {
 	if b == nil {
 		return nil
 	}
@@ -222,12 +222,12 @@ func (ctx *ExecContext) deleteNanoflowViaRepoOrBackend(id model.ID) error {
 // (modelsdk-native scan) or falls back to backend.IsRule (legacy path).
 // The free-function form takes the components explicitly so callers
 // without an *ExecContext (e.g., flowBuilder methods) can use it too.
-func isRuleViaRepoOrBackend(repo repos.MicroflowRepository, b backend.FullBackend, qn string) (bool, error) {
+func isRuleViaRepoOrBackend(repo repos.MicroflowRepository, b backend.ConnectionBackend, qn string) (bool, error) {
 	if repo != nil {
 		return repo.IsRule(qn)
 	}
 	if b == nil {
 		return false, nil
 	}
-	return b.IsRule(qn)
+	return b.(backend.MicroflowBackend).IsRule(qn)
 }
