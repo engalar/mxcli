@@ -775,11 +775,13 @@ type ExecCallbacks struct {
 type ExecContext struct {
 	context.Context
 
-	// Backend is the underlying backend. Prefer role-specific fields
-	// (ModuleLister, MicroflowReader) over ctx.Backend.
-	// TODO: remove once all external consumers (linter, catalog, pageBuilder)
-	// accept BackendFactory instead of FullBackend.
+	// Backend is retained for backward compat (initRoles fallback,
+	// ImportBuffer type assertion). New code should use role fields.
+	// TODO: remove once mock backend implements BackendFactory.
 	Backend backend.FullBackend
+	// backendFactory holds the backend as BackendFactory for initRoles().
+	// Set alongside Backend in executor_connect.go.
+	backendFactory backend.BackendFactory
 
 	// Logger is the session diagnostics logger (nil = no logging).
 	Logger *diaglog.Logger
@@ -840,14 +842,18 @@ type ExecContext struct {
 }
 
 // initRoles populates the role-specific backend fields. Prefers
-// BackendFactory accessor methods when available (new pattern);
-// falls back to ctx.Backend (deprecated FullBackend) for backward compat.
+// backendFactory (set directly in executor_connect.go) over
+// ctx.Backend (deprecated FullBackend) for backward compat.
 func (ctx *ExecContext) initRoles() {
 	if ctx == nil {
 		return
 	}
-	// Try BackendFactory first (new pattern).
-	if bf, ok := ctx.Backend.(backend.BackendFactory); ok {
+	// Try backendFactory first (set alongside ctx.Backend in production).
+	bf := ctx.backendFactory
+	if bf == nil {
+		bf, _ = ctx.Backend.(backend.BackendFactory)
+	}
+	if bf != nil {
 		ctx.ModuleLister = bf.ModuleLister()
 		ctx.ModuleWriter = bf.ModuleWriter()
 		ctx.DomainModelReader = bf.DomainModelReader()
@@ -895,6 +901,7 @@ func (ctx *ExecContext) initRoles() {
 		return
 	}
 	// Fallback: ctx.Backend (deprecated FullBackend).
+	// Kept for mock backends that don't implement BackendFactory.
 	if ctx.Backend == nil {
 		return
 	}
