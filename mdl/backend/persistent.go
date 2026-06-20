@@ -4,15 +4,13 @@ package backend
 
 import "github.com/mendixlabs/mxcli/mdl/repos"
 
-// PersistentBackend extends FullBackend (and implicitly ConnectionBackend)
-// with the repo-provider methods exposed by MprBackend. The daemon's
-// noOpConnectBackend embeds this interface so that executor duck-type checks
-// (microflowsRepoProvider etc.) succeed without importing the concrete
-// *mprbackend.MprBackend type.
+// PersistentBackend extends ConnectionBackend with the repo-provider
+// methods exposed by MprBackend. The daemon's noOpConnectBackend embeds
+// this interface so that executor duck-type checks (microflowsRepoProvider
+// etc.) succeed without importing the concrete *mprbackend.MprBackend type.
 //
 // Deprecated: Prefer BackendFactory for construction-time needs.
 type PersistentBackend interface {
-	FullBackend
 	ConnectionBackend
 	Microflows() repos.MicroflowRepository
 	Nanoflows() repos.NanoflowRepository
