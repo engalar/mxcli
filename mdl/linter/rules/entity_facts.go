@@ -11,7 +11,7 @@ import (
 // catalog does not surface as node properties (persistability and access-rule
 // count). These are read from the gen-typed domain models via the deep reader.
 type entityFact struct {
-	Persistent     bool
+	Persistent      bool
 	AccessRuleCount int
 }
 

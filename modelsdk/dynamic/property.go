@@ -11,7 +11,7 @@ import (
 type PropertyKind uint8
 
 const (
-	KindString     PropertyKind = iota
+	KindString PropertyKind = iota
 	KindBool
 	KindInt32
 	KindFloat64
@@ -59,8 +59,8 @@ func newProperty(p element.Property) *Property {
 	return d
 }
 
-func (p *Property) Name() string        { return p.prop.Name() }
-func (p *Property) Kind() PropertyKind  { return p.kind }
+func (p *Property) Name() string       { return p.prop.Name() }
+func (p *Property) Kind() PropertyKind { return p.kind }
 
 func (p *Property) inferKind() {
 	switch p.prop.(type) {

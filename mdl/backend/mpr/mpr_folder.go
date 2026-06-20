@@ -3,9 +3,9 @@
 package mprbackend
 
 import (
+	"github.com/mendixlabs/mxcli/mdl/types"
 	modelsdkmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
 	"github.com/mendixlabs/mxcli/modelsdk/mprread"
-	"github.com/mendixlabs/mxcli/mdl/types"
 )
 
 type folderBackend struct {

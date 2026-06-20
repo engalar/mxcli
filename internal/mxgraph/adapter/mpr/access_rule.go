@@ -14,16 +14,17 @@ import (
 // 为每个实体访问规则创建 AccessRule 节点和 HAS_ACCESS_RULE 边。
 //
 // 数据来源（typed modelsdk 路径，domain model 类型注册完整）：
-//   DomainModels$DomainModel
-//     → Entities[] (ChildListProperty)
-//       → Entity
-//         → AccessRules[] (ChildListProperty)
-//           → AccessRule
-//             → ModuleRolesQualifiedNames()
-//             → DefaultMemberAccessRights()  ("ReadOnly"|"ReadWrite"|"" )
-//             → AllowCreate()
-//             → AllowDelete()
-//             → XPathConstraint()
+//
+//	DomainModels$DomainModel
+//	  → Entities[] (ChildListProperty)
+//	    → Entity
+//	      → AccessRules[] (ChildListProperty)
+//	        → AccessRule
+//	          → ModuleRolesQualifiedNames()
+//	          → DefaultMemberAccessRights()  ("ReadOnly"|"ReadWrite"|"" )
+//	          → AllowCreate()
+//	          → AllowDelete()
+//	          → XPathConstraint()
 type AccessRuleAdapter struct {
 	Model *modelsdk.Model
 }
@@ -96,15 +97,15 @@ func (a *AccessRuleAdapter) Build(ctx context.Context, sink mxgraph.EventSink) e
 				for _, mrQN := range ar.ModuleRolesQualifiedNames() {
 					nodeID := mxgraph.NodeID(fmt.Sprintf("%s.rule.%s", entityQN, mrQN))
 					props := map[string]any{
-						"$Type":          "AccessRule",
-						"EntityQN":       entityQN,
-						"ModuleRoleQN":   mrQN,
-						"CanRead":        canRead,
-						"CanWrite":       canWrite,
-						"CanCreate":      ar.AllowCreate(),
-						"CanDelete":      ar.AllowDelete(),
+						"$Type":           "AccessRule",
+						"EntityQN":        entityQN,
+						"ModuleRoleQN":    mrQN,
+						"CanRead":         canRead,
+						"CanWrite":        canWrite,
+						"CanCreate":       ar.AllowCreate(),
+						"CanDelete":       ar.AllowDelete(),
 						"XPathConstraint": xpath,
-						"QualifiedName":  fmt.Sprintf("%s→%s", entityQN, mrQN),
+						"QualifiedName":   fmt.Sprintf("%s→%s", entityQN, mrQN),
 					}
 					events = append(events, mxgraph.Event{
 						Type: mxgraph.NodeCreated,

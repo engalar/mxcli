@@ -512,9 +512,9 @@ func (pg *ProjectGraph) bfsChains(start *mxgraph.Node, entryKind, entryName stri
 
 		if cur.node.Label == "Page" {
 			chains = append(chains, FlowChain{
-				EntryPoint:    fmt.Sprintf("%s:%s", entryKind, entryName),
-				Steps:         cur.steps,
-				TerminalPage:  cur.qn,
+				EntryPoint:   fmt.Sprintf("%s:%s", entryKind, entryName),
+				Steps:        cur.steps,
+				TerminalPage: cur.qn,
 			})
 		}
 

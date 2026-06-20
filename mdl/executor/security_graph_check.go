@@ -9,8 +9,8 @@ import (
 // 要求 graph 已构建（含 AccessRuleAdapter、DocumentGrantAdapter、PageRefAdapter）。
 //
 // 使用场景：
-//   1. mxcli lint (SEC001)：EntitiesWithMissingAccessRules → µs 级（之前 11 ms）
-//   2. mxcli check --references：所有数据分析来自图查询（之前 70 ms）
+//  1. mxcli lint (SEC001)：EntitiesWithMissingAccessRules → µs 级（之前 11 ms）
+//  2. mxcli check --references：所有数据分析来自图查询（之前 70 ms）
 //
 // 预期加速：~1000x（graph 一次建图后，每次分析只需 µs 级查询）
 type GraphAccessAnalyzer struct {
@@ -19,16 +19,16 @@ type GraphAccessAnalyzer struct {
 
 // AccessGapSummary 汇总访问间隙分析结果。
 type AccessGapSummary struct {
-	EntitiesWithoutRules []graphcatalog.EntityNode     // SEC001
-	PageGaps             []PageAccessGap               // ACCESS-001
-	MFGaps               []MFAccessGap                 // ACCESS-003
+	EntitiesWithoutRules []graphcatalog.EntityNode // SEC001
+	PageGaps             []PageAccessGap           // ACCESS-001
+	MFGaps               []MFAccessGap             // ACCESS-003
 }
 
 // PageAccessGap 表示某个角色能看见页面但无实体读权限。
 type PageAccessGap struct {
-	UserRole       string
-	ModuleRoleQN   string
-	PageQN         string
+	UserRole        string
+	ModuleRoleQN    string
+	PageQN          string
 	MissingEntityQN string
 }
 
@@ -82,10 +82,10 @@ func (a *GraphAccessAnalyzer) detectPageGaps() []PageAccessGap {
 			for _, entityQN := range entityRefs {
 				if !readableEntities[entityQN] {
 					gaps = append(gaps, PageAccessGap{
-						UserRole:         "", // 由调用方填充
-						ModuleRoleQN:     mrQN,
-						PageQN:           page.QualifiedName,
-						MissingEntityQN:  entityQN,
+						UserRole:        "", // 由调用方填充
+						ModuleRoleQN:    mrQN,
+						PageQN:          page.QualifiedName,
+						MissingEntityQN: entityQN,
 					})
 				}
 			}

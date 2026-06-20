@@ -47,4 +47,3 @@ type DatabaseColumnMapping struct {
 	ColumnName  string `json:"columnName"`  // SQL column name
 	SqlDataType string `json:"sqlDataType"` // simplified type name for display
 }
-

@@ -27,10 +27,10 @@ type fkgQuerier struct {
 	graph *mxgraph.Graph
 }
 
-var _ Querier           = (*fkgQuerier)(nil)
-var _ GuidanceQuerier   = (*fkgQuerier)(nil)
+var _ Querier = (*fkgQuerier)(nil)
+var _ GuidanceQuerier = (*fkgQuerier)(nil)
 var _ CurriculumQuerier = (*fkgQuerier)(nil)
-var _ Orchestrator      = (*fkgQuerier)(nil)
+var _ Orchestrator = (*fkgQuerier)(nil)
 
 // nodeToSummary converts a raw graph node to the public NodeSummary type.
 func nodeToSummary(n *mxgraph.Node) NodeSummary {

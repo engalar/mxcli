@@ -15,5 +15,5 @@ type RenameStmt struct {
 	DryRun     bool          // If true, report references without modifying
 }
 
-func (s *RenameStmt) isStatement() {}
+func (s *RenameStmt) isStatement()     {}
 func (s *RenameStmt) TypeName() string { return "Rename" }

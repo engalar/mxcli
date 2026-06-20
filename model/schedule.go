@@ -24,4 +24,3 @@ func (s *ScheduledEvent) GetName() string {
 func (s *ScheduledEvent) GetContainerID() ID {
 	return s.ContainerID
 }
-

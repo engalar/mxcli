@@ -21,7 +21,7 @@ type CreateLayoutStmt struct {
 	IsReplace     bool
 }
 
-func (s *CreateLayoutStmt) isStatement() {}
+func (s *CreateLayoutStmt) isStatement()     {}
 func (s *CreateLayoutStmt) TypeName() string { return "CreateLayout" }
 
 // LayoutWidgetV3 is a top-level widget in a layout body.

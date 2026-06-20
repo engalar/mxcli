@@ -63,4 +63,3 @@ type ServiceOperation struct {
 	Entity      string `json:"entity"`              // BY_NAME qualified ref: "Module.EntityName"
 	Microflow   string `json:"microflow,omitempty"` // BY_NAME qualified ref (optional handler)
 }
-

@@ -84,7 +84,7 @@ func BenchmarkEntityNamesFromBackend(b *testing.B) {
 		// 每次重置缓存以测量冷启动
 		e.cache = nil
 		ctx := e.newExecContext(context.Background())
-		ctx.initRoles() // mirror the registry dispatch path that wires role interfaces
+		ctx.initRoles()            // mirror the registry dispatch path that wires role interfaces
 		h := &ContainerHierarchy{} // 空 hierarchy 够用于此基准
 		_ = getEntityNames(ctx, h)
 	}

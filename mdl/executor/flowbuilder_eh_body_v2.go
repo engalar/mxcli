@@ -62,22 +62,22 @@ func (fb *flowBuilderGen) addErrorHandlerFlowGen(sourceActivityID element.ID, so
 	// parent (legacy parity: the EH body sees variables from the main
 	// scope) and shares backend/repos/measurer/restServices.
 	errBuilder := &flowBuilderGen{
-		posX:           errorX,
-		posY:           errorY,
-		baseY:          errorY,
-		spacing:        HorizontalSpacing,
-		returnType:     fb.returnType,
-		varTypes:       fb.varTypes,
-		declaredVars:   fb.declaredVars,
-		measurer:       fb.measurer,
-		backend:            fb.backend,
-		moduleLister:       fb.moduleLister,
-		domainModelReader:  fb.domainModelReader,
-		microflowsRepo:     fb.microflowsRepo,
-		nanoflowsRepo:  fb.nanoflowsRepo,
-		hierarchy:      fb.hierarchy,
-		restServices:   fb.restServices,
-		isNanoflow:     fb.isNanoflow,
+		posX:              errorX,
+		posY:              errorY,
+		baseY:             errorY,
+		spacing:           HorizontalSpacing,
+		returnType:        fb.returnType,
+		varTypes:          fb.varTypes,
+		declaredVars:      fb.declaredVars,
+		measurer:          fb.measurer,
+		backend:           fb.backend,
+		moduleLister:      fb.moduleLister,
+		domainModelReader: fb.domainModelReader,
+		microflowsRepo:    fb.microflowsRepo,
+		nanoflowsRepo:     fb.nanoflowsRepo,
+		hierarchy:         fb.hierarchy,
+		restServices:      fb.restServices,
+		isNanoflow:        fb.isNanoflow,
 	}
 
 	var lastErrID element.ID

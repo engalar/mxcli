@@ -5,8 +5,8 @@ package mprbackend
 import (
 	"fmt"
 
-	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/mdl/types"
+	"github.com/mendixlabs/mxcli/model"
 	modelsdkmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
 )
 

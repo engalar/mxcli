@@ -31,8 +31,8 @@ func minimalStableTemplate() *WidgetTemplate {
 			"Name":  "test.widget.Minimal",
 			"Properties": []any{
 				map[string]any{
-					"$ID":        "11223344556677889900aabbccddeeff",
-					"$Type":      "CustomWidgets$WidgetPropertyType",
+					"$ID":         "11223344556677889900aabbccddeeff",
+					"$Type":       "CustomWidgets$WidgetPropertyType",
 					"PropertyKey": "caption",
 					"ValueType": map[string]any{
 						"$ID":   "ffeeddccbbaa99887766554433221100",
@@ -42,8 +42,8 @@ func minimalStableTemplate() *WidgetTemplate {
 			},
 		},
 		Object: map[string]any{
-			"$ID":        "00112233445566778899aabbccddeeff",
-			"$Type":      "CustomWidgets$WidgetObject",
+			"$ID":         "00112233445566778899aabbccddeeff",
+			"$Type":       "CustomWidgets$WidgetObject",
 			"TypePointer": "aabbccdd00112233445566778899aabb",
 		},
 	}

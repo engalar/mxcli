@@ -104,4 +104,3 @@ type RestResponseMapping struct {
 	Association string                 `json:"association,omitempty"` // e.g. "RestDemo.Args_PostDemo2Response"
 	Children    []*RestResponseMapping `json:"children,omitempty"`    // recursive children
 }
-

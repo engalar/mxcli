@@ -334,9 +334,9 @@ type DataGridSpec struct {
 	Columns           []DataGridColumnSpec
 	HeaderWidgetsBSON []bson.D // Pre-serialized CONTROLBAR widgets for filtersPlaceholder
 	// Paging overrides (empty string = use template default)
-	PagingOverrides  map[string]string // camelCase widget key → string value
-	SelectionMode    string            // empty = no override
-	ColumnsFilterable bool             // true = set DataGrid2 columnsFilterable property to "true"
+	PagingOverrides   map[string]string // camelCase widget key → string value
+	SelectionMode     string            // empty = no override
+	ColumnsFilterable bool              // true = set DataGrid2 columnsFilterable property to "true"
 }
 
 // FilterWidgetSpec carries inputs for building a filter widget.

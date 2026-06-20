@@ -11,8 +11,8 @@ import (
 	"strings"
 	"sync"
 
-	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 	"github.com/mendixlabs/mxcli/internal/mxgraph"
+	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 	"github.com/mendixlabs/mxcli/modelsdk/widgets/definitions"
 	"github.com/mendixlabs/mxcli/modelsdk/widgets/mpk"
 )
@@ -27,13 +27,13 @@ type DiscoveredWidget struct {
 
 // WidgetRegistry holds loaded widget definitions keyed by uppercase MDL name.
 type WidgetRegistry struct {
-	byMDLName       map[string]*WidgetDefinition   // keyed by uppercase MDLName
-	byWidgetID      map[string]*WidgetDefinition    // keyed by widgetId
-	knownOperations map[string]bool                 // operations accepted during validation
-	projectDir      string                          // project root for MPK fallback
-	mpkNameMap      map[string]string               // uppercase MDLName → widgetID (pre-scan, legacy)
-	mpkDiscovered   map[string]*DiscoveredWidget    // uppercase MDLName → full discovery info
-	mxGraph         *mxgraph.Graph                  // mxgraph index for fast widget lookup
+	byMDLName       map[string]*WidgetDefinition // keyed by uppercase MDLName
+	byWidgetID      map[string]*WidgetDefinition // keyed by widgetId
+	knownOperations map[string]bool              // operations accepted during validation
+	projectDir      string                       // project root for MPK fallback
+	mpkNameMap      map[string]string            // uppercase MDLName → widgetID (pre-scan, legacy)
+	mpkDiscovered   map[string]*DiscoveredWidget // uppercase MDLName → full discovery info
+	mxGraph         *mxgraph.Graph               // mxgraph index for fast widget lookup
 }
 
 // defaultKnownOperations is the set of operation names supported by the widget engine.

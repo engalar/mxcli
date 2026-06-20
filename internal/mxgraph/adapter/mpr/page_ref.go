@@ -226,10 +226,10 @@ func (a *PageRefAdapter) extractActionRefs(w map[string]any, pageID mxgraph.Node
 
 	// 综合检查所有可能的操作字段（从现代到遗留）
 	actionSources := []struct {
-		sourceKey string      // BSON 字段名
-		innerKey  string      // 字段内部的操作类型 key（"" 表示直接是操作）
+		sourceKey string // BSON 字段名
+		innerKey  string // 字段内部的操作类型 key（"" 表示直接是操作）
 	}{
-		{"Action", ""},              // 现代 ActionButton/LinkButton
+		{"Action", ""}, // 现代 ActionButton/LinkButton
 		{"OnClickMicroflow", "microflow"},
 		{"OnClickAction", "microflow"},
 	}
@@ -421,7 +421,9 @@ func (a *PageRefAdapter) extractPluggableActions(w map[string]any, pageID mxgrap
 			// 每个 Property 的 {TypePointer, Value}，Value 中可能含 Action/Microflow/Form
 			for _, obj := range arrayVal(value, "Objects") {
 				colObj := toMap(obj)
-				if colObj == nil { continue }
+				if colObj == nil {
+					continue
+				}
 
 				// 方式1：列直接有 Microflow/Form 字符串属性
 				if mf, ok := colObj["Microflow"].(string); ok && mf != "" {
@@ -436,9 +438,13 @@ func (a *PageRefAdapter) extractPluggableActions(w map[string]any, pageID mxgrap
 				// 方式2：列 Properties 数组中可能包含 Action
 				for _, colProp := range arrayVal(colObj, "Properties") {
 					cp := toMap(colProp)
-					if cp == nil { continue }
+					if cp == nil {
+						continue
+					}
 					cv := toMap(cp["Value"])
-					if cv == nil { continue }
+					if cv == nil {
+						continue
+					}
 					// Value 中可能有 Action 子文档
 					if action := toMap(cv["Action"]); action != nil {
 						evts := a.extractActionRefsFromMap(action, pageID, module)

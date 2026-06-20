@@ -29,5 +29,5 @@ type LintStmt struct {
 	ShowRules bool
 }
 
-func (s *LintStmt) isStatement() {}
+func (s *LintStmt) isStatement()     {}
 func (s *LintStmt) TypeName() string { return "Lint" }

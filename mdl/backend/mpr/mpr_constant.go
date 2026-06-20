@@ -6,9 +6,9 @@ import (
 	"fmt"
 
 	"github.com/mendixlabs/mxcli/model"
+	genConst "github.com/mendixlabs/mxcli/modelsdk/gen/constants"
 	modelsdkmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
 	"github.com/mendixlabs/mxcli/modelsdk/mprread"
-	genConst "github.com/mendixlabs/mxcli/modelsdk/gen/constants"
 )
 
 type constantBackend struct {

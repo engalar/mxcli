@@ -77,7 +77,10 @@ Example:
 			mdlCmd = fmt.Sprintf("SHOW %s", showKeyword)
 		}
 
-		if err := executeMDL(projectPath, mdlCmd, cmd.OutOrStdout()); err != nil { fmt.Fprintf(cmd.ErrOrStderr(), "Error: %v\n", err); return }
+		if err := executeMDL(projectPath, mdlCmd, cmd.OutOrStdout()); err != nil {
+			fmt.Fprintf(cmd.ErrOrStderr(), "Error: %v\n", err)
+			return
+		}
 	},
 }
 

@@ -108,8 +108,8 @@ func TestExecCreateLayout_ModifyReplacesExisting(t *testing.T) {
 	deleted := false
 	created := false
 	mb := &mock.MockBackend{
-		IsConnectedFunc: func() bool { return true },
-		ListModulesFunc: func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
+		IsConnectedFunc:    func() bool { return true },
+		ListModulesFunc:    func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
 		GetContainerIDFunc: func(model.ID, string) (model.ID, error) { return "container-uuid", nil },
 		DeleteLayoutGenFunc: func(id model.ID) error {
 			deleted = true

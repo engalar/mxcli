@@ -69,5 +69,5 @@ type MoveStmt struct {
 	TargetModule string        // Target module name (empty = same module)
 }
 
-func (s *MoveStmt) isStatement() {}
+func (s *MoveStmt) isStatement()     {}
 func (s *MoveStmt) TypeName() string { return "Move" }

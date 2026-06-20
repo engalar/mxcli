@@ -30,13 +30,13 @@ type RecordingDomainModelRepository struct {
 	Deleted      []model.ID
 	Moved        []DomainModelMoveCall
 
-	GetFunc                  func(model.ID) (*genDm.DomainModel, error)
-	ListFunc                 func(model.ID) ([]*genDm.DomainModel, error)
+	GetFunc                    func(model.ID) (*genDm.DomainModel, error)
+	ListFunc                   func(model.ID) ([]*genDm.DomainModel, error)
 	ListAllWithContainerIDFunc func() ([]repos.DomainModelWithContainer, error)
-	CreateFunc               func(DomainModelCreateCall) error
-	UpdateFunc               func(*genDm.DomainModel) error
-	DeleteFunc               func(model.ID) error
-	MoveFunc                 func(DomainModelMoveCall) error
+	CreateFunc                 func(DomainModelCreateCall) error
+	UpdateFunc                 func(*genDm.DomainModel) error
+	DeleteFunc                 func(model.ID) error
+	MoveFunc                   func(DomainModelMoveCall) error
 }
 
 var _ repos.DomainModelRepository = (*RecordingDomainModelRepository)(nil)

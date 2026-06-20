@@ -34,9 +34,9 @@ type rawDesignPropDef struct {
 }
 
 type rawDesignOption struct {
-	Name    string `json:"name"`
-	Class   string `json:"class,omitempty"`
-	Preview string `json:"preview,omitempty"`
+	Name     string `json:"name"`
+	Class    string `json:"class,omitempty"`
+	Preview  string `json:"preview,omitempty"`
 	Variable string `json:"variable,omitempty"`
 }
 

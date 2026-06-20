@@ -46,32 +46,32 @@ type RefData struct {
 
 // FieldData holds template data for a single property field.
 type FieldData struct {
-	PropName     string // original JS property name
-	BSONKey      string // PascalCase BSON key (e.g. "Name", "Attributes")
-	FieldName    string // Go unexported struct field name (e.g. "name")
-	FieldType    string // Go type, e.g. "*property.Primitive[string]"
-	FieldIndex   int    // zero-based index of this field among all properties (for Bind bit)
-	GetterName   string // Go exported getter method name (e.g. "Name")
-	GetterCall   string // method to call on the property (Get, Items, QualifiedName, etc.)
-	GetterReturn string // Go return type
-	SetterName   string
-	SetterArg    string
-	SetterCall   string
-	HasSetter    bool
-	AdderName    string
-	AdderArg     string
-	HasAdder     bool
-	RemoverName  string
-	NeedsInit    bool   // true for Primitive properties (have Init(bson.Raw))
-	IsPartChild  bool   // true for Part/PartList — needs recursive child decode
-	IsList       bool   // true for PartList — decoded via DecodeChildren
-	IsRef        bool   // true for ByNameRef — string from BSON
-	IsRefList    bool   // true for ByNameRefList — string array from BSON
-	IsIdRef      bool   // true for ByIdRef — binary UUID from BSON
-	TargetType   string // ByNameRef target type (e.g. "DomainModels$Entity")
-	IsEnum       bool   // true for Enum — string from BSON
-	IsEnumList   bool   // true for EnumList — string array from BSON
-	Constructor  string // e.g. "property.NewPrimitive[string](\"name\", property.DecodeString)"
+	PropName       string // original JS property name
+	BSONKey        string // PascalCase BSON key (e.g. "Name", "Attributes")
+	FieldName      string // Go unexported struct field name (e.g. "name")
+	FieldType      string // Go type, e.g. "*property.Primitive[string]"
+	FieldIndex     int    // zero-based index of this field among all properties (for Bind bit)
+	GetterName     string // Go exported getter method name (e.g. "Name")
+	GetterCall     string // method to call on the property (Get, Items, QualifiedName, etc.)
+	GetterReturn   string // Go return type
+	SetterName     string
+	SetterArg      string
+	SetterCall     string
+	HasSetter      bool
+	AdderName      string
+	AdderArg       string
+	HasAdder       bool
+	RemoverName    string
+	NeedsInit      bool   // true for Primitive properties (have Init(bson.Raw))
+	IsPartChild    bool   // true for Part/PartList — needs recursive child decode
+	IsList         bool   // true for PartList — decoded via DecodeChildren
+	IsRef          bool   // true for ByNameRef — string from BSON
+	IsRefList      bool   // true for ByNameRefList — string array from BSON
+	IsIdRef        bool   // true for ByIdRef — binary UUID from BSON
+	TargetType     string // ByNameRef target type (e.g. "DomainModels$Entity")
+	IsEnum         bool   // true for Enum — string from BSON
+	IsEnumList     bool   // true for EnumList — string array from BSON
+	Constructor    string // e.g. "property.NewPrimitive[string](\"name\", property.DecodeString)"
 	DescriptorKind string // PropKind constant for descriptors.go (empty for abstract types)
 }
 

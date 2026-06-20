@@ -46,7 +46,7 @@ type HeaderDef struct {
 	Value string // Mendix expression
 }
 
-func (s *CreateODataClientStmt) isStatement() {}
+func (s *CreateODataClientStmt) isStatement()     {}
 func (s *CreateODataClientStmt) TypeName() string { return "CreateODataClient" }
 
 // AlterODataClientStmt represents: ALTER ODATA CLIENT Module.Name SET key = value
@@ -55,7 +55,7 @@ type AlterODataClientStmt struct {
 	Changes map[string]any // property name -> new value
 }
 
-func (s *AlterODataClientStmt) isStatement() {}
+func (s *AlterODataClientStmt) isStatement()     {}
 func (s *AlterODataClientStmt) TypeName() string { return "AlterODataClient" }
 
 // DropODataClientStmt represents: DROP ODATA CLIENT Module.Name
@@ -63,7 +63,7 @@ type DropODataClientStmt struct {
 	Name QualifiedName
 }
 
-func (s *DropODataClientStmt) isStatement() {}
+func (s *DropODataClientStmt) isStatement()     {}
 func (s *DropODataClientStmt) TypeName() string { return "DropODataClient" }
 
 // CreateODataServiceStmt represents: CREATE ODATA SERVICE Module.Name (...) AUTHENTICATION ... { ... }
@@ -84,7 +84,7 @@ type CreateODataServiceStmt struct {
 	CreateOrModify      bool // True if CREATE OR MODIFY was used
 }
 
-func (s *CreateODataServiceStmt) isStatement() {}
+func (s *CreateODataServiceStmt) isStatement()     {}
 func (s *CreateODataServiceStmt) TypeName() string { return "CreateODataService" }
 
 // PublishedEntityDef represents a PUBLISH ENTITY block within an OData service.
@@ -115,7 +115,7 @@ type AlterODataServiceStmt struct {
 	Changes map[string]any // property name -> new value
 }
 
-func (s *AlterODataServiceStmt) isStatement() {}
+func (s *AlterODataServiceStmt) isStatement()     {}
 func (s *AlterODataServiceStmt) TypeName() string { return "AlterODataService" }
 
 // DropODataServiceStmt represents: DROP ODATA SERVICE Module.Name
@@ -123,7 +123,7 @@ type DropODataServiceStmt struct {
 	Name QualifiedName
 }
 
-func (s *DropODataServiceStmt) isStatement() {}
+func (s *DropODataServiceStmt) isStatement()     {}
 func (s *DropODataServiceStmt) TypeName() string { return "DropODataService" }
 
 // CreateExternalEntityStmt represents: CREATE [OR MODIFY] EXTERNAL ENTITY Module.Name FROM ODATA CLIENT Module.Service (...) (attrs);
@@ -142,7 +142,7 @@ type CreateExternalEntityStmt struct {
 	CreateOrModify           bool
 }
 
-func (s *CreateExternalEntityStmt) isStatement() {}
+func (s *CreateExternalEntityStmt) isStatement()     {}
 func (s *CreateExternalEntityStmt) TypeName() string { return "CreateExternalEntity" }
 
 // CreateExternalEntitiesStmt represents: CREATE [OR MODIFY] EXTERNAL ENTITIES FROM Module.Service [INTO Module] [ENTITIES (Name1, Name2)]
@@ -153,5 +153,5 @@ type CreateExternalEntitiesStmt struct {
 	CreateOrModify bool          // True if CREATE OR MODIFY was used
 }
 
-func (s *CreateExternalEntitiesStmt) isStatement() {}
+func (s *CreateExternalEntitiesStmt) isStatement()     {}
 func (s *CreateExternalEntitiesStmt) TypeName() string { return "CreateExternalEntities" }

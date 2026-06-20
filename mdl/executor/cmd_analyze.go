@@ -8,8 +8,8 @@ import (
 	"strings"
 
 	"github.com/mendixlabs/mxcli/internal/mxgraph"
-	"github.com/mendixlabs/mxcli/mdl/graphcatalog"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
+	"github.com/mendixlabs/mxcli/mdl/graphcatalog"
 )
 
 // Ensure time import triggers no build error

@@ -6,9 +6,9 @@ import (
 	"fmt"
 
 	"github.com/mendixlabs/mxcli/model"
+	genSched "github.com/mendixlabs/mxcli/modelsdk/gen/scheduledevents"
 	modelsdkmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
 	"github.com/mendixlabs/mxcli/modelsdk/mprread"
-	genSched "github.com/mendixlabs/mxcli/modelsdk/gen/scheduledevents"
 )
 
 type scheduledEventBackend struct {

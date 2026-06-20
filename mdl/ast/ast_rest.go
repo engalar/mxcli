@@ -18,7 +18,7 @@ type CreateRestClientStmt struct {
 	OpenApiPath    string // Non-empty = spec-driven; operations come from spec not OPERATION blocks
 }
 
-func (s *CreateRestClientStmt) isStatement() {}
+func (s *CreateRestClientStmt) isStatement()     {}
 func (s *CreateRestClientStmt) TypeName() string { return "CreateRestClient" }
 
 // RestAuthDef represents authentication configuration in a CREATE REST CLIENT statement.
@@ -85,7 +85,7 @@ type DropRestClientStmt struct {
 	Name QualifiedName
 }
 
-func (s *DropRestClientStmt) isStatement() {}
+func (s *DropRestClientStmt) isStatement()     {}
 func (s *DropRestClientStmt) TypeName() string { return "DropRestClient" }
 
 // DescribeContractFromOpenAPIStmt represents: DESCRIBE CONTRACT OPERATIONS FROM OPENAPI '/path/to/spec.json'
@@ -94,7 +94,7 @@ type DescribeContractFromOpenAPIStmt struct {
 	SpecPath string
 }
 
-func (s *DescribeContractFromOpenAPIStmt) isStatement() {}
+func (s *DescribeContractFromOpenAPIStmt) isStatement()     {}
 func (s *DescribeContractFromOpenAPIStmt) TypeName() string { return "DescribeContractFromOpenAPI" }
 
 // ============================================================================
@@ -114,7 +114,7 @@ type CreatePublishedRestServiceStmt struct {
 	CreateOrModify bool
 }
 
-func (s *CreatePublishedRestServiceStmt) isStatement() {}
+func (s *CreatePublishedRestServiceStmt) isStatement()     {}
 func (s *CreatePublishedRestServiceStmt) TypeName() string { return "CreatePublishedRestService" }
 
 type PublishedRestResourceDef struct {
@@ -137,7 +137,7 @@ type DropPublishedRestServiceStmt struct {
 	Name QualifiedName
 }
 
-func (s *DropPublishedRestServiceStmt) isStatement() {}
+func (s *DropPublishedRestServiceStmt) isStatement()     {}
 func (s *DropPublishedRestServiceStmt) TypeName() string { return "DropPublishedRestService" }
 
 // AlterPublishedRestServiceStmt represents:
@@ -151,7 +151,7 @@ type AlterPublishedRestServiceStmt struct {
 	Actions []PublishedRestAlterAction
 }
 
-func (s *AlterPublishedRestServiceStmt) isStatement() {}
+func (s *AlterPublishedRestServiceStmt) isStatement()     {}
 func (s *AlterPublishedRestServiceStmt) TypeName() string { return "AlterPublishedRestService" }
 
 // PublishedRestAlterAction is one of the alter operations.

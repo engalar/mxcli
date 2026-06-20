@@ -207,7 +207,9 @@ func (s *recordingSink) Emit(events []Event) error {
 }
 
 var errSecondary = &sinkError{}
+
 type sinkError struct{}
+
 func (e *sinkError) Error() string { return "secondary error" }
 
 // ── LoggingSink integration with IndexManager ─────────────
@@ -223,7 +225,7 @@ func TestLoggingSink_BuildAllWritesDelta(t *testing.T) {
 
 	mgr := NewIndexManager()
 	mgr.RegisterAdapter(&testAdapter{
-		name: "test",
+		name:   "test",
 		schema: &GraphSchema{NodeLabels: []Label{"Entity"}},
 		events: []Event{
 			{Type: NodeCreated, Node: &Node{ID: "e1", Label: "Entity"}},

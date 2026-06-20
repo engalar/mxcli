@@ -11,12 +11,12 @@ import (
 
 	"go.mongodb.org/mongo-driver/v2/bson"
 
+	"github.com/mendixlabs/mxcli/internal/mxgraph"
 	"github.com/mendixlabs/mxcli/mdl/backend"
 	mprrepos "github.com/mendixlabs/mxcli/mdl/backend/mpr/repos"
 	"github.com/mendixlabs/mxcli/mdl/backend/unitstore"
 	"github.com/mendixlabs/mxcli/mdl/linter"
 	"github.com/mendixlabs/mxcli/mdl/types"
-	"github.com/mendixlabs/mxcli/internal/mxgraph"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/modelsdk/codec"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
@@ -45,13 +45,13 @@ var _ linter.LintReader = (*MprBackend)(nil)
 // by delegating to a single modelsdk/mpr Reader/Writer pair and domain-
 // specific sub-backends created eagerly in Connect().
 type MprBackend struct {
-	reader     *modelsdkmpr.Reader
-	msdkReader *modelsdkmpr.Reader // alias of reader; kept for *_compat.go ergonomics
-	msdkWriter modelsdkmpr.UnitWriter
-	writer     *modelsdkmpr.Writer // concrete writer, set in Connect()
-	path       string
-	scriptBuf  *ScriptBuffer
-	unitBuf    *unitstore.BufferedUnitStore
+	reader          *modelsdkmpr.Reader
+	msdkReader      *modelsdkmpr.Reader // alias of reader; kept for *_compat.go ergonomics
+	msdkWriter      modelsdkmpr.UnitWriter
+	writer          *modelsdkmpr.Writer // concrete writer, set in Connect()
+	path            string
+	scriptBuf       *ScriptBuffer
+	unitBuf         *unitstore.BufferedUnitStore
 	widgetTypeCache map[string]*widgetTypeCacheEntry
 
 	// subBackendsReady is set to true once Connect() finishes creating
@@ -59,20 +59,20 @@ type MprBackend struct {
 	subBackendsReady bool
 
 	// Domain-specific sub-backends. Created eagerly in Connect().
-	modules          *moduleBackend
-	microflows       *microflowBackend
-	workflows        *workflowBackend
-	pages            *pageBackend
-	java             *javaBackend
-	domainmodels     *domainModelBackend
-	security         *securityBackend
-	folders          *folderBackend
-	scheduledEvents  *scheduledEventBackend
-	enumerations     *enumerationBackend
-	constants        *constantBackend
-	rawUnits         *rawUnitBackend
-	metadata         *metadataBackend
-	mappings         *mappingBackend
+	modules         *moduleBackend
+	microflows      *microflowBackend
+	workflows       *workflowBackend
+	pages           *pageBackend
+	java            *javaBackend
+	domainmodels    *domainModelBackend
+	security        *securityBackend
+	folders         *folderBackend
+	scheduledEvents *scheduledEventBackend
+	enumerations    *enumerationBackend
+	constants       *constantBackend
+	rawUnits        *rawUnitBackend
+	metadata        *metadataBackend
+	mappings        *mappingBackend
 }
 
 // widgetTypeCacheEntry holds the per-page cached type schema for one widget type.
@@ -268,50 +268,50 @@ func (b *MprBackend) Commit() error { return nil }
 
 // ── BackendFactory accessors ─────────────────────────────────────────────
 
-func (b *MprBackend) ModuleLister() backend.ModuleLister              { return b.modules }
-func (b *MprBackend) ModuleWriter() backend.ModuleWriter              { return b }
-func (b *MprBackend) DomainModelReader() backend.DomainModelReader    { return b }
-func (b *MprBackend) DomainModelWriter() backend.DomainModelWriter    { return b }
-func (b *MprBackend) MicroflowReader() backend.MicroflowReader       { return b.microflows }
-func (b *MprBackend) MicroflowWriter() backend.MicroflowWriter       { return b }
-func (b *MprBackend) WorkflowReader() backend.WorkflowReader         { return b.workflows }
-func (b *MprBackend) WorkflowWriter() backend.WorkflowWriter         { return b }
-func (b *MprBackend) PageReader() backend.PageReader                 { return b.pages }
-func (b *MprBackend) PageWriter() backend.PageWriter                 { return b }
-func (b *MprBackend) JavaActionReader() backend.JavaActionReader     { return b }
-func (b *MprBackend) JavaActionWriter() backend.JavaActionWriter     { return b }
-func (b *MprBackend) JavaScriptActionReader() backend.JavaScriptActionReader { return b }
-func (b *MprBackend) JavaScriptActionWriter() backend.JavaScriptActionWriter { return b }
-func (b *MprBackend) EnumerationReader() backend.EnumerationReader   { return b.enumerations }
-func (b *MprBackend) EnumerationWriter() backend.EnumerationWriter   { return b }
-func (b *MprBackend) ConstantReader() backend.ConstantReader         { return b.constants }
-func (b *MprBackend) ConstantWriter() backend.ConstantWriter         { return b }
-func (b *MprBackend) SettingsReader() backend.SettingsReader         { return b }
-func (b *MprBackend) SettingsWriter() backend.SettingsWriter         { return b }
-func (b *MprBackend) MappingReader() backend.MappingReader           { return b }
-func (b *MprBackend) MappingWriter() backend.MappingWriter           { return b }
-func (b *MprBackend) UnitReader() backend.UnitReader                 { return b.rawUnits }
-func (b *MprBackend) UnitWriter() backend.UnitWriter                 { return b.rawUnits }
-func (b *MprBackend) NavigationReader() backend.NavigationReader     { return b }
-func (b *MprBackend) NavigationWriter() backend.NavigationWriter     { return b }
-func (b *MprBackend) ImageCollectionWriter() backend.ImageCollectionWriter { return b }
-func (b *MprBackend) ServiceLister() backend.ServiceLister           { return b }
-func (b *MprBackend) ServiceWriter() backend.ServiceWriter           { return b }
-func (b *MprBackend) ScheduledEventReader() backend.ScheduledEventReader { return b.scheduledEvents }
-func (b *MprBackend) MetadataReader() backend.MetadataReader         { return b.metadata }
-func (b *MprBackend) FolderManager() backend.FolderManager           { return b }
-func (b *MprBackend) ModuleSettingsReader() backend.ModuleSettingsReader { return b }
-func (b *MprBackend) ModuleSettingsWriter() backend.ModuleSettingsWriter { return b }
-func (b *MprBackend) RenameManager() backend.RenameManager           { return b }
-func (b *MprBackend) SecurityProjectManager() backend.SecurityProjectManager { return b }
-func (b *MprBackend) SecurityModuleManager() backend.SecurityModuleManager { return b }
+func (b *MprBackend) ModuleLister() backend.ModuleLister                               { return b.modules }
+func (b *MprBackend) ModuleWriter() backend.ModuleWriter                               { return b }
+func (b *MprBackend) DomainModelReader() backend.DomainModelReader                     { return b }
+func (b *MprBackend) DomainModelWriter() backend.DomainModelWriter                     { return b }
+func (b *MprBackend) MicroflowReader() backend.MicroflowReader                         { return b.microflows }
+func (b *MprBackend) MicroflowWriter() backend.MicroflowWriter                         { return b }
+func (b *MprBackend) WorkflowReader() backend.WorkflowReader                           { return b.workflows }
+func (b *MprBackend) WorkflowWriter() backend.WorkflowWriter                           { return b }
+func (b *MprBackend) PageReader() backend.PageReader                                   { return b.pages }
+func (b *MprBackend) PageWriter() backend.PageWriter                                   { return b }
+func (b *MprBackend) JavaActionReader() backend.JavaActionReader                       { return b }
+func (b *MprBackend) JavaActionWriter() backend.JavaActionWriter                       { return b }
+func (b *MprBackend) JavaScriptActionReader() backend.JavaScriptActionReader           { return b }
+func (b *MprBackend) JavaScriptActionWriter() backend.JavaScriptActionWriter           { return b }
+func (b *MprBackend) EnumerationReader() backend.EnumerationReader                     { return b.enumerations }
+func (b *MprBackend) EnumerationWriter() backend.EnumerationWriter                     { return b }
+func (b *MprBackend) ConstantReader() backend.ConstantReader                           { return b.constants }
+func (b *MprBackend) ConstantWriter() backend.ConstantWriter                           { return b }
+func (b *MprBackend) SettingsReader() backend.SettingsReader                           { return b }
+func (b *MprBackend) SettingsWriter() backend.SettingsWriter                           { return b }
+func (b *MprBackend) MappingReader() backend.MappingReader                             { return b }
+func (b *MprBackend) MappingWriter() backend.MappingWriter                             { return b }
+func (b *MprBackend) UnitReader() backend.UnitReader                                   { return b.rawUnits }
+func (b *MprBackend) UnitWriter() backend.UnitWriter                                   { return b.rawUnits }
+func (b *MprBackend) NavigationReader() backend.NavigationReader                       { return b }
+func (b *MprBackend) NavigationWriter() backend.NavigationWriter                       { return b }
+func (b *MprBackend) ImageCollectionWriter() backend.ImageCollectionWriter             { return b }
+func (b *MprBackend) ServiceLister() backend.ServiceLister                             { return b }
+func (b *MprBackend) ServiceWriter() backend.ServiceWriter                             { return b }
+func (b *MprBackend) ScheduledEventReader() backend.ScheduledEventReader               { return b.scheduledEvents }
+func (b *MprBackend) MetadataReader() backend.MetadataReader                           { return b.metadata }
+func (b *MprBackend) FolderManager() backend.FolderManager                             { return b }
+func (b *MprBackend) ModuleSettingsReader() backend.ModuleSettingsReader               { return b }
+func (b *MprBackend) ModuleSettingsWriter() backend.ModuleSettingsWriter               { return b }
+func (b *MprBackend) RenameManager() backend.RenameManager                             { return b }
+func (b *MprBackend) SecurityProjectManager() backend.SecurityProjectManager           { return b }
+func (b *MprBackend) SecurityModuleManager() backend.SecurityModuleManager             { return b }
 func (b *MprBackend) SecurityEntityAccessManager() backend.SecurityEntityAccessManager { return b }
-func (b *MprBackend) PageModelAccess() backend.PageModelAccess       { return b }
-func (b *MprBackend) PageMutationOperator() backend.PageMutationOperator { return b }
-func (b *MprBackend) WorkflowMutationOperator() backend.WorkflowMutationOperator { return b }
-func (b *MprBackend) WidgetBuilder() backend.WidgetBuilder           { return b }
-func (b *MprBackend) ScriptTransactionManager() backend.ScriptTransactionManager { return b }
-func (b *MprBackend) AgentEditorOperator() backend.AgentEditorOperator { return b }
+func (b *MprBackend) PageModelAccess() backend.PageModelAccess                         { return b }
+func (b *MprBackend) PageMutationOperator() backend.PageMutationOperator               { return b }
+func (b *MprBackend) WorkflowMutationOperator() backend.WorkflowMutationOperator       { return b }
+func (b *MprBackend) WidgetBuilder() backend.WidgetBuilder                             { return b }
+func (b *MprBackend) ScriptTransactionManager() backend.ScriptTransactionManager       { return b }
+func (b *MprBackend) AgentEditorOperator() backend.AgentEditorOperator                 { return b }
 
 // ---------------------------------------------------------------------------
 // ModuleBackend — reads delegate to moduleBackend, writes stay on MprBackend

@@ -23,8 +23,8 @@ type MockProjectGraph struct {
 	ImpactFunc              func(qualifiedName string) []graphcatalog.RefEdge
 	ReferencesFunc          func(qualifiedName string) []graphcatalog.RefEdge
 	// ThemeReader
-	ThemeVariablesFunc   func(module string, filter graphcatalog.ThemeVarFilter) []graphcatalog.ThemeVariableNode
-	ThemeVariableFunc    func(name string) *graphcatalog.ThemeVariableNode
+	ThemeVariablesFunc      func(module string, filter graphcatalog.ThemeVarFilter) []graphcatalog.ThemeVariableNode
+	ThemeVariableFunc       func(name string) *graphcatalog.ThemeVariableNode
 	OverriddenVariablesFunc func() []graphcatalog.ThemeVariableNode
 	// StylingReader
 	WidgetInstancesFunc  func(pageQN string) []graphcatalog.WidgetInstanceNode

@@ -97,9 +97,14 @@ func DecodeBinaryUUID(raw bson.Raw, key string) string {
 	}
 	// Reverse the Microsoft GUID byte-swap to recover the original UUID bytes.
 	var u [16]byte
-	u[0] = data[3]; u[1] = data[2]; u[2] = data[1]; u[3] = data[0]
-	u[4] = data[5]; u[5] = data[4]
-	u[6] = data[7]; u[7] = data[6]
+	u[0] = data[3]
+	u[1] = data[2]
+	u[2] = data[1]
+	u[3] = data[0]
+	u[4] = data[5]
+	u[5] = data[4]
+	u[6] = data[7]
+	u[7] = data[6]
 	copy(u[8:], data[8:])
 	h := hex.EncodeToString(u[:])
 	return h[0:8] + "-" + h[8:12] + "-" + h[12:16] + "-" + h[16:20] + "-" + h[20:32]
@@ -117,9 +122,14 @@ func EncodeBinaryUUID(id string) any {
 		return nil
 	}
 	blob := make([]byte, 16)
-	blob[0] = decoded[3]; blob[1] = decoded[2]; blob[2] = decoded[1]; blob[3] = decoded[0]
-	blob[4] = decoded[5]; blob[5] = decoded[4]
-	blob[6] = decoded[7]; blob[7] = decoded[6]
+	blob[0] = decoded[3]
+	blob[1] = decoded[2]
+	blob[2] = decoded[1]
+	blob[3] = decoded[0]
+	blob[4] = decoded[5]
+	blob[5] = decoded[4]
+	blob[6] = decoded[7]
+	blob[7] = decoded[6]
 	copy(blob[8:], decoded[8:])
 	return bson.Binary{Subtype: 0x00, Data: blob}
 }
@@ -214,8 +224,8 @@ func (p *StringListPrimitive) BSONValue() any {
 // that Studio Pro serializes as Binary rather than as a plain string.
 type BinaryUUIDPrimitive struct {
 	propertyBase
-	raw  bson.Raw
-	val  string
+	raw    bson.Raw
+	val    string
 	loaded bool
 }
 

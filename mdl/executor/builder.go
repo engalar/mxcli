@@ -28,13 +28,13 @@ func Build() *Builder {
 	return &Builder{out: os.Stdout}
 }
 
-func (b *Builder) Out(w io.Writer) *Builder                        { b.out = w; return b }
-func (b *Builder) ProgressOut(w io.Writer) *Builder                 { b.progress = w; return b }
-func (b *Builder) WithBackend(be backend.ConnectionBackend) *Builder      { b.backend = be; return b }
-func (b *Builder) WithFactory(f BackendFactory) *Builder            { b.factory = f; return b }
-func (b *Builder) WithLogger(l *diaglog.Logger) *Builder            { b.logger = l; return b }
-func (b *Builder) Format(f OutputFormat) *Builder                   { b.format = f; return b }
-func (b *Builder) Quiet() *Builder                                  { b.quiet = true; return b }
+func (b *Builder) Out(w io.Writer) *Builder                          { b.out = w; return b }
+func (b *Builder) ProgressOut(w io.Writer) *Builder                  { b.progress = w; return b }
+func (b *Builder) WithBackend(be backend.ConnectionBackend) *Builder { b.backend = be; return b }
+func (b *Builder) WithFactory(f BackendFactory) *Builder             { b.factory = f; return b }
+func (b *Builder) WithLogger(l *diaglog.Logger) *Builder             { b.logger = l; return b }
+func (b *Builder) Format(f OutputFormat) *Builder                    { b.format = f; return b }
+func (b *Builder) Quiet() *Builder                                   { b.quiet = true; return b }
 
 func (b *Builder) Create() *Executor {
 	e := New(b.out)

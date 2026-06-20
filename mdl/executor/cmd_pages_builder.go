@@ -28,22 +28,22 @@ import (
 // pageBuilder constructs pages from AST.
 type pageBuilder struct {
 	// Deprecated: use role-specific fields below.
-	backend            backend.FullBackend
-	moduleLister       backend.ModuleLister
-	domainModelReader  backend.DomainModelReader
-	pageReader         backend.PageReader
-	folderManager      backend.FolderManager
-	connectionManager  backend.ConnectionManager
-	moduleID           model.ID
-	moduleName         string
-	widgetScope        map[string]model.ID                // widget name -> widget ID
-	paramScope         map[string]model.ID                // param name -> entity ID
-	paramEntityNames   map[string]string                  // param name -> qualified entity name
-	execCache          *executorCache                     // Shared cache from executor
-	isSnippet          bool                               // True if building a snippet (affects parameter datasource)
-	fragments          map[string]*ast.DefineFragmentStmt // Fragment registry from executor
-	themeRegistry      *ThemeRegistry                     // Theme design property definitions (may be nil)
-	widgetBackend      backend.WidgetBuilderBackend       // Backend for pluggable widget construction
+	backend           backend.FullBackend
+	moduleLister      backend.ModuleLister
+	domainModelReader backend.DomainModelReader
+	pageReader        backend.PageReader
+	folderManager     backend.FolderManager
+	connectionManager backend.ConnectionManager
+	moduleID          model.ID
+	moduleName        string
+	widgetScope       map[string]model.ID                // widget name -> widget ID
+	paramScope        map[string]model.ID                // param name -> entity ID
+	paramEntityNames  map[string]string                  // param name -> qualified entity name
+	execCache         *executorCache                     // Shared cache from executor
+	isSnippet         bool                               // True if building a snippet (affects parameter datasource)
+	fragments         map[string]*ast.DefineFragmentStmt // Fragment registry from executor
+	themeRegistry     *ThemeRegistry                     // Theme design property definitions (may be nil)
+	widgetBackend     backend.WidgetBuilderBackend       // Backend for pluggable widget construction
 
 	// Pluggable widget engine (lazily initialized)
 	widgetRegistry     *WidgetRegistry
@@ -76,23 +76,33 @@ type pageBuilder struct {
 
 // role helpers — prefer role-specific field, fall back to deprecated backend.
 func (pb *pageBuilder) moduleListerOrBackend() backend.ModuleLister {
-	if pb.moduleLister != nil { return pb.moduleLister }
+	if pb.moduleLister != nil {
+		return pb.moduleLister
+	}
 	return pb.backend
 }
 func (pb *pageBuilder) dmReaderOrBackend() backend.DomainModelReader {
-	if pb.domainModelReader != nil { return pb.domainModelReader }
+	if pb.domainModelReader != nil {
+		return pb.domainModelReader
+	}
 	return pb.backend
 }
 func (pb *pageBuilder) pageReaderOrBackend() backend.PageReader {
-	if pb.pageReader != nil { return pb.pageReader }
+	if pb.pageReader != nil {
+		return pb.pageReader
+	}
 	return pb.backend
 }
 func (pb *pageBuilder) folderMgrOrBackend() backend.FolderManager {
-	if pb.folderManager != nil { return pb.folderManager }
+	if pb.folderManager != nil {
+		return pb.folderManager
+	}
 	return pb.backend
 }
 func (pb *pageBuilder) connMgrOrBackend() backend.ConnectionManager {
-	if pb.connectionManager != nil { return pb.connectionManager }
+	if pb.connectionManager != nil {
+		return pb.connectionManager
+	}
 	return pb.backend
 }
 

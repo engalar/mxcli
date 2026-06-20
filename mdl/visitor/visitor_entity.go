@@ -66,7 +66,9 @@ var dropDispatch = []dropEntry{
 		build: func(ctx *parser.DropStatementContext, names []parser.IQualifiedNameContext) ast.Statement {
 			return &ast.DropODataServiceStmt{Name: buildQualifiedName(names[0])}
 		}},
-	{match: func(ctx *parser.DropStatementContext) bool { return ctx.BUSINESS() != nil && ctx.EVENT() != nil && ctx.SERVICE() != nil },
+	{match: func(ctx *parser.DropStatementContext) bool {
+		return ctx.BUSINESS() != nil && ctx.EVENT() != nil && ctx.SERVICE() != nil
+	},
 		build: func(ctx *parser.DropStatementContext, names []parser.IQualifiedNameContext) ast.Statement {
 			return &ast.DropBusinessEventServiceStmt{Name: buildQualifiedName(names[0])}
 		}},
@@ -82,7 +84,9 @@ var dropDispatch = []dropEntry{
 		build: func(ctx *parser.DropStatementContext, names []parser.IQualifiedNameContext) ast.Statement {
 			return &ast.DropModelStmt{Name: buildQualifiedName(names[0])}
 		}},
-	{match: func(ctx *parser.DropStatementContext) bool { return ctx.CONSUMED() != nil && ctx.MCP() != nil && ctx.SERVICE() != nil },
+	{match: func(ctx *parser.DropStatementContext) bool {
+		return ctx.CONSUMED() != nil && ctx.MCP() != nil && ctx.SERVICE() != nil
+	},
 		build: func(ctx *parser.DropStatementContext, names []parser.IQualifiedNameContext) ast.Statement {
 			return &ast.DropConsumedMCPServiceStmt{Name: buildQualifiedName(names[0])}
 		}},
@@ -94,7 +98,9 @@ var dropDispatch = []dropEntry{
 		build: func(ctx *parser.DropStatementContext, names []parser.IQualifiedNameContext) ast.Statement {
 			return &ast.DropAgentStmt{Name: buildQualifiedName(names[0])}
 		}},
-	{match: func(ctx *parser.DropStatementContext) bool { return ctx.PUBLISHED() != nil && ctx.REST() != nil && ctx.SERVICE() != nil },
+	{match: func(ctx *parser.DropStatementContext) bool {
+		return ctx.PUBLISHED() != nil && ctx.REST() != nil && ctx.SERVICE() != nil
+	},
 		build: func(ctx *parser.DropStatementContext, names []parser.IQualifiedNameContext) ast.Statement {
 			return &ast.DropPublishedRestServiceStmt{Name: buildQualifiedName(names[0])}
 		}},
@@ -130,6 +136,7 @@ var dropDispatch = []dropEntry{
 			return &ast.DropFolderStmt{FolderPath: folderPath, Module: moduleName}
 		}},
 }
+
 // dropConfigHandlers covers DROP CONFIGURATION which uses STRING_LITERAL not qualified names.
 func isDropConfiguration(ctx *parser.DropStatementContext) bool {
 	return ctx.CONFIGURATION() != nil

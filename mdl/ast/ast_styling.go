@@ -11,7 +11,7 @@ type ShowDesignPropertiesStmt struct {
 	WidgetType string // Empty = all widget types, or specific type like "CONTAINER"
 }
 
-func (s *ShowDesignPropertiesStmt) isStatement() {}
+func (s *ShowDesignPropertiesStmt) isStatement()     {}
 func (s *ShowDesignPropertiesStmt) TypeName() string { return "ShowDesignProperties" }
 
 // DescribeStylingStmt represents: DESCRIBE STYLING ON PAGE/SNIPPET Module.Name [WIDGET widgetName]
@@ -21,7 +21,7 @@ type DescribeStylingStmt struct {
 	WidgetName    string        // Empty = all widgets with styling
 }
 
-func (s *DescribeStylingStmt) isStatement() {}
+func (s *DescribeStylingStmt) isStatement()     {}
 func (s *DescribeStylingStmt) TypeName() string { return "DescribeStyling" }
 
 // AlterStylingStmt represents: ALTER STYLING ON PAGE/SNIPPET Module.Name WIDGET widgetName SET/CLEAR ...
@@ -33,7 +33,7 @@ type AlterStylingStmt struct {
 	ClearDesignProps bool                // CLEAR DESIGN PROPERTIES
 }
 
-func (s *AlterStylingStmt) isStatement() {}
+func (s *AlterStylingStmt) isStatement()     {}
 func (s *AlterStylingStmt) TypeName() string { return "AlterStyling" }
 
 // StylingAssignment represents a single property assignment in ALTER STYLING SET.

@@ -274,7 +274,6 @@ func (e *Env) fetchLatestTag() (string, error) {
 	return parseLatestTagFromAtom(resp.Body, "daemon-v")
 }
 
-
 func killPIDFile(pidPath, sockPath string) {
 	b, err := os.ReadFile(pidPath)
 	if err != nil {

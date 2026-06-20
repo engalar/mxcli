@@ -110,21 +110,21 @@ func (fb *flowBuilderGen) emitLoopedActivityGen(body []ast.MicroflowStatement, s
 	// loop-local declarations don't leak. Other flowBuilderGen state
 	// (backend, hierarchy, repos, measurer) is shared.
 	loopBuilder := &flowBuilderGen{
-		posX:           innerStartX,
-		posY:           innerStartY,
-		baseY:          innerStartY,
-		spacing:        HorizontalSpacing,
-		varTypes:       cloneStringMap(fb.varTypes),
-		declaredVars:   cloneStringMap(fb.declaredVars),
-		measurer:       fb.measurer,
-		backend:            fb.backend,
-		moduleLister:       fb.moduleLister,
-		domainModelReader:  fb.domainModelReader,
-		microflowsRepo:     fb.microflowsRepo,
-		nanoflowsRepo:  fb.nanoflowsRepo,
-		hierarchy:      fb.hierarchy,
-		restServices:   fb.restServices,
-		isNanoflow:     fb.isNanoflow,
+		posX:              innerStartX,
+		posY:              innerStartY,
+		baseY:             innerStartY,
+		spacing:           HorizontalSpacing,
+		varTypes:          cloneStringMap(fb.varTypes),
+		declaredVars:      cloneStringMap(fb.declaredVars),
+		measurer:          fb.measurer,
+		backend:           fb.backend,
+		moduleLister:      fb.moduleLister,
+		domainModelReader: fb.domainModelReader,
+		microflowsRepo:    fb.microflowsRepo,
+		nanoflowsRepo:     fb.nanoflowsRepo,
+		hierarchy:         fb.hierarchy,
+		restServices:      fb.restServices,
+		isNanoflow:        fb.isNanoflow,
 	}
 
 	// Process body statements + thread chain flows.

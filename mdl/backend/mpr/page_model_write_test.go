@@ -130,8 +130,8 @@ func TestExtractColWidth_UsesWeightKey(t *testing.T) {
 // preserves the column width correctly.
 func TestLayoutGridColumn_RoundTrip(t *testing.T) {
 	orig := &types.WidgetNode{
-		Kind: types.WidgetLayoutCol,
-		Name: "col",
+		Kind:     types.WidgetLayoutCol,
+		Name:     "col",
 		ColWidth: types.ColWidthDef{Desktop: 6, Tablet: 6, Phone: 12},
 	}
 	doc := widgetToBSON(orig)

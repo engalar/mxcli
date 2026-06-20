@@ -1,9 +1,9 @@
 package executor
 
 import (
+	"go/ast"
 	"go/parser"
 	"go/token"
-	"go/ast"
 	"os"
 	"strings"
 	"testing"
@@ -107,17 +107,17 @@ func TestNoRawBSONTypeStringsInExecutor(t *testing.T) {
 		"workflows_v2.go":              true, // (b) type switch/comparisons when reading workflow activities
 		"structure.go":                 true, // (b) type switch/comparisons for structure display
 		// (b) type strings used for reading/identifying existing BSON in describe/show commands:
-		"cmd_drop_entity_v2.go":          true,
-		"entities_v2.go":                 true,
-		"microflows_show_v2.go":          true,
-		"microflows_show_list_v2.go":     true,
-		"nanoflow_elk_v2.go":             true,
-		"nanoflows_show_v2.go":           true,
-		"page_wireframe.go":              true,
-		"pages_describe.go":              true,
-		"pages_describe_output.go":       true,
-		"pages_describe_parse.go":        true,
-		"pages_describe_pluggable.go":    true,
+		"cmd_drop_entity_v2.go":           true,
+		"entities_v2.go":                  true,
+		"microflows_show_v2.go":           true,
+		"microflows_show_list_v2.go":      true,
+		"nanoflow_elk_v2.go":              true,
+		"nanoflows_show_v2.go":            true,
+		"page_wireframe.go":               true,
+		"pages_describe.go":               true,
+		"pages_describe_output.go":        true,
+		"pages_describe_parse.go":         true,
+		"pages_describe_pluggable.go":     true,
 		"cmd_security_write_entity_v2.go": true,
 		// (b) describe formatter-dispatch registration keys: type strings
 		// identify which BSON $Type each formatter reads; no BSON construction.
@@ -164,4 +164,3 @@ func TestNoRawBSONTypeStringsInExecutor(t *testing.T) {
 		})
 	}
 }
-

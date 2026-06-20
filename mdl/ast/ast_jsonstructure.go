@@ -14,7 +14,7 @@ type CreateJsonStructureStmt struct {
 	CustomNameMap  map[string]string // Optional: JSON key → custom ExposedName
 }
 
-func (s *CreateJsonStructureStmt) isStatement() {}
+func (s *CreateJsonStructureStmt) isStatement()     {}
 func (s *CreateJsonStructureStmt) TypeName() string { return "CreateJsonStructure" }
 
 // DropJsonStructureStmt represents: DROP JSON STRUCTURE Module.Name
@@ -22,5 +22,5 @@ type DropJsonStructureStmt struct {
 	Name QualifiedName
 }
 
-func (s *DropJsonStructureStmt) isStatement() {}
+func (s *DropJsonStructureStmt) isStatement()     {}
 func (s *DropJsonStructureStmt) TypeName() string { return "DropJsonStructure" }

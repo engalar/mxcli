@@ -60,10 +60,10 @@ func main() {
 
 // fileResult holds the outcome of executing a single MDL file.
 type fileResult struct {
-	file      string
-	stmts     int
-	elapsed   time.Duration
-	err       error
+	file    string
+	stmts   int
+	elapsed time.Duration
+	err     error
 }
 
 func runFiles(exec *executor.Executor, files []string, stopOnError bool) {

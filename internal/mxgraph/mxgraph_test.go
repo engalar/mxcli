@@ -250,8 +250,8 @@ type testAdapter struct {
 	events []Event
 }
 
-func (a *testAdapter) Name() string                     { return a.name }
-func (a *testAdapter) Schema() *GraphSchema              { return a.schema }
+func (a *testAdapter) Name() string         { return a.name }
+func (a *testAdapter) Schema() *GraphSchema { return a.schema }
 func (a *testAdapter) Build(ctx context.Context, sink EventSink) error {
 	return sink.Emit(a.events)
 }

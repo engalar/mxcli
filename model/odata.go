@@ -127,4 +127,3 @@ type PublishedMember struct {
 	Sortable    bool   `json:"sortable,omitempty"`
 	IsPartOfKey bool   `json:"isPartOfKey,omitempty"`
 }
-

@@ -98,9 +98,9 @@ func (q *fkgQuerier) Plan(moduleName string) (*CurriculumPlan, error) {
 // Orchestrate returns an ordered implementation plan for multiple concepts.
 func (q *fkgQuerier) Orchestrate(conceptIDs []string) (*OrchestrationPlan, error) {
 	type depInfo struct {
-		index     int
-		node      *mxgraph.Node
-		deps      map[string]bool // concept IDs this depends on
+		index int
+		node  *mxgraph.Node
+		deps  map[string]bool // concept IDs this depends on
 	}
 
 	nodes := make([]*depInfo, 0, len(conceptIDs))

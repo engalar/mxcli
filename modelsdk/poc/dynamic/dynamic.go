@@ -67,8 +67,8 @@ func newProperty(p element.Property) *Property {
 	return d
 }
 
-func (p *Property) Name() string  { return p.prop.Name() }
-func (p *Property) Kind() Kind    { return p.kind }
+func (p *Property) Name() string       { return p.prop.Name() }
+func (p *Property) Kind() Kind         { return p.kind }
 func (p *Property) TargetType() string { return p.target }
 
 func (p *Property) inferKind() {

@@ -14,7 +14,7 @@ type AlterNavigationStmt struct {
 	CreateOrModify bool             // true if CREATE OR REPLACE/MODIFY was used
 }
 
-func (s *AlterNavigationStmt) isStatement() {}
+func (s *AlterNavigationStmt) isStatement()     {}
 func (s *AlterNavigationStmt) TypeName() string { return "AlterNavigation" }
 
 // NavHomePageDef represents a HOME PAGE or HOME MICROFLOW clause.

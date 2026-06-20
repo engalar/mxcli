@@ -16,9 +16,10 @@ import (
 //   - Microflow 节点的 ApplyEntityAccess 属性
 //
 // 数据来源（typed modelsdk 路径）：
-//   Forms$Page.AllowedRolesQualifiedNames()
-//   Microflows$Microflow.AllowedModuleRolesQualifiedNames()
-//   Microflows$Microflow.ApplyEntityAccess()
+//
+//	Forms$Page.AllowedRolesQualifiedNames()
+//	Microflows$Microflow.AllowedModuleRolesQualifiedNames()
+//	Microflows$Microflow.ApplyEntityAccess()
 type DocumentGrantAdapter struct {
 	Model *modelsdk.Model
 }

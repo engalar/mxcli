@@ -4,9 +4,9 @@
 //
 // Bug: msdkWrite used UpdateRawUnit which skips scriptBuf. This caused two
 // problems when a script transaction was active:
-//   1. ScriptOverlay was never updated → each msdkWrite read stale data
-//   2. commitScriptBuffer BatchWrite overwrote the UpdateRawUnit SQLite writes
-//      with the old ScriptBuffer content (pre-GRANT domain model)
+//  1. ScriptOverlay was never updated → each msdkWrite read stale data
+//  2. commitScriptBuffer BatchWrite overwrote the UpdateRawUnit SQLite writes
+//     with the old ScriptBuffer content (pre-GRANT domain model)
 //
 // Net result: ALL security grants applied inside EXECUTE SCRIPT were silently
 // discarded on commit, producing CE2729 "No access" errors in mx check.
@@ -29,9 +29,9 @@ import (
 // goes through scriptBuf (SetScriptOverlay). Before the fix, subsequent
 // msdkWrite calls (for GRANTs) use UpdateRawUnit which bypasses scriptBuf,
 // leaving the ScriptOverlay stale. This causes:
-//   1. Each GRANT reads the pre-GRANT ScriptOverlay, so they overwrite each other.
-//   2. commitScriptBuffer BatchWrite overwrites the SQLite writes with the
-//      stale ScriptBuffer content, wiping all GRANTs.
+//  1. Each GRANT reads the pre-GRANT ScriptOverlay, so they overwrite each other.
+//  2. commitScriptBuffer BatchWrite overwrites the SQLite writes with the
+//     stale ScriptBuffer content, wiping all GRANTs.
 func TestMsdkWrite_ScriptTransaction_CumulativeGrants(t *testing.T) {
 	// Create a bare MPR (no entity yet) so we can add the entity inside the tx.
 	mprPath, dmID := makeDomainModelTestMPR(t)

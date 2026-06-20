@@ -277,16 +277,16 @@ func (a *WidgetInstanceAdapter) inspectRawWidget(
 	condEdit := extractConditionalEditability(m)
 
 	props := map[string]any{
-		"$Type":             "WidgetInstance",
-		"Name":              widgetName,
-		"WidgetType":        shortTypeName(typeName),
-		"Class":             class,
-		"Style":             style,
-		"DesignProperties":  dps,
+		"$Type":                  "WidgetInstance",
+		"Name":                   widgetName,
+		"WidgetType":             shortTypeName(typeName),
+		"Class":                  class,
+		"Style":                  style,
+		"DesignProperties":       dps,
 		"ConditionalVisibility":  condVis,
 		"ConditionalEditability": condEdit,
-		"QualifiedName":     qn,
-		"Module":            module,
+		"QualifiedName":          qn,
+		"Module":                 module,
 	}
 
 	var events []mxgraph.Event
@@ -416,15 +416,15 @@ func dropVersionPrefix(arr bson.A) []any {
 // isWidgetType 判断是否为可渲染的 widget 类型。
 func isWidgetType(typeName string) bool {
 	skipTypes := map[string]bool{
-		"Forms$LayoutCall":                true,
-		"Forms$LayoutCallArgument":        true,
-		"Forms$FormCall":                  true,
-		"Forms$FormCallArgument":          true,
-		"Forms$Appearance":                true,
-		"Forms$DesignPropertyValue":       true,
-		"Forms$OptionDesignPropertyValue": true,
-		"Forms$ToggleDesignPropertyValue":  true,
-		"Forms$CustomDesignPropertyValue":  true,
+		"Forms$LayoutCall":                  true,
+		"Forms$LayoutCallArgument":          true,
+		"Forms$FormCall":                    true,
+		"Forms$FormCallArgument":            true,
+		"Forms$Appearance":                  true,
+		"Forms$DesignPropertyValue":         true,
+		"Forms$OptionDesignPropertyValue":   true,
+		"Forms$ToggleDesignPropertyValue":   true,
+		"Forms$CustomDesignPropertyValue":   true,
 		"Forms$ConditionalVisibilityWidget": true,
 	}
 	if skipTypes[typeName] {

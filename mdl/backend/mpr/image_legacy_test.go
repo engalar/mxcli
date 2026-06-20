@@ -3,8 +3,8 @@ package mprbackend
 import (
 	"testing"
 
-	modelsdkmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
 	"github.com/mendixlabs/mxcli/mdl/types"
+	modelsdkmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
 )
 
 // TestParseImageCollectionRaw_RoundTrip guards against the read-path bug where

@@ -61,7 +61,7 @@ type CreateMicroflowStmt struct {
 	ResetLayout    bool // reset layout — clears activity positions so Studio Pro re-layouts
 }
 
-func (s *CreateMicroflowStmt) isStatement() {}
+func (s *CreateMicroflowStmt) isStatement()     {}
 func (s *CreateMicroflowStmt) TypeName() string { return "CreateMicroflow" }
 
 // DropMicroflowStmt represents: DROP MICROFLOW Module.Name
@@ -69,7 +69,7 @@ type DropMicroflowStmt struct {
 	Name QualifiedName
 }
 
-func (s *DropMicroflowStmt) isStatement() {}
+func (s *DropMicroflowStmt) isStatement()     {}
 func (s *DropMicroflowStmt) TypeName() string { return "DropMicroflow" }
 
 // CreateNanoflowStmt represents: CREATE NANOFLOW Module.Name (params) RETURNS type BEGIN body END
@@ -86,7 +86,7 @@ type CreateNanoflowStmt struct {
 	ResetLayout    bool // reset layout — clears activity positions so Studio Pro re-layouts
 }
 
-func (s *CreateNanoflowStmt) isStatement() {}
+func (s *CreateNanoflowStmt) isStatement()     {}
 func (s *CreateNanoflowStmt) TypeName() string { return "CreateNanoflow" }
 
 // DropNanoflowStmt represents: DROP NANOFLOW Module.Name
@@ -94,7 +94,7 @@ type DropNanoflowStmt struct {
 	Name QualifiedName
 }
 
-func (s *DropNanoflowStmt) isStatement() {}
+func (s *DropNanoflowStmt) isStatement()     {}
 func (s *DropNanoflowStmt) TypeName() string { return "DropNanoflow" }
 
 // ============================================================================

@@ -44,4 +44,3 @@ func (r *RegularExpression) GetName() string {
 func (r *RegularExpression) GetContainerID() ID {
 	return r.ContainerID
 }
-

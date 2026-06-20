@@ -55,4 +55,3 @@ func (f *Folder) GetName() string {
 func (f *Folder) GetContainerID() ID {
 	return f.ContainerID
 }
-

@@ -13,7 +13,7 @@ type CreateDataTransformerStmt struct {
 	CreateOrModify bool // true for CREATE OR MODIFY / CREATE OR REPLACE
 }
 
-func (s *CreateDataTransformerStmt) isStatement() {}
+func (s *CreateDataTransformerStmt) isStatement()     {}
 func (s *CreateDataTransformerStmt) TypeName() string { return "CreateDataTransformer" }
 
 // DataTransformerStepDef represents a single step: JSLT '...' or XSLT '...'
@@ -27,5 +27,5 @@ type DropDataTransformerStmt struct {
 	Name QualifiedName
 }
 
-func (s *DropDataTransformerStmt) isStatement() {}
+func (s *DropDataTransformerStmt) isStatement()     {}
 func (s *DropDataTransformerStmt) TypeName() string { return "DropDataTransformer" }

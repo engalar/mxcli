@@ -3,13 +3,13 @@
 package mprbackend
 
 import (
-	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/mdl/types"
-	modelsdkmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
-	"github.com/mendixlabs/mxcli/modelsdk/mprread"
+	"github.com/mendixlabs/mxcli/model"
 	genExpMap "github.com/mendixlabs/mxcli/modelsdk/gen/exportmappings"
 	genImpMap "github.com/mendixlabs/mxcli/modelsdk/gen/importmappings"
 	genJson "github.com/mendixlabs/mxcli/modelsdk/gen/jsonstructures"
+	modelsdkmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
+	"github.com/mendixlabs/mxcli/modelsdk/mprread"
 )
 
 type mappingBackend struct {

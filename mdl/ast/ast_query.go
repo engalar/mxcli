@@ -16,7 +16,7 @@ type ShowStmt struct {
 	All        bool           // For SHOW STRUCTURE ALL (include system modules)
 }
 
-func (s *ShowStmt) isStatement() {}
+func (s *ShowStmt) isStatement()     {}
 func (s *ShowStmt) TypeName() string { return "Show" }
 
 // ShowObjectType represents what to show.
@@ -256,7 +256,7 @@ type ShowFeaturesStmt struct {
 	AddedSince string
 }
 
-func (s *ShowFeaturesStmt) isStatement() {}
+func (s *ShowFeaturesStmt) isStatement()     {}
 func (s *ShowFeaturesStmt) TypeName() string { return "ShowFeatures" }
 
 // SelectStmt represents a SELECT query against catalog tables.
@@ -264,7 +264,7 @@ type SelectStmt struct {
 	Query string // The raw SQL query
 }
 
-func (s *SelectStmt) isStatement() {}
+func (s *SelectStmt) isStatement()     {}
 func (s *SelectStmt) TypeName() string { return "Select" }
 
 // DescribeStmt represents DESCRIBE commands.
@@ -276,7 +276,7 @@ type DescribeStmt struct {
 	Qualifier  string // For DESCRIBE JAR DEPENDENCY: the 'group:artifact' coordinate
 }
 
-func (s *DescribeStmt) isStatement() {}
+func (s *DescribeStmt) isStatement()     {}
 func (s *DescribeStmt) TypeName() string { return "Describe" }
 
 // DescribeObjectType represents what to describe.
@@ -415,7 +415,7 @@ type DescribeCatalogTableStmt struct {
 	TableName string // lowercase table name, e.g. "widgets", "entities"
 }
 
-func (s *DescribeCatalogTableStmt) isStatement() {}
+func (s *DescribeCatalogTableStmt) isStatement()     {}
 func (s *DescribeCatalogTableStmt) TypeName() string { return "DescribeCatalogTable" }
 
 // ============================================================================
@@ -425,13 +425,13 @@ func (s *DescribeCatalogTableStmt) TypeName() string { return "DescribeCatalogTa
 // UpdateStmt represents: UPDATE
 type UpdateStmt struct{}
 
-func (s *UpdateStmt) isStatement() {}
+func (s *UpdateStmt) isStatement()     {}
 func (s *UpdateStmt) TypeName() string { return "Update" }
 
 // RefreshStmt represents: REFRESH
 type RefreshStmt struct{}
 
-func (s *RefreshStmt) isStatement() {}
+func (s *RefreshStmt) isStatement()     {}
 func (s *RefreshStmt) TypeName() string { return "Refresh" }
 
 // RefreshCatalogStmt represents: REFRESH CATALOG [FULL] [SOURCE] [FORCE] [BACKGROUND]
@@ -442,7 +442,7 @@ type RefreshCatalogStmt struct {
 	Background bool // If true, run in background and return immediately
 }
 
-func (s *RefreshCatalogStmt) isStatement() {}
+func (s *RefreshCatalogStmt) isStatement()     {}
 func (s *RefreshCatalogStmt) TypeName() string { return "RefreshCatalog" }
 
 // ============================================================================
@@ -455,7 +455,7 @@ type SetStmt struct {
 	Value any // string, int64, or bool
 }
 
-func (s *SetStmt) isStatement() {}
+func (s *SetStmt) isStatement()     {}
 func (s *SetStmt) TypeName() string { return "Set" }
 
 // HelpStmt represents: HELP [topic words...]
@@ -463,13 +463,13 @@ type HelpStmt struct {
 	Topic []string // e.g., ["workflow", "user-task"] for HELP WORKFLOW USER-TASK
 }
 
-func (s *HelpStmt) isStatement() {}
+func (s *HelpStmt) isStatement()     {}
 func (s *HelpStmt) TypeName() string { return "Help" }
 
 // ExitStmt represents: EXIT or QUIT
 type ExitStmt struct{}
 
-func (s *ExitStmt) isStatement() {}
+func (s *ExitStmt) isStatement()     {}
 func (s *ExitStmt) TypeName() string { return "Exit" }
 
 // SearchStmt represents: SEARCH 'query'
@@ -477,7 +477,7 @@ type SearchStmt struct {
 	Query string
 }
 
-func (s *SearchStmt) isStatement() {}
+func (s *SearchStmt) isStatement()     {}
 func (s *SearchStmt) TypeName() string { return "Search" }
 
 // ExecuteScriptStmt represents: EXECUTE SCRIPT 'path'
@@ -485,5 +485,5 @@ type ExecuteScriptStmt struct {
 	Path string
 }
 
-func (s *ExecuteScriptStmt) isStatement() {}
+func (s *ExecuteScriptStmt) isStatement()     {}
 func (s *ExecuteScriptStmt) TypeName() string { return "ExecuteScript" }

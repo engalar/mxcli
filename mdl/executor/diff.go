@@ -151,12 +151,24 @@ type diffHandler func(ctx *ExecContext, stmt ast.Statement) (*DiffResult, error)
 
 // diffDispatch maps concrete statement types to their diff functions.
 var diffDispatch = map[reflect.Type]diffHandler{
-	reflect.TypeOf(&ast.CreateEntityStmt{}):      func(ctx *ExecContext, stmt ast.Statement) (*DiffResult, error) { return diffEntity(ctx, stmt.(*ast.CreateEntityStmt)) },
-	reflect.TypeOf(&ast.CreateViewEntityStmt{}):  func(ctx *ExecContext, stmt ast.Statement) (*DiffResult, error) { return diffViewEntity(ctx, stmt.(*ast.CreateViewEntityStmt)) },
-	reflect.TypeOf(&ast.CreateEnumerationStmt{}): func(ctx *ExecContext, stmt ast.Statement) (*DiffResult, error) { return diffEnumeration(ctx, stmt.(*ast.CreateEnumerationStmt)) },
-	reflect.TypeOf(&ast.CreateAssociationStmt{}): func(ctx *ExecContext, stmt ast.Statement) (*DiffResult, error) { return diffAssociation(ctx, stmt.(*ast.CreateAssociationStmt)) },
-	reflect.TypeOf(&ast.CreateMicroflowStmt{}):   func(ctx *ExecContext, stmt ast.Statement) (*DiffResult, error) { return diffMicroflow(ctx, stmt.(*ast.CreateMicroflowStmt)) },
-	reflect.TypeOf(&ast.CreateNanoflowStmt{}):    func(ctx *ExecContext, stmt ast.Statement) (*DiffResult, error) { return diffNanoflow(ctx, stmt.(*ast.CreateNanoflowStmt)) },
+	reflect.TypeOf(&ast.CreateEntityStmt{}): func(ctx *ExecContext, stmt ast.Statement) (*DiffResult, error) {
+		return diffEntity(ctx, stmt.(*ast.CreateEntityStmt))
+	},
+	reflect.TypeOf(&ast.CreateViewEntityStmt{}): func(ctx *ExecContext, stmt ast.Statement) (*DiffResult, error) {
+		return diffViewEntity(ctx, stmt.(*ast.CreateViewEntityStmt))
+	},
+	reflect.TypeOf(&ast.CreateEnumerationStmt{}): func(ctx *ExecContext, stmt ast.Statement) (*DiffResult, error) {
+		return diffEnumeration(ctx, stmt.(*ast.CreateEnumerationStmt))
+	},
+	reflect.TypeOf(&ast.CreateAssociationStmt{}): func(ctx *ExecContext, stmt ast.Statement) (*DiffResult, error) {
+		return diffAssociation(ctx, stmt.(*ast.CreateAssociationStmt))
+	},
+	reflect.TypeOf(&ast.CreateMicroflowStmt{}): func(ctx *ExecContext, stmt ast.Statement) (*DiffResult, error) {
+		return diffMicroflow(ctx, stmt.(*ast.CreateMicroflowStmt))
+	},
+	reflect.TypeOf(&ast.CreateNanoflowStmt{}): func(ctx *ExecContext, stmt ast.Statement) (*DiffResult, error) {
+		return diffNanoflow(ctx, stmt.(*ast.CreateNanoflowStmt))
+	},
 }
 
 // diffStatement generates a diff result for a single statement

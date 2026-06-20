@@ -132,5 +132,3 @@ func (s *countingSink) Emit(events []mxgraph.Event) error {
 	}
 	return nil
 }
-
-

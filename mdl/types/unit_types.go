@@ -8,35 +8,35 @@ package types
 // when switching on UnitInfo.Type or unitCache entries.
 const (
 	// Core project structure
-	UnitTypeModule       = "Projects$ModuleImpl"
-	UnitTypeModuleSettings = "Projects$ModuleSettings"
-	UnitTypeFolder       = "Projects$Folder"
+	UnitTypeModule          = "Projects$ModuleImpl"
+	UnitTypeModuleSettings  = "Projects$ModuleSettings"
+	UnitTypeFolder          = "Projects$Folder"
 	UnitTypeProjectSettings = "Settings$ProjectSettings"
 
 	// Domain model
-	UnitTypeDomainModel  = "DomainModels$DomainModel"
-	UnitTypeEnumeration  = "Enumerations$Enumeration"
-	UnitTypeConstant     = "Constants$Constant"
+	UnitTypeDomainModel = "DomainModels$DomainModel"
+	UnitTypeEnumeration = "Enumerations$Enumeration"
+	UnitTypeConstant    = "Constants$Constant"
 
 	// Flows
-	UnitTypeMicroflow    = "Microflows$Microflow"
-	UnitTypeNanoflow     = "Microflows$Nanoflow"
-	UnitTypeRule         = "Microflows$Rule"
+	UnitTypeMicroflow = "Microflows$Microflow"
+	UnitTypeNanoflow  = "Microflows$Nanoflow"
+	UnitTypeRule      = "Microflows$Rule"
 
 	// Pages / UI
-	UnitTypePage         = "Forms$Page"
-	UnitTypeLayout       = "Forms$Layout"
-	UnitTypeSnippet      = "Forms$Snippet"
+	UnitTypePage    = "Forms$Page"
+	UnitTypeLayout  = "Forms$Layout"
+	UnitTypeSnippet = "Forms$Snippet"
 
 	// Java / JavaScript actions
 	UnitTypeJavaAction       = "JavaActions$JavaAction"
 	UnitTypeJavaScriptAction = "JavaActions$JavaScriptAction"
 
 	// Workflows
-	UnitTypeWorkflow     = "Workflows$Workflow"
+	UnitTypeWorkflow = "Workflows$Workflow"
 
 	// REST / OData / Business events
-	UnitTypePublishedRestService = "Rest$PublishedRestService"
+	UnitTypePublishedRestService  = "Rest$PublishedRestService"
 	UnitTypePublishedODataService = "ODataPublish$PublishedODataService"
 	UnitTypeConsumedODataService  = "Rest$ConsumedODataService"
 	UnitTypeBusinessEventPrefix   = "BusinessEvents$" // prefix — multiple sub-types; use with strings.HasPrefix, not ==

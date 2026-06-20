@@ -102,9 +102,9 @@ func TestMove_Page_CrossModule(t *testing.T) {
 	moved := false
 	refUpdated := false
 	mb := &mock.MockBackend{
-		IsConnectedFunc: func() bool { return true },
-		ListModulesFunc: func() ([]*model.Module, error) { return []*model.Module{srcMod, dstMod}, nil },
-		ListFoldersFunc: func() ([]*types.FolderInfo, error) { return nil, nil },
+		IsConnectedFunc:     func() bool { return true },
+		ListModulesFunc:     func() ([]*model.Module, error) { return []*model.Module{srcMod, dstMod}, nil },
+		ListFoldersFunc:     func() ([]*types.FolderInfo, error) { return nil, nil },
 		MoveDocumentGenFunc: func(id, containerID model.ID) error { moved = true; return nil },
 		UpdateQualifiedNameInAllUnitsFunc: func(old, new string) (int, error) {
 			refUpdated = true
@@ -158,9 +158,9 @@ func TestMove_Page_BackendError(t *testing.T) {
 	mod := mkModule("MyModule")
 	pg := mkPageGen(string(nextID("pg")), "MyPage")
 	mb := &mock.MockBackend{
-		IsConnectedFunc: func() bool { return true },
-		ListModulesFunc: func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
-		ListFoldersFunc: func() ([]*types.FolderInfo, error) { return nil, nil },
+		IsConnectedFunc:     func() bool { return true },
+		ListModulesFunc:     func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
+		ListFoldersFunc:     func() ([]*types.FolderInfo, error) { return nil, nil },
 		MoveDocumentGenFunc: func(id, containerID model.ID) error { return fmt.Errorf("disk full") },
 	}
 	h := mkHierarchy(mod)

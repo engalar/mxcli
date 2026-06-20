@@ -10,8 +10,8 @@ import (
 	"github.com/mendixlabs/mxcli/modelsdk"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
 	"github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
-	"go.mongodb.org/mongo-driver/v2/bson"
 	"github.com/mendixlabs/mxcli/modelsdk/poc/dynamic"
+	"go.mongodb.org/mongo-driver/v2/bson"
 
 	_ "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 	_ "github.com/mendixlabs/mxcli/modelsdk/gen/enumerations"

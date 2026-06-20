@@ -81,16 +81,36 @@ var wfActivityDispatch map[reflect.Type]wfActivityHandler
 
 func init() {
 	wfActivityDispatch = map[reflect.Type]wfActivityHandler{
-		reflect.TypeOf(&ast.WorkflowJumpToNode{}):             func(wbc *wfBuildCtx, node ast.WorkflowActivityNode) element.Element { return buildJumpToGenActivity(node.(*ast.WorkflowJumpToNode)) },
-		reflect.TypeOf(&ast.WorkflowWaitForTimerNode{}):       func(wbc *wfBuildCtx, node ast.WorkflowActivityNode) element.Element { return buildWaitForTimerGenActivity(node.(*ast.WorkflowWaitForTimerNode)) },
-		reflect.TypeOf(&ast.WorkflowWaitForNotificationNode{}): func(wbc *wfBuildCtx, node ast.WorkflowActivityNode) element.Element { return buildWaitForNotificationGenActivity(wbc, node.(*ast.WorkflowWaitForNotificationNode)) },
-		reflect.TypeOf(&ast.WorkflowEndNode{}):                func(wbc *wfBuildCtx, node ast.WorkflowActivityNode) element.Element { return buildEndWorkflowGenActivity(node.(*ast.WorkflowEndNode)) },
-		reflect.TypeOf(&ast.WorkflowAnnotationActivityNode{}): func(wbc *wfBuildCtx, node ast.WorkflowActivityNode) element.Element { return buildAnnotationActivityGen(node.(*ast.WorkflowAnnotationActivityNode)) },
-		reflect.TypeOf(&ast.WorkflowUserTaskNode{}):           func(wbc *wfBuildCtx, node ast.WorkflowActivityNode) element.Element { return buildUserTaskGenActivity(wbc, node.(*ast.WorkflowUserTaskNode)) },
-		reflect.TypeOf(&ast.WorkflowCallMicroflowNode{}):      func(wbc *wfBuildCtx, node ast.WorkflowActivityNode) element.Element { return buildCallMicroflowGenActivity(wbc, node.(*ast.WorkflowCallMicroflowNode)) },
-		reflect.TypeOf(&ast.WorkflowCallWorkflowNode{}):       func(wbc *wfBuildCtx, node ast.WorkflowActivityNode) element.Element { return buildCallWorkflowGenActivity(wbc, node.(*ast.WorkflowCallWorkflowNode)) },
-		reflect.TypeOf(&ast.WorkflowDecisionNode{}):           func(wbc *wfBuildCtx, node ast.WorkflowActivityNode) element.Element { return buildExclusiveSplitGenActivity(wbc, node.(*ast.WorkflowDecisionNode)) },
-		reflect.TypeOf(&ast.WorkflowParallelSplitNode{}):      func(wbc *wfBuildCtx, node ast.WorkflowActivityNode) element.Element { return buildParallelSplitGenActivity(wbc, node.(*ast.WorkflowParallelSplitNode)) },
+		reflect.TypeOf(&ast.WorkflowJumpToNode{}): func(wbc *wfBuildCtx, node ast.WorkflowActivityNode) element.Element {
+			return buildJumpToGenActivity(node.(*ast.WorkflowJumpToNode))
+		},
+		reflect.TypeOf(&ast.WorkflowWaitForTimerNode{}): func(wbc *wfBuildCtx, node ast.WorkflowActivityNode) element.Element {
+			return buildWaitForTimerGenActivity(node.(*ast.WorkflowWaitForTimerNode))
+		},
+		reflect.TypeOf(&ast.WorkflowWaitForNotificationNode{}): func(wbc *wfBuildCtx, node ast.WorkflowActivityNode) element.Element {
+			return buildWaitForNotificationGenActivity(wbc, node.(*ast.WorkflowWaitForNotificationNode))
+		},
+		reflect.TypeOf(&ast.WorkflowEndNode{}): func(wbc *wfBuildCtx, node ast.WorkflowActivityNode) element.Element {
+			return buildEndWorkflowGenActivity(node.(*ast.WorkflowEndNode))
+		},
+		reflect.TypeOf(&ast.WorkflowAnnotationActivityNode{}): func(wbc *wfBuildCtx, node ast.WorkflowActivityNode) element.Element {
+			return buildAnnotationActivityGen(node.(*ast.WorkflowAnnotationActivityNode))
+		},
+		reflect.TypeOf(&ast.WorkflowUserTaskNode{}): func(wbc *wfBuildCtx, node ast.WorkflowActivityNode) element.Element {
+			return buildUserTaskGenActivity(wbc, node.(*ast.WorkflowUserTaskNode))
+		},
+		reflect.TypeOf(&ast.WorkflowCallMicroflowNode{}): func(wbc *wfBuildCtx, node ast.WorkflowActivityNode) element.Element {
+			return buildCallMicroflowGenActivity(wbc, node.(*ast.WorkflowCallMicroflowNode))
+		},
+		reflect.TypeOf(&ast.WorkflowCallWorkflowNode{}): func(wbc *wfBuildCtx, node ast.WorkflowActivityNode) element.Element {
+			return buildCallWorkflowGenActivity(wbc, node.(*ast.WorkflowCallWorkflowNode))
+		},
+		reflect.TypeOf(&ast.WorkflowDecisionNode{}): func(wbc *wfBuildCtx, node ast.WorkflowActivityNode) element.Element {
+			return buildExclusiveSplitGenActivity(wbc, node.(*ast.WorkflowDecisionNode))
+		},
+		reflect.TypeOf(&ast.WorkflowParallelSplitNode{}): func(wbc *wfBuildCtx, node ast.WorkflowActivityNode) element.Element {
+			return buildParallelSplitGenActivity(wbc, node.(*ast.WorkflowParallelSplitNode))
+		},
 	}
 }
 

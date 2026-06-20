@@ -53,7 +53,6 @@ func TestReadVersionFile_Present(t *testing.T) {
 	}
 }
 
-
 // makeTarZst creates an in-memory .tar.zst archive containing the given files.
 func makeTarZst(t *testing.T, files map[string][]byte) *bytes.Buffer {
 	t.Helper()

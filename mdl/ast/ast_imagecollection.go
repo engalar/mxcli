@@ -19,7 +19,7 @@ type CreateImageCollectionStmt struct {
 	Images         []ImageItem
 }
 
-func (s *CreateImageCollectionStmt) isStatement() {}
+func (s *CreateImageCollectionStmt) isStatement()     {}
 func (s *CreateImageCollectionStmt) TypeName() string { return "CreateImageCollection" }
 
 // DropImageCollectionStmt represents: DROP IMAGE COLLECTION Module.Name
@@ -27,7 +27,7 @@ type DropImageCollectionStmt struct {
 	Name QualifiedName
 }
 
-func (s *DropImageCollectionStmt) isStatement() {}
+func (s *DropImageCollectionStmt) isStatement()     {}
 func (s *DropImageCollectionStmt) TypeName() string { return "DropImageCollection" }
 
 // AlterImageCollectionStmt represents ALTER IMAGE COLLECTION Module.Name action [, action...]
@@ -36,7 +36,7 @@ type AlterImageCollectionStmt struct {
 	Actions []ImageCollectionAction
 }
 
-func (s *AlterImageCollectionStmt) isStatement() {}
+func (s *AlterImageCollectionStmt) isStatement()     {}
 func (s *AlterImageCollectionStmt) TypeName() string { return "AlterImageCollection" }
 
 // ImageCollectionAction is the interface for all ALTER IMAGE COLLECTION sub-actions.

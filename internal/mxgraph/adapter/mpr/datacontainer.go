@@ -28,19 +28,19 @@ var jsonBufPool = sync.Pool{
 // 和 PageRefAdapter 相同的模式）。
 type DataContainerAdapter struct {
 	Source   RawUnitSource
-	Model    *modelsdk.Model  // 用于解析 module 和 entity QN
-	DocCache BsonDocCache     // 可选：共享 BSON 解码缓存
+	Model    *modelsdk.Model // 用于解析 module 和 entity QN
+	DocCache BsonDocCache    // 可选：共享 BSON 解码缓存
 }
 
 // childWidgetSummary 描述数据容器内一个子 widget 的外观和条件性配置。
 type childWidgetSummary struct {
-	Name                  string `json:"name"`
-	WidgetType            string `json:"widgetType"`
-	Class                 string `json:"class,omitempty"`
-	Style                 string `json:"style,omitempty"`
-	Caption               string `json:"caption,omitempty"`
-	Attribute             string `json:"attribute,omitempty"`
-	ConditionalVisibility string `json:"condVis,omitempty"`
+	Name                   string `json:"name"`
+	WidgetType             string `json:"widgetType"`
+	Class                  string `json:"class,omitempty"`
+	Style                  string `json:"style,omitempty"`
+	Caption                string `json:"caption,omitempty"`
+	Attribute              string `json:"attribute,omitempty"`
+	ConditionalVisibility  string `json:"condVis,omitempty"`
 	ConditionalEditability string `json:"condEdit,omitempty"`
 }
 
@@ -53,21 +53,21 @@ type containerCtxVar struct {
 
 // dcWalkState 是遍历 widget 树时的状态。
 type dcWalkState struct {
-	depth      int
-	parentID   mxgraph.NodeID
-	entityCtx  string // 当前层级的实体 QN（$currentObject）
-	parentEntity string // 父层级的实体 QN
-	module     string
-	pageQN     string
+	depth         int
+	parentID      mxgraph.NodeID
+	entityCtx     string // 当前层级的实体 QN（$currentObject）
+	parentEntity  string // 父层级的实体 QN
+	module        string
+	pageQN        string
 	widgetNameMap map[string]string // 第一遍收集: widgetName → entity QN
 }
 
 // dataSourceInfo 描述从 DataSource 子文档提取的信息。
 type dataSourceInfo struct {
-	dsType     string // "database" | "microflow" | "nanoflow" | "parameter" | "association" | "selection" | "none"
-	entity     string // 实体 QN（已解析）
-	microflow  string // 微流 QN
-	paramName  string // 参数名
+	dsType       string // "database" | "microflow" | "nanoflow" | "parameter" | "association" | "selection" | "none"
+	entity       string // 实体 QN（已解析）
+	microflow    string // 微流 QN
+	paramName    string // 参数名
 	listenTarget string // 监听目标 widget 名
 }
 
@@ -143,10 +143,10 @@ func (a *DataContainerAdapter) Build(ctx context.Context, sink mxgraph.EventSink
 
 		nameMap := make(map[string]string, 128)
 		state := &dcWalkState{
-			depth:        0,
-			parentID:     pageID,
-			module:       module,
-			pageQN:       pageQN,
+			depth:         0,
+			parentID:      pageID,
+			module:        module,
+			pageQN:        pageQN,
 			widgetNameMap: nameMap,
 		}
 
@@ -287,8 +287,6 @@ func (a *DataContainerAdapter) collectNamesDeep(w map[string]any, typeName strin
 	}
 }
 
-
-
 // walkPageWidgets 主要遍历路径，生成 DataContainer 节点。
 func (a *DataContainerAdapter) walkPageWidgets(doc map[string]any, state *dcWalkState, events *[]mxgraph.Event) {
 	for _, key := range []string{"FormCall", "LayoutCall"} {
@@ -402,23 +400,23 @@ func (a *DataContainerAdapter) emitDataContainer(w map[string]any, state *dcWalk
 	jsonBufPool.Put(buf)
 
 	props := map[string]any{
-		"$Type":            "DataContainer",
-		"WidgetType":       a.shortType(typeName),
-		"WidgetName":       name,
-		"DataSourceType":   ds.dsType,
-		"EntityPath":       ds.entity,
-		"TargetEntity":     targetEntity,
+		"$Type":               "DataContainer",
+		"WidgetType":          a.shortType(typeName),
+		"WidgetName":          name,
+		"DataSourceType":      ds.dsType,
+		"EntityPath":          ds.entity,
+		"TargetEntity":        targetEntity,
 		"DataSourceMicroflow": ds.microflow,
-		"ParameterName":    ds.paramName,
-		"ListenTargetWidget": ds.listenTarget,
-		"HasSelection":     hasSelection,
-		"SelectionName":    selectionName,
-		"Depth":            state.depth,
-		"PageQN":           state.pageQN,
-		"Module":           state.module,
-		"QualifiedName":    containerQN,
-		"ChildWidgets":     childrenStr,
-		"ContextVariables": ctxVarsStr,
+		"ParameterName":       ds.paramName,
+		"ListenTargetWidget":  ds.listenTarget,
+		"HasSelection":        hasSelection,
+		"SelectionName":       selectionName,
+		"Depth":               state.depth,
+		"PageQN":              state.pageQN,
+		"Module":              state.module,
+		"QualifiedName":       containerQN,
+		"ChildWidgets":        childrenStr,
+		"ContextVariables":    ctxVarsStr,
 	}
 
 	*events = append(*events, mxgraph.Event{

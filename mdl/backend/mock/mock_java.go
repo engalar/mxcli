@@ -76,5 +76,3 @@ func (m *MockBackend) WriteJavaSourceFileGen(moduleName, actionName string, java
 	}
 	return fmt.Errorf("MockBackend.WriteJavaSourceFileGen not configured")
 }
-
-

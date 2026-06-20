@@ -30,17 +30,17 @@ type EnumerationValue struct {
 
 // PropertyDef describes a single property from a widget XML definition.
 type PropertyDef struct {
-	Key          string // e.g. "staticDataSourceCaption"
-	Type         string // XML type: "attribute", "expression", "textTemplate", "widgets", etc.
-	Caption      string
-	Description  string
-	Category     string // from enclosing propertyGroup captions, joined with "::"
-	Required     bool
-	DefaultValue string // for enumeration/boolean/integer types
-	IsList       bool
-	IsSystem     bool                  // true for <systemProperty> elements
-	DataSource   string                // dataSource attribute reference
-	AllowedTypes []string              // for attribute properties: Mendix type names ("String", "Decimal", etc.)
+	Key               string // e.g. "staticDataSourceCaption"
+	Type              string // XML type: "attribute", "expression", "textTemplate", "widgets", etc.
+	Caption           string
+	Description       string
+	Category          string // from enclosing propertyGroup captions, joined with "::"
+	Required          bool
+	DefaultValue      string // for enumeration/boolean/integer types
+	IsList            bool
+	IsSystem          bool                  // true for <systemProperty> elements
+	DataSource        string                // dataSource attribute reference
+	AllowedTypes      []string              // for attribute properties: Mendix type names ("String", "Decimal", etc.)
 	ReturnType        *ExpressionReturnType // for expression-type properties
 	EnumerationValues []EnumerationValue    // for enumeration-type properties
 	SelectionTypes    []string              // for selection-type properties ("None", "Single", "Multi")
@@ -124,25 +124,25 @@ type xmlSelectionType struct {
 
 // xmlReturnType represents <returnType type="..."> for expression properties.
 type xmlReturnType struct {
-	Type         string `xml:"type,attr"`
+	Type           string `xml:"type,attr"`
 	EntityProperty string `xml:"entityProperty,attr"`
-	AssignableTo string `xml:"assignableTo,attr"`
+	AssignableTo   string `xml:"assignableTo,attr"`
 }
 
 // xmlProperty represents <property key="..." type="..." ...> element.
 type xmlProperty struct {
-	Key            string             `xml:"key,attr"`
-	Type           string             `xml:"type,attr"`
-	DefaultValue   string             `xml:"defaultValue,attr"`
-	Required       string             `xml:"required,attr"`
-	IsList         string             `xml:"isList,attr"`
-	DataSource     string             `xml:"dataSource,attr"`
-	Caption        string             `xml:"caption"`
-	Description    string             `xml:"description"`
+	Key               string                `xml:"key,attr"`
+	Type              string                `xml:"type,attr"`
+	DefaultValue      string                `xml:"defaultValue,attr"`
+	Required          string                `xml:"required,attr"`
+	IsList            string                `xml:"isList,attr"`
+	DataSource        string                `xml:"dataSource,attr"`
+	Caption           string                `xml:"caption"`
+	Description       string                `xml:"description"`
 	AttributeTypes    []xmlAttributeType    `xml:"attributeTypes>attributeType"`
-	EnumerationValues []xmlEnumerationValue  `xml:"enumerationValues>enumerationValue"`
-	SelectionTypes    []xmlSelectionType     `xml:"selectionTypes>selectionType"`
-	ReturnType        *xmlReturnType         `xml:"returnType"`
+	EnumerationValues []xmlEnumerationValue `xml:"enumerationValues>enumerationValue"`
+	SelectionTypes    []xmlSelectionType    `xml:"selectionTypes>selectionType"`
+	ReturnType        *xmlReturnType        `xml:"returnType"`
 	// Nested properties for object type
 	NestedProps []xmlPropGroup `xml:"properties>propertyGroup"`
 }

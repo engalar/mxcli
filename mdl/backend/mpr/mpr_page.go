@@ -6,8 +6,8 @@ import (
 	"context"
 	"sync"
 
-	"github.com/mendixlabs/mxcli/model"
 	mprrepos "github.com/mendixlabs/mxcli/mdl/backend/mpr/repos"
+	"github.com/mendixlabs/mxcli/model"
 	genPg "github.com/mendixlabs/mxcli/modelsdk/gen/pages"
 	mmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
 )

@@ -77,7 +77,7 @@ func (pt *PerfTimer) Report() {
 	sort.Strings(names)
 
 	fmt.Fprintf(output, "\n── Performance ──────────────────────────────\n")
-		fmt.Fprintf(output, "  Total wall time: %s\n", perfFormatDuration(total))
+	fmt.Fprintf(output, "  Total wall time: %s\n", perfFormatDuration(total))
 
 	var grandTotalNs int64
 	for _, name := range names {

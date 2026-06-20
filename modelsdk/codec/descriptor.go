@@ -5,7 +5,7 @@ import "sync"
 type PropKind uint8
 
 const (
-	PropKindString     PropKind = iota
+	PropKindString PropKind = iota
 	PropKindBool
 	PropKindInt32
 	PropKindFloat64

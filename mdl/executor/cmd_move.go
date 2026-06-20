@@ -91,6 +91,7 @@ func updateQualifiedNameRefs(ctx *ExecContext, name ast.QualifiedName, newModule
 	}
 	return nil
 }
+
 // moveEntity moves an entity from one domain model to another.
 // Entities are embedded inside DomainModel documents, so we must remove from source DM and add to target DM.
 // Associations referencing the entity are converted to CrossAssociations.
@@ -163,4 +164,3 @@ func moveEntity(ctx *ExecContext, name ast.QualifiedName, sourceModule, targetMo
 	}
 	return nil
 }
-

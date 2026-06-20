@@ -108,11 +108,11 @@ type RefEdge struct {
 type NavigationProfileNode struct {
 	ID            string
 	Name          string
-	Kind          string   // "Responsive" | "Native" | "Hybrid"
+	Kind          string // "Responsive" | "Native" | "Hybrid"
 	IsNative      bool
 	QualifiedName string
-	HomePage      string   // page QN or microflow QN
-	HasRoleBased  bool     // has role-based home pages
+	HomePage      string // page QN or microflow QN
+	HasRoleBased  bool   // has role-based home pages
 	MenuItemCount int
 	LoginPage     string
 	NotFoundPage  string
@@ -122,8 +122,8 @@ type NavigationProfileNode struct {
 type NavigationMenuItemNode struct {
 	ID        string
 	Caption   string
-	Page      string   // target page QN or empty
-	Microflow string   // target microflow QN or empty
+	Page      string // target page QN or empty
+	Microflow string // target microflow QN or empty
 	Depth     int
 	ParentID  string
 	ProfileID string
@@ -171,13 +171,13 @@ type DataContainerNode struct {
 
 // ChildWidgetSummary 是数据容器内子 widget 的外观摘要。
 type ChildWidgetSummary struct {
-	Name                  string `json:"name"`
-	WidgetType            string `json:"widgetType"`
-	Class                 string `json:"class,omitempty"`
-	Style                 string `json:"style,omitempty"`
-	Caption               string `json:"caption,omitempty"`
-	Attribute             string `json:"attribute,omitempty"`
-	ConditionalVisibility string `json:"condVis,omitempty"`
+	Name                   string `json:"name"`
+	WidgetType             string `json:"widgetType"`
+	Class                  string `json:"class,omitempty"`
+	Style                  string `json:"style,omitempty"`
+	Caption                string `json:"caption,omitempty"`
+	Attribute              string `json:"attribute,omitempty"`
+	ConditionalVisibility  string `json:"condVis,omitempty"`
 	ConditionalEditability string `json:"condEdit,omitempty"`
 }
 
@@ -197,24 +197,24 @@ type VariableScope struct {
 
 // EntityPageRef 描述实体被页面引用的情况。
 type EntityPageRef struct {
-	Entity        string
-	Page          string
+	Entity         string
+	Page           string
 	DataSourceType string // "database" | "association" | "microflow" | "parameter" | "selection"
-	ContainerName string
+	ContainerName  string
 }
 
 // EntityDataFlow 描述实体的完整数据流。
 type EntityDataFlow struct {
-	Entity   string
-	Pages    []PageDataFlowSummary
-	Creators  []string // microflows that create this entity
+	Entity     string
+	Pages      []PageDataFlowSummary
+	Creators   []string // microflows that create this entity
 	Retrievers []string // microflows that retrieve this entity
 }
 
 // PageDataFlowSummary 描述页面对实体的访问。
 type PageDataFlowSummary struct {
-	Page            string
-	DataSourceType  string
-	AllowedRoles    []string
-	NavigationRefs  []string // profiles referencing this page
+	Page           string
+	DataSourceType string
+	AllowedRoles   []string
+	NavigationRefs []string // profiles referencing this page
 }

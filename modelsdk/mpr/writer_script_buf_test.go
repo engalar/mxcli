@@ -107,5 +107,3 @@ func TestWriterScriptBuf_ErrorPropagation(t *testing.T) {
 		t.Errorf("InsertUnit error = %v, want %v", err, wantErr)
 	}
 }
-
-

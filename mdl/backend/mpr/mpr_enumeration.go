@@ -6,9 +6,9 @@ import (
 	"fmt"
 
 	"github.com/mendixlabs/mxcli/model"
+	genEnum "github.com/mendixlabs/mxcli/modelsdk/gen/enumerations"
 	modelsdkmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
 	"github.com/mendixlabs/mxcli/modelsdk/mprread"
-	genEnum "github.com/mendixlabs/mxcli/modelsdk/gen/enumerations"
 )
 
 type enumerationBackend struct {

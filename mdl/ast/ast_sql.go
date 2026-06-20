@@ -13,7 +13,7 @@ type SQLConnectStmt struct {
 	Alias  string
 }
 
-func (s *SQLConnectStmt) isStatement() {}
+func (s *SQLConnectStmt) isStatement()     {}
 func (s *SQLConnectStmt) TypeName() string { return "SQLConnect" }
 
 // SQLDisconnectStmt represents: SQL DISCONNECT <alias>
@@ -21,13 +21,13 @@ type SQLDisconnectStmt struct {
 	Alias string
 }
 
-func (s *SQLDisconnectStmt) isStatement() {}
+func (s *SQLDisconnectStmt) isStatement()     {}
 func (s *SQLDisconnectStmt) TypeName() string { return "SQLDisconnect" }
 
 // SQLConnectionsStmt represents: SQL CONNECTIONS
 type SQLConnectionsStmt struct{}
 
-func (s *SQLConnectionsStmt) isStatement() {}
+func (s *SQLConnectionsStmt) isStatement()     {}
 func (s *SQLConnectionsStmt) TypeName() string { return "SQLConnections" }
 
 // SQLQueryStmt represents: SQL <alias> <raw-sql>
@@ -36,7 +36,7 @@ type SQLQueryStmt struct {
 	Query string
 }
 
-func (s *SQLQueryStmt) isStatement() {}
+func (s *SQLQueryStmt) isStatement()     {}
 func (s *SQLQueryStmt) TypeName() string { return "SQLQuery" }
 
 // SQLShowTablesStmt represents: SQL <alias> SHOW TABLES
@@ -44,7 +44,7 @@ type SQLShowTablesStmt struct {
 	Alias string
 }
 
-func (s *SQLShowTablesStmt) isStatement() {}
+func (s *SQLShowTablesStmt) isStatement()     {}
 func (s *SQLShowTablesStmt) TypeName() string { return "SQLShowTables" }
 
 // SQLDescribeTableStmt represents: SQL <alias> DESCRIBE <table>
@@ -53,7 +53,7 @@ type SQLDescribeTableStmt struct {
 	Table string
 }
 
-func (s *SQLDescribeTableStmt) isStatement() {}
+func (s *SQLDescribeTableStmt) isStatement()     {}
 func (s *SQLDescribeTableStmt) TypeName() string { return "SQLDescribeTable" }
 
 // SQLShowViewsStmt represents: SQL <alias> SHOW VIEWS
@@ -61,7 +61,7 @@ type SQLShowViewsStmt struct {
 	Alias string
 }
 
-func (s *SQLShowViewsStmt) isStatement() {}
+func (s *SQLShowViewsStmt) isStatement()     {}
 func (s *SQLShowViewsStmt) TypeName() string { return "SQLShowViews" }
 
 // SQLShowFunctionsStmt represents: SQL <alias> SHOW FUNCTIONS
@@ -69,7 +69,7 @@ type SQLShowFunctionsStmt struct {
 	Alias string
 }
 
-func (s *SQLShowFunctionsStmt) isStatement() {}
+func (s *SQLShowFunctionsStmt) isStatement()     {}
 func (s *SQLShowFunctionsStmt) TypeName() string { return "SQLShowFunctions" }
 
 // SQLGenerateConnectorStmt represents: SQL <alias> GENERATE CONNECTOR INTO <module> [TABLES (...)] [VIEWS (...)] [EXEC]
@@ -81,7 +81,7 @@ type SQLGenerateConnectorStmt struct {
 	Exec   bool     // execute generated MDL immediately
 }
 
-func (s *SQLGenerateConnectorStmt) isStatement() {}
+func (s *SQLGenerateConnectorStmt) isStatement()     {}
 func (s *SQLGenerateConnectorStmt) TypeName() string { return "SQLGenerateConnector" }
 
 // ============================================================================
@@ -128,7 +128,7 @@ type CreateDatabaseConnectionStmt struct {
 	CreateOrModify        bool
 }
 
-func (s *CreateDatabaseConnectionStmt) isStatement() {}
+func (s *CreateDatabaseConnectionStmt) isStatement()     {}
 func (s *CreateDatabaseConnectionStmt) TypeName() string { return "CreateDatabaseConnection" }
 
 // ImportMapping maps a source column to a target attribute.
@@ -157,5 +157,5 @@ type ImportStmt struct {
 	Limit        int // 0 = no limit
 }
 
-func (s *ImportStmt) isStatement() {}
+func (s *ImportStmt) isStatement()     {}
 func (s *ImportStmt) TypeName() string { return "Import" }

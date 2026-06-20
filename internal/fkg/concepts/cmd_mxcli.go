@@ -12,11 +12,11 @@ import (
 // The adapter reads them in Build() to create FKG command nodes.
 
 type cmdDescriptor struct {
-	Name     string
-	Short    string
-	Long     string
-	Parent   string
-	Flags    []string
+	Name   string
+	Short  string
+	Long   string
+	Parent string
+	Flags  []string
 }
 
 var mxcliCmds []cmdDescriptor

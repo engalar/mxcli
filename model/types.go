@@ -11,46 +11,56 @@ import (
 // ID represents a unique identifier for model elements.
 // In Mendix, these are typically UUIDs.
 type ID string
+
 // QualifiedName represents a fully qualified name in the format "Module.Element".
 type QualifiedName string
+
 // Point represents a position in 2D space.
 type Point struct {
 	X int `json:"x"`
 	Y int `json:"y"`
 }
+
 // Size represents dimensions in 2D space.
 type Size struct {
 	Width  int `json:"width"`
 	Height int `json:"height"`
 }
+
 // Element is the base interface for all model elements.
 type Element interface {
 	GetID() ID
 	GetTypeName() string
 }
+
 // NamedElement is an element with a name.
 type NamedElement interface {
 	Element
 	GetName() string
 }
+
 // ContainedElement is an element that belongs to a container.
 type ContainedElement interface {
 	Element
 	GetContainerID() ID
 }
+
 // BaseElement provides common fields for all model elements.
 type BaseElement struct {
 	ID       ID     `json:"$ID"`
 	TypeName string `json:"$Type"`
 }
+
 // GetID returns the element's unique identifier.
 func (e *BaseElement) GetID() ID {
 	return e.ID
 }
+
 // GetTypeName returns the element's type name.
 func (e *BaseElement) GetTypeName() string {
 	return e.TypeName
 }
+
 // Unit represents a document unit in the Mendix model.
 // Units are top-level elements like DomainModel, Microflow, Page, etc.
 type Unit struct {
@@ -58,14 +68,17 @@ type Unit struct {
 	ContainerID ID     `json:"containerId"`
 	Name        string `json:"name,omitempty"`
 }
+
 // GetName returns the unit's name.
 func (u *Unit) GetName() string {
 	return u.Name
 }
+
 // GetContainerID returns the ID of the containing element.
 func (u *Unit) GetContainerID() ID {
 	return u.ContainerID
 }
+
 // Module represents a Mendix module.
 // GetName returns the module's name.
 // Project represents a Mendix project.
@@ -78,6 +91,7 @@ type Text struct {
 	BaseElement
 	Translations map[string]string `json:"translations,omitempty"`
 }
+
 // GetTranslation returns the translation for a given language code.
 func (t *Text) GetTranslation(languageCode string) string {
 	if t.Translations == nil {
@@ -85,6 +99,7 @@ func (t *Text) GetTranslation(languageCode string) string {
 	}
 	return t.Translations[languageCode]
 }
+
 // TranslationNode represents a single translatable text field in a document,
 // with its per-language translations. A missing language key means that
 // language has not been translated for this field.
@@ -94,6 +109,7 @@ type TranslationNode struct {
 	DocType  string            `json:"docType"`  // "PAGE", "SNIPPET", "ENUMERATION", "WORKFLOW", "MICROFLOW"
 	Texts    map[string]string `json:"texts"`    // langCode -> text; missing key = not translated
 }
+
 // Image represents an image reference.
 type Image struct {
 	BaseElement
@@ -102,6 +118,7 @@ type Image struct {
 	Width     int    `json:"width,omitempty"`
 	Height    int    `json:"height,omitempty"`
 }
+
 // ConstantDataType represents the data type of a constant.
 // Constant represents a constant value.
 // GetName returns the constant's name.
@@ -126,6 +143,7 @@ func (e *BaseElement) MarshalJSON() ([]byte, error) {
 		Alias: (*Alias)(e),
 	})
 }
+
 // DocumentType is intentionally not defined here.
 // Use codec.DefaultRegistry.TypeNameOf(reflect.TypeOf(gen.Type{})) to obtain
 // the canonical BSON $Type name for a given gen/* type at compile time.
@@ -238,13 +256,18 @@ type UnknownElement struct {
 	RawDoc     bson.D            `json:"-"`
 	FieldKinds map[string]string `json:"-"`
 }
+
 // GetPosition returns the element's position (satisfies microflows.MicroflowObject).
 func (u *UnknownElement) GetPosition() Point { return u.Position }
+
 // SetPosition sets the element's position (satisfies microflows.MicroflowObject).
 func (u *UnknownElement) SetPosition(p Point) { u.Position = p }
+
 // GetName returns the element's name (satisfies workflows.WorkflowActivity).
 func (u *UnknownElement) GetName() string { return u.Name }
+
 // GetCaption returns the element's caption (satisfies workflows.WorkflowActivity).
 func (u *UnknownElement) GetCaption() string { return u.Caption }
+
 // ActivityType returns the type name (satisfies workflows.WorkflowActivity).
 func (u *UnknownElement) ActivityType() string { return u.TypeName }

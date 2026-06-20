@@ -6,8 +6,8 @@ import (
 	"context"
 	"sync"
 
-	"github.com/mendixlabs/mxcli/model"
 	mprrepos "github.com/mendixlabs/mxcli/mdl/backend/mpr/repos"
+	"github.com/mendixlabs/mxcli/model"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 	mmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
 )
@@ -15,9 +15,9 @@ import (
 // microflowBackend implements the gen-typed Microflow/Nanoflow surface
 // with per-query caching via microflowCache.
 type microflowBackend struct {
-	writer      *mmpr.Writer
-	mfCache     *microflowCache
-	nfCache     *microflowNanoflowCache
+	writer  *mmpr.Writer
+	mfCache *microflowCache
+	nfCache *microflowNanoflowCache
 }
 
 func newMicroflowBackend(writer *mmpr.Writer) *microflowBackend {

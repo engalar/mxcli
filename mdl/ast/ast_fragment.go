@@ -8,7 +8,7 @@ type DefineFragmentStmt struct {
 	Widgets []*WidgetV3
 }
 
-func (s *DefineFragmentStmt) isStatement() {}
+func (s *DefineFragmentStmt) isStatement()     {}
 func (s *DefineFragmentStmt) TypeName() string { return "DefineFragment" }
 
 // DescribeFragmentFromStmt represents DESCRIBE FRAGMENT FROM PAGE/SNIPPET ... WIDGET ...
@@ -18,5 +18,5 @@ type DescribeFragmentFromStmt struct {
 	WidgetName    string        // Target widget name
 }
 
-func (s *DescribeFragmentFromStmt) isStatement() {}
+func (s *DescribeFragmentFromStmt) isStatement()     {}
 func (s *DescribeFragmentFromStmt) TypeName() string { return "DescribeFragmentFrom" }

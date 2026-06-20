@@ -18,7 +18,7 @@ type CreateModuleStmt struct {
 	Name string
 }
 
-func (s *CreateModuleStmt) isStatement() {}
+func (s *CreateModuleStmt) isStatement()     {}
 func (s *CreateModuleStmt) TypeName() string { return "CreateModule" }
 
 // DropModuleStmt represents: DROP MODULE ModuleName
@@ -26,7 +26,7 @@ type DropModuleStmt struct {
 	Name string
 }
 
-func (s *DropModuleStmt) isStatement() {}
+func (s *DropModuleStmt) isStatement()     {}
 func (s *DropModuleStmt) TypeName() string { return "DropModule" }
 
 // DropFolderStmt represents: DROP FOLDER 'path' IN Module
@@ -35,7 +35,7 @@ type DropFolderStmt struct {
 	Module     string // Module name
 }
 
-func (s *DropFolderStmt) isStatement() {}
+func (s *DropFolderStmt) isStatement()     {}
 func (s *DropFolderStmt) TypeName() string { return "DropFolder" }
 
 // MoveFolderStmt represents: MOVE FOLDER Module.FolderName TO ...
@@ -45,7 +45,7 @@ type MoveFolderStmt struct {
 	TargetModule string        // Target module name (empty = same module)
 }
 
-func (s *MoveFolderStmt) isStatement() {}
+func (s *MoveFolderStmt) isStatement()     {}
 func (s *MoveFolderStmt) TypeName() string { return "MoveFolder" }
 
 // CreateEnumerationStmt represents: CREATE ENUMERATION Module.Name (values) COMMENT '...'
@@ -57,7 +57,7 @@ type CreateEnumerationStmt struct {
 	CreateOrModify bool // True if CREATE OR MODIFY was used
 }
 
-func (s *CreateEnumerationStmt) isStatement() {}
+func (s *CreateEnumerationStmt) isStatement()     {}
 func (s *CreateEnumerationStmt) TypeName() string { return "CreateEnumeration" }
 
 // AlterEnumerationStmt represents: ALTER ENUMERATION Module.Name ADD/DROP/RENAME VALUE ...
@@ -69,7 +69,7 @@ type AlterEnumerationStmt struct {
 	Caption   string // For ADD
 }
 
-func (s *AlterEnumerationStmt) isStatement() {}
+func (s *AlterEnumerationStmt) isStatement()     {}
 func (s *AlterEnumerationStmt) TypeName() string { return "AlterEnumeration" }
 
 // AlterEnumOp represents the type of enumeration alteration.
@@ -86,7 +86,7 @@ type DropEnumerationStmt struct {
 	Name QualifiedName
 }
 
-func (s *DropEnumerationStmt) isStatement() {}
+func (s *DropEnumerationStmt) isStatement()     {}
 func (s *DropEnumerationStmt) TypeName() string { return "DropEnumeration" }
 
 // ============================================================================
@@ -105,7 +105,7 @@ type CreateConstantStmt struct {
 	CreateOrModify  bool // True if CREATE OR MODIFY was used
 }
 
-func (s *CreateConstantStmt) isStatement() {}
+func (s *CreateConstantStmt) isStatement()     {}
 func (s *CreateConstantStmt) TypeName() string { return "CreateConstant" }
 
 // DropConstantStmt represents: DROP CONSTANT Module.Name
@@ -113,5 +113,5 @@ type DropConstantStmt struct {
 	Name QualifiedName
 }
 
-func (s *DropConstantStmt) isStatement() {}
+func (s *DropConstantStmt) isStatement()     {}
 func (s *DropConstantStmt) TypeName() string { return "DropConstant" }

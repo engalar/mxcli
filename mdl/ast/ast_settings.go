@@ -13,7 +13,7 @@ type AlterSettingsStmt struct {
 	DropConstant bool   // If true, remove the constant override instead of setting it
 }
 
-func (s *AlterSettingsStmt) isStatement() {}
+func (s *AlterSettingsStmt) isStatement()     {}
 func (s *AlterSettingsStmt) TypeName() string { return "AlterSettings" }
 
 // CreateConfigurationStmt represents CREATE CONFIGURATION 'name' [properties...].
@@ -22,7 +22,7 @@ type CreateConfigurationStmt struct {
 	Properties map[string]any
 }
 
-func (s *CreateConfigurationStmt) isStatement() {}
+func (s *CreateConfigurationStmt) isStatement()     {}
 func (s *CreateConfigurationStmt) TypeName() string { return "CreateConfiguration" }
 
 // DropConfigurationStmt represents DROP CONFIGURATION 'name'.
@@ -30,5 +30,5 @@ type DropConfigurationStmt struct {
 	Name string
 }
 
-func (s *DropConfigurationStmt) isStatement() {}
+func (s *DropConfigurationStmt) isStatement()     {}
 func (s *DropConfigurationStmt) TypeName() string { return "DropConfiguration" }

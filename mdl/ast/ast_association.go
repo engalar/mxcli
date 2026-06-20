@@ -111,7 +111,7 @@ type CreateAssociationStmt struct {
 	CreateOrModify bool // true for CREATE OR MODIFY / CREATE OR REPLACE
 }
 
-func (s *CreateAssociationStmt) isStatement() {}
+func (s *CreateAssociationStmt) isStatement()     {}
 func (s *CreateAssociationStmt) TypeName() string { return "CreateAssociation" }
 
 // DropAssociationStmt represents: DROP ASSOCIATION Module.Name
@@ -119,7 +119,7 @@ type DropAssociationStmt struct {
 	Name QualifiedName
 }
 
-func (s *DropAssociationStmt) isStatement() {}
+func (s *DropAssociationStmt) isStatement()     {}
 func (s *DropAssociationStmt) TypeName() string { return "DropAssociation" }
 
 // AlterAssociationOperation represents the type of ALTER ASSOCIATION operation.
@@ -142,5 +142,5 @@ type AlterAssociationStmt struct {
 	Comment        string
 }
 
-func (s *AlterAssociationStmt) isStatement() {}
+func (s *AlterAssociationStmt) isStatement()     {}
 func (s *AlterAssociationStmt) TypeName() string { return "AlterAssociation" }

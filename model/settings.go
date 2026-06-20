@@ -117,4 +117,3 @@ type DistributionSettings struct {
 	IsDistributable bool   `json:"isDistributable"`
 	Version         string `json:"version,omitempty"`
 }
-

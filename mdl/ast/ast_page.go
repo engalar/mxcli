@@ -40,7 +40,7 @@ type DropPageStmt struct {
 	Name QualifiedName
 }
 
-func (s *DropPageStmt) isStatement() {}
+func (s *DropPageStmt) isStatement()     {}
 func (s *DropPageStmt) TypeName() string { return "DropPage" }
 
 // DropSnippetStmt represents: DROP SNIPPET Module.Name
@@ -48,5 +48,5 @@ type DropSnippetStmt struct {
 	Name QualifiedName
 }
 
-func (s *DropSnippetStmt) isStatement() {}
+func (s *DropSnippetStmt) isStatement()     {}
 func (s *DropSnippetStmt) TypeName() string { return "DropSnippet" }

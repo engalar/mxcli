@@ -20,13 +20,15 @@ func (e *Env) daemonBinaryPath() string {
 	return filepath.Join(e.daemonDir(), name)
 }
 
-func (e *Env) daemonBakPath() string         { return filepath.Join(e.daemonDir(), "mxcli-daemon.bak") }
-func (e *Env) daemonSocketPath() string      { return filepath.Join(e.daemonDir(), "mxcli.sock") }
-func (e *Env) daemonVersionPath() string     { return filepath.Join(e.daemonDir(), "version") }
-func (e *Env) daemonVersionBakPath() string  { return filepath.Join(e.daemonDir(), "version.bak") }
-func (e *Env) daemonUpdateAvailablePath() string { return filepath.Join(e.daemonDir(), "update-available") }
-func (e *Env) daemonLastCheckPath() string   { return filepath.Join(e.daemonDir(), "last-check") }
-func (e *Env) daemonPIDPath() string { return filepath.Join(e.daemonDir(), "mxcli-daemon.pid") }
+func (e *Env) daemonBakPath() string        { return filepath.Join(e.daemonDir(), "mxcli-daemon.bak") }
+func (e *Env) daemonSocketPath() string     { return filepath.Join(e.daemonDir(), "mxcli.sock") }
+func (e *Env) daemonVersionPath() string    { return filepath.Join(e.daemonDir(), "version") }
+func (e *Env) daemonVersionBakPath() string { return filepath.Join(e.daemonDir(), "version.bak") }
+func (e *Env) daemonUpdateAvailablePath() string {
+	return filepath.Join(e.daemonDir(), "update-available")
+}
+func (e *Env) daemonLastCheckPath() string { return filepath.Join(e.daemonDir(), "last-check") }
+func (e *Env) daemonPIDPath() string       { return filepath.Join(e.daemonDir(), "mxcli-daemon.pid") }
 
 // mprDaemonSocketPath returns the Unix socket path for a per-MPR daemon bound to mprAbsPath.
 // Format: mpr-{mprHash[0:6]}-{binHash[0:2]}.sock

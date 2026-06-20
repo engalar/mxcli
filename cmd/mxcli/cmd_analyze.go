@@ -82,35 +82,35 @@ Examples:
 
 		depth, _ := cmd.Flags().GetInt("depth")
 
-	switch topic {
-	case "navigation", "nav":
-		return executor.AnalyzeNavigation(ctx)
-	case "page":
-		if name == "" {
-			return fmt.Errorf("page QN required: mxcli analyze page MyModule.MyPage")
+		switch topic {
+		case "navigation", "nav":
+			return executor.AnalyzeNavigation(ctx)
+		case "page":
+			if name == "" {
+				return fmt.Errorf("page QN required: mxcli analyze page MyModule.MyPage")
+			}
+			return executor.AnalyzePage(ctx, name)
+		case "entity":
+			if name == "" {
+				return fmt.Errorf("entity QN required: mxcli analyze entity MyModule.MyEntity")
+			}
+			return executor.AnalyzeEntity(ctx, name)
+		case "orphans", "orphan":
+			return executor.AnalyzeOrphans(ctx)
+		case "flow":
+			// mxcli analyze flow                      (list all entry points + reachability)
+			// mxcli analyze flow navigation Responsive (chains from navigation)
+			// mxcli analyze flow workflow MyWF         (chains from workflow)
+			// mxcli analyze flow microflow MyMF        (chains from microflow)
+			entryKind := name
+			entryName := ""
+			if len(args) > 2 {
+				entryName = strings.Join(args[2:], " ")
+			}
+			return executor.AnalyzeFlow(ctx, entryKind, entryName, depth)
+		default:
+			return fmt.Errorf("unknown analyze topic: %q (try: navigation, page <QN>, entity <QN>, orphans, flow)", topic)
 		}
-		return executor.AnalyzePage(ctx, name)
-	case "entity":
-		if name == "" {
-			return fmt.Errorf("entity QN required: mxcli analyze entity MyModule.MyEntity")
-		}
-		return executor.AnalyzeEntity(ctx, name)
-	case "orphans", "orphan":
-		return executor.AnalyzeOrphans(ctx)
-	case "flow":
-		// mxcli analyze flow                      (list all entry points + reachability)
-		// mxcli analyze flow navigation Responsive (chains from navigation)
-		// mxcli analyze flow workflow MyWF         (chains from workflow)
-		// mxcli analyze flow microflow MyMF        (chains from microflow)
-		entryKind := name
-		entryName := ""
-		if len(args) > 2 {
-			entryName = strings.Join(args[2:], " ")
-		}
-		return executor.AnalyzeFlow(ctx, entryKind, entryName, depth)
-	default:
-		return fmt.Errorf("unknown analyze topic: %q (try: navigation, page <QN>, entity <QN>, orphans, flow)", topic)
-	}
 	},
 }
 

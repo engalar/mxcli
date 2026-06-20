@@ -25,7 +25,7 @@ type CreateWorkflowStmt struct {
 	Activities []WorkflowActivityNode
 }
 
-func (s *CreateWorkflowStmt) isStatement() {}
+func (s *CreateWorkflowStmt) isStatement()     {}
 func (s *CreateWorkflowStmt) TypeName() string { return "CreateWorkflow" }
 
 // DropWorkflowStmt represents: DROP WORKFLOW Module.Name
@@ -33,7 +33,7 @@ type DropWorkflowStmt struct {
 	Name QualifiedName
 }
 
-func (s *DropWorkflowStmt) isStatement() {}
+func (s *DropWorkflowStmt) isStatement()     {}
 func (s *DropWorkflowStmt) TypeName() string { return "DropWorkflow" }
 
 // WorkflowActivityNode is the interface for workflow activity AST nodes.
@@ -183,7 +183,7 @@ type AlterWorkflowStmt struct {
 	Operations []AlterWorkflowOp
 }
 
-func (s *AlterWorkflowStmt) isStatement() {}
+func (s *AlterWorkflowStmt) isStatement()     {}
 func (s *AlterWorkflowStmt) TypeName() string { return "AlterWorkflow" }
 
 // AlterWorkflowOp is the interface for ALTER WORKFLOW operations.

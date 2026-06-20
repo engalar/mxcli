@@ -174,8 +174,8 @@ func bsonWidgetToTemplate(typeDoc, objectDoc bson.D, widgetID string) (*WidgetTe
 
 	return &WidgetTemplate{
 		WidgetID:  widgetID,
-		Generated: true,  // skip augmentFromMPK — Studio Pro BSON is authoritative
-		StableIds: true,  // use collectIDsIdentity so original $IDs are reused
+		Generated: true, // skip augmentFromMPK — Studio Pro BSON is authoritative
+		StableIds: true, // use collectIDsIdentity so original $IDs are reused
 		Type:      typeMapTyped,
 		Object:    objectMapTyped,
 	}, nil

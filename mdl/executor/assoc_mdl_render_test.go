@@ -110,7 +110,7 @@ func TestAstDeleteBehaviorStr(t *testing.T) {
 		// DELETE_IF_NO_REFERENCES, CASCADE, PREVENT.
 		// BSON values with no direct MDL equivalent fall back to DELETE_BUT_KEEP_REFERENCES.
 		{ast.DeleteCascade, "DELETE_AND_REFERENCES"},
-		{ast.DeleteBoth, "DELETE_BUT_KEEP_REFERENCES"},             // no MDL equivalent
+		{ast.DeleteBoth, "DELETE_BUT_KEEP_REFERENCES"},                  // no MDL equivalent
 		{ast.DeleteKeepParentDeleteChild, "DELETE_BUT_KEEP_REFERENCES"}, // no MDL equivalent
 		{ast.DeleteKeepChildDeleteParent, "DELETE_BUT_KEEP_REFERENCES"}, // no MDL equivalent
 		{ast.DeleteIfNoReferences, "DELETE_IF_NO_REFERENCES"},

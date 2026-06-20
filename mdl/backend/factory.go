@@ -53,5 +53,3 @@ type BackendFactory interface {
 	ScriptTransactionManager() ScriptTransactionManager
 	AgentEditorOperator() AgentEditorOperator
 }
-
-

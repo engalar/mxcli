@@ -30,7 +30,7 @@ func TestAccessGap_SuggestedMDL_EntityRead(t *testing.T) {
 
 func TestAccessGap_SuggestedMDL_MFExecute(t *testing.T) {
 	g := AccessGap{
-		GapType: GapMFExecute,
+		GapType:    GapMFExecute,
 		ModuleRole: "HD.CustomerRole",
 		MFQN:       "HD.DS_GetMyProfile",
 	}
@@ -45,8 +45,8 @@ func TestAccessGap_SuggestedMDL_MFExecute(t *testing.T) {
 // asserted a hand-built map; this version calls the real builder function.
 func TestUserRoleToModuleRoles(t *testing.T) {
 	cases := []struct {
-		name       string
-		userRoles  []struct {
+		name      string
+		userRoles []struct {
 			roleName    string
 			moduleRoles []string
 		}

@@ -213,22 +213,22 @@ func execCreateNanoflowGen(ctx *ExecContext, s *ast.CreateNanoflowStmt) error {
 			mendixVer = version.Parse(rpv.ProductVersion)
 		}
 		fb := &flowBuilderGen{
-			posX:           200,
-			posY:           200,
-			baseY:          200,
-			spacing:        HorizontalSpacing,
-			varTypes:       map[string]string{},
-			declaredVars:   map[string]string{},
-			measurer:       &layoutMeasurer{varTypes: map[string]string{}},
-		backend:            ctx.Backend,
-		moduleLister:       ctx.ModuleLister,
-		domainModelReader:  ctx.DomainModelReader,
-		microflowsRepo:     ctx.Microflows,
-			nanoflowsRepo:  ctx.Nanoflows,
-			hierarchy:      hierarchy,
-			restServices:   restServices,
-			isNanoflow:     true, // EH defaults to "Abort" instead of "Rollback"
-			version:        mendixVer,
+			posX:              200,
+			posY:              200,
+			baseY:             200,
+			spacing:           HorizontalSpacing,
+			varTypes:          map[string]string{},
+			declaredVars:      map[string]string{},
+			measurer:          &layoutMeasurer{varTypes: map[string]string{}},
+			backend:           ctx.Backend,
+			moduleLister:      ctx.ModuleLister,
+			domainModelReader: ctx.DomainModelReader,
+			microflowsRepo:    ctx.Microflows,
+			nanoflowsRepo:     ctx.Nanoflows,
+			hierarchy:         hierarchy,
+			restServices:      restServices,
+			isNanoflow:        true, // EH defaults to "Abort" instead of "Rollback"
+			version:           mendixVer,
 		}
 
 		// Initialise variable types from parameters so body statements

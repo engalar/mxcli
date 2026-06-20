@@ -35,7 +35,7 @@ type CreateJavaActionStmt struct {
 	CreateOrModify  bool              // true for CREATE OR MODIFY / CREATE OR REPLACE
 }
 
-func (s *CreateJavaActionStmt) isStatement() {}
+func (s *CreateJavaActionStmt) isStatement()     {}
 func (s *CreateJavaActionStmt) TypeName() string { return "CreateJavaAction" }
 
 // DropJavaActionStmt represents: DROP JAVA ACTION Module.Name
@@ -43,7 +43,7 @@ type DropJavaActionStmt struct {
 	Name QualifiedName
 }
 
-func (s *DropJavaActionStmt) isStatement() {}
+func (s *DropJavaActionStmt) isStatement()     {}
 func (s *DropJavaActionStmt) TypeName() string { return "DropJavaAction" }
 
 // CreateJavaScriptActionStmt represents CREATE [OR MODIFY] JAVASCRIPT ACTION statements.
@@ -60,5 +60,5 @@ type CreateJavaScriptActionStmt struct {
 	CreateOrModify bool
 }
 
-func (s *CreateJavaScriptActionStmt) isStatement() {}
+func (s *CreateJavaScriptActionStmt) isStatement()     {}
 func (s *CreateJavaScriptActionStmt) TypeName() string { return "CreateJavaScriptAction" }

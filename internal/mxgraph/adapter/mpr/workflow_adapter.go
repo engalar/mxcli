@@ -14,8 +14,9 @@ import (
 //
 // BSON type: Workflows$Workflow
 // Edges:
-//   CALLS  → Microflow  (CallMicroflowTask / CallMicroflowActivity)
-//   CALLS  → Workflow   (CallWorkflowActivity)
+//
+//	CALLS  → Microflow  (CallMicroflowTask / CallMicroflowActivity)
+//	CALLS  → Workflow   (CallWorkflowActivity)
 type WorkflowAdapter struct {
 	Model *modelsdk.Model
 }

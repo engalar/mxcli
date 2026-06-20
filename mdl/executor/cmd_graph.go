@@ -10,8 +10,8 @@ import (
 	"time"
 
 	"github.com/mendixlabs/mxcli/internal/mxgraph"
-	mpradapter "github.com/mendixlabs/mxcli/internal/mxgraph/adapter/mpr"
 	designdprops "github.com/mendixlabs/mxcli/internal/mxgraph/adapter/designdprops"
+	mpradapter "github.com/mendixlabs/mxcli/internal/mxgraph/adapter/mpr"
 	themescss "github.com/mendixlabs/mxcli/internal/mxgraph/adapter/themescss"
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"

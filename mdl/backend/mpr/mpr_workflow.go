@@ -3,8 +3,8 @@
 package mprbackend
 
 import (
-	"github.com/mendixlabs/mxcli/model"
 	mprrepos "github.com/mendixlabs/mxcli/mdl/backend/mpr/repos"
+	"github.com/mendixlabs/mxcli/model"
 	genWf "github.com/mendixlabs/mxcli/modelsdk/gen/workflows"
 	mmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
 )

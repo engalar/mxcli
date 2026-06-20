@@ -12,7 +12,7 @@ type ShowWidgetsStmt struct {
 	InModule string
 }
 
-func (s *ShowWidgetsStmt) isStatement() {}
+func (s *ShowWidgetsStmt) isStatement()     {}
 func (s *ShowWidgetsStmt) TypeName() string { return "ShowWidgets" }
 
 // ShowInstalledWidgetsStmt represents: SHOW INSTALLED WIDGETS
@@ -20,7 +20,7 @@ func (s *ShowWidgetsStmt) TypeName() string { return "ShowWidgets" }
 // widget definitions regardless of page instantiation.
 type ShowInstalledWidgetsStmt struct{}
 
-func (s *ShowInstalledWidgetsStmt) isStatement() {}
+func (s *ShowInstalledWidgetsStmt) isStatement()     {}
 func (s *ShowInstalledWidgetsStmt) TypeName() string { return "ShowInstalledWidgets" }
 
 // UpdateWidgetsStmt represents: UPDATE WIDGETS SET ... WHERE ... [IN module] [DRY RUN]
@@ -31,7 +31,7 @@ type UpdateWidgetsStmt struct {
 	DryRun      bool
 }
 
-func (s *UpdateWidgetsStmt) isStatement() {}
+func (s *UpdateWidgetsStmt) isStatement()     {}
 func (s *UpdateWidgetsStmt) TypeName() string { return "UpdateWidgets" }
 
 // WidgetFilter represents a filter condition for widget queries.

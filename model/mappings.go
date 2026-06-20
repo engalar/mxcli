@@ -84,4 +84,3 @@ type ExportMappingElement struct {
 	JsonPath    string                  `json:"jsonPath,omitempty"`
 	Children    []*ExportMappingElement `json:"children,omitempty"`
 }
-

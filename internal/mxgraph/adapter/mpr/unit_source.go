@@ -15,15 +15,16 @@ type modelsdkUnit struct {
 	raw      []byte
 }
 
-func (u *modelsdkUnit) ID() string          { return u.id }
-func (u *modelsdkUnit) TypeName() string    { return u.typeName }
-func (u *modelsdkUnit) Raw() []byte         { return u.raw }
+func (u *modelsdkUnit) ID() string       { return u.id }
+func (u *modelsdkUnit) TypeName() string { return u.typeName }
+func (u *modelsdkUnit) Raw() []byte      { return u.raw }
 
 // ModelsdkUnitSource 将 *modelsdk.Model 适配为 RawUnitSource。
 //
 // 为何不直接用 typed 路径？
-//   Forms$FormCallArgument 的 typed Properties 未声明 Widget/Widgets 字段，
-//   因此 typed 路径无法到达 widget 树。本章节开头有详述。
+//
+//	Forms$FormCallArgument 的 typed Properties 未声明 Widget/Widgets 字段，
+//	因此 typed 路径无法到达 widget 树。本章节开头有详述。
 //
 // 性能说明：LoadUnit() 确实触发 typed codec 解码，但 Raw() 返回的是解码前
 // 的原始 BSON bytes，codec 的递归展开只发生在调用 Properties()/ChildElement()

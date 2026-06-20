@@ -20,4 +20,3 @@ type DataTransformerStep struct {
 	Technology string `json:"technology"` // "JSLT", "XSLT"
 	Expression string `json:"expression"` // the transformation expression
 }
-

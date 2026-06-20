@@ -243,7 +243,7 @@ func buildENUSText(msg string) *genTexts.Text {
 }
 
 // stripAttrDefaultQuotes removes surrounding single quotes from string default
-// values and un-doubles internal escapes ("it''s" -> "it's"). Other scalar
+// values and un-doubles internal escapes ("it”s" -> "it's"). Other scalar
 // default forms pass through unchanged.
 func stripAttrDefaultQuotes(v string) string {
 	if len(v) >= 2 && v[0] == '\'' && v[len(v)-1] == '\'' {

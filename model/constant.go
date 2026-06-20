@@ -27,4 +27,3 @@ func (c *Constant) GetName() string {
 func (c *Constant) GetContainerID() ID {
 	return c.ContainerID
 }
-

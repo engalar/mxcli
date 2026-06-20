@@ -40,7 +40,7 @@ func makeBSON(pairs [][2]string) []byte {
 	buf = append(buf, 0, 0, 0, 0)
 
 	for _, kv := range pairs {
-		buf = append(buf, 0x02)       // string type
+		buf = append(buf, 0x02)             // string type
 		buf = append(buf, []byte(kv[0])...) // key
 		buf = append(buf, 0x00)             // key terminator
 		// String: len + data + \x00

@@ -202,7 +202,7 @@ type supplements struct {
 	IdRefScope             map[string]string          `json:"id_ref_scope"`
 	ExtraProperties        map[string]json.RawMessage `json:"extra_properties"`
 	ExtraTypes             map[string]json.RawMessage `json:"extra_types"`
-	TypeRenames            map[string]string          `json:"type_renames"` // old_bson → new_bson
+	TypeRenames            map[string]string          `json:"type_renames"`           // old_bson → new_bson
 	BinaryUUIDPropsList    []string                   `json:"binary_uuid_properties"` // "ClassName.propName" or "*.propName"
 
 	// Derived after loading.

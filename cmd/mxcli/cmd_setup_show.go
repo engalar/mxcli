@@ -182,8 +182,8 @@ func versionFromMxPath(p string) string {
 		}
 	}
 	// Windows/Linux: grandparent directory = version
-	dir := filepath.Dir(p)       // modeler
-	parent := filepath.Dir(dir)  // version dir
+	dir := filepath.Dir(p)      // modeler
+	parent := filepath.Dir(dir) // version dir
 	return filepath.Base(parent)
 }
 

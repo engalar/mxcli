@@ -604,8 +604,12 @@ func TestAlterUserRole_BackfillsMissingGUID(t *testing.T) {
 			var isCustomer bool
 			var guidBin bson.Binary
 			for _, f := range d {
-				if f.Key == "Name" { isCustomer, _ = f.Value.(string) == "Customer", true }
-				if f.Key == "GUID" { guidBin, _ = f.Value.(bson.Binary) }
+				if f.Key == "Name" {
+					isCustomer, _ = f.Value.(string) == "Customer", true
+				}
+				if f.Key == "GUID" {
+					guidBin, _ = f.Value.(bson.Binary)
+				}
 			}
 			if !isCustomer {
 				continue

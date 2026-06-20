@@ -107,23 +107,23 @@ type DataFlowReader interface {
 
 // FlowStep 描述传递式数据流中的一步。
 type FlowStep struct {
-	NodeType  string // "NavProfile" | "MenuItem" | "Page" | "Microflow" | "Nanoflow" | "Workflow" | "DataContainer"
-	NodeName  string // QN or caption
-	EdgeType  string // what led here: "TARGETS_PAGE" | "TARGETS_MICROFLOW" | "SHOWS_PAGE" | "CALLS_MICROFLOW" | "CALLS" | "HAS_DATASOURCE_MICROFLOW" | "HAS_DATA_CONTAINER"
-	Depth     int
+	NodeType string // "NavProfile" | "MenuItem" | "Page" | "Microflow" | "Nanoflow" | "Workflow" | "DataContainer"
+	NodeName string // QN or caption
+	EdgeType string // what led here: "TARGETS_PAGE" | "TARGETS_MICROFLOW" | "SHOWS_PAGE" | "CALLS_MICROFLOW" | "CALLS" | "HAS_DATASOURCE_MICROFLOW" | "HAS_DATA_CONTAINER"
+	Depth    int
 }
 
 // FlowChain 是一条完整的入口→...→页面 链。
 type FlowChain struct {
-	EntryPoint string // "navigation:Responsive" | "workflow:MyWF" | "event:btnClick"
-	Steps      []FlowStep
+	EntryPoint   string // "navigation:Responsive" | "workflow:MyWF" | "event:btnClick"
+	Steps        []FlowStep
 	TerminalPage string // final reachable page QN
 }
 
 // EntryPoint 描述一个应用入口点。
 type EntryPoint struct {
-	Kind string // "navigation" | "workflow" | "event" | "microflow"
-	Name string // profile name / workflow QN / microflow QN
+	Kind        string // "navigation" | "workflow" | "event" | "microflow"
+	Name        string // profile name / workflow QN / microflow QN
 	Description string
 }
 

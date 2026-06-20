@@ -37,7 +37,10 @@ Examples:
 			mdlCmd += " TRANSITIVE"
 		}
 
-		if err := executeMDL(projectPath, mdlCmd, cmd.OutOrStdout()); err != nil { fmt.Fprintf(cmd.ErrOrStderr(), "Error: %v\n", err); return }
+		if err := executeMDL(projectPath, mdlCmd, cmd.OutOrStdout()); err != nil {
+			fmt.Fprintf(cmd.ErrOrStderr(), "Error: %v\n", err)
+			return
+		}
 	},
 }
 
@@ -67,7 +70,10 @@ Examples:
 			mdlCmd += " TRANSITIVE"
 		}
 
-		if err := executeMDL(projectPath, mdlCmd, cmd.OutOrStdout()); err != nil { fmt.Fprintf(cmd.ErrOrStderr(), "Error: %v\n", err); return }
+		if err := executeMDL(projectPath, mdlCmd, cmd.OutOrStdout()); err != nil {
+			fmt.Fprintf(cmd.ErrOrStderr(), "Error: %v\n", err)
+			return
+		}
 	},
 }
 
@@ -90,7 +96,10 @@ Examples:
 		}
 
 		mdlCmd := fmt.Sprintf("SHOW REFERENCES TO %s", args[0])
-		if err := executeMDL(projectPath, mdlCmd, cmd.OutOrStdout()); err != nil { fmt.Fprintf(cmd.ErrOrStderr(), "Error: %v\n", err); return }
+		if err := executeMDL(projectPath, mdlCmd, cmd.OutOrStdout()); err != nil {
+			fmt.Fprintf(cmd.ErrOrStderr(), "Error: %v\n", err)
+			return
+		}
 	},
 }
 
@@ -113,7 +122,10 @@ Examples:
 		}
 
 		mdlCmd := fmt.Sprintf("SHOW IMPACT OF %s", args[0])
-		if err := executeMDL(projectPath, mdlCmd, cmd.OutOrStdout()); err != nil { fmt.Fprintf(cmd.ErrOrStderr(), "Error: %v\n", err); return }
+		if err := executeMDL(projectPath, mdlCmd, cmd.OutOrStdout()); err != nil {
+			fmt.Fprintf(cmd.ErrOrStderr(), "Error: %v\n", err)
+			return
+		}
 	},
 }
 
@@ -158,7 +170,10 @@ Examples:
 		if all {
 			mdlCmd += " ALL"
 		}
-		if err := executeMDL(projectPath, mdlCmd, cmd.OutOrStdout()); err != nil { fmt.Fprintf(cmd.ErrOrStderr(), "Error: %v\n", err); return }
+		if err := executeMDL(projectPath, mdlCmd, cmd.OutOrStdout()); err != nil {
+			fmt.Fprintf(cmd.ErrOrStderr(), "Error: %v\n", err)
+			return
+		}
 	},
 }
 
@@ -201,7 +216,10 @@ Examples:
 		if depth > 0 {
 			mdlCmd += fmt.Sprintf(" DEPTH %d", depth)
 		}
-		if err := executeMDL(projectPath, mdlCmd, cmd.OutOrStdout()); err != nil { fmt.Fprintf(cmd.ErrOrStderr(), "Error: %v\n", err); return }
+		if err := executeMDL(projectPath, mdlCmd, cmd.OutOrStdout()); err != nil {
+			fmt.Fprintf(cmd.ErrOrStderr(), "Error: %v\n", err)
+			return
+		}
 	},
 }
 

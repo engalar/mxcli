@@ -41,7 +41,7 @@ func TestAccessRuleAdapter_Schema(t *testing.T) {
 
 func TestParseAccessRuleRights(t *testing.T) {
 	tests := []struct {
-		rights         string
+		rights              string
 		wantRead, wantWrite bool
 	}{
 		{"ReadOnly", true, false},
