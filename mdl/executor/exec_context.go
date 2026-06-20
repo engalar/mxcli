@@ -146,11 +146,63 @@ type ExecContext struct {
 	ExecCallbacks
 }
 
-// initRoles populates the role-specific backend fields from Backend. Safe to
-// call multiple times. Repopulates every call so reconnecting to a new project
-// picks up the new Backend's role interface implementations.
+// initRoles populates the role-specific backend fields. Prefers
+// BackendFactory accessor methods when available (new pattern);
+// falls back to ctx.Backend (deprecated FullBackend) for backward compat.
 func (ctx *ExecContext) initRoles() {
-	if ctx == nil || ctx.Backend == nil {
+	if ctx == nil {
+		return
+	}
+	// Try BackendFactory first (new pattern).
+	if bf, ok := ctx.Backend.(backend.BackendFactory); ok {
+		ctx.ModuleLister = bf.ModuleLister()
+		ctx.ModuleWriter = bf.ModuleWriter()
+		ctx.DomainModelReader = bf.DomainModelReader()
+		ctx.DomainModelWriter = bf.DomainModelWriter()
+		ctx.MicroflowReader = bf.MicroflowReader()
+		ctx.MicroflowWriter = bf.MicroflowWriter()
+		ctx.WorkflowReader = bf.WorkflowReader()
+		ctx.WorkflowWriter = bf.WorkflowWriter()
+		ctx.PageReader = bf.PageReader()
+		ctx.PageWriter = bf.PageWriter()
+		ctx.JavaActionReader = bf.JavaActionReader()
+		ctx.JavaActionWriter = bf.JavaActionWriter()
+		ctx.JavaScriptActionWriter = bf.JavaScriptActionWriter()
+		ctx.EnumerationReader = bf.EnumerationReader()
+		ctx.EnumerationWriter = bf.EnumerationWriter()
+		ctx.ConstantReader = bf.ConstantReader()
+		ctx.ConstantWriter = bf.ConstantWriter()
+		ctx.SettingsReader = bf.SettingsReader()
+		ctx.SettingsWriter = bf.SettingsWriter()
+		ctx.MappingReader = bf.MappingReader()
+		ctx.MappingWriter = bf.MappingWriter()
+		ctx.UnitReader = bf.UnitReader()
+		ctx.UnitWriter = bf.UnitWriter()
+		ctx.NavigationReader = bf.NavigationReader()
+		ctx.NavigationWriter = bf.NavigationWriter()
+		ctx.ImageCollectionWriter = bf.ImageCollectionWriter()
+		ctx.ScheduledEventReader = bf.ScheduledEventReader()
+		ctx.ServiceLister = bf.ServiceLister()
+		ctx.ServiceWriter = bf.ServiceWriter()
+		ctx.MetadataReader = bf.MetadataReader()
+		ctx.ConnectionManager = bf
+		ctx.FolderManager = bf.FolderManager()
+		ctx.ModuleSettingsReader = bf.ModuleSettingsReader()
+		ctx.ModuleSettingsWriter = bf.ModuleSettingsWriter()
+		ctx.RenameManager = bf.RenameManager()
+		ctx.SecurityProjectManager = bf.SecurityProjectManager()
+		ctx.SecurityModuleManager = bf.SecurityModuleManager()
+		ctx.SecurityEntityAccessManager = bf.SecurityEntityAccessManager()
+		ctx.PageModelAccess = bf.PageModelAccess()
+		ctx.PageMutationOperator = bf.PageMutationOperator()
+		ctx.WorkflowMutationOperator = bf.WorkflowMutationOperator()
+		ctx.WidgetBuilder = bf.WidgetBuilder()
+		ctx.ScriptTransactionManager = bf.ScriptTransactionManager()
+		ctx.AgentEditorOperator = bf.AgentEditorOperator()
+		return
+	}
+	// Fallback: ctx.Backend (deprecated FullBackend).
+	if ctx.Backend == nil {
 		return
 	}
 	ctx.ModuleLister = ctx.Backend
