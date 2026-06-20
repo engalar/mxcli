@@ -13,6 +13,7 @@ type ShowWidgetsStmt struct {
 }
 
 func (s *ShowWidgetsStmt) isStatement() {}
+func (s *ShowWidgetsStmt) TypeName() string { return "ShowWidgets" }
 
 // ShowInstalledWidgetsStmt represents: SHOW INSTALLED WIDGETS
 // Scans the project's widgets/ directory for .mpk files, listing all
@@ -20,6 +21,7 @@ func (s *ShowWidgetsStmt) isStatement() {}
 type ShowInstalledWidgetsStmt struct{}
 
 func (s *ShowInstalledWidgetsStmt) isStatement() {}
+func (s *ShowInstalledWidgetsStmt) TypeName() string { return "ShowInstalledWidgets" }
 
 // UpdateWidgetsStmt represents: UPDATE WIDGETS SET ... WHERE ... [IN module] [DRY RUN]
 type UpdateWidgetsStmt struct {
@@ -30,6 +32,7 @@ type UpdateWidgetsStmt struct {
 }
 
 func (s *UpdateWidgetsStmt) isStatement() {}
+func (s *UpdateWidgetsStmt) TypeName() string { return "UpdateWidgets" }
 
 // WidgetFilter represents a filter condition for widget queries.
 type WidgetFilter struct {

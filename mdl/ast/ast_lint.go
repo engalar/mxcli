@@ -30,3 +30,4 @@ type LintStmt struct {
 }
 
 func (s *LintStmt) isStatement() {}
+func (s *LintStmt) TypeName() string { return "Lint" }

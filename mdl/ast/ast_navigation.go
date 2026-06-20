@@ -15,6 +15,7 @@ type AlterNavigationStmt struct {
 }
 
 func (s *AlterNavigationStmt) isStatement() {}
+func (s *AlterNavigationStmt) TypeName() string { return "AlterNavigation" }
 
 // NavHomePageDef represents a HOME PAGE or HOME MICROFLOW clause.
 type NavHomePageDef struct {

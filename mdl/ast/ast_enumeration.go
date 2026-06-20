@@ -19,6 +19,7 @@ type CreateModuleStmt struct {
 }
 
 func (s *CreateModuleStmt) isStatement() {}
+func (s *CreateModuleStmt) TypeName() string { return "CreateModule" }
 
 // DropModuleStmt represents: DROP MODULE ModuleName
 type DropModuleStmt struct {
@@ -26,6 +27,7 @@ type DropModuleStmt struct {
 }
 
 func (s *DropModuleStmt) isStatement() {}
+func (s *DropModuleStmt) TypeName() string { return "DropModule" }
 
 // DropFolderStmt represents: DROP FOLDER 'path' IN Module
 type DropFolderStmt struct {
@@ -34,6 +36,7 @@ type DropFolderStmt struct {
 }
 
 func (s *DropFolderStmt) isStatement() {}
+func (s *DropFolderStmt) TypeName() string { return "DropFolder" }
 
 // MoveFolderStmt represents: MOVE FOLDER Module.FolderName TO ...
 type MoveFolderStmt struct {
@@ -43,6 +46,7 @@ type MoveFolderStmt struct {
 }
 
 func (s *MoveFolderStmt) isStatement() {}
+func (s *MoveFolderStmt) TypeName() string { return "MoveFolder" }
 
 // CreateEnumerationStmt represents: CREATE ENUMERATION Module.Name (values) COMMENT '...'
 type CreateEnumerationStmt struct {
@@ -54,6 +58,7 @@ type CreateEnumerationStmt struct {
 }
 
 func (s *CreateEnumerationStmt) isStatement() {}
+func (s *CreateEnumerationStmt) TypeName() string { return "CreateEnumeration" }
 
 // AlterEnumerationStmt represents: ALTER ENUMERATION Module.Name ADD/DROP/RENAME VALUE ...
 type AlterEnumerationStmt struct {
@@ -65,6 +70,7 @@ type AlterEnumerationStmt struct {
 }
 
 func (s *AlterEnumerationStmt) isStatement() {}
+func (s *AlterEnumerationStmt) TypeName() string { return "AlterEnumeration" }
 
 // AlterEnumOp represents the type of enumeration alteration.
 type AlterEnumOp int
@@ -81,6 +87,7 @@ type DropEnumerationStmt struct {
 }
 
 func (s *DropEnumerationStmt) isStatement() {}
+func (s *DropEnumerationStmt) TypeName() string { return "DropEnumeration" }
 
 // ============================================================================
 // Constant Statements
@@ -99,6 +106,7 @@ type CreateConstantStmt struct {
 }
 
 func (s *CreateConstantStmt) isStatement() {}
+func (s *CreateConstantStmt) TypeName() string { return "CreateConstant" }
 
 // DropConstantStmt represents: DROP CONSTANT Module.Name
 type DropConstantStmt struct {
@@ -106,3 +114,4 @@ type DropConstantStmt struct {
 }
 
 func (s *DropConstantStmt) isStatement() {}
+func (s *DropConstantStmt) TypeName() string { return "DropConstant" }

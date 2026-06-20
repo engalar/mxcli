@@ -25,6 +25,7 @@ type CreateImportMappingStmt struct {
 }
 
 func (s *CreateImportMappingStmt) isStatement() {}
+func (s *CreateImportMappingStmt) TypeName() string { return "CreateImportMapping" }
 
 // DropImportMappingStmt represents: DROP IMPORT MAPPING Module.Name
 type DropImportMappingStmt struct {
@@ -32,6 +33,7 @@ type DropImportMappingStmt struct {
 }
 
 func (s *DropImportMappingStmt) isStatement() {}
+func (s *DropImportMappingStmt) TypeName() string { return "DropImportMapping" }
 
 // ImportMappingElementDef represents one element in the mapping tree.
 type ImportMappingElementDef struct {
@@ -77,6 +79,7 @@ type CreateExportMappingStmt struct {
 }
 
 func (s *CreateExportMappingStmt) isStatement() {}
+func (s *CreateExportMappingStmt) TypeName() string { return "CreateExportMapping" }
 
 // DropExportMappingStmt represents: DROP EXPORT MAPPING Module.Name
 type DropExportMappingStmt struct {
@@ -84,6 +87,7 @@ type DropExportMappingStmt struct {
 }
 
 func (s *DropExportMappingStmt) isStatement() {}
+func (s *DropExportMappingStmt) TypeName() string { return "DropExportMapping" }
 
 // ExportMappingElementDef represents one element in an export mapping tree.
 type ExportMappingElementDef struct {

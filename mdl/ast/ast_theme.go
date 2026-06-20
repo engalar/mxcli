@@ -8,3 +8,4 @@ type ShowThemeVariablesStmt struct {
 }
 
 func (s *ShowThemeVariablesStmt) isStatement() {}
+func (s *ShowThemeVariablesStmt) TypeName() string { return "ShowThemeVariables" }

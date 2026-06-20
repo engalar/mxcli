@@ -16,3 +16,4 @@ type RenameStmt struct {
 }
 
 func (s *RenameStmt) isStatement() {}
+func (s *RenameStmt) TypeName() string { return "Rename" }

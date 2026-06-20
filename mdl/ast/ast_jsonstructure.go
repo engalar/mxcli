@@ -15,6 +15,7 @@ type CreateJsonStructureStmt struct {
 }
 
 func (s *CreateJsonStructureStmt) isStatement() {}
+func (s *CreateJsonStructureStmt) TypeName() string { return "CreateJsonStructure" }
 
 // DropJsonStructureStmt represents: DROP JSON STRUCTURE Module.Name
 type DropJsonStructureStmt struct {
@@ -22,3 +23,4 @@ type DropJsonStructureStmt struct {
 }
 
 func (s *DropJsonStructureStmt) isStatement() {}
+func (s *DropJsonStructureStmt) TypeName() string { return "DropJsonStructure" }

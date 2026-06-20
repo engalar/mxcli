@@ -30,6 +30,7 @@ type CreateModelStmt struct {
 }
 
 func (s *CreateModelStmt) isStatement() {}
+func (s *CreateModelStmt) TypeName() string { return "CreateModel" }
 
 // DropModelStmt represents: DROP MODEL Module.Name
 type DropModelStmt struct {
@@ -37,6 +38,7 @@ type DropModelStmt struct {
 }
 
 func (s *DropModelStmt) isStatement() {}
+func (s *DropModelStmt) TypeName() string { return "DropModel" }
 
 // CreateConsumedMCPServiceStmt represents:
 //
@@ -57,6 +59,7 @@ type CreateConsumedMCPServiceStmt struct {
 }
 
 func (s *CreateConsumedMCPServiceStmt) isStatement() {}
+func (s *CreateConsumedMCPServiceStmt) TypeName() string { return "CreateConsumedMCPService" }
 
 // DropConsumedMCPServiceStmt represents: DROP CONSUMED MCP SERVICE Module.Name
 type DropConsumedMCPServiceStmt struct {
@@ -64,6 +67,7 @@ type DropConsumedMCPServiceStmt struct {
 }
 
 func (s *DropConsumedMCPServiceStmt) isStatement() {}
+func (s *DropConsumedMCPServiceStmt) TypeName() string { return "DropConsumedMCPService" }
 
 // CreateKnowledgeBaseStmt represents:
 //
@@ -86,6 +90,7 @@ type CreateKnowledgeBaseStmt struct {
 }
 
 func (s *CreateKnowledgeBaseStmt) isStatement() {}
+func (s *CreateKnowledgeBaseStmt) TypeName() string { return "CreateKnowledgeBase" }
 
 // DropKnowledgeBaseStmt represents: DROP KNOWLEDGE BASE Module.Name
 type DropKnowledgeBaseStmt struct {
@@ -93,6 +98,7 @@ type DropKnowledgeBaseStmt struct {
 }
 
 func (s *DropKnowledgeBaseStmt) isStatement() {}
+func (s *DropKnowledgeBaseStmt) TypeName() string { return "DropKnowledgeBase" }
 
 // CreateAgentStmt represents CREATE AGENT Module.Name (...) [{ body }].
 type CreateAgentStmt struct {
@@ -115,6 +121,7 @@ type CreateAgentStmt struct {
 }
 
 func (s *CreateAgentStmt) isStatement() {}
+func (s *CreateAgentStmt) TypeName() string { return "CreateAgent" }
 
 // DropAgentStmt represents: DROP AGENT Module.Name
 type DropAgentStmt struct {
@@ -122,6 +129,7 @@ type DropAgentStmt struct {
 }
 
 func (s *DropAgentStmt) isStatement() {}
+func (s *DropAgentStmt) TypeName() string { return "DropAgent" }
 
 // AgentVarDef is a variable entry in CREATE AGENT's Variables: (...) property.
 type AgentVarDef struct {

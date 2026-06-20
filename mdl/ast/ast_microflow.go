@@ -62,6 +62,7 @@ type CreateMicroflowStmt struct {
 }
 
 func (s *CreateMicroflowStmt) isStatement() {}
+func (s *CreateMicroflowStmt) TypeName() string { return "CreateMicroflow" }
 
 // DropMicroflowStmt represents: DROP MICROFLOW Module.Name
 type DropMicroflowStmt struct {
@@ -69,6 +70,7 @@ type DropMicroflowStmt struct {
 }
 
 func (s *DropMicroflowStmt) isStatement() {}
+func (s *DropMicroflowStmt) TypeName() string { return "DropMicroflow" }
 
 // CreateNanoflowStmt represents: CREATE NANOFLOW Module.Name (params) RETURNS type BEGIN body END
 type CreateNanoflowStmt struct {
@@ -85,6 +87,7 @@ type CreateNanoflowStmt struct {
 }
 
 func (s *CreateNanoflowStmt) isStatement() {}
+func (s *CreateNanoflowStmt) TypeName() string { return "CreateNanoflow" }
 
 // DropNanoflowStmt represents: DROP NANOFLOW Module.Name
 type DropNanoflowStmt struct {
@@ -92,6 +95,7 @@ type DropNanoflowStmt struct {
 }
 
 func (s *DropNanoflowStmt) isStatement() {}
+func (s *DropNanoflowStmt) TypeName() string { return "DropNanoflow" }
 
 // ============================================================================
 // Microflow Body Statements

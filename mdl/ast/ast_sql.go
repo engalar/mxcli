@@ -14,6 +14,7 @@ type SQLConnectStmt struct {
 }
 
 func (s *SQLConnectStmt) isStatement() {}
+func (s *SQLConnectStmt) TypeName() string { return "SQLConnect" }
 
 // SQLDisconnectStmt represents: SQL DISCONNECT <alias>
 type SQLDisconnectStmt struct {
@@ -21,11 +22,13 @@ type SQLDisconnectStmt struct {
 }
 
 func (s *SQLDisconnectStmt) isStatement() {}
+func (s *SQLDisconnectStmt) TypeName() string { return "SQLDisconnect" }
 
 // SQLConnectionsStmt represents: SQL CONNECTIONS
 type SQLConnectionsStmt struct{}
 
 func (s *SQLConnectionsStmt) isStatement() {}
+func (s *SQLConnectionsStmt) TypeName() string { return "SQLConnections" }
 
 // SQLQueryStmt represents: SQL <alias> <raw-sql>
 type SQLQueryStmt struct {
@@ -34,6 +37,7 @@ type SQLQueryStmt struct {
 }
 
 func (s *SQLQueryStmt) isStatement() {}
+func (s *SQLQueryStmt) TypeName() string { return "SQLQuery" }
 
 // SQLShowTablesStmt represents: SQL <alias> SHOW TABLES
 type SQLShowTablesStmt struct {
@@ -41,6 +45,7 @@ type SQLShowTablesStmt struct {
 }
 
 func (s *SQLShowTablesStmt) isStatement() {}
+func (s *SQLShowTablesStmt) TypeName() string { return "SQLShowTables" }
 
 // SQLDescribeTableStmt represents: SQL <alias> DESCRIBE <table>
 type SQLDescribeTableStmt struct {
@@ -49,6 +54,7 @@ type SQLDescribeTableStmt struct {
 }
 
 func (s *SQLDescribeTableStmt) isStatement() {}
+func (s *SQLDescribeTableStmt) TypeName() string { return "SQLDescribeTable" }
 
 // SQLShowViewsStmt represents: SQL <alias> SHOW VIEWS
 type SQLShowViewsStmt struct {
@@ -56,6 +62,7 @@ type SQLShowViewsStmt struct {
 }
 
 func (s *SQLShowViewsStmt) isStatement() {}
+func (s *SQLShowViewsStmt) TypeName() string { return "SQLShowViews" }
 
 // SQLShowFunctionsStmt represents: SQL <alias> SHOW FUNCTIONS
 type SQLShowFunctionsStmt struct {
@@ -63,6 +70,7 @@ type SQLShowFunctionsStmt struct {
 }
 
 func (s *SQLShowFunctionsStmt) isStatement() {}
+func (s *SQLShowFunctionsStmt) TypeName() string { return "SQLShowFunctions" }
 
 // SQLGenerateConnectorStmt represents: SQL <alias> GENERATE CONNECTOR INTO <module> [TABLES (...)] [VIEWS (...)] [EXEC]
 type SQLGenerateConnectorStmt struct {
@@ -74,6 +82,7 @@ type SQLGenerateConnectorStmt struct {
 }
 
 func (s *SQLGenerateConnectorStmt) isStatement() {}
+func (s *SQLGenerateConnectorStmt) TypeName() string { return "SQLGenerateConnector" }
 
 // ============================================================================
 // Database Connection Statements
@@ -120,6 +129,7 @@ type CreateDatabaseConnectionStmt struct {
 }
 
 func (s *CreateDatabaseConnectionStmt) isStatement() {}
+func (s *CreateDatabaseConnectionStmt) TypeName() string { return "CreateDatabaseConnection" }
 
 // ImportMapping maps a source column to a target attribute.
 type ImportMapping struct {
@@ -148,3 +158,4 @@ type ImportStmt struct {
 }
 
 func (s *ImportStmt) isStatement() {}
+func (s *ImportStmt) TypeName() string { return "Import" }

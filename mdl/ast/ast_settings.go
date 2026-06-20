@@ -14,6 +14,7 @@ type AlterSettingsStmt struct {
 }
 
 func (s *AlterSettingsStmt) isStatement() {}
+func (s *AlterSettingsStmt) TypeName() string { return "AlterSettings" }
 
 // CreateConfigurationStmt represents CREATE CONFIGURATION 'name' [properties...].
 type CreateConfigurationStmt struct {
@@ -22,6 +23,7 @@ type CreateConfigurationStmt struct {
 }
 
 func (s *CreateConfigurationStmt) isStatement() {}
+func (s *CreateConfigurationStmt) TypeName() string { return "CreateConfiguration" }
 
 // DropConfigurationStmt represents DROP CONFIGURATION 'name'.
 type DropConfigurationStmt struct {
@@ -29,3 +31,4 @@ type DropConfigurationStmt struct {
 }
 
 func (s *DropConfigurationStmt) isStatement() {}
+func (s *DropConfigurationStmt) TypeName() string { return "DropConfiguration" }

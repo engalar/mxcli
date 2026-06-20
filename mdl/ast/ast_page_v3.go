@@ -36,6 +36,7 @@ type CreatePageStmtV3 struct {
 }
 
 func (s *CreatePageStmtV3) isStatement() {}
+func (s *CreatePageStmtV3) TypeName() string { return "CreatePageStmtV3" }
 
 // CreateSnippetStmtV3 represents a V3 snippet creation statement.
 type CreateSnippetStmtV3 struct {
@@ -50,6 +51,7 @@ type CreateSnippetStmtV3 struct {
 }
 
 func (s *CreateSnippetStmtV3) isStatement() {}
+func (s *CreateSnippetStmtV3) TypeName() string { return "CreateSnippetStmtV3" }
 
 // WidgetV3 represents a V3 widget with explicit properties.
 // Pattern: WIDGET name (Props) { children }

@@ -14,6 +14,7 @@ type CreateBusinessEventServiceStmt struct {
 }
 
 func (s *CreateBusinessEventServiceStmt) isStatement() {}
+func (s *CreateBusinessEventServiceStmt) TypeName() string { return "CreateBusinessEventService" }
 
 // BusinessEventMessageDef defines a message within a business event service.
 type BusinessEventMessageDef struct {
@@ -36,3 +37,4 @@ type DropBusinessEventServiceStmt struct {
 }
 
 func (s *DropBusinessEventServiceStmt) isStatement() {}
+func (s *DropBusinessEventServiceStmt) TypeName() string { return "DropBusinessEventService" }

@@ -21,6 +21,7 @@ type AlterLanguageStmt struct {
 }
 
 func (s *AlterLanguageStmt) isStatement() {}
+func (s *AlterLanguageStmt) TypeName() string { return "AlterLanguage" }
 func (s *AlterLanguageStmt) String() string {
 	if s.Op == AlterLanguageAdd {
 		return "ALTER SETTINGS LANGUAGE ADD " + s.Code
@@ -43,6 +44,7 @@ type TranslateStmt struct {
 }
 
 func (s *TranslateStmt) isStatement() {}
+func (s *TranslateStmt) TypeName() string { return "Translate" }
 func (s *TranslateStmt) String() string {
 	return "TRANSLATE " + s.DocType + " " + s.QName.String() + " IN " + s.Lang
 }
@@ -67,6 +69,7 @@ type TranslateMicroflowStmt struct {
 }
 
 func (s *TranslateMicroflowStmt) isStatement() {}
+func (s *TranslateMicroflowStmt) TypeName() string { return "TranslateMicroflow" }
 func (s *TranslateMicroflowStmt) String() string {
 	return "TRANSLATE MICROFLOW " + s.QName.String() + " IN " + s.Lang
 }
@@ -78,6 +81,7 @@ type DescribeTranslationsStmt struct {
 }
 
 func (s *DescribeTranslationsStmt) isStatement() {}
+func (s *DescribeTranslationsStmt) TypeName() string { return "DescribeTranslations" }
 func (s *DescribeTranslationsStmt) String() string {
 	return "DESCRIBE TRANSLATIONS " + s.QName.String()
 }

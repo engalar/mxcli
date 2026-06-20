@@ -14,6 +14,7 @@ type CreateDataTransformerStmt struct {
 }
 
 func (s *CreateDataTransformerStmt) isStatement() {}
+func (s *CreateDataTransformerStmt) TypeName() string { return "CreateDataTransformer" }
 
 // DataTransformerStepDef represents a single step: JSLT '...' or XSLT '...'
 type DataTransformerStepDef struct {
@@ -27,3 +28,4 @@ type DropDataTransformerStmt struct {
 }
 
 func (s *DropDataTransformerStmt) isStatement() {}
+func (s *DropDataTransformerStmt) TypeName() string { return "DropDataTransformer" }

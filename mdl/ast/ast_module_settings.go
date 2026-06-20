@@ -9,6 +9,7 @@ type AlterModuleJarDepStmt struct {
 }
 
 func (s *AlterModuleJarDepStmt) isStatement() {}
+func (s *AlterModuleJarDepStmt) TypeName() string { return "AlterModuleJarDep" }
 
 // JarDepAction is the common interface for JAR dependency sub-actions.
 type JarDepAction interface {

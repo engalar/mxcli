@@ -12,6 +12,7 @@ type ShowDesignPropertiesStmt struct {
 }
 
 func (s *ShowDesignPropertiesStmt) isStatement() {}
+func (s *ShowDesignPropertiesStmt) TypeName() string { return "ShowDesignProperties" }
 
 // DescribeStylingStmt represents: DESCRIBE STYLING ON PAGE/SNIPPET Module.Name [WIDGET widgetName]
 type DescribeStylingStmt struct {
@@ -21,6 +22,7 @@ type DescribeStylingStmt struct {
 }
 
 func (s *DescribeStylingStmt) isStatement() {}
+func (s *DescribeStylingStmt) TypeName() string { return "DescribeStyling" }
 
 // AlterStylingStmt represents: ALTER STYLING ON PAGE/SNIPPET Module.Name WIDGET widgetName SET/CLEAR ...
 type AlterStylingStmt struct {
@@ -32,6 +34,7 @@ type AlterStylingStmt struct {
 }
 
 func (s *AlterStylingStmt) isStatement() {}
+func (s *AlterStylingStmt) TypeName() string { return "AlterStyling" }
 
 // StylingAssignment represents a single property assignment in ALTER STYLING SET.
 type StylingAssignment struct {

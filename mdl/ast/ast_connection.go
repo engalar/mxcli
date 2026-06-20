@@ -12,13 +12,16 @@ type ConnectStmt struct {
 }
 
 func (s *ConnectStmt) isStatement() {}
+func (s *ConnectStmt) TypeName() string { return "Connect" }
 
 // DisconnectStmt represents: DISCONNECT
 type DisconnectStmt struct{}
 
 func (s *DisconnectStmt) isStatement() {}
+func (s *DisconnectStmt) TypeName() string { return "Disconnect" }
 
 // StatusStmt represents: STATUS or SHOW STATUS
 type StatusStmt struct{}
 
 func (s *StatusStmt) isStatement() {}
+func (s *StatusStmt) TypeName() string { return "Status" }

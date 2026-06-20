@@ -19,6 +19,7 @@ type CreateRestClientStmt struct {
 }
 
 func (s *CreateRestClientStmt) isStatement() {}
+func (s *CreateRestClientStmt) TypeName() string { return "CreateRestClient" }
 
 // RestAuthDef represents authentication configuration in a CREATE REST CLIENT statement.
 type RestAuthDef struct {
@@ -85,6 +86,7 @@ type DropRestClientStmt struct {
 }
 
 func (s *DropRestClientStmt) isStatement() {}
+func (s *DropRestClientStmt) TypeName() string { return "DropRestClient" }
 
 // DescribeContractFromOpenAPIStmt represents: DESCRIBE CONTRACT OPERATIONS FROM OPENAPI '/path/to/spec.json'
 // No project connection required; outputs the MDL that would be generated from the spec.
@@ -93,6 +95,7 @@ type DescribeContractFromOpenAPIStmt struct {
 }
 
 func (s *DescribeContractFromOpenAPIStmt) isStatement() {}
+func (s *DescribeContractFromOpenAPIStmt) TypeName() string { return "DescribeContractFromOpenAPI" }
 
 // ============================================================================
 // Published REST Service Statements
@@ -112,6 +115,7 @@ type CreatePublishedRestServiceStmt struct {
 }
 
 func (s *CreatePublishedRestServiceStmt) isStatement() {}
+func (s *CreatePublishedRestServiceStmt) TypeName() string { return "CreatePublishedRestService" }
 
 type PublishedRestResourceDef struct {
 	Name       string
@@ -134,6 +138,7 @@ type DropPublishedRestServiceStmt struct {
 }
 
 func (s *DropPublishedRestServiceStmt) isStatement() {}
+func (s *DropPublishedRestServiceStmt) TypeName() string { return "DropPublishedRestService" }
 
 // AlterPublishedRestServiceStmt represents:
 //
@@ -147,6 +152,7 @@ type AlterPublishedRestServiceStmt struct {
 }
 
 func (s *AlterPublishedRestServiceStmt) isStatement() {}
+func (s *AlterPublishedRestServiceStmt) TypeName() string { return "AlterPublishedRestService" }
 
 // PublishedRestAlterAction is one of the alter operations.
 type PublishedRestAlterAction interface {

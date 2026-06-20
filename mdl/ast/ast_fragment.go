@@ -9,6 +9,7 @@ type DefineFragmentStmt struct {
 }
 
 func (s *DefineFragmentStmt) isStatement() {}
+func (s *DefineFragmentStmt) TypeName() string { return "DefineFragment" }
 
 // DescribeFragmentFromStmt represents DESCRIBE FRAGMENT FROM PAGE/SNIPPET ... WIDGET ...
 type DescribeFragmentFromStmt struct {
@@ -18,3 +19,4 @@ type DescribeFragmentFromStmt struct {
 }
 
 func (s *DescribeFragmentFromStmt) isStatement() {}
+func (s *DescribeFragmentFromStmt) TypeName() string { return "DescribeFragmentFrom" }

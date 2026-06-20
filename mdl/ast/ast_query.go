@@ -17,6 +17,7 @@ type ShowStmt struct {
 }
 
 func (s *ShowStmt) isStatement() {}
+func (s *ShowStmt) TypeName() string { return "Show" }
 
 // ShowObjectType represents what to show.
 type ShowObjectType int
@@ -256,6 +257,7 @@ type ShowFeaturesStmt struct {
 }
 
 func (s *ShowFeaturesStmt) isStatement() {}
+func (s *ShowFeaturesStmt) TypeName() string { return "ShowFeatures" }
 
 // SelectStmt represents a SELECT query against catalog tables.
 type SelectStmt struct {
@@ -263,6 +265,7 @@ type SelectStmt struct {
 }
 
 func (s *SelectStmt) isStatement() {}
+func (s *SelectStmt) TypeName() string { return "Select" }
 
 // DescribeStmt represents DESCRIBE commands.
 type DescribeStmt struct {
@@ -274,6 +277,7 @@ type DescribeStmt struct {
 }
 
 func (s *DescribeStmt) isStatement() {}
+func (s *DescribeStmt) TypeName() string { return "Describe" }
 
 // DescribeObjectType represents what to describe.
 type DescribeObjectType int
@@ -412,6 +416,7 @@ type DescribeCatalogTableStmt struct {
 }
 
 func (s *DescribeCatalogTableStmt) isStatement() {}
+func (s *DescribeCatalogTableStmt) TypeName() string { return "DescribeCatalogTable" }
 
 // ============================================================================
 // Repository Statements
@@ -421,11 +426,13 @@ func (s *DescribeCatalogTableStmt) isStatement() {}
 type UpdateStmt struct{}
 
 func (s *UpdateStmt) isStatement() {}
+func (s *UpdateStmt) TypeName() string { return "Update" }
 
 // RefreshStmt represents: REFRESH
 type RefreshStmt struct{}
 
 func (s *RefreshStmt) isStatement() {}
+func (s *RefreshStmt) TypeName() string { return "Refresh" }
 
 // RefreshCatalogStmt represents: REFRESH CATALOG [FULL] [SOURCE] [FORCE] [BACKGROUND]
 type RefreshCatalogStmt struct {
@@ -436,6 +443,7 @@ type RefreshCatalogStmt struct {
 }
 
 func (s *RefreshCatalogStmt) isStatement() {}
+func (s *RefreshCatalogStmt) TypeName() string { return "RefreshCatalog" }
 
 // ============================================================================
 // Session Statements
@@ -448,6 +456,7 @@ type SetStmt struct {
 }
 
 func (s *SetStmt) isStatement() {}
+func (s *SetStmt) TypeName() string { return "Set" }
 
 // HelpStmt represents: HELP [topic words...]
 type HelpStmt struct {
@@ -455,11 +464,13 @@ type HelpStmt struct {
 }
 
 func (s *HelpStmt) isStatement() {}
+func (s *HelpStmt) TypeName() string { return "Help" }
 
 // ExitStmt represents: EXIT or QUIT
 type ExitStmt struct{}
 
 func (s *ExitStmt) isStatement() {}
+func (s *ExitStmt) TypeName() string { return "Exit" }
 
 // SearchStmt represents: SEARCH 'query'
 type SearchStmt struct {
@@ -467,6 +478,7 @@ type SearchStmt struct {
 }
 
 func (s *SearchStmt) isStatement() {}
+func (s *SearchStmt) TypeName() string { return "Search" }
 
 // ExecuteScriptStmt represents: EXECUTE SCRIPT 'path'
 type ExecuteScriptStmt struct {
@@ -474,3 +486,4 @@ type ExecuteScriptStmt struct {
 }
 
 func (s *ExecuteScriptStmt) isStatement() {}
+func (s *ExecuteScriptStmt) TypeName() string { return "ExecuteScript" }

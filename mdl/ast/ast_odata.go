@@ -47,6 +47,7 @@ type HeaderDef struct {
 }
 
 func (s *CreateODataClientStmt) isStatement() {}
+func (s *CreateODataClientStmt) TypeName() string { return "CreateODataClient" }
 
 // AlterODataClientStmt represents: ALTER ODATA CLIENT Module.Name SET key = value
 type AlterODataClientStmt struct {
@@ -55,6 +56,7 @@ type AlterODataClientStmt struct {
 }
 
 func (s *AlterODataClientStmt) isStatement() {}
+func (s *AlterODataClientStmt) TypeName() string { return "AlterODataClient" }
 
 // DropODataClientStmt represents: DROP ODATA CLIENT Module.Name
 type DropODataClientStmt struct {
@@ -62,6 +64,7 @@ type DropODataClientStmt struct {
 }
 
 func (s *DropODataClientStmt) isStatement() {}
+func (s *DropODataClientStmt) TypeName() string { return "DropODataClient" }
 
 // CreateODataServiceStmt represents: CREATE ODATA SERVICE Module.Name (...) AUTHENTICATION ... { ... }
 type CreateODataServiceStmt struct {
@@ -82,6 +85,7 @@ type CreateODataServiceStmt struct {
 }
 
 func (s *CreateODataServiceStmt) isStatement() {}
+func (s *CreateODataServiceStmt) TypeName() string { return "CreateODataService" }
 
 // PublishedEntityDef represents a PUBLISH ENTITY block within an OData service.
 type PublishedEntityDef struct {
@@ -112,6 +116,7 @@ type AlterODataServiceStmt struct {
 }
 
 func (s *AlterODataServiceStmt) isStatement() {}
+func (s *AlterODataServiceStmt) TypeName() string { return "AlterODataService" }
 
 // DropODataServiceStmt represents: DROP ODATA SERVICE Module.Name
 type DropODataServiceStmt struct {
@@ -119,6 +124,7 @@ type DropODataServiceStmt struct {
 }
 
 func (s *DropODataServiceStmt) isStatement() {}
+func (s *DropODataServiceStmt) TypeName() string { return "DropODataService" }
 
 // CreateExternalEntityStmt represents: CREATE [OR MODIFY] EXTERNAL ENTITY Module.Name FROM ODATA CLIENT Module.Service (...) (attrs);
 type CreateExternalEntityStmt struct {
@@ -137,6 +143,7 @@ type CreateExternalEntityStmt struct {
 }
 
 func (s *CreateExternalEntityStmt) isStatement() {}
+func (s *CreateExternalEntityStmt) TypeName() string { return "CreateExternalEntity" }
 
 // CreateExternalEntitiesStmt represents: CREATE [OR MODIFY] EXTERNAL ENTITIES FROM Module.Service [INTO Module] [ENTITIES (Name1, Name2)]
 type CreateExternalEntitiesStmt struct {
@@ -147,3 +154,4 @@ type CreateExternalEntitiesStmt struct {
 }
 
 func (s *CreateExternalEntitiesStmt) isStatement() {}
+func (s *CreateExternalEntitiesStmt) TypeName() string { return "CreateExternalEntities" }

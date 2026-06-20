@@ -47,6 +47,7 @@ type CreateEntityStmt struct {
 }
 
 func (s *CreateEntityStmt) isStatement() {}
+func (s *CreateEntityStmt) TypeName() string { return "CreateEntity" }
 
 // DropEntityStmt represents: DROP ENTITY Module.Name
 type DropEntityStmt struct {
@@ -54,6 +55,7 @@ type DropEntityStmt struct {
 }
 
 func (s *DropEntityStmt) isStatement() {}
+func (s *DropEntityStmt) TypeName() string { return "DropEntity" }
 
 // AlterEntityOp represents the type of entity alteration.
 type AlterEntityOp int
@@ -104,6 +106,7 @@ type AlterEntityStmt struct {
 }
 
 func (s *AlterEntityStmt) isStatement() {}
+func (s *AlterEntityStmt) TypeName() string { return "AlterEntity" }
 
 // ============================================================================
 // View Entity Statements
@@ -133,3 +136,4 @@ type CreateViewEntityStmt struct {
 }
 
 func (s *CreateViewEntityStmt) isStatement() {}
+func (s *CreateViewEntityStmt) TypeName() string { return "CreateViewEntity" }

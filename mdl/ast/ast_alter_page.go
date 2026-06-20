@@ -14,6 +14,7 @@ type AlterPageStmt struct {
 }
 
 func (s *AlterPageStmt) isStatement() {}
+func (s *AlterPageStmt) TypeName() string { return "AlterPage" }
 
 // AlterPageOperation is the interface for individual ALTER PAGE operations.
 type AlterPageOperation interface {

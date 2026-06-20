@@ -13,6 +13,7 @@ type CreateModuleRoleStmt struct {
 }
 
 func (s *CreateModuleRoleStmt) isStatement() {}
+func (s *CreateModuleRoleStmt) TypeName() string { return "CreateModuleRole" }
 
 // DropModuleRoleStmt represents: DROP MODULE ROLE Module.RoleName
 type DropModuleRoleStmt struct {
@@ -20,6 +21,7 @@ type DropModuleRoleStmt struct {
 }
 
 func (s *DropModuleRoleStmt) isStatement() {}
+func (s *DropModuleRoleStmt) TypeName() string { return "DropModuleRole" }
 
 // CreateUserRoleStmt represents: CREATE [OR MODIFY] USER ROLE Name (ModuleRole, ...) [MANAGE ALL ROLES]
 type CreateUserRoleStmt struct {
@@ -30,6 +32,7 @@ type CreateUserRoleStmt struct {
 }
 
 func (s *CreateUserRoleStmt) isStatement() {}
+func (s *CreateUserRoleStmt) TypeName() string { return "CreateUserRole" }
 
 // AlterUserRoleStmt represents: ALTER USER ROLE Name ADD/REMOVE MODULE ROLES (...)
 type AlterUserRoleStmt struct {
@@ -39,6 +42,7 @@ type AlterUserRoleStmt struct {
 }
 
 func (s *AlterUserRoleStmt) isStatement() {}
+func (s *AlterUserRoleStmt) TypeName() string { return "AlterUserRole" }
 
 // DropUserRoleStmt represents: DROP USER ROLE Name
 type DropUserRoleStmt struct {
@@ -46,6 +50,7 @@ type DropUserRoleStmt struct {
 }
 
 func (s *DropUserRoleStmt) isStatement() {}
+func (s *DropUserRoleStmt) TypeName() string { return "DropUserRole" }
 
 // EntityAccessRight represents a single access right in a GRANT statement.
 type EntityAccessRight struct {
@@ -74,6 +79,7 @@ type GrantEntityAccessStmt struct {
 }
 
 func (s *GrantEntityAccessStmt) isStatement() {}
+func (s *GrantEntityAccessStmt) TypeName() string { return "GrantEntityAccess" }
 
 // RevokeEntityAccessStmt represents: REVOKE role1, role2 ON Module.Entity [(rights...)]
 // When Rights is nil, the entire access rule is removed. When non-nil, only the
@@ -85,6 +91,7 @@ type RevokeEntityAccessStmt struct {
 }
 
 func (s *RevokeEntityAccessStmt) isStatement() {}
+func (s *RevokeEntityAccessStmt) TypeName() string { return "RevokeEntityAccess" }
 
 // GrantMicroflowAccessStmt represents: GRANT EXECUTE ON MICROFLOW Module.MF TO role1, role2
 type GrantMicroflowAccessStmt struct {
@@ -93,6 +100,7 @@ type GrantMicroflowAccessStmt struct {
 }
 
 func (s *GrantMicroflowAccessStmt) isStatement() {}
+func (s *GrantMicroflowAccessStmt) TypeName() string { return "GrantMicroflowAccess" }
 
 // RevokeMicroflowAccessStmt represents: REVOKE EXECUTE ON MICROFLOW Module.MF FROM role1, role2
 type RevokeMicroflowAccessStmt struct {
@@ -101,6 +109,7 @@ type RevokeMicroflowAccessStmt struct {
 }
 
 func (s *RevokeMicroflowAccessStmt) isStatement() {}
+func (s *RevokeMicroflowAccessStmt) TypeName() string { return "RevokeMicroflowAccess" }
 
 // GrantNanoflowAccessStmt represents: GRANT EXECUTE ON NANOFLOW Module.NF TO role1, role2
 type GrantNanoflowAccessStmt struct {
@@ -109,6 +118,7 @@ type GrantNanoflowAccessStmt struct {
 }
 
 func (s *GrantNanoflowAccessStmt) isStatement() {}
+func (s *GrantNanoflowAccessStmt) TypeName() string { return "GrantNanoflowAccess" }
 
 // RevokeNanoflowAccessStmt represents: REVOKE EXECUTE ON NANOFLOW Module.NF FROM role1, role2
 type RevokeNanoflowAccessStmt struct {
@@ -117,6 +127,7 @@ type RevokeNanoflowAccessStmt struct {
 }
 
 func (s *RevokeNanoflowAccessStmt) isStatement() {}
+func (s *RevokeNanoflowAccessStmt) TypeName() string { return "RevokeNanoflowAccess" }
 
 // GrantPageAccessStmt represents: GRANT VIEW ON PAGE Module.Page TO role1, role2
 type GrantPageAccessStmt struct {
@@ -125,6 +136,7 @@ type GrantPageAccessStmt struct {
 }
 
 func (s *GrantPageAccessStmt) isStatement() {}
+func (s *GrantPageAccessStmt) TypeName() string { return "GrantPageAccess" }
 
 // RevokePageAccessStmt represents: REVOKE VIEW ON PAGE Module.Page FROM role1, role2
 type RevokePageAccessStmt struct {
@@ -133,6 +145,7 @@ type RevokePageAccessStmt struct {
 }
 
 func (s *RevokePageAccessStmt) isStatement() {}
+func (s *RevokePageAccessStmt) TypeName() string { return "RevokePageAccess" }
 
 // GrantWorkflowAccessStmt represents: GRANT EXECUTE ON WORKFLOW Module.WF TO role1, role2
 type GrantWorkflowAccessStmt struct {
@@ -141,6 +154,7 @@ type GrantWorkflowAccessStmt struct {
 }
 
 func (s *GrantWorkflowAccessStmt) isStatement() {}
+func (s *GrantWorkflowAccessStmt) TypeName() string { return "GrantWorkflowAccess" }
 
 // RevokeWorkflowAccessStmt represents: REVOKE EXECUTE ON WORKFLOW Module.WF FROM role1, role2
 type RevokeWorkflowAccessStmt struct {
@@ -149,6 +163,7 @@ type RevokeWorkflowAccessStmt struct {
 }
 
 func (s *RevokeWorkflowAccessStmt) isStatement() {}
+func (s *RevokeWorkflowAccessStmt) TypeName() string { return "RevokeWorkflowAccess" }
 
 // GrantODataServiceAccessStmt represents: GRANT ACCESS ON ODATA SERVICE Module.Svc TO role1, role2
 type GrantODataServiceAccessStmt struct {
@@ -157,6 +172,7 @@ type GrantODataServiceAccessStmt struct {
 }
 
 func (s *GrantODataServiceAccessStmt) isStatement() {}
+func (s *GrantODataServiceAccessStmt) TypeName() string { return "GrantODataServiceAccess" }
 
 // RevokeODataServiceAccessStmt represents: REVOKE ACCESS ON ODATA SERVICE Module.Svc FROM role1, role2
 type RevokeODataServiceAccessStmt struct {
@@ -165,6 +181,7 @@ type RevokeODataServiceAccessStmt struct {
 }
 
 func (s *RevokeODataServiceAccessStmt) isStatement() {}
+func (s *RevokeODataServiceAccessStmt) TypeName() string { return "RevokeODataServiceAccess" }
 
 // GrantPublishedRestServiceAccessStmt represents: GRANT ACCESS ON PUBLISHED REST SERVICE Module.Svc TO role1, role2
 type GrantPublishedRestServiceAccessStmt struct {
@@ -173,6 +190,7 @@ type GrantPublishedRestServiceAccessStmt struct {
 }
 
 func (s *GrantPublishedRestServiceAccessStmt) isStatement() {}
+func (s *GrantPublishedRestServiceAccessStmt) TypeName() string { return "GrantPublishedRestServiceAccess" }
 
 // RevokePublishedRestServiceAccessStmt represents: REVOKE ACCESS ON PUBLISHED REST SERVICE Module.Svc FROM role1, role2
 type RevokePublishedRestServiceAccessStmt struct {
@@ -181,6 +199,7 @@ type RevokePublishedRestServiceAccessStmt struct {
 }
 
 func (s *RevokePublishedRestServiceAccessStmt) isStatement() {}
+func (s *RevokePublishedRestServiceAccessStmt) TypeName() string { return "RevokePublishedRestServiceAccess" }
 
 // AlterProjectSecurityStmt represents ALTER PROJECT SECURITY commands.
 type AlterProjectSecurityStmt struct {
@@ -193,6 +212,7 @@ type AlterProjectSecurityStmt struct {
 }
 
 func (s *AlterProjectSecurityStmt) isStatement() {}
+func (s *AlterProjectSecurityStmt) TypeName() string { return "AlterProjectSecurity" }
 
 // AlterPasswordPolicyOptions holds the parsed options from
 // ALTER PROJECT SECURITY PASSWORD POLICY (min_length: N, ...).
@@ -214,6 +234,7 @@ type CreateDemoUserStmt struct {
 }
 
 func (s *CreateDemoUserStmt) isStatement() {}
+func (s *CreateDemoUserStmt) TypeName() string { return "CreateDemoUser" }
 
 // DropDemoUserStmt represents: DROP DEMO USER 'name'
 type DropDemoUserStmt struct {
@@ -221,6 +242,7 @@ type DropDemoUserStmt struct {
 }
 
 func (s *DropDemoUserStmt) isStatement() {}
+func (s *DropDemoUserStmt) TypeName() string { return "DropDemoUser" }
 
 // UpdateSecurityStmt represents: UPDATE SECURITY [IN Module]
 type UpdateSecurityStmt struct {
@@ -228,3 +250,4 @@ type UpdateSecurityStmt struct {
 }
 
 func (s *UpdateSecurityStmt) isStatement() {}
+func (s *UpdateSecurityStmt) TypeName() string { return "UpdateSecurity" }

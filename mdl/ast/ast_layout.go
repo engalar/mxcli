@@ -22,6 +22,7 @@ type CreateLayoutStmt struct {
 }
 
 func (s *CreateLayoutStmt) isStatement() {}
+func (s *CreateLayoutStmt) TypeName() string { return "CreateLayout" }
 
 // LayoutWidgetV3 is a top-level widget in a layout body.
 type LayoutWidgetV3 struct {

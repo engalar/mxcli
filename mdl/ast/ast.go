@@ -8,6 +8,7 @@ package ast
 // Statement represents any MDL statement that can be executed.
 type Statement interface {
 	isStatement()
+	TypeName() string
 }
 
 // Position represents a location in the domain model canvas.
@@ -69,3 +70,4 @@ type MoveStmt struct {
 }
 
 func (s *MoveStmt) isStatement() {}
+func (s *MoveStmt) TypeName() string { return "Move" }
