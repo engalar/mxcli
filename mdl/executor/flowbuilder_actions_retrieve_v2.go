@@ -107,15 +107,15 @@ func (fb *flowBuilderGen) buildAssociationRetrieveSourceGen(s *ast.RetrieveStmt)
 	// legacy `flowBuilder` adapter — both `lookupAssociationGen` and
 	// `entityIsSubtypeOfGen` are pure-read and live in
 	// flowbuilder_assoc_lookup_gen.go.
-	if fb.backend != nil {
-		assocInfo := lookupAssociationGen(fb.backend, s.Source.Module, s.Source.Name)
+	if fb.moduleLister != nil && fb.domainModelReader != nil {
+		assocInfo := lookupAssociationGen(fb.moduleLister, fb.domainModelReader, s.Source.Module, s.Source.Name)
 		startVarType := ""
 		if fb.varTypes != nil {
 			startVarType = fb.varTypes[s.StartVariable]
 		}
 		startsFromChildSide := assocInfo != nil &&
 			assocInfo.childEntityQN != "" &&
-			entityIsSubtypeOfGen(fb.backend, startVarType, assocInfo.childEntityQN)
+			entityIsSubtypeOfGen(fb.moduleLister, fb.domainModelReader, startVarType, assocInfo.childEntityQN)
 
 		if assocInfo != nil &&
 			assocInfo.Type == "Reference" &&

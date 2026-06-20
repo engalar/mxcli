@@ -210,7 +210,7 @@ func (fb *flowBuilderGen) resolveListOperationMember(listVariable, memberName st
 			entityQN = strings.TrimPrefix(listType, "List of ")
 		}
 	}
-	resolved := resolveMemberChangeGenStandalone(fb.backend, memberName, entityQN, nil)
+	resolved := resolveMemberChangeGenStandalone(fb.moduleLister, fb.domainModelReader, memberName, entityQN, nil)
 	return resolved.attributeQN, resolved.associationQN
 }
 

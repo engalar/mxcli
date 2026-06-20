@@ -114,7 +114,7 @@ func (fb *flowBuilderGen) resolveMemberChangeGen(memberName, entityQN string) re
 	// Try to use a cached domain model to avoid redundant GetDomainModelGen
 	// calls across consecutive member changes in the same change action.
 	dm := fb.cachedDMForEntityQN(entityQN)
-	return resolveMemberChangeGenStandalone(fb.backend, memberName, entityQN, dm)
+	return resolveMemberChangeGenStandalone(fb.moduleLister, fb.domainModelReader, memberName, entityQN, dm)
 }
 
 // cachedDMForEntityQN returns the cached domain model for the module
@@ -122,14 +122,14 @@ func (fb *flowBuilderGen) resolveMemberChangeGen(memberName, entityQN string) re
 // result is cached on this flowBuilderGen so that consecutive member
 // changes in the same change action share one backend call.
 func (fb *flowBuilderGen) cachedDMForEntityQN(entityQN string) *genDm.DomainModel {
-	if entityQN == "" || fb.backend == nil {
+	if entityQN == "" || fb.moduleLister == nil || fb.domainModelReader == nil {
 		return nil
 	}
 	parts := strings.SplitN(entityQN, ".", 2)
 	if len(parts) != 2 {
 		return nil
 	}
-	mod, err := fb.backend.GetModuleByName(parts[0])
+	mod, err := fb.moduleLister.GetModuleByName(parts[0])
 	if err != nil || mod == nil {
 		return nil
 	}
@@ -139,7 +139,7 @@ func (fb *flowBuilderGen) cachedDMForEntityQN(entityQN string) *genDm.DomainMode
 	if dm, ok := fb.dmCache[mod.ID]; ok {
 		return dm
 	}
-	dm, err := fb.backend.GetDomainModelGen(mod.ID)
+	dm, err := fb.domainModelReader.GetDomainModelGen(mod.ID)
 	if err != nil || dm == nil {
 		return nil
 	}

@@ -61,10 +61,10 @@ import (
 //   - sets ErrorHandlingType per ehTypeGen (gen builder default).
 func (fb *flowBuilderGen) addCreateVariableActionGen(s *ast.DeclareStmt) element.ID {
 	declType := s.Type
-	if declType.Kind == ast.TypeEnumeration && declType.EnumRef != nil && fb.backend != nil {
+	if declType.Kind == ast.TypeEnumeration && declType.EnumRef != nil && fb.moduleLister != nil && fb.domainModelReader != nil {
 		// Stage 3.2.6.4: standalone disambiguation (legacy
 		// `flowBuilder.isEntity` is gone with the rest of the family).
-		if isEntityGen(fb.backend, declType.EnumRef.Module, declType.EnumRef.Name) {
+		if isEntityGen(fb.moduleLister, fb.domainModelReader, declType.EnumRef.Module, declType.EnumRef.Name) {
 			declType = ast.DataType{Kind: ast.TypeEntity, EntityRef: declType.EnumRef}
 		}
 	}

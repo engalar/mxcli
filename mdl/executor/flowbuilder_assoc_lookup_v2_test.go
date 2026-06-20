@@ -46,7 +46,7 @@ func TestResolveMemberChangeGen_AssocNotInCachedDM(t *testing.T) {
 	// Act: resolve a 1-dot association name not present in the (empty) DM.
 	memberName := "EndCustomerRegistration.EndCustomer_ApplicationCommonHeader"
 	entityQN := "EndCustomerRegistration.EndCustomer"
-	got := resolveMemberChangeGenStandalone(b, memberName, entityQN, nil)
+	got := resolveMemberChangeGenStandalone(b, b, memberName, entityQN, nil)
 
 	// Assert: must return associationQN, NOT attributeQN.
 	if got.attributeQN != "" {
@@ -81,7 +81,7 @@ func TestResolveMemberChangeGen_TwoDotAttributePreserved(t *testing.T) {
 
 	memberName := "MyModule.MyEntity.MyAttr"
 	entityQN := "MyModule.MyEntity"
-	got := resolveMemberChangeGenStandalone(b, memberName, entityQN, nil)
+	got := resolveMemberChangeGenStandalone(b, b, memberName, entityQN, nil)
 
 	if got.attributeQN != memberName {
 		t.Errorf("got attributeQN=%q, want %q — 2-dot name must be preserved as attribute",
@@ -158,7 +158,7 @@ func TestResolveMemberChangeGen_FetchesDMTwiceForBareAttribute(t *testing.T) {
 	}
 
 	// Act: resolve a single bare-attribute member change
-	_ = resolveMemberChangeGenStandalone(b, "Status", "HD.Ticket", nil)
+	_ = resolveMemberChangeGenStandalone(b, b, "Status", "HD.Ticket", nil)
 
 	// Assert: GetDomainModelGen must be called exactly once.
 	// Current bug: called 2x (double-fetch).

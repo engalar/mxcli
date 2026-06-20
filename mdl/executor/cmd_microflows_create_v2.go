@@ -194,8 +194,10 @@ func execCreateMicroflowGen(ctx *ExecContext, s *ast.CreateMicroflowStmt) error 
 		varTypes:       map[string]string{},
 		declaredVars:   map[string]string{},
 		measurer:       &layoutMeasurer{varTypes: map[string]string{}},
-		backend:        ctx.Backend,
-		microflowsRepo: ctx.Microflows,
+		backend:            ctx.Backend,
+		moduleLister:       ctx.ModuleLister,
+		domainModelReader:  ctx.DomainModelReader,
+		microflowsRepo:     ctx.Microflows,
 		nanoflowsRepo:  ctx.Nanoflows,
 		hierarchy:      hierarchy,
 		restServices:   restServices,
@@ -263,7 +265,7 @@ func execCreateMicroflowGen(ctx *ExecContext, s *ast.CreateMicroflowStmt) error 
 		// Resolve TypeEnumeration vs TypeEntity ambiguity: a bare qualified
 		// name (e.g. HD.Ticket) is parsed as TypeEnumeration — check the
 		// backend to determine the true kind.
-		paramType := resolveAmbiguousDataType(ctx, ctx.Backend, p.Type)
+		paramType := resolveAmbiguousDataType(ctx, ctx.ModuleLister, ctx.DomainModelReader, p.Type)
 		if dt := convertASTToGenDataType(paramType); dt != nil {
 			param.SetParameterType(dt)
 		}

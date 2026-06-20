@@ -113,7 +113,11 @@ type flowBuilderGen struct {
 	nextFlowCase     string
 	nextFlowAnchor   *ast.FlowAnchors
 
+	// Deprecated: use moduleLister/domainModelReader instead.
+	// Kept for backward compat with test files.
 	backend            backend.FullBackend
+	moduleLister       backend.ModuleLister
+	domainModelReader  backend.DomainModelReader
 	microflowsRepo     repos.MicroflowRepository
 	nanoflowsRepo      repos.NanoflowRepository
 	hierarchy          *ContainerHierarchy
@@ -403,7 +407,7 @@ func (fb *flowBuilderGen) resolveAssociationPaths(expr ast.Expression) ast.Expre
 // (Stage 3.1 only ships microflows + nanoflows). Once a gen
 // DomainModelRepository lands, this will switch over.
 func (fb *flowBuilderGen) resolvePathSegments(path []string) []string {
-	if fb.backend == nil || len(path) == 0 {
+	if fb.moduleLister == nil || fb.domainModelReader == nil || len(path) == 0 {
 		return path
 	}
 
@@ -427,7 +431,7 @@ func (fb *flowBuilderGen) resolvePathSegments(path []string) []string {
 		}
 		// Stage 3.2.6.4: standalone lookup (was previously a method
 		// on the legacy `flowBuilder`; the type is being deleted).
-		result := lookupAssociationGen(fb.backend, parts[0], parts[1])
+		result := lookupAssociationGen(fb.moduleLister, fb.domainModelReader, parts[0], parts[1])
 		if result != nil && result.childEntityQN != "" {
 			resolved = append(resolved, result.childEntityQN)
 		}

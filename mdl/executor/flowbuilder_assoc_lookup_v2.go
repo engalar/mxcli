@@ -36,15 +36,15 @@ type assocLookupResult struct {
 // its type and the qualified names of its parent and child entities.
 // Returns nil if the association cannot be found (e.g., backend is nil
 // or module doesn't exist). Pure read — no mutation.
-func lookupAssociationGen(b backend.FullBackend, moduleName, assocName string) *assocLookupResult {
-	if b == nil {
+func lookupAssociationGen(lister backend.ModuleLister, reader backend.DomainModelReader, moduleName, assocName string) *assocLookupResult {
+	if lister == nil || reader == nil {
 		return nil
 	}
-	mod, err := b.GetModuleByName(moduleName)
+	mod, err := lister.GetModuleByName(moduleName)
 	if err != nil || mod == nil {
 		return nil
 	}
-	dm, err := b.GetDomainModelGen(mod.ID)
+	dm, err := reader.GetDomainModelGen(mod.ID)
 	if err != nil || dm == nil {
 		return nil
 	}
@@ -83,15 +83,15 @@ func lookupAssociationGen(b backend.FullBackend, moduleName, assocName string) *
 // entity in the domain model. Used by the gen builder to disambiguate
 // `Module.Name` references that the parser parses as TypeEnumeration
 // — when the name actually targets an entity we rewrite the type.
-func isEntityGen(b backend.FullBackend, moduleName, entityName string) bool {
-	if b == nil {
+func isEntityGen(lister backend.ModuleLister, reader backend.DomainModelReader, moduleName, entityName string) bool {
+	if lister == nil || reader == nil {
 		return false
 	}
-	mod, err := b.GetModuleByName(moduleName)
+	mod, err := lister.GetModuleByName(moduleName)
 	if err != nil || mod == nil {
 		return false
 	}
-	dm, err := b.GetDomainModelGen(mod.ID)
+	dm, err := reader.GetDomainModelGen(mod.ID)
 	if err != nil || dm == nil {
 		return false
 	}
@@ -117,21 +117,17 @@ func isEntityGen(b backend.FullBackend, moduleName, entityName string) bool {
 // Safe to call with any DataType; non-ambiguous kinds are returned unchanged.
 // Uses ctx to leverage the per-module DomainModel cache (getDomainModelGenCached)
 // so that consecutive calls for the same module share one backend fetch.
-func resolveAmbiguousDataType(ctx *ExecContext, b backend.FullBackend, dt ast.DataType) ast.DataType {
+func resolveAmbiguousDataType(ctx *ExecContext, lister backend.ModuleLister, reader backend.DomainModelReader, dt ast.DataType) ast.DataType {
 	switch dt.Kind {
 	case ast.TypeEnumeration:
-		// Attribute/general context: TypeEnumeration may actually be an entity.
-		if dt.EnumRef != nil && b != nil {
-			if isEntityGenCached(ctx, b, dt.EnumRef.Module, dt.EnumRef.Name) {
+		if dt.EnumRef != nil && lister != nil && reader != nil {
+			if isEntityGenCached(ctx, lister, reader, dt.EnumRef.Module, dt.EnumRef.Name) {
 				return ast.DataType{Kind: ast.TypeEntity, EntityRef: dt.EnumRef}
 			}
 		}
 	case ast.TypeEntity:
-		// Microflow parameter context: buildMicroflowDataType returns TypeEntity
-		// for any bare QN, including enumerations. If the QN is not a known
-		// entity, treat it as TypeEnumeration.
-		if dt.EntityRef != nil && b != nil {
-			if !isEntityGenCached(ctx, b, dt.EntityRef.Module, dt.EntityRef.Name) {
+		if dt.EntityRef != nil && lister != nil && reader != nil {
+			if !isEntityGenCached(ctx, lister, reader, dt.EntityRef.Module, dt.EntityRef.Name) {
 				return ast.DataType{Kind: ast.TypeEnumeration, EnumRef: dt.EntityRef}
 			}
 		}
@@ -143,11 +139,11 @@ func resolveAmbiguousDataType(ctx *ExecContext, b backend.FullBackend, dt ast.Da
 // It uses getDomainModelGenCached(ctx, moduleID) so that multiple
 // lookups against the same module hit the in-memory cache instead
 // of decoding BSON from the backend each time.
-func isEntityGenCached(ctx *ExecContext, b backend.FullBackend, moduleName, entityName string) bool {
+func isEntityGenCached(ctx *ExecContext, lister backend.ModuleLister, reader backend.DomainModelReader, moduleName, entityName string) bool {
 	if ctx == nil {
-		return isEntityGen(b, moduleName, entityName)
+		return isEntityGen(lister, reader, moduleName, entityName)
 	}
-	mod, err := b.GetModuleByName(moduleName)
+	mod, err := lister.GetModuleByName(moduleName)
 	if err != nil || mod == nil {
 		return false
 	}
@@ -168,19 +164,19 @@ func isEntityGenCached(ctx *ExecContext, b backend.FullBackend, moduleName, enti
 // "MyModule.ENUM_Status") for an attribute if it is an enumeration
 // type. Returns "" if the attribute is not an enumeration or if the
 // domain model is not available.
-func lookupEnumRefGen(b backend.FullBackend, entityQN, attrName string) string {
-	if b == nil || entityQN == "" || attrName == "" {
+func lookupEnumRefGen(lister backend.ModuleLister, reader backend.DomainModelReader, entityQN, attrName string) string {
+	if lister == nil || reader == nil || entityQN == "" || attrName == "" {
 		return ""
 	}
 	parts := strings.SplitN(entityQN, ".", 2)
 	if len(parts) != 2 {
 		return ""
 	}
-	mod, err := b.GetModuleByName(parts[0])
+	mod, err := lister.GetModuleByName(parts[0])
 	if err != nil || mod == nil {
 		return ""
 	}
-	dm, err := b.GetDomainModelGen(mod.ID)
+	dm, err := reader.GetDomainModelGen(mod.ID)
 	if err != nil || dm == nil {
 		return ""
 	}
@@ -208,8 +204,8 @@ func lookupEnumRefGen(b backend.FullBackend, entityQN, attrName string) string {
 // looking for an attribute named attrName, returning its fully
 // qualified name (Module.Entity.Attribute) on the first match.
 // Pure read.
-func resolveAttributeInEntityHierarchyGen(b backend.FullBackend, entityQN, attrName string, dm *genDm.DomainModel) (string, bool) {
-	if b == nil || entityQN == "" || attrName == "" {
+func resolveAttributeInEntityHierarchyGen(lister backend.ModuleLister, reader backend.DomainModelReader, entityQN, attrName string, dm *genDm.DomainModel) (string, bool) {
+	if lister == nil || reader == nil || entityQN == "" || attrName == "" {
 		return "", false
 	}
 	seen := make(map[string]bool)
@@ -233,11 +229,11 @@ func resolveAttributeInEntityHierarchyGen(b backend.FullBackend, entityQN, attrN
 		if firstIteration && dm != nil {
 			entity = findEntityInDomainModelGen(dm, parts[1])
 		} else {
-			mod, err := b.GetModuleByName(parts[0])
+			mod, err := lister.GetModuleByName(parts[0])
 			if err != nil || mod == nil {
 				return "", false
 			}
-			resolvedDM, err := b.GetDomainModelGen(mod.ID)
+			resolvedDM, err := reader.GetDomainModelGen(mod.ID)
 			if err != nil || resolvedDM == nil {
 				return "", false
 			}
@@ -272,12 +268,12 @@ func resolveAttributeInEntityHierarchyGen(b backend.FullBackend, entityQN, attrN
 //     preserved as attribute QNs even when entity metadata is missing.
 //
 // dm is an optional pre-fetched domain model. When non-nil the function
-// uses it directly instead of calling b.GetDomainModelGen, enabling
+// uses it directly instead of calling reader.GetDomainModelGen, enabling
 // callers to cache the DM across multiple member-change resolutions.
 // Pass nil for the original fetch-from-backend behaviour.
 //
 // Pure read; no flowBuilder receiver needed.
-func resolveMemberChangeGenStandalone(b backend.FullBackend, memberName, entityQN string, dm *genDm.DomainModel) resolvedMemberChange {
+func resolveMemberChangeGenStandalone(lister backend.ModuleLister, reader backend.DomainModelReader, memberName, entityQN string, dm *genDm.DomainModel) resolvedMemberChange {
 	if entityQN == "" {
 		return memberChangeFallback(memberName, "")
 	}
@@ -298,12 +294,12 @@ func resolveMemberChangeGenStandalone(b backend.FullBackend, memberName, entityQ
 		qualifiedName = moduleName + "." + memberName
 	}
 
-	if b != nil {
-		if mod, err := b.GetModuleByName(lookupModule); err == nil && mod != nil {
+	if lister != nil && reader != nil {
+		if mod, err := lister.GetModuleByName(lookupModule); err == nil && mod != nil {
 			// Use caller-provided DM when available (avoids re-fetching
 			// the same domain model for every member change).
 			if dm == nil {
-				if fetchedDM, err := b.GetDomainModelGen(mod.ID); err == nil && fetchedDM != nil {
+				if fetchedDM, err := reader.GetDomainModelGen(mod.ID); err == nil && fetchedDM != nil {
 					dm = fetchedDM
 				}
 			}
@@ -327,7 +323,7 @@ func resolveMemberChangeGenStandalone(b backend.FullBackend, memberName, entityQ
 				}
 				// Pass the already-fetched dm to avoid a second backend
 				// call inside resolveAttributeInEntityHierarchyGen.
-				if attrQN, ok := resolveAttributeInEntityHierarchyGen(b, entityQN, memberName, dm); ok {
+				if attrQN, ok := resolveAttributeInEntityHierarchyGen(lister, reader, entityQN, memberName, dm); ok {
 					return resolvedMemberChange{attributeQN: attrQN}
 				}
 				// Neither attribute nor association found in the domain model
@@ -369,14 +365,14 @@ func memberChangeFallback(memberName, entityQN string) resolvedMemberChange {
 // entityIsSubtypeOfGen walks the generalization chain from candidateQN
 // upward, returning true if it ever reaches ancestorQN. Returns false
 // on missing modules / entities / dangling refs (defensive).
-func entityIsSubtypeOfGen(b backend.FullBackend, candidateQN, ancestorQN string) bool {
+func entityIsSubtypeOfGen(lister backend.ModuleLister, reader backend.DomainModelReader, candidateQN, ancestorQN string) bool {
 	if candidateQN == "" || ancestorQN == "" {
 		return false
 	}
 	if candidateQN == ancestorQN {
 		return true
 	}
-	if b == nil {
+	if lister == nil || reader == nil {
 		return false
 	}
 	seen := make(map[string]bool)
@@ -392,11 +388,11 @@ func entityIsSubtypeOfGen(b backend.FullBackend, candidateQN, ancestorQN string)
 		if len(parts) != 2 {
 			return false
 		}
-		mod, err := b.GetModuleByName(parts[0])
+		mod, err := lister.GetModuleByName(parts[0])
 		if err != nil || mod == nil {
 			return false
 		}
-		dm, err := b.GetDomainModelGen(mod.ID)
+		dm, err := reader.GetDomainModelGen(mod.ID)
 		if err != nil || dm == nil {
 			return false
 		}
@@ -434,22 +430,22 @@ func findEntityInDomainModelGen(dm *genDm.DomainModel, name string) *genDm.Entit
 
 // isNonPersistentEntity reports whether qualifiedName refers to a non-persistent entity.
 // If fb.nonPersistentEntities is already populated (e.g. by tests), it is used directly.
-// Otherwise it is lazily loaded from fb.backend; returns false when backend is nil.
+// Otherwise it is lazily loaded from fb.domainModelReader; returns false when reader is nil.
 func (fb *flowBuilderGen) isNonPersistentEntity(qualifiedName string) bool {
 	if fb.nonPersistentEntities == nil {
-		if fb.backend == nil {
+		if fb.domainModelReader == nil {
 			return false
 		}
-		fb.nonPersistentEntities = loadNonPersistentEntitySet(fb.backend, fb.hierarchy)
+		fb.nonPersistentEntities = loadNonPersistentEntitySet(fb.domainModelReader, fb.hierarchy)
 	}
 	return fb.nonPersistentEntities[qualifiedName]
 }
 
 // loadNonPersistentEntitySet builds the set of non-persistent entity qualified names
 // by walking all domain models via the backend.
-func loadNonPersistentEntitySet(b backend.FullBackend, h *ContainerHierarchy) map[string]bool {
+func loadNonPersistentEntitySet(reader backend.DomainModelReader, h *ContainerHierarchy) map[string]bool {
 	result := make(map[string]bool)
-	dms, err := b.ListDomainModelsGen()
+	dms, err := reader.ListDomainModelsGen()
 	if err != nil || h == nil {
 		return result
 	}
