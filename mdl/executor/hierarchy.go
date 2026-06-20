@@ -12,11 +12,30 @@ import (
 )
 
 // hierarchySource is the minimal interface needed to build a ContainerHierarchy.
-// Both *mpr.Reader and backend.FullBackend satisfy this.
+// Implementations include *mpr.Reader, backend.FullBackend, and hierarchyRolesSource.
 type hierarchySource interface {
 	ListModules() ([]*model.Module, error)
 	ListUnits() ([]*types.UnitInfo, error)
 	ListFolders() ([]*types.FolderInfo, error)
+}
+
+// hierarchyRolesSource wraps role-specific backend interfaces into a hierarchySource.
+type hierarchyRolesSource struct {
+	ml  backend.ModuleLister
+	mur backend.MetadataReader
+	fm  backend.FolderManager
+}
+
+func (s hierarchyRolesSource) ListModules() ([]*model.Module, error) {
+	return s.ml.ListModules()
+}
+
+func (s hierarchyRolesSource) ListUnits() ([]*types.UnitInfo, error) {
+	return s.mur.ListUnits()
+}
+
+func (s hierarchyRolesSource) ListFolders() ([]*types.FolderInfo, error) {
+	return s.fm.ListFolders()
 }
 
 // ContainerHierarchy provides efficient module and folder resolution for documents.
@@ -168,7 +187,11 @@ func getHierarchy(ctx *ExecContext) (*ContainerHierarchy, error) {
 	if ctx.Cache.hierarchy != nil {
 		return ctx.Cache.hierarchy, nil
 	}
-	h, err := NewContainerHierarchyFromBackend(ctx.Backend)
+	h, err := NewContainerHierarchy(hierarchyRolesSource{
+		ml:  ctx.ModuleLister,
+		mur: ctx.MetadataReader,
+		fm:  ctx.FolderManager,
+	})
 	if err != nil {
 		return nil, err
 	}

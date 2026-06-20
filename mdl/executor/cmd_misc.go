@@ -451,7 +451,7 @@ func execExecuteScript(ctx *ExecContext, s *ast.ExecuteScriptStmt) error {
 	// calls inherit the outer transaction.
 	isRoot := ctx.ScriptDepth == 0
 	var scriptTx backend.ScriptTransaction
-	if isRoot && ctx.Backend != nil && ctx.ConnectionManager.IsConnected() {
+	if isRoot && ctx.ScriptTransactionManager != nil && ctx.ConnectionManager.IsConnected() {
 		var err error
 		scriptTx, err = ctx.ScriptTransactionManager.BeginScriptTransaction()
 		if err != nil {
