@@ -31,85 +31,55 @@ import (
 	sqllib "github.com/mendixlabs/mxcli/sql"
 )
 
-// executorCache holds cached data for performance across multiple operations.
+// sessionTracker holds per-session mutable state (created/dropped tracking).
+// Backend-level caching is handled by sub-backends (microflowCache, pageCache, etc.).
+type sessionTracker struct {
+	createdMicroflows map[string]*createdMicroflowInfo
+	createdNanoflows  map[string]*createdNanoflowInfo
+	createdPages      map[string]*createdPageInfo
+	createdSnippets   map[string]*createdSnippetInfo
+
+	droppedMicroflows map[string]*droppedUnitInfo
+	droppedNanoflows  map[string]*droppedUnitInfo
+
+	modifiedDomainModels map[model.ID]string
+}
+
+// executorCache — retained for backward compatibility with handler helper
+// functions. New code should use sub-backend caches directly.
+// Deprecated: Backend cache fields will be removed once all helpers
+// route through sub-backend caches. Session tracking moves to sessionTracker.
 type executorCache struct {
+	sessionTracker
+
 	modules   []*model.Module
 	units     []*types.UnitInfo
 	folders   []*types.FolderInfo
 	hierarchy *ContainerHierarchy
-	// pages, layouts are cached separately as they may change during execution
 
-	// Track items created during this session (not yet visible via reader)
-	createdMicroflows map[string]*createdMicroflowInfo // qualifiedName -> info
-	createdNanoflows  map[string]*createdNanoflowInfo  // qualifiedName -> info
-	createdPages      map[string]*createdPageInfo      // qualifiedName -> info
-	createdSnippets   map[string]*createdSnippetInfo   // qualifiedName -> info
+	entityNames    map[model.ID]string
+	microflowNames map[model.ID]string
+	pageNames      map[model.ID]string
 
-	// Track items dropped during this session so that a subsequent
-	// CREATE OR REPLACE/MODIFY with the same qualified name can reuse the
-	// original UnitID and ContainerID. Studio Pro treats Unit rows with a
-	// different UnitID (or the same UnitID under a different container) as
-	// unrelated documents, producing broken projects on delete+insert
-	// rewrites. Reusing both keeps the rewrite semantically equivalent to an
-	// in-place update.
-	droppedMicroflows map[string]*droppedUnitInfo // qualifiedName -> original IDs
-	droppedNanoflows  map[string]*droppedUnitInfo // qualifiedName -> original IDs
-
-	// Track domain models modified during this session for finalization
-	modifiedDomainModels map[model.ID]string // domain model unit ID -> module name
-
-	// Pre-warmed name lookup maps for parallel describe (goroutine-safe after init)
-	entityNames    map[model.ID]string // entity ID -> "Module.EntityName"
-	microflowNames map[model.ID]string // microflow ID -> "Module.MicroflowName"
-	pageNames      map[model.ID]string // page ID -> "Module.PageName"
-
-	// Cached gen-typed flow listings with container UUID resolved.
-	// Populated lazily by listMicroflowsWithContainerGen /
-	// listNanoflowsWithContainerGen so repeated callers in a single
-	// session pay one ListAll + one batch container scan instead of
-	// N per-element GetContainerUUID lookups (Followup E1).
 	microflowsWithContainerGen []MicroflowGenWithContainer
 	nanoflowsWithContainerGen  []NanoflowGenWithContainer
 
-	// Cached gen-typed security listings. Populated lazily by
-	// getProjectSecurityGen / listModuleSecurityWithContainerGen.
 	projectSecurityGen             *genSec.ProjectSecurity
 	moduleSecurityWithContainerGen []ModuleSecurityGenWithContainer
 
-	// Cached gen-typed Java action / JavaScript action listings.
-	// Populated lazily by listJavaActionsWithContainerGen /
-	// listJavaScriptActionsWithContainerGen (Stage 3.3.2 A0).
 	javaActionsWithContainerGen       []ContainerWithGen[*genJA.JavaAction]
 	javaScriptActionsWithContainerGen []ContainerWithGen[*genJSA.JavaScriptAction]
 
-	// Cached gen-typed DomainModel listing with container UUID resolved
-	// (Stage 3.3.4 A0). Each module owns at most one DomainModel; the
-	// container ID is the owning module's UUID.
 	domainModelsWithContainerGen []DomainModelGenWithContainer
+	domainModels                 []*genDm.DomainModel
+	domainModelsGen              []*genDm.DomainModel
 
-	// Legacy sdk-typed DomainModel listing retained until the final
-	// backend-interface retirement removes the old surface.
-	domainModels []*genDm.DomainModel
-
-	// Flat gen-typed DomainModel list (Stage 3.3.4.C9). Populated lazily
-	// by cachedDomainModelsGen via ctx.Backend.ListDomainModelsGen.
-	// Used by cmd_pages_builder getDomainModels migration (C7).
-	domainModelsGen []*genDm.DomainModel
-
-	// Cached gen-typed Workflow listing with container UUID resolved
-	// (Stage 3.3.3 A0).
 	workflowsWithContainerGen []ContainerWithGen[*genWf.Workflow]
 
-	// Cached gen-typed Page / Layout / Snippet listings with container
-	// UUID resolved (Stage 3.3.5 A0).
 	pagesWithContainerGen    []ContainerWithGen[*genPg.Page]
 	layoutsWithContainerGen  []ContainerWithGen[*genPg.Layout]
 	snippetsWithContainerGen []ContainerWithGen[*genPg.Snippet]
 
-	// domainModelByModule caches moduleID → *genDm.DomainModel.
-	// Populated lazily by getDomainModelGenCached; updated write-through
-	// by setDomainModelGenCached after every UpdateDomainModelGen call.
-	// Single-goroutine lifetime — no lock needed.
 	domainModelByModule map[model.ID]*genDm.DomainModel
 }
 
@@ -764,7 +734,8 @@ type ExecIO struct {
 
 // ExecSession holds per-session mutable state.
 type ExecSession struct {
-	Cache                             *executorCache
+	Cache                             *executorCache  // Deprecated: use Session for tracking, sub-backend caches for data
+	Session                           *sessionTracker // Per-session create/drop tracking
 	Fragments                         map[string]*ast.DefineFragmentStmt
 	Settings                          map[string]any
 	ScriptDepth                       int

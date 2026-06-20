@@ -22,11 +22,13 @@ func TestResolveSnippetRef_FromCache(t *testing.T) {
 
 	snpID := model.ID("snp-session-1")
 	cache := &executorCache{
-		createdSnippets: map[string]*createdSnippetInfo{
-			"MyModule.NavMenu": {
-				ID:         snpID,
-				Name:       "NavMenu",
-				ModuleName: "MyModule",
+		sessionTracker: sessionTracker{
+			createdSnippets: map[string]*createdSnippetInfo{
+				"MyModule.NavMenu": {
+					ID:         snpID,
+					Name:       "NavMenu",
+					ModuleName: "MyModule",
+				},
 			},
 		},
 	}
@@ -60,7 +62,9 @@ func TestResolveSnippetRef_NotFoundInCache(t *testing.T) {
 	}
 
 	cache := &executorCache{
-		createdSnippets: map[string]*createdSnippetInfo{},
+		sessionTracker: sessionTracker{
+			createdSnippets: map[string]*createdSnippetInfo{},
+		},
 	}
 
 	mod := mkModule("MyModule")

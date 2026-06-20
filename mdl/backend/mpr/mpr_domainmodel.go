@@ -3,6 +3,9 @@
 package mprbackend
 
 import (
+	"context"
+	"sync"
+
 	"github.com/mendixlabs/mxcli/model"
 	mprrepos "github.com/mendixlabs/mxcli/mdl/backend/mpr/repos"
 	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
@@ -11,22 +14,27 @@ import (
 )
 
 // domainModelBackend implements the read-only gen-typed DomainModel surface
-// by wrapping the modelsdk-native DomainModelRepository. Write methods
-// (UpdateDomainModelGen, delete helpers) remain on MprBackend.
+// with per-query caching.
 type domainModelBackend struct {
-	writer *mmpr.Writer
+	writer      *mmpr.Writer
+	domainCache *domainModelListCache
 }
 
 func newDomainModelBackend(writer *mmpr.Writer) *domainModelBackend {
-	return &domainModelBackend{writer: writer}
+	return &domainModelBackend{
+		writer:      writer,
+		domainCache: newDomainModelListCache(),
+	}
 }
 
 func (b *domainModelBackend) ListDomainModelsGen() ([]*genDm.DomainModel, error) {
-	dms, err := mprrepos.NewDomainModelRepository(b.writer).List("")
-	if err != nil {
-		return nil, err
-	}
-	return append(dms, builtinSystemDomainModel()), nil
+	return b.domainCache.get(context.Background(), func() ([]*genDm.DomainModel, error) {
+		dms, err := mprrepos.NewDomainModelRepository(b.writer).List("")
+		if err != nil {
+			return nil, err
+		}
+		return append(dms, builtinSystemDomainModel()), nil
+	})
 }
 
 func (b *domainModelBackend) GetDomainModelGen(moduleID model.ID) (*genDm.DomainModel, error) {
@@ -45,4 +53,45 @@ func (b *domainModelBackend) GetDomainModelGen(moduleID model.ID) (*genDm.Domain
 
 func (b *domainModelBackend) GetDomainModelByIDGen(id model.ID) (*genDm.DomainModel, error) {
 	return mprrepos.NewDomainModelRepository(b.writer).Get(id)
+}
+
+func (b *domainModelBackend) InvalidateCache() {
+	b.domainCache.invalidate()
+}
+
+// ── typed cache ────────────────────────────────────────────────────────
+
+type domainModelListCache struct {
+	mu    sync.RWMutex
+	items []*genDm.DomainModel
+	valid bool
+}
+
+func newDomainModelListCache() *domainModelListCache { return &domainModelListCache{} }
+
+func (c *domainModelListCache) get(ctx context.Context, load func() ([]*genDm.DomainModel, error)) ([]*genDm.DomainModel, error) {
+	c.mu.RLock()
+	if c.valid {
+		defer c.mu.RUnlock()
+		return c.items, nil
+	}
+	c.mu.RUnlock()
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.valid {
+		return c.items, nil
+	}
+	items, err := load()
+	if err != nil {
+		return nil, err
+	}
+	c.items = items
+	c.valid = true
+	return c.items, nil
+}
+
+func (c *domainModelListCache) invalidate() {
+	c.mu.Lock()
+	c.valid = false
+	c.mu.Unlock()
 }

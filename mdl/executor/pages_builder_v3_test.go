@@ -32,8 +32,10 @@ func newPageBuilderWithNanoflowStub(qualifiedName string) *pageBuilder {
 	}
 	return &pageBuilder{
 		execCache: &executorCache{
-			createdNanoflows: map[string]*createdNanoflowInfo{
-				qualifiedName: {ID: model.ID("00000000-0000-0000-0000-000000000003"), Name: "NF_Search", ModuleName: "HD"},
+			sessionTracker: sessionTracker{
+				createdNanoflows: map[string]*createdNanoflowInfo{
+					qualifiedName: {ID: model.ID("00000000-0000-0000-0000-000000000003"), Name: "NF_Search", ModuleName: "HD"},
+				},
 			},
 		},
 		paramEntityNames: map[string]string{"$Search": "HD.TicketSearch"},
@@ -187,8 +189,10 @@ func newPageBuilderWithMicroflowStub(qualifiedName string) *pageBuilder {
 	}
 	return &pageBuilder{
 		execCache: &executorCache{
-			createdMicroflows: map[string]*createdMicroflowInfo{
-				qualifiedName: {ID: model.ID("00000000-0000-0000-0000-000000000001"), Name: "SomeMF", ModuleName: "MyMod"},
+			sessionTracker: sessionTracker{
+				createdMicroflows: map[string]*createdMicroflowInfo{
+					qualifiedName: {ID: model.ID("00000000-0000-0000-0000-000000000001"), Name: "SomeMF", ModuleName: "MyMod"},
+				},
 			},
 		},
 		widgetBackend: mb,
