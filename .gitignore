@@ -1,90 +1,80 @@
-# Reference libraries (too large for git, obtain from npm)
-libs/
 
-# Unit test failure log (written by pre-commit hook, read by Claude Code)
-.test-fail.log
-
-# Go build artifacts
-bin/
-*.exe
-*.exe~
-*.dll
-*.so
-*.dylib
-*.test
-*.out
-
-# Go workspace
-go.work
-go.work.sum
-
-# IDE
-.idea/
-.vscode/
-*.swp
-*.swo
-.antlr/
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Test artifacts
-coverage.out
-coverage.html
-# Test reports (generated, do not commit)
-coverage/*
-# Exception: benchmark baseline IS committed
 !coverage/bench-baseline.json
 !coverage/bench-baseline.txt
 !coverage/coverage-baseline.txt
-reference/mendix-repl/
-reference/mxbuild/
-reference/mendixmodellib/
-reference/mdl-grammar/
-reference/mxbuild-11.6.0/
-/reference/
-mx-test-projects/*/
-tmp/
-
-# Generated files
-*.pdf
-*.tar
-*.tgz
-cmd/mxcli/skills/
-cmd/mxcli/commands/
-cmd/mxcli/lint-rules/
-cmd/mxcli/changelog.md
-cmd/mxcli/vscode-mdl.vsix
-vscode-mdl/*.vsix
+# Academy end-to-end test projects (created via mxcli new, not committed)
+# Both forms needed: `node_modules/` matches directories, `node_modules` matches symlinks.
 # Build artifacts
+# Exception: benchmark baseline IS committed
+# Excluded skills
+# Generated files
+# Go build artifacts
+# Go workspace
+# IDE
+# OS
+# Reference libraries (too large for git, obtain from npm)
+# Snap tool binary (used for BSON fixture generation)
+# Test artifacts
+# Test reports (generated, do not commit)
+# Unit test failure log (written by pre-commit hook, read by Claude Code)
+# VS Code extension leftovers (node_modules/dist owned by other user — tracked files removed via git rm)
+# npm — node_modules is local-only; package.json + package-lock.json are committed
+*.cast
+*.dll
+*.dylib
+*.exe
+*.exe~
+*.out
+*.pdf
+*.pptx
+*.so
+*.swo
+*.swp
+*.tar
+*.test
+*.tgz
+.DS_Store
+.antlr/
+.claude/skills/mendix/migrate-outsystems.md
+.claude/worktrees/
+.idea/
+.playwright-cli/
+.superpowers/
+.test-fail.log
+.vscode/
+.worktrees/
 /mxcli
 /mxcli-launcher
-grammardoc
-*.cast
-*.pptx
-# Excluded skills
-.claude/skills/mendix/migrate-outsystems.md
-
-# Snap tool binary (used for BSON fixture generation)
-snap-bson
-.playwright-cli/
-.claude/worktrees/
-
-# VS Code extension leftovers (node_modules/dist owned by other user — tracked files removed via git rm)
-vscode-mdl/
-.worktrees/
-
-# npm — node_modules is local-only; package.json + package-lock.json are committed
-# Both forms needed: `node_modules/` matches directories, `node_modules` matches symlinks.
-node_modules
-node_modules/
-.superpowers/
-
-graphify-out
-
-# Academy end-to-end test projects (created via mxcli new, not committed)
+/reference/
 HelpDeskE2E/
 HelpDeskE2EClean/
-HelpDeskFresh/
 HelpDeskFinal/
+HelpDeskFresh/
+Thumbs.db
+bin/
+cmd/mxcli/changelog.md
+cmd/mxcli/commands/
+cmd/mxcli/lint-rules/
+cmd/mxcli/skills/
+cmd/mxcli/vscode-mdl.vsix
+coverage.html
+coverage.out
+coverage/*
+go.work
+go.work.sum
+grammardoc
+graphify-out
+libs/
+mx-test-projects/*/
+node_modules
+node_modules/
+perf_import
+reference/mdl-grammar/
+reference/mendix-repl/
+reference/mendixmodellib/
+reference/mxbuild-11.6.0/
+reference/mxbuild/
+snap-bson
+tmp/
+vscode-mdl/
+vscode-mdl/*.vsix
