@@ -27,17 +27,23 @@ import (
 
 // pageBuilder constructs pages from AST.
 type pageBuilder struct {
-	backend          backend.FullBackend
-	moduleID         model.ID
-	moduleName       string
-	widgetScope      map[string]model.ID                // widget name -> widget ID
-	paramScope       map[string]model.ID                // param name -> entity ID
-	paramEntityNames map[string]string                  // param name -> qualified entity name
-	execCache        *executorCache                     // Shared cache from executor
-	isSnippet        bool                               // True if building a snippet (affects parameter datasource)
-	fragments        map[string]*ast.DefineFragmentStmt // Fragment registry from executor
-	themeRegistry    *ThemeRegistry                     // Theme design property definitions (may be nil)
-	widgetBackend    backend.WidgetBuilderBackend       // Backend for pluggable widget construction
+	// Deprecated: use role-specific fields below.
+	backend            backend.FullBackend
+	moduleLister       backend.ModuleLister
+	domainModelReader  backend.DomainModelReader
+	pageReader         backend.PageReader
+	folderManager      backend.FolderManager
+	connectionManager  backend.ConnectionManager
+	moduleID           model.ID
+	moduleName         string
+	widgetScope        map[string]model.ID                // widget name -> widget ID
+	paramScope         map[string]model.ID                // param name -> entity ID
+	paramEntityNames   map[string]string                  // param name -> qualified entity name
+	execCache          *executorCache                     // Shared cache from executor
+	isSnippet          bool                               // True if building a snippet (affects parameter datasource)
+	fragments          map[string]*ast.DefineFragmentStmt // Fragment registry from executor
+	themeRegistry      *ThemeRegistry                     // Theme design property definitions (may be nil)
+	widgetBackend      backend.WidgetBuilderBackend       // Backend for pluggable widget construction
 
 	// Pluggable widget engine (lazily initialized)
 	widgetRegistry     *WidgetRegistry
@@ -68,6 +74,28 @@ type pageBuilder struct {
 	mxGraph *mxgraph.Graph // Injected from ExecContext for widget registry fast path
 }
 
+// role helpers — prefer role-specific field, fall back to deprecated backend.
+func (pb *pageBuilder) moduleListerOrBackend() backend.ModuleLister {
+	if pb.moduleLister != nil { return pb.moduleLister }
+	return pb.backend
+}
+func (pb *pageBuilder) dmReaderOrBackend() backend.DomainModelReader {
+	if pb.domainModelReader != nil { return pb.domainModelReader }
+	return pb.backend
+}
+func (pb *pageBuilder) pageReaderOrBackend() backend.PageReader {
+	if pb.pageReader != nil { return pb.pageReader }
+	return pb.backend
+}
+func (pb *pageBuilder) folderMgrOrBackend() backend.FolderManager {
+	if pb.folderManager != nil { return pb.folderManager }
+	return pb.backend
+}
+func (pb *pageBuilder) connMgrOrBackend() backend.ConnectionManager {
+	if pb.connectionManager != nil { return pb.connectionManager }
+	return pb.backend
+}
+
 // initPluggableEngine lazily initializes the pluggable widget engine.
 func (pb *pageBuilder) initPluggableEngine() {
 	if pb.pluggableEngine != nil || pb.pluggableEngineErr != nil {
@@ -83,10 +111,10 @@ func (pb *pageBuilder) initPluggableEngine() {
 		registry.SetMxGraph(pb.mxGraph)
 	}
 	if pb.backend != nil {
-		if loadErr := registry.LoadUserDefinitions(pb.backend.Path()); loadErr != nil {
+		if loadErr := registry.LoadUserDefinitions(pb.connMgrOrBackend().Path()); loadErr != nil {
 			log.Printf("warning: loading user widget definitions: %v", loadErr)
 		}
-		projectDir := filepath.Dir(pb.backend.Path())
+		projectDir := filepath.Dir(pb.connMgrOrBackend().Path())
 		if scanErr := registry.SetProjectDir(projectDir); scanErr != nil {
 			log.Printf("warning: widget pre-scan: %v", scanErr)
 		}
@@ -100,8 +128,8 @@ func (pb *pageBuilder) initPluggableEngine() {
 
 // getProjectPath returns the project directory path from the backend.
 func (pb *pageBuilder) getProjectPath() string {
-	if pb.backend != nil {
-		return pb.backend.Path()
+	if pb.connMgrOrBackend() != nil {
+		return pb.connMgrOrBackend().Path()
 	}
 	return ""
 }
@@ -121,7 +149,7 @@ func (pb *pageBuilder) getModules() []*model.Module {
 	if pb.execCache != nil && pb.execCache.modules != nil {
 		return pb.execCache.modules
 	}
-	modules, _ := pb.backend.ListModules()
+	modules, _ := pb.moduleListerOrBackend().ListModules()
 	if pb.execCache != nil {
 		pb.execCache.modules = modules
 	}
@@ -147,7 +175,7 @@ func (pb *pageBuilder) getHierarchy() (*ContainerHierarchy, error) {
 func (pb *pageBuilder) getLayouts() ([]*genPg.Layout, error) {
 	if pb.layoutsCache == nil {
 		var err error
-		pb.layoutsCache, err = pb.backend.ListLayoutsGen()
+		pb.layoutsCache, err = pb.pageReaderOrBackend().ListLayoutsGen()
 		if err != nil {
 			return nil, err
 		}
@@ -168,7 +196,7 @@ func (pb *pageBuilder) getDomainModelsWithContainer() ([]DomainModelGenWithConta
 		dms = pb.execCache.domainModelsGen
 	} else {
 		var err error
-		dms, err = pb.backend.ListDomainModelsGen()
+		dms, err = pb.dmReaderOrBackend().ListDomainModelsGen()
 		if err != nil {
 			return nil, err
 		}
@@ -203,7 +231,7 @@ func (pb *pageBuilder) getDomainModelsWithContainer() ([]DomainModelGenWithConta
 func (pb *pageBuilder) getPages() ([]*genPg.Page, error) {
 	if pb.pagesCache == nil {
 		var err error
-		pb.pagesCache, err = pb.backend.ListPagesGen()
+		pb.pagesCache, err = pb.pageReaderOrBackend().ListPagesGen()
 		if err != nil {
 			return nil, err
 		}
@@ -267,7 +295,7 @@ func (pb *pageBuilder) resolveLayout(layoutName string) (model.ID, error) {
 	}
 
 	for _, l := range layouts {
-		containerID, _ := pb.backend.GetPageContainerUUID(model.ID(l.ID()))
+		containerID, _ := pb.pageReaderOrBackend().GetPageContainerUUID(model.ID(l.ID()))
 		modID := h.FindModuleID(containerID)
 		modName := h.GetModuleName(modID)
 		if l.Name() == name && (moduleName == "" || modName == moduleName) {
@@ -341,7 +369,7 @@ func (pb *pageBuilder) getMainPlaceholderRef(layoutName string) string {
 func (pb *pageBuilder) getFolders() ([]*types.FolderInfo, error) {
 	if pb.foldersCache == nil {
 		var err error
-		pb.foldersCache, err = pb.backend.ListFolders()
+		pb.foldersCache, err = pb.folderMgrOrBackend().ListFolders()
 		if err != nil {
 			return nil, err
 		}
@@ -414,7 +442,7 @@ func (pb *pageBuilder) createFolder(name string, containerID model.ID) (model.ID
 		Name:        name,
 	}
 
-	if err := pb.backend.CreateFolder(folder); err != nil {
+	if err := pb.folderMgrOrBackend().CreateFolder(folder); err != nil {
 		return "", err
 	}
 
