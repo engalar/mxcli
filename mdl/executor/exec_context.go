@@ -253,13 +253,13 @@ func (ctx *ExecContext) initRoles() {
 
 // Connected returns true if a project is connected via the Backend.
 func (ctx *ExecContext) Connected() bool {
-	if ctx.Backend == nil {
-		return false
+	if ctx.ConnectionManager != nil {
+		return ctx.ConnectionManager.IsConnected()
 	}
-	if ctx.ConnectionManager == nil {
+	if ctx.Backend != nil {
 		return ctx.Backend.IsConnected()
 	}
-	return ctx.ConnectionManager.IsConnected()
+	return false
 }
 
 // ConnectedForWrite returns true if a project is connected and the backend
