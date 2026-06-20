@@ -626,10 +626,11 @@ func listExternalActions(ctx *ExecContext, moduleName string) error {
 		if moduleName != "" && !strings.EqualFold(modName, moduleName) {
 			continue
 		}
-		oc, _ := mf.ObjectCollection().(*genMf.MicroflowObjectCollection)
-		if oc != nil {
-			extractActions(oc, modName, mf.Name())
+		oc, ok := mf.ObjectCollection().(*genMf.MicroflowObjectCollection)
+		if !ok || oc == nil {
+			continue
 		}
+		extractActions(oc, modName, mf.Name())
 	}
 	for _, nf := range nfs {
 		if nf == nil {
@@ -639,10 +640,11 @@ func listExternalActions(ctx *ExecContext, moduleName string) error {
 		if moduleName != "" && !strings.EqualFold(modName, moduleName) {
 			continue
 		}
-		oc, _ := nf.ObjectCollection().(*genMf.MicroflowObjectCollection)
-		if oc != nil {
-			extractActions(oc, modName, nf.Name())
+		oc, ok := nf.ObjectCollection().(*genMf.MicroflowObjectCollection)
+		if !ok || oc == nil {
+			continue
 		}
+		extractActions(oc, modName, nf.Name())
 	}
 
 	if len(actionMap) == 0 && ctx.Format != FormatJSON {
@@ -731,8 +733,8 @@ func outputExternalEntityMDL(ctx *ExecContext, entity *genDm.Entity, moduleName 
 	if entity.Documentation() != "" {
 		outputJavadoc(ctx.Output, entity.Documentation())
 	}
-	src, _ := entity.Source().(*genRest.ODataRemoteEntitySource)
-	if src == nil {
+	src, ok := entity.Source().(*genRest.ODataRemoteEntitySource)
+	if !ok || src == nil {
 		return mdlerrors.NewValidationf("%s.%s is not backed by an OData remote source", moduleName, entity.Name())
 	}
 

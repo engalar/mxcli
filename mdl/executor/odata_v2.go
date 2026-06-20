@@ -124,7 +124,10 @@ func listExternalActionsGen(ctx *ExecContext, moduleName string) error {
 		if moduleName != "" && !strings.EqualFold(modName, moduleName) {
 			continue
 		}
-		oc, _ := mf.ObjectCollection().(*genMf.MicroflowObjectCollection)
+		oc, ok := mf.ObjectCollection().(*genMf.MicroflowObjectCollection)
+		if !ok {
+			oc = nil
+		}
 		extractGen(oc, modName, mf.Name())
 	}
 	for _, nf := range nfs {
@@ -135,7 +138,10 @@ func listExternalActionsGen(ctx *ExecContext, moduleName string) error {
 		if moduleName != "" && !strings.EqualFold(modName, moduleName) {
 			continue
 		}
-		oc, _ := nf.ObjectCollection().(*genMf.MicroflowObjectCollection)
+		oc, ok := nf.ObjectCollection().(*genMf.MicroflowObjectCollection)
+		if !ok {
+			oc = nil
+		}
 		extractGen(oc, modName, nf.Name())
 	}
 

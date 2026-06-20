@@ -65,7 +65,10 @@ func listMicroflows(ctx *ExecContext, moduleName string) error {
 		qualifiedName := modName + "." + mf.Name()
 		folderPath := h.BuildFolderPath(containerID)
 		returnType := strings.TrimSpace(mf.ReturnType())
-		oc, _ := mf.ObjectCollection().(*genMf.MicroflowObjectCollection)
+		oc, ok := mf.ObjectCollection().(*genMf.MicroflowObjectCollection)
+		if !ok {
+			oc = nil
+		}
 		params := genFlowParameterElems(mf.ObjectCollection())
 		activities := countGenFlowActivities(oc)
 		complexity := calculateGenFlowComplexity(oc)
@@ -139,7 +142,10 @@ func listNanoflows(ctx *ExecContext, moduleName string) error {
 		qualifiedName := modName + "." + nf.Name()
 		folderPath := h.BuildFolderPath(containerID)
 		returnType := strings.TrimSpace(nf.ReturnType())
-		oc, _ := nf.ObjectCollection().(*genMf.MicroflowObjectCollection)
+		oc, ok := nf.ObjectCollection().(*genMf.MicroflowObjectCollection)
+		if !ok {
+			oc = nil
+		}
 		params := genFlowParameterElems(nf.ObjectCollection())
 		activities := countGenFlowActivities(oc)
 		complexity := calculateGenFlowComplexity(oc)

@@ -528,7 +528,10 @@ func formatLogMessageActionGen(a *genMf.LogMessageAction) string {
 	}
 
 	message := "'Message'"
-	tmpl, _ := a.MessageTemplate().(*genMf.StringTemplate)
+	tmpl, ok := a.MessageTemplate().(*genMf.StringTemplate)
+	if !ok {
+		tmpl = nil
+	}
 	if tmpl != nil {
 		if text := tmpl.Text(); text != "" {
 			message = mdlQuote(text)

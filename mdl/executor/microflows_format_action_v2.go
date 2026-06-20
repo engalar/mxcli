@@ -498,7 +498,10 @@ func formatShowMessageActionGen(a *genMf.ShowMessageAction) string {
 	}
 
 	message := "'...'"
-	tmpl, _ := a.Template().(*genMf.TextTemplate)
+	tmpl, ok := a.Template().(*genMf.TextTemplate)
+	if !ok {
+		tmpl = nil
+	}
 	if tmpl != nil {
 		if text, ok := tmpl.Text().(*genTx.Text); ok && text != nil {
 			if picked, found := pickTextTranslationGen(text); found {

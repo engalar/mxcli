@@ -176,7 +176,10 @@ func formatRestCallActionGen(a *genMf.RestCallAction) string {
 	var sb strings.Builder
 
 	resultHandlingType := a.ResultHandlingType()
-	rh, _ := a.ResultHandling().(*genMf.ResultHandling)
+	rh, ok := a.ResultHandling().(*genMf.ResultHandling)
+	if !ok {
+		rh = nil
+	}
 
 	outputVar := readRestCallOutputVarGen(rh)
 	if outputVar != "" {
@@ -188,7 +191,10 @@ func formatRestCallActionGen(a *genMf.RestCallAction) string {
 	sb.WriteString("rest call ")
 
 	method := "get"
-	httpConfig, _ := a.HttpConfiguration().(*genMf.HttpConfiguration)
+	httpConfig, ok := a.HttpConfiguration().(*genMf.HttpConfiguration)
+	if !ok {
+		httpConfig = nil
+	}
 	if httpConfig != nil {
 		switch httpConfig.HttpMethod() {
 		case genMf.HttpMethodGet:
@@ -667,7 +673,10 @@ func formatTransformJsonActionGen(a *genMf.TransformJsonAction) string {
 func formatWebServiceCallActionGen(a *genMf.WebServiceCallAction) string {
 	prefix := ""
 
-	rh, _ := a.ResultHandling().(*genMf.ResultHandling)
+	rh, ok := a.ResultHandling().(*genMf.ResultHandling)
+	if !ok {
+		rh = nil
+	}
 	outputVar := readRestCallOutputVarGen(rh)
 	if outputVar != "" {
 		prefix = fmt.Sprintf("$%s = ", outputVar)

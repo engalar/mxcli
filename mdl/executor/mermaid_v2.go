@@ -108,8 +108,8 @@ func renderFlowMermaidGen(ctx *ExecContext, oc element.Element, topLevelFlows []
 	var sb strings.Builder
 	sb.WriteString("flowchart LR\n")
 
-	col, _ := oc.(*genMf.MicroflowObjectCollection)
-	if col == nil || len(genActivityObjects(col)) == 0 {
+	col, ok := oc.(*genMf.MicroflowObjectCollection)
+	if !ok || col == nil || len(genActivityObjects(col)) == 0 {
 		sb.WriteString("    start([Start]) --> stop([End])\n")
 		fmt.Fprint(ctx.Output, sb.String())
 		return nil

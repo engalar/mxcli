@@ -414,7 +414,10 @@ type elementLikeDeleteBehavior interface {
 }
 
 func associationDeleteBehaviorGen(elem interface{}) elementLikeDeleteBehavior {
-	db, _ := elem.(*genDm.AssociationDeleteBehavior)
+	db, ok := elem.(*genDm.AssociationDeleteBehavior)
+	if !ok {
+		return nil
+	}
 	return db
 }
 

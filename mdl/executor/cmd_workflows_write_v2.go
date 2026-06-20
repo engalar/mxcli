@@ -268,8 +268,11 @@ func injectEndIntoConditionOutcomes(activities []element.Element) {
 			if !ok {
 				continue
 			}
-			f, _ := voc.Flow().(*genWf.Flow)
-			if f != nil && len(f.ActivitiesItems()) > 0 {
+			f, ok := voc.Flow().(*genWf.Flow)
+			if !ok || f == nil {
+				continue
+			}
+			if len(f.ActivitiesItems()) > 0 {
 				continue // already has activities
 			}
 			end := genWf.NewEndWorkflowActivity()

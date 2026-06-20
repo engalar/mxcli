@@ -528,8 +528,8 @@ func countStructureWorkflowActivitiesGen(wf *genWf.Workflow) (total, userTasks, 
 	if wf == nil {
 		return
 	}
-	flow, _ := wf.Flow().(*genWf.Flow)
-	if flow == nil {
+	flow, ok := wf.Flow().(*genWf.Flow)
+	if !ok || flow == nil {
 		return
 	}
 	countStructureFlowActivitiesGen(flow, &total, &userTasks, &microflowCalls, &decisions)

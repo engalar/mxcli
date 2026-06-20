@@ -115,8 +115,8 @@ func countWorkflowActivitiesGen(wf *genWf.Workflow) (total, userTasks, decisions
 	if wf == nil {
 		return
 	}
-	flow, _ := wf.Flow().(*genWf.Flow)
-	if flow == nil {
+	flow, ok := wf.Flow().(*genWf.Flow)
+	if !ok || flow == nil {
 		return
 	}
 	countFlowActivitiesGen(flow, &total, &userTasks, &decisions)
@@ -472,13 +472,22 @@ func boundaryEventDelayGen(ev element.Element) string {
 func boundaryEventFlowGen(ev element.Element) *genWf.Flow {
 	switch v := ev.(type) {
 	case *genWf.InterruptingTimerBoundaryEvent:
-		f, _ := v.Flow().(*genWf.Flow)
+		f, ok := v.Flow().(*genWf.Flow)
+		if !ok {
+			return nil
+		}
 		return f
 	case *genWf.NonInterruptingTimerBoundaryEvent:
-		f, _ := v.Flow().(*genWf.Flow)
+		f, ok := v.Flow().(*genWf.Flow)
+		if !ok {
+			return nil
+		}
 		return f
 	case *genWf.TimerBoundaryEvent:
-		f, _ := v.Flow().(*genWf.Flow)
+		f, ok := v.Flow().(*genWf.Flow)
+		if !ok {
+			return nil
+		}
 		return f
 	}
 	return nil
@@ -1041,22 +1050,34 @@ func conditionOutcomeNameFlowGen(oc element.Element) (string, *genWf.Flow) {
 		if v.Value() {
 			name = "true"
 		}
-		f, _ := v.Flow().(*genWf.Flow)
+		f, ok := v.Flow().(*genWf.Flow)
+		if !ok {
+			return name, nil
+		}
 		return name, f
 	case *genWf.EnumerationValueConditionOutcome:
 		// Output the full qualified name (Module.EnumName.ValueName) wrapped in
 		// single quotes so the MDL round-trip produces a valid STRING_LITERAL
 		// and BSON stores the format Studio Pro 11.10.0 requires.
 		name := "'" + v.ValueQualifiedName() + "'"
-		f, _ := v.Flow().(*genWf.Flow)
+		f, ok := v.Flow().(*genWf.Flow)
+		if !ok {
+			return name, nil
+		}
 		return name, f
 	case *genWf.VoidConditionOutcome:
-		f, _ := v.Flow().(*genWf.Flow)
+		f, ok := v.Flow().(*genWf.Flow)
+		if !ok {
+			return "default", nil
+		}
 		return "default", f
 	case *genWf.ExclusiveSplitOutcome:
 		// Generic outcome — read raw BSON for the value caption.
 		val := genWf.ExclusiveSplitOutcomeValue(v)
-		f, _ := v.Flow().(*genWf.Flow)
+		f, ok := v.Flow().(*genWf.Flow)
+		if !ok {
+			return val, nil
+		}
 		return val, f
 	}
 	return "", nil
