@@ -65,6 +65,7 @@ go.work.sum
 grammardoc
 graphify-out
 libs/
+mdlrun
 mx-test-projects/*/
 node_modules
 node_modules/
