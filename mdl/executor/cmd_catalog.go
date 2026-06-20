@@ -383,7 +383,7 @@ func buildCatalog(ctx *ExecContext, full bool, source ...bool) error {
 	cat.SetProject("default", "Current Project", version)
 
 	// Build catalog
-	builder := catalog.NewBuilder(cat, ctx.Backend)
+	builder := catalog.NewBuilder(cat, ctx.CatalogReader())
 	builder.SetFullMode(full)
 	if isSource {
 		builder.SetSourceMode(true)

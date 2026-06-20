@@ -19,6 +19,7 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/diaglog"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 	"github.com/mendixlabs/mxcli/mdl/graphcatalog"
+	"github.com/mendixlabs/mxcli/mdl/linter"
 	"github.com/mendixlabs/mxcli/mdl/repos"
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
@@ -1133,6 +1134,18 @@ func setDomainModelGenCached(ctx *ExecContext, moduleID model.ID, dm *genDm.Doma
 		ctx.Cache.domainModelByModule = make(map[model.ID]*genDm.DomainModel)
 	}
 	ctx.Cache.domainModelByModule[moduleID] = dm
+}
+
+// CatalogReader returns ctx.Backend as a catalog reader.
+// FullBackend implements CatalogReader, so this always succeeds for production backends.
+func (ctx *ExecContext) CatalogReader() catalog.CatalogReader {
+	return ctx.Backend
+}
+
+// LintReader returns ctx.Backend as a lint reader.
+// FullBackend implements LintReader, so this always succeeds for production backends.
+func (ctx *ExecContext) LintReader() linter.LintReader {
+	return ctx.Backend
 }
 
 // statusWriter returns the StatusOutput writer if set, otherwise io.Discard.

@@ -33,7 +33,7 @@ func execLint(ctx *ExecContext, s *ast.LintStmt) error {
 	}
 
 	// Create lint context
-	lintCtx := linter.NewLintContext(ctx.Graph, ctx.Backend)
+	lintCtx := linter.NewLintContext(ctx.Graph, ctx.LintReader())
 
 	// Load configuration
 	projectDir := filepath.Dir(ctx.MprPath)
