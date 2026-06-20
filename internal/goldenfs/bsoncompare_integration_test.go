@@ -31,7 +31,7 @@ func runMDL(t *testing.T, mprPath, script string) {
 	t.Helper()
 	e := executor.New(io.Discard)
 	e.SetQuiet(true)
-	e.SetBackendFactory(func() backend.FullBackend { return mprbackend.New() })
+	e.SetBackendFactory(func() backend.ConnectionBackend { return mprbackend.New() })
 	defer func() {
 		if err := e.Close(); err != nil {
 			t.Errorf("runMDL: executor close: %v", err)

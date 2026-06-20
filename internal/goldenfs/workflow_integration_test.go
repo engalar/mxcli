@@ -174,7 +174,7 @@ func TestGoldenFS_WorkflowIntegration(t *testing.T) {
 		t.Helper()
 		e := executor.New(io.Discard)
 		e.SetQuiet(true)
-		e.SetBackendFactory(func() backend.FullBackend { return mprbackend.New() })
+		e.SetBackendFactory(func() backend.ConnectionBackend { return mprbackend.New() })
 		defer func() {
 			if err := e.Close(); err != nil {
 				t.Logf("[%s] executor close warning: %v", label, err)

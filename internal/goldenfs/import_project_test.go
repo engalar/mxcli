@@ -70,7 +70,7 @@ func runImportViaFUSE(t *testing.T, mountMpr, exportDir string) string {
 	var buf bytes.Buffer
 	e := executor.New(&buf)
 	e.SetQuiet(true)
-	e.SetBackendFactory(func() backend.FullBackend { return mprbackend.New() })
+	e.SetBackendFactory(func() backend.ConnectionBackend { return mprbackend.New() })
 	defer func() {
 		if err := e.Close(); err != nil {
 			t.Logf("executor close: %v", err)

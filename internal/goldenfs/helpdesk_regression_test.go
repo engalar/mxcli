@@ -323,7 +323,7 @@ func describeMDLParseableClean(t *testing.T, mprPath string) string {
 	var buf strings.Builder
 	e := executor.New(&buf)
 	e.SetQuiet(true)
-	e.SetBackendFactory(func() backend.FullBackend { return mprbackend.New() })
+	e.SetBackendFactory(func() backend.ConnectionBackend { return mprbackend.New() })
 	defer func() {
 		if err := e.Close(); err != nil {
 			t.Logf("executor close: %v", err)
@@ -358,7 +358,7 @@ func describeMDL(t *testing.T, mprPath string) string {
 	var buf strings.Builder
 	e := executor.New(&buf)
 	e.SetQuiet(true)
-	e.SetBackendFactory(func() backend.FullBackend { return mprbackend.New() })
+	e.SetBackendFactory(func() backend.ConnectionBackend { return mprbackend.New() })
 	defer func() {
 		if err := e.Close(); err != nil {
 			t.Logf("executor close: %v", err)
@@ -434,7 +434,7 @@ func describeMDLParseable(t *testing.T, mprPath string) string {
 	var buf strings.Builder
 	e := executor.New(&buf)
 	e.SetQuiet(true)
-	e.SetBackendFactory(func() backend.FullBackend { return mprbackend.New() })
+	e.SetBackendFactory(func() backend.ConnectionBackend { return mprbackend.New() })
 	defer func() {
 		if err := e.Close(); err != nil {
 			t.Logf("executor close: %v", err)
@@ -685,7 +685,7 @@ func runMDLLenient(t *testing.T, mprPath, script string) {
 	t.Helper()
 	e := executor.New(io.Discard)
 	e.SetQuiet(true)
-	e.SetBackendFactory(func() backend.FullBackend { return mprbackend.New() })
+	e.SetBackendFactory(func() backend.ConnectionBackend { return mprbackend.New() })
 	defer func() {
 		if err := e.Close(); err != nil {
 			t.Logf("runMDLLenient: executor close: %v", err)

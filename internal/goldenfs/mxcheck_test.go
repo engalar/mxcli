@@ -52,7 +52,7 @@ func TestGoldenFS_ExecAndMxCheck(t *testing.T) {
 	out := &bytes.Buffer{}
 	e := executor.New(out)
 	e.SetQuiet(true)
-	e.SetBackendFactory(func() backend.FullBackend { return mprbackend.New() })
+	e.SetBackendFactory(func() backend.ConnectionBackend { return mprbackend.New() })
 	defer func() {
 		if err := e.Close(); err != nil {
 			t.Logf("executor close warning: %v", err)
