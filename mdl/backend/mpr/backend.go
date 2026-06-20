@@ -41,40 +41,23 @@ var _ backend.PageModelBackend = (*MprBackend)(nil)
 var _ backend.ImportBufferBackend = (*MprBackend)(nil)
 var _ linter.LintReader = (*MprBackend)(nil)
 
-// MprBackend implements backend.FullBackend by delegating to a single
-// modelsdk/mpr Reader/Writer pair. Read methods either route through
-// mprread free functions (which take a *modelsdkmpr.Reader) or through
-// the hand-decoded *_compat.go helpers that pull raw bytes from the same
-// Reader. Write methods route through the modelsdkmpr.UnitWriter / the
-// gen-typed repositories.
-//
-// All read/write methods assume Connect() has been called; calling them
-// before Connect() panics with a nil pointer dereference. The executor
-// enforces connection state via ConnectionBackend.IsConnected().
+// MprBackend implements backend.FullBackend + backend.BackendFactory
+// by delegating to a single modelsdk/mpr Reader/Writer pair and domain-
+// specific sub-backends created eagerly in Connect().
 type MprBackend struct {
 	reader     *modelsdkmpr.Reader
 	msdkReader *modelsdkmpr.Reader // alias of reader; kept for *_compat.go ergonomics
 	msdkWriter modelsdkmpr.UnitWriter
 	path       string
-	// scriptBuf is non-nil while an EXECUTE SCRIPT block is open. Write helpers
-	// route mutations into the buffer instead of opening per-statement SQL
-	// transactions; the whole script commits atomically via a single BatchWrite
-	// at the end — see backend.ScriptTransaction.
-	scriptBuf *ScriptBuffer
-	// unitBuf is non-nil when an ImportSession is active.
-	// writeUnitContents routes writes through the buffer instead of opening
-	// individual SQLite transactions. Reads are satisfied from the overlay.
-	unitBuf *unitstore.BufferedUnitStore
-	// widgetTypeCache is non-nil during a page build (BeginPageBuild..EndPageBuild).
-	// It maps widgetID → widgetTypeCacheEntry, enabling one CustomWidgets$CustomWidgetType
-	// schema to be shared across all instances of the same widget type on a page.
-	// This matches Studio Pro's canonical format and reduces page BSON size by up to 50%
-	// on pages with multiple same-type filter widgets.
+	scriptBuf  *ScriptBuffer
+	unitBuf    *unitstore.BufferedUnitStore
 	widgetTypeCache map[string]*widgetTypeCacheEntry
 
-	// Domain-specific sub-backends. Populated lazily after Connect().
-	// These extract method groups into focused types as part of the
-	// MprBackend facade decomposition (Phase 3).
+	// subBackendsReady is set to true once Connect() finishes creating
+	// all sub-backends. Replaces repeated initSubBackends() calls.
+	subBackendsReady bool
+
+	// Domain-specific sub-backends. Created eagerly in Connect().
 	modules          *moduleBackend
 	microflows       *microflowBackend
 	workflows        *workflowBackend
@@ -149,16 +132,13 @@ func (b *MprBackend) Connect(path string) error {
 	if err != nil {
 		return err
 	}
-	// Reuse r as the writer's internal reader so that w.reader.InvalidateCache()
-	// (called by insertUnit after every write) invalidates the same Reader that
-	// b.msdkReader points to. With separate Reader objects (old behaviour), writes
-	// only invalidated the Writer's private cache while listing methods on b.msdkReader
-	// returned stale data from their own independent unitCacheValid flag.
 	mw := modelsdkmpr.NewWriterWithReader(r)
 	b.reader = r
 	b.msdkReader = r
 	b.msdkWriter = mw
 	b.path = path
+
+	// Eagerly create all sub-backends — no lazy init overhead on every call.
 	b.modules = newModuleBackend(r)
 	b.microflows = newMicroflowBackend(mw)
 	b.workflows = newWorkflowBackend(mw)
@@ -173,66 +153,71 @@ func (b *MprBackend) Connect(path string) error {
 	b.rawUnits = newRawUnitBackend(r, mw)
 	b.metadata = newMetadataBackend(r)
 	b.mappings = newMappingBackend(r)
+	b.subBackendsReady = true
 	return nil
 }
 
-// initSubBackends lazily initialises domain-specific sub-backends.
-// Safe to call multiple times.
+// initSubBackends is a no-op when subBackendsReady is true, which is set
+// in Connect() after all sub-backends are created eagerly.
+// Kept as a safeguard so that methods don't NPE when called before Connect().
 func (b *MprBackend) initSubBackends() {
-	if b.reader != nil {
-		if b.modules == nil {
-			b.modules = newModuleBackend(b.reader)
+	if b.subBackendsReady || b.reader == nil {
+		return
+	}
+	if b.modules == nil {
+		b.modules = newModuleBackend(b.reader)
+	}
+	if b.folders == nil {
+		b.folders = newFolderBackend(b.reader)
+	}
+	if b.scheduledEvents == nil {
+		b.scheduledEvents = newScheduledEventBackend(b.reader)
+	}
+	if b.enumerations == nil {
+		b.enumerations = newEnumerationBackend(b.reader)
+	}
+	if b.constants == nil {
+		b.constants = newConstantBackend(b.reader)
+	}
+	if b.rawUnits == nil && b.msdkWriter != nil {
+		if w, ok := b.msdkWriter.(*modelsdkmpr.Writer); ok {
+			b.rawUnits = newRawUnitBackend(b.reader, w)
 		}
-		if b.folders == nil {
-			b.folders = newFolderBackend(b.reader)
+	}
+	if b.metadata == nil {
+		b.metadata = newMetadataBackend(b.reader)
+	}
+	if b.mappings == nil {
+		b.mappings = newMappingBackend(b.reader)
+	}
+	if b.microflows == nil && b.msdkWriter != nil {
+		if w, ok := b.msdkWriter.(*modelsdkmpr.Writer); ok {
+			b.microflows = newMicroflowBackend(w)
 		}
-		if b.scheduledEvents == nil {
-			b.scheduledEvents = newScheduledEventBackend(b.reader)
+	}
+	if b.workflows == nil && b.msdkWriter != nil {
+		if w, ok := b.msdkWriter.(*modelsdkmpr.Writer); ok {
+			b.workflows = newWorkflowBackend(w)
 		}
-		if b.enumerations == nil {
-			b.enumerations = newEnumerationBackend(b.reader)
+	}
+	if b.pages == nil && b.msdkWriter != nil {
+		if w, ok := b.msdkWriter.(*modelsdkmpr.Writer); ok {
+			b.pages = newPageBackend(w)
 		}
-		if b.constants == nil {
-			b.constants = newConstantBackend(b.reader)
+	}
+	if b.java == nil && b.msdkWriter != nil {
+		if w, ok := b.msdkWriter.(*modelsdkmpr.Writer); ok {
+			b.java = newJavaBackend(w)
 		}
-		if b.rawUnits == nil && b.msdkWriter != nil {
-			b.rawUnits = newRawUnitBackend(b.reader, b.msdkWriter)
+	}
+	if b.domainmodels == nil && b.msdkWriter != nil {
+		if w, ok := b.msdkWriter.(*modelsdkmpr.Writer); ok {
+			b.domainmodels = newDomainModelBackend(w)
 		}
-		if b.metadata == nil {
-			b.metadata = newMetadataBackend(b.reader)
-		}
-		if b.mappings == nil {
-			b.mappings = newMappingBackend(b.reader)
-		}
-		if b.microflows == nil && b.msdkWriter != nil {
-			if w, ok := b.msdkWriter.(*modelsdkmpr.Writer); ok {
-				b.microflows = newMicroflowBackend(w)
-			}
-		}
-		if b.workflows == nil && b.msdkWriter != nil {
-			if w, ok := b.msdkWriter.(*modelsdkmpr.Writer); ok {
-				b.workflows = newWorkflowBackend(w)
-			}
-		}
-		if b.pages == nil && b.msdkWriter != nil {
-			if w, ok := b.msdkWriter.(*modelsdkmpr.Writer); ok {
-				b.pages = newPageBackend(w)
-			}
-		}
-		if b.java == nil && b.msdkWriter != nil {
-			if w, ok := b.msdkWriter.(*modelsdkmpr.Writer); ok {
-				b.java = newJavaBackend(w)
-			}
-		}
-		if b.domainmodels == nil && b.msdkWriter != nil {
-			if w, ok := b.msdkWriter.(*modelsdkmpr.Writer); ok {
-				b.domainmodels = newDomainModelBackend(w)
-			}
-		}
-		if b.security == nil && b.msdkWriter != nil {
-			if w, ok := b.msdkWriter.(*modelsdkmpr.Writer); ok {
-				b.security = newSecurityBackend(w)
-			}
+	}
+	if b.security == nil && b.msdkWriter != nil {
+		if w, ok := b.msdkWriter.(*modelsdkmpr.Writer); ok {
+			b.security = newSecurityBackend(w)
 		}
 	}
 }
@@ -277,6 +262,53 @@ func (b *MprBackend) GetMxGraph() *mxgraph.Graph {
 
 // Commit is a no-op — the MPR writer auto-commits on each write operation.
 func (b *MprBackend) Commit() error { return nil }
+
+// ── BackendFactory accessors ─────────────────────────────────────────────
+
+func (b *MprBackend) ModuleLister() backend.ModuleLister              { return b.modules }
+func (b *MprBackend) ModuleWriter() backend.ModuleWriter              { return b }
+func (b *MprBackend) DomainModelReader() backend.DomainModelReader    { return b }
+func (b *MprBackend) DomainModelWriter() backend.DomainModelWriter    { return b }
+func (b *MprBackend) MicroflowReader() backend.MicroflowReader       { return b.microflows }
+func (b *MprBackend) MicroflowWriter() backend.MicroflowWriter       { return b }
+func (b *MprBackend) WorkflowReader() backend.WorkflowReader         { return b.workflows }
+func (b *MprBackend) WorkflowWriter() backend.WorkflowWriter         { return b }
+func (b *MprBackend) PageReader() backend.PageReader                 { return b.pages }
+func (b *MprBackend) PageWriter() backend.PageWriter                 { return b }
+func (b *MprBackend) JavaActionReader() backend.JavaActionReader     { return b }
+func (b *MprBackend) JavaActionWriter() backend.JavaActionWriter     { return b }
+func (b *MprBackend) JavaScriptActionReader() backend.JavaScriptActionReader { return b }
+func (b *MprBackend) JavaScriptActionWriter() backend.JavaScriptActionWriter { return b }
+func (b *MprBackend) EnumerationReader() backend.EnumerationReader   { return b.enumerations }
+func (b *MprBackend) EnumerationWriter() backend.EnumerationWriter   { return b }
+func (b *MprBackend) ConstantReader() backend.ConstantReader         { return b.constants }
+func (b *MprBackend) ConstantWriter() backend.ConstantWriter         { return b }
+func (b *MprBackend) SettingsReader() backend.SettingsReader         { return b }
+func (b *MprBackend) SettingsWriter() backend.SettingsWriter         { return b }
+func (b *MprBackend) MappingReader() backend.MappingReader           { return b }
+func (b *MprBackend) MappingWriter() backend.MappingWriter           { return b }
+func (b *MprBackend) UnitReader() backend.UnitReader                 { return b.rawUnits }
+func (b *MprBackend) UnitWriter() backend.UnitWriter                 { return b.rawUnits }
+func (b *MprBackend) NavigationReader() backend.NavigationReader     { return b }
+func (b *MprBackend) NavigationWriter() backend.NavigationWriter     { return b }
+func (b *MprBackend) ImageCollectionWriter() backend.ImageCollectionWriter { return b }
+func (b *MprBackend) ServiceLister() backend.ServiceLister           { return b }
+func (b *MprBackend) ServiceWriter() backend.ServiceWriter           { return b }
+func (b *MprBackend) ScheduledEventReader() backend.ScheduledEventReader { return b.scheduledEvents }
+func (b *MprBackend) MetadataReader() backend.MetadataReader         { return b.metadata }
+func (b *MprBackend) FolderManager() backend.FolderManager           { return b }
+func (b *MprBackend) ModuleSettingsReader() backend.ModuleSettingsReader { return b }
+func (b *MprBackend) ModuleSettingsWriter() backend.ModuleSettingsWriter { return b }
+func (b *MprBackend) RenameManager() backend.RenameManager           { return b }
+func (b *MprBackend) SecurityProjectManager() backend.SecurityProjectManager { return b }
+func (b *MprBackend) SecurityModuleManager() backend.SecurityModuleManager { return b }
+func (b *MprBackend) SecurityEntityAccessManager() backend.SecurityEntityAccessManager { return b }
+func (b *MprBackend) PageModelAccess() backend.PageModelAccess       { return b }
+func (b *MprBackend) PageMutationOperator() backend.PageMutationOperator { return b }
+func (b *MprBackend) WorkflowMutationOperator() backend.WorkflowMutationOperator { return b }
+func (b *MprBackend) WidgetBuilder() backend.WidgetBuilder           { return b }
+func (b *MprBackend) ScriptTransactionManager() backend.ScriptTransactionManager { return b }
+func (b *MprBackend) AgentEditorOperator() backend.AgentEditorOperator { return b }
 
 // ---------------------------------------------------------------------------
 // ModuleBackend — reads delegate to moduleBackend, writes stay on MprBackend
