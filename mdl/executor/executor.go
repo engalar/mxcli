@@ -968,10 +968,19 @@ func (ctx *ExecContext) ConnectedForWrite() bool {
 	return ctx.Connected()
 }
 
-// InvalidateCache clears the hierarchy/entity/microflow cache so that
-// subsequent statements see fresh data.
+// InvalidateCache clears the executor cache and invalidates backend
+// caches so subsequent statements see fresh data.
 func (ctx *ExecContext) InvalidateCache() {
 	ctx.Cache = nil
+	if ctx.MetadataReader != nil {
+		ctx.MetadataReader.InvalidateCache()
+	}
+	// Also invalidate sub-backend caches through the metadata reader.
+	// MprBackend.InvalidateCache() overrides MetadataReader.InvalidateCache()
+	// and clears sub-backend caches (microflow, page, domainmodel, etc.).
+	if ctx.Backend != nil {
+		ctx.Backend.InvalidateCache()
+	}
 }
 
 // GetThemeRegistry returns the cached theme registry, loading it lazily

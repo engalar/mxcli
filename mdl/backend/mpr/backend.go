@@ -1360,8 +1360,21 @@ func (b *MprBackend) ContentsDir() string {
 	return b.metadata.ContentsDir()
 }
 func (b *MprBackend) InvalidateCache() {
-	b.initSubBackends()
 	b.metadata.InvalidateCache()
+	b.invalidateSubCaches()
+}
+
+func (b *MprBackend) invalidateSubCaches() {
+	if b.microflows != nil {
+		b.microflows.InvalidateCache()
+	}
+	if b.pages != nil {
+		b.pages.InvalidateCache()
+	}
+	if b.domainmodels != nil {
+		b.domainmodels.InvalidateCache()
+	}
+	// workflowBackend and securityBackend caches TBD
 }
 
 // ---------------------------------------------------------------------------
