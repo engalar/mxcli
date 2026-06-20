@@ -3,14 +3,11 @@
 package backend
 
 // FullBackend composes every domain backend into a single interface.
-// Implementations must satisfy all sub-interfaces.
 //
-// Role interfaces (e.g. ModuleLister, DomainModelReader) are embedded
-// alongside the original domain sub-interfaces. Callers should prefer
-// the narrowest role interface for dependency injection.
-//
-// FullBackend exists primarily as a construction-time constraint on
-// backend implementations.
+// Deprecated: Use BackendFactory for construction and narrow role
+// interfaces (ModuleLister, MicroflowReader, etc.) for business logic.
+// FullBackend and its sub-interfaces will be removed once all callers
+// are migrated (Tasks 5, 7-9 of the SOLID refactoring).
 type FullBackend interface {
 	ConnectionBackend
 	ModuleBackend
