@@ -774,11 +774,10 @@ type ExecCallbacks struct {
 type ExecContext struct {
 	context.Context
 
-	// Backend provides all domain operations. Nil when not connected.
-	// Deprecated: All production code has been migrated to role-specific
-	// fields (DomainModelReader, PageWriter, etc.). Only the ImportBuffer
-	// type assertion and some test fixtures still reference this field.
-	// Remove once those are migrated.
+	// Backend is the underlying backend. Prefer role-specific fields
+	// (ModuleLister, MicroflowReader) over ctx.Backend.
+	// TODO: remove once all external consumers (linter, catalog, pageBuilder)
+	// accept BackendFactory instead of FullBackend.
 	Backend backend.FullBackend
 
 	// Logger is the session diagnostics logger (nil = no logging).
