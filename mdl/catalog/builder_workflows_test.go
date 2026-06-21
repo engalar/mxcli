@@ -11,12 +11,6 @@ import (
 )
 
 func TestCountWorkflowActivityTypesGen(t *testing.T) {
-	makeWfWithActivity := func(act ...interface{ ID() any }) *genWf.Workflow {
-		_ = act // unused — see helpers below
-		return nil
-	}
-	_ = makeWfWithActivity
-
 	// Build helpers — gen types use NewX() factories.
 	emptyWf := func() *genWf.Workflow {
 		wf := genWf.NewWorkflow()

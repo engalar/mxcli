@@ -34,6 +34,9 @@ func TestNoDirectBSONImportInExecutor(t *testing.T) {
 	// pending — see docs/superpowers/specs/2026-05-27-executor-bson-cleanup-design.md
 	allowlist := map[string]bool{
 		"pages_builder_v3.go":          true, // Task 10 — see comment above
+		"pages_builder_datasource_v3.go": true, // Task 10 — code moved from pages_builder_v3.go
+		"pages_builder_types_v3.go":      true, // Task 10 — code moved from pages_builder_v3.go
+		"pages_builder_widgets_v3.go":    true, // Task 10 — code moved from pages_builder_v3.go
 		"diff_local.go":                true, // Batch 3, investigation pending
 		"flowbuilder_raw_setter_v2.go": true, // Batch 3, investigation pending
 	}
@@ -99,6 +102,8 @@ func TestNoRawBSONTypeStringsInExecutor(t *testing.T) {
 	// The purpose of this test is to prevent NEW violations, not to fix all existing ones at once.
 	allowlist := map[string]bool{
 		"pages_builder_v3.go":          true, // Task 10: buildDataGridDataSourceBSON still uses raw bson.D
+		"pages_builder_datasource_v3.go": true, // Task 10 — code moved from pages_builder_v3.go
+		"pages_builder_widgets_v3.go":    true, // Task 10 — code moved from pages_builder_v3.go
 		"diff_local.go":                true, // Batch 3, investigation pending
 		"flowbuilder_raw_setter_v2.go": true, // Batch 3, investigation pending
 		"theme_reader.go":              true, // (b) reads/identifies existing widget types; no construction

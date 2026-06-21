@@ -212,7 +212,7 @@ left-to-right; each arrow is a file or step.
 | **Change existing MDL syntax** | `mdl/grammar/*.g4` → `make grammar` (commit regenerated parser alongside the `.g4` change) → `mdl/visitor/` → `mdl/ast/` |
 | **Write an executor unit test** | `mdl/backend/mock/` (set the relevant `*Func` field) → `mdl/executor/*_test.go` — no `.mpr` file involved |
 | **Write a BSON correctness test** | `internal/goldenfs/` (golden snapshot) → helpdesk regression test (`helpdesk_regression_test.go`) |
-| **Gate a feature by Mendix version** | `sdk/versions/mendix-{9,10,11}.yaml` (registry entry with `min_version`) → `mdl/executor` `checkFeature()` pre-check (actionable error + hint before any BSON write) |
+| **Gate a feature by Mendix version** | `modelsdk/version/mendix-{9,10,11}.yaml` (registry entry with `min_version`) → `mdl/executor` `checkFeature()` pre-check (actionable error + hint before any BSON write) |
 | **Add an external-SQL capability** | `sql/` (driver / connection / query / import / generate) — this subsystem is reached from the executor but lives outside the backend interface; it talks to PostgreSQL / Oracle / SQL Server, not to `.mpr` |
 | **Add an editor / IDE-assist feature** | `mdl/executor/autocomplete*.go` (completion logic) → `cmd/mxcli/serve.go` / `cmd/mxcli/cmd_expr_daemon.go` (the daemon that hosts editor requests over a socket) — all of it reuses the same parser, AST, and catalog |
 

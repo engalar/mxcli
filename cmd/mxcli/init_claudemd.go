@@ -369,7 +369,7 @@ func generateClaudeMD(projectName, mprFile string, inDevcontainer bool) string {
 	w("| " + bt + "/lint" + bt + " | Check project for common issues |\n")
 	w("| " + bt + "/test" + bt + " | Run Playwright tests against the running app |\n")
 	w("| " + bt + "/diff-local" + bt + " | Show git diff of local MPR v2 changes |\n")
-	w("| " + bt + "/diff-script" + bt + " | Compare MDL script against project state |\n")
+	w("| " + bt + "/diff script" + bt + " | Compare MDL script against project state |\n")
 	w("\n")
 
 	// ── Skills Reference ────────────────────────────────────────────

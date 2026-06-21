@@ -110,6 +110,58 @@ func DecodeBinaryUUID(raw bson.Raw, key string) string {
 	return h[0:8] + "-" + h[8:12] + "-" + h[12:16] + "-" + h[16:20] + "-" + h[20:32]
 }
 
+// DecodeBinary extracts a BSON Binary value as a raw byte slice.
+func DecodeBinary(raw bson.Raw, key string) []byte {
+	val, err := raw.LookupErr(key)
+	if err != nil {
+		return nil
+	}
+	_, data, ok := val.BinaryOK()
+	if !ok {
+		return nil
+	}
+	return data
+}
+
+// BinaryPrimitive stores a byte slice, read from a BSON Binary field.
+// Used for properties where Mendix stores binary blobs (e.g. image data)
+// under a BSON Binary subtype rather than as a string.
+type BinaryPrimitive struct {
+	propertyBase
+	raw    bson.Raw
+	val    []byte
+	loaded bool
+}
+
+func NewBinaryPrimitive(name string) *BinaryPrimitive {
+	return &BinaryPrimitive{propertyBase: propertyBase{name: name}}
+}
+
+func (p *BinaryPrimitive) Init(raw bson.Raw) { p.raw = raw }
+
+func (p *BinaryPrimitive) Get() []byte {
+	if !p.loaded {
+		if p.raw != nil {
+			p.val = DecodeBinary(p.raw, p.name)
+		}
+		p.loaded = true
+	}
+	return p.val
+}
+
+func (p *BinaryPrimitive) Set(v []byte) {
+	p.val = v
+	p.loaded = true
+	p.markDirty()
+}
+
+func (p *BinaryPrimitive) BSONValue() any {
+	if p.val == nil {
+		return nil
+	}
+	return bson.Binary{Subtype: 0x00, Data: p.val}
+}
+
 // EncodeBinaryUUID converts a UUID string to a BSON Binary value in Mendix
 // Microsoft GUID byte-swapped format. Returns nil when id is "".
 func EncodeBinaryUUID(id string) any {

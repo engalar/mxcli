@@ -42,7 +42,7 @@ The proposal diverges from the Content API in scope: we use a per-feature YAML r
 
 ```
                     version Feature Registry
-                    (sdk/versions/*.yaml)
+                    (modelsdk/version/*.yaml)
                            |
             +--------------+--------------+
             |              |              |
@@ -59,7 +59,7 @@ The proposal diverges from the Content API in scope: we use a per-feature YAML r
 A structured YAML file per major version, embedded via `go:embed`:
 
 ```
-sdk/versions/
+modelsdk/version/
   mendix-9.yaml
   mendix-10.yaml
   mendix-11.yaml
@@ -68,7 +68,7 @@ sdk/versions/
 Each file defines features with consistent `min_version` / `max_version` bounds (aligned with Mendix Content API conventions), syntax examples, deprecations, and upgrade hints:
 
 ```yaml
-# sdk/versions/mendix-10.yaml
+# modelsdk/version/mendix-10.yaml
 major: 10
 supported_range: "10.0.0..10.24.99"
 lts_versions: ["10.24"]
@@ -422,7 +422,7 @@ The version registry needs updates when Mendix releases new versions. Proposed p
 
 ### Phase 1: Version Feature Registry + SHOW FEATURES (foundation)
 
-1. Create `sdk/versions/` package with YAML loader and `go:embed`
+1. Create `modelsdk/version/` package with YAML loader and `go:embed`
 2. Create YAML files for Mendix 9, 10, 11 (initial feature set from existing knowledge)
 3. Implement `show features` command in executor
 4. Implement `show features added since <version>` variant

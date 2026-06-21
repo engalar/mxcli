@@ -171,6 +171,12 @@ type DomainMeta struct {
 	// but the TypeScript SDK types as Guid/string.
 	BinaryUUIDProps map[string]bool
 
+	// BinaryProps is a set of "ClassName.propertyName" (or "*.propertyName")
+	// pairs whose Primitive[string] fields should use BinaryPrimitive instead.
+	// Used for properties that store raw binary data (e.g. Image.imageData)
+	// as BSON Binary blobs.
+	BinaryProps map[string]bool
+
 	// CrossDomainProps maps class names from OTHER domains (e.g. "Document",
 	// "ModuleDocument") to their properties. Used by the emitter to resolve
 	// cross-domain inheritance (e.g. Workflow extends projects.Document).

@@ -2,7 +2,8 @@
 
 **日期：** 2026-05-16
 **状态：** 已批准，待实施
-**范围：** sdk/agenteditor, sdk/security, sdk/versions, sdk/javaactions, sdk/workflows, sdk/domainmodel, sdk/pages
+**范围：** sdk/agenteditor, sdk/security, sdk/javaactions, sdk/workflows, sdk/domainmodel, sdk/pages
+**sdk/versions 已于本文档实施前独立完成迁移至 modelsdk/version/**
 
 ---
 
@@ -28,7 +29,7 @@
 |---|---|---|---|---|
 | `sdk/agenteditor` | 38行（纯代理） | ❌（已在 mdl/types） | ~8 个小改 | 极简 |
 | `sdk/security` | 209行 | ✅ gen/security/ | ~2 个 | 简 |
-| `sdk/versions` | 数据/注册 | ✅ modelsdk/version/ | — | 简 |
+| ~~`sdk/versions`~~ ✅ 已迁移 | 数据/注册 | ✅ modelsdk/version/ | — | 简 |
 | `sdk/javaactions` | 269行 | ✅ gen/javaactions/ | ~6 个 | 中 |
 | `sdk/workflows` | 395行（已 DEPRECATED） | ✅ gen/workflows/ | ~6 个 | 中 |
 | `sdk/domainmodel` | 607行 | ✅ gen/domainmodels/ | ~8 个 | 复杂 |
@@ -66,10 +67,9 @@ PR5 (可选)    sdk/mpr 本体退役                     ← 前四波完成后�
 - 写 security document roundtrip 测试确认读写不变
 - `git rm sdk/security/`
 
-**sdk/versions**
-- 改写前先 diff `sdk/versions/` 与 `modelsdk/version/` 的版本注册数据
-- 若完全同步：`sdk/mpr/version/` 改引用路径，`git rm sdk/versions/`
-- 若不同步：补齐后再删
+**sdk/versions ✅ 已完成**
+- 已 diff 确认数据同步，迁移至 `modelsdk/version/`
+- `sdk/versions/` 已删除，零残留引用
 
 ---
 
@@ -130,7 +130,7 @@ Wave 3/4 额外：在真实 `.mpr` 文件上跑 `mxcli exec mdl-examples/` 验�
 | modelsdk/gen 类型字段与 sdk/TYPE 不完全对等 | 改写前对比两侧 struct，缺字段先补 gen 侧 |
 | sdk/mpr 内部使用了 sdk/TYPE 的私有辅助函数 | 将辅助函数内联或迁移到 gen 扩展文件（ext.go） |
 | Wave 2~4 改写量大，中间态编译失败 | 每文件改完立即验证，不批量改 |
-| sdk/versions 数据与 modelsdk/version 不同步 | Wave 1 开始前先 diff，发现缺口立即补 |
+| ~~sdk/versions 数据与 modelsdk/version 不同步~~ ✅ 已同步 | Wave 1 开始前已 diff 确认同步，迁移完成 |
 
 ---
 

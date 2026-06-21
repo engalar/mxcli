@@ -4,6 +4,9 @@
     "*.persistentId",
     "UserRole.guid"
   ],
+  "binary_properties": [
+    "Image.imageData"
+  ],
   "storage_aliases": {
     "_doc": "SDK structureTypeName → BSON storage $Type. Codegen generates dual registration for each.",
     "DomainModels$Entity": "DomainModels$EntityImpl",
@@ -128,6 +131,7 @@
     "ResultHandling.storeInVariable": "Bind",
     "DatabaseRetrieveSource.xPathConstraint": "XpathConstraint",
     "DatabaseRetrieveSource.sortItemList": "NewSortings",
+    "Image.imageData": "Image",
     "SortItemList.items": "Sortings"
   },
   "property_order_overrides": {

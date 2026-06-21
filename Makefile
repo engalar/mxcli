@@ -187,19 +187,13 @@ build: sync-all
 	@mkdir -p $(BUILD_DIR)
 	CGO_ENABLED=0 go build $(LDFLAGS) -o $(BUILD_DIR)/$(DAEMON_NAME) $(CMD_PATH)
 	CGO_ENABLED=0 go build $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME) ./cmd/mxcli-launcher
-	CGO_ENABLED=0 go build -o $(BUILD_DIR)/source_tree ./cmd/source_tree
 	@if [ "$(OS)" = "Windows_NT" ] || echo "$$OSTYPE" | grep -qi msys; then \
 		cp $(BUILD_DIR)/$(DAEMON_NAME) $(BUILD_DIR)/$(DAEMON_NAME).exe 2>/dev/null || true; \
 		cp $(BUILD_DIR)/$(BINARY_NAME) $(BUILD_DIR)/$(BINARY_NAME).exe 2>/dev/null || true; \
-		echo "Built $(BUILD_DIR)/$(BINARY_NAME)[.exe] $(BUILD_DIR)/$(DAEMON_NAME)[.exe] $(BUILD_DIR)/source_tree (go build auto-adds .exe; cp is a MSYS2/Cygwin safety net)"; \
+		echo "Built $(BUILD_DIR)/$(BINARY_NAME)[.exe] $(BUILD_DIR)/$(DAEMON_NAME)[.exe] (go build auto-adds .exe; cp is a MSYS2/Cygwin safety net)"; \
 	else \
-		echo "Built $(BUILD_DIR)/$(BINARY_NAME) $(BUILD_DIR)/$(DAEMON_NAME) $(BUILD_DIR)/source_tree"; \
+		echo "Built $(BUILD_DIR)/$(BINARY_NAME) $(BUILD_DIR)/$(DAEMON_NAME)"; \
 	fi
-
-# Build the standalone MDL dev runner (no daemon required).
-# Usage: go run ./cmd/mdlrun -p app.mpr -c "show entities"
-mdlrun:
-	CGO_ENABLED=0 go build -o bin/mdlrun ./cmd/mdlrun
 
 build-local:
 	@mkdir -p $(BUILD_DIR)
@@ -521,18 +515,6 @@ clean:
 	go clean
 
 
-# Generate documentation from ANTLR4 grammar
-docs: documentation
-documentation:
-	@echo "Generating MDL grammar documentation..."
-	@mkdir -p docs/06-mdl-reference
-	@CGO_ENABLED=0 go run ./cmd/grammardoc \
-		-grammar mdl/grammar/MDLParser.g4 \
-		-lexer mdl/grammar/MDLLexer.g4 \
-		-output docs/06-mdl-reference/grammar-reference.md \
-		-title "MDL Grammar Reference"
-	@echo "Documentation generated at docs/06-mdl-reference/grammar-reference.md"
-
 # Build documentation site with mdbook
 docs-site:
 	mdbook build docs-site
@@ -578,12 +560,6 @@ mine-exprgrammar:
 .PHONY: roundtrip
 roundtrip:
 	GOPROXY=https://goproxy.cn,direct go test -tags=roundtrip ./mdl/exprcheck/ -run TestRoundTrip -count=1 -timeout 5m
-
-# expr-hints-md — regenerates docs/06-mdl-reference/expr-hints.md from the
-# canonical hint registry in mdl/exprcheck/hints/registry.go.
-.PHONY: expr-hints-md
-expr-hints-md:
-	GOPROXY=https://goproxy.cn,direct go run ./cmd/expr-hints-md
 
 # release-audit — 检查三个发布项目自上一个 tag 以来的代码变更。
 # 用法: make release-audit [REF=<ref>]

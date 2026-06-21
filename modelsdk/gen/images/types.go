@@ -26,7 +26,7 @@ var (
 type Image struct {
 	element.Base
 	name        *property.Primitive[string]
-	imageData   *property.Primitive[string]
+	imageData   *property.BinaryPrimitive
 	imageFormat *property.Enum[string]
 }
 
@@ -41,12 +41,12 @@ func (o *Image) SetName(v string) {
 }
 
 // ImageData returns the value of the imageData property.
-func (o *Image) ImageData() string {
+func (o *Image) ImageData() []byte {
 	return o.imageData.Get()
 }
 
 // SetImageData sets the value of the imageData property.
-func (o *Image) SetImageData(v string) {
+func (o *Image) SetImageData(v []byte) {
 	o.imageData.Set(v)
 }
 
@@ -170,7 +170,7 @@ func initImage() *Image {
 	o.SetTypeName("Images$Image")
 	o.name = property.NewPrimitive[string]("Name", property.DecodeString)
 	o.name.Bind(&o.Base, 0)
-	o.imageData = property.NewPrimitive[string]("ImageData", property.DecodeString)
+	o.imageData = property.NewBinaryPrimitive("Image")
 	o.imageData.Bind(&o.Base, 1)
 	o.imageFormat = property.NewEnum[string]("ImageFormat")
 	o.imageFormat.Bind(&o.Base, 2)

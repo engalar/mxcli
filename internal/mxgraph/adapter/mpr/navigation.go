@@ -63,6 +63,10 @@ func (a *NavigationAdapter) Build(ctx context.Context, sink mxgraph.EventSink) e
 
 		module := a.Source.ResolveModuleName(unit.ID())
 
+		// TODO(mxgraph): Replace raw BSON with gen/navigation typed accessors once
+		// MenuItemCollection.Action/Item tree is fully covered in generated types
+		// (gen/navigation currently exposes NavigationProfile.Kind/Name/HomePage/etc.
+		// but MenuItemCollection returns element.Element, not a typed item with Actions).
 		var doc map[string]any
 		if err := bson.Unmarshal(raw, &doc); err != nil {
 			continue

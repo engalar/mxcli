@@ -11,7 +11,7 @@ func init() {
 		TypeName: "Images$Image",
 		Properties: []codec.PropDesc{
 			{Name: "name", BSONKey: "Name", Kind: codec.PropKindString, RefType: ""},
-			{Name: "imageData", BSONKey: "ImageData", Kind: codec.PropKindString, RefType: ""},
+			{Name: "imageData", BSONKey: "Image", Kind: codec.PropKindBinary, RefType: ""},
 			{Name: "imageFormat", BSONKey: "ImageFormat", Kind: codec.PropKindEnum, RefType: ""},
 		},
 	})

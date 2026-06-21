@@ -18,6 +18,7 @@ const (
 	PropKindEnumList
 	PropKindStringList
 	PropKindBinaryUUID
+	PropKindBinary
 )
 
 type PropDesc struct {

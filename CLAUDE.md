@@ -76,8 +76,8 @@ make vet
 go run ./examples/read_project/main.go /path/to/project.mpr
 go run ./examples/modify_project/main.go /path/to/project.mpr
 
-# run the code generator
-go run ./cmd/codegen/main.go -reflection-dir ./reference/mendixmodellib/reflection-data -version 10.0.0 -output ./generated/metamodel
+# run the modelsdk code generator (from node_modules/mendixmodelsdk)
+go run ./cmd/codegen -gen-dir node_modules/mendixmodelsdk/src/gen
 ```
 
 **Note**: This project uses `modernc.org/sqlite` (pure Go) and does **not** require CGO. No C compiler is needed.
@@ -316,7 +316,7 @@ New or modified MDL syntax must follow the design guidelines:
 
 ### Version compatibility
 New features that depend on a specific Mendix version must be version-gated:
-- [ ] **Registry entry** — feature added to `sdk/versions/mendix-{9,10,11}.yaml` with correct `min_version`
+- [ ] **Registry entry** — feature added to `modelsdk/version/mendix-{9,10,11}.yaml` with correct `min_version`
 - [ ] **Executor pre-check** — `checkFeature()` called before BSON writes, with actionable error and hint
 - [ ] **Test coverage** — version-gated tests use `-- @version:` directives or `requireMinVersion()`
 - [ ] **Skill updated** — `.claude/skills/version-awareness.md` updated if the feature has a workaround for older versions

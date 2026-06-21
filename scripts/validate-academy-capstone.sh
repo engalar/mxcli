@@ -129,9 +129,19 @@ run_mxcli() {
     fi
 }
 
-# multi-file MDL execution (cmd/mdlrun supports multiple positional file args)
+# multi-file MDL execution — call mxcli exec per file
 run_mdlrun() {
-    (cd "$REPO_ROOT" && go run ./cmd/mdlrun "$@")
+    local project=""
+    local args=()
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            -p) project="$2"; shift 2 ;;
+            *) args+=("$1"); shift ;;
+        esac
+    done
+    for f in "${args[@]}"; do
+        (cd "$REPO_ROOT" && go run ./cmd/mxcli exec ${project:+-p "$project"} "$f")
+    done
 }
 
 # local runtime commands: build, run — bypasses launcher entirely

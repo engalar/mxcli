@@ -3,7 +3,7 @@
 # Generated files must only change when the generator is re-run.
 
 GEN_DIR="modelsdk/gen"
-CODEGEN_DIRS="internal/codegen cmd/modelsdk-codegen"
+CODEGEN_DIRS="internal/codegen cmd/codegen"
 
 # Supplement files (supplement_*.go / supplement_*_test.go) are intentional
 # hand-written additions to the gen package and are exempt from this check.
@@ -24,7 +24,7 @@ if [ "$codegen_staged" -eq 0 ]; then
     echo "" >&2
     echo "Generated files must not be edited manually." >&2
     echo "Re-run the generator to produce a consistent diff:" >&2
-    echo "  go run ./cmd/modelsdk-codegen ..." >&2
+    echo "  go run ./cmd/codegen ..." >&2
     echo "" >&2
     echo "Staged gen files:" >&2
     git diff --cached --name-only | grep "^${GEN_DIR}/" >&2

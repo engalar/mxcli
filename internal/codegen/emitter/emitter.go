@@ -267,6 +267,21 @@ func Generate(meta *dtsparser.DomainMeta, outDir string) error {
 					td.Fields[fi].Constructor = "property.NewBinaryUUIDPrimitive(\"" + bsonKey + "\")"
 				}
 			}
+
+			// Apply Binary override: switch Primitive[string]/DecodeString to
+			// BinaryPrimitive for fields that Mendix stores as raw BSON Binary
+			// blobs (e.g. Image.imageData). Match "ClassName.propName" or "*.propName".
+			if meta.BinaryProps != nil && td.Fields[fi].NeedsInit {
+				propKey := cls.Name + "." + td.Fields[fi].PropName
+				wildKey := "*." + td.Fields[fi].PropName
+				if meta.BinaryProps[propKey] || meta.BinaryProps[wildKey] {
+					bsonKey := td.Fields[fi].BSONKey
+					td.Fields[fi].FieldType = "*property.BinaryPrimitive"
+					td.Fields[fi].GetterReturn = "[]byte"
+					td.Fields[fi].SetterArg = "[]byte"
+					td.Fields[fi].Constructor = "property.NewBinaryPrimitive(\"" + bsonKey + "\")"
+				}
+			}
 		}
 		// Apply property order overrides — reorder fields to match Mendix's
 		// BSON serialization order (which may differ from the SDK definition order).
@@ -317,6 +332,8 @@ func Generate(meta *dtsparser.DomainMeta, outDir string) error {
 				f.DescriptorKind = "PropKindStringList"
 			case strings.Contains(f.FieldType, "BinaryUUIDPrimitive"):
 				f.DescriptorKind = "PropKindBinaryUUID"
+			case strings.Contains(f.FieldType, "BinaryPrimitive"):
+				f.DescriptorKind = "PropKindBinary"
 			case strings.Contains(f.FieldType, "Primitive[string]"):
 				f.DescriptorKind = "PropKindString"
 			case strings.Contains(f.FieldType, "Primitive[bool]"):

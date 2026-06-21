@@ -12,9 +12,7 @@ in Mendix project files.
 
 Subcommands:
   dump      Dump raw BSON data as JSON or NDSL
-  discover  Analyze field coverage per $Type
-  compare   Diff two BSON objects
-  diff       Diff two .mxunit BSON files as NDSL`,
+  discover  Analyze field coverage per $Type`,
 }
 
 func init() {
@@ -23,6 +21,4 @@ func init() {
 	// Register subcommands
 	bsonCmd.AddCommand(bsonDumpCmd)
 	bsonCmd.AddCommand(discoverCmd)
-	bsonCmd.AddCommand(bsonCompareCmd)
-	bsonCmd.AddCommand(bsonDiffCmd)
 }

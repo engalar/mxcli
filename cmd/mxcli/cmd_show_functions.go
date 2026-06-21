@@ -49,5 +49,7 @@ func runShowFunctions(out io.Writer, name string) error {
 }
 
 func init() {
-	showCmd.AddCommand(showFunctionsCmd)
+	describeCmd.AddCommand(showFunctionsCmd)
+	clone := *showFunctionsCmd
+	showCmd.AddCommand(&clone)
 }

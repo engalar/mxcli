@@ -614,7 +614,19 @@ func (e *Executor) IsConnected() bool {
 }
 
 // Backend returns the full backend, or nil if not connected.
+//
+// Deprecated: Callers should use role-specific accessors (LintReader(),
+// CatalogReader(), etc.) or rely on ExecContext role fields instead.
 func (e *Executor) Backend() backend.FullBackend {
+	if e.backend == nil || !e.backend.IsConnected() {
+		return nil
+	}
+	return e.backend
+}
+
+// LintReader returns a lint-compatible reader, or nil if not connected.
+// Prefer this over Backend() when creating lint contexts.
+func (e *Executor) LintReader() linter.LintReader {
 	if e.backend == nil || !e.backend.IsConnected() {
 		return nil
 	}
@@ -1152,14 +1164,20 @@ func setDomainModelGenCached(ctx *ExecContext, moduleID model.ID, dm *genDm.Doma
 }
 
 // CatalogReader returns ctx.Backend as a catalog reader.
-// FullBackend implements CatalogReader, so this always succeeds for production backends.
+// FullBackend implements CatalogReader via BackendFactory embedding.
 func (ctx *ExecContext) CatalogReader() catalog.CatalogReader {
+	if ctx.Backend == nil {
+		return nil
+	}
 	return ctx.Backend
 }
 
 // LintReader returns ctx.Backend as a lint reader.
-// FullBackend implements LintReader, so this always succeeds for production backends.
+// FullBackend implements LintReader via BackendFactory embedding.
 func (ctx *ExecContext) LintReader() linter.LintReader {
+	if ctx.Backend == nil {
+		return nil
+	}
 	return ctx.Backend
 }
 

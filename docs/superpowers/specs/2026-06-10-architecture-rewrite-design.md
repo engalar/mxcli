@@ -110,7 +110,7 @@ Organized by "what do I want to do", not by package.
 | Change MDL syntax | `.g4` file → `make grammar` (commit generated `mdl/grammar/parser/` files alongside `.g4`) → visitor → ast |
 | Write executor unit test | `mdl/backend/mock/` injection → `mdl/executor/*_test.go` |
 | Write BSON correctness test | `internal/goldenfs/` golden snapshot → helpdesk regression test |
-| Gate a feature by Mendix version | `sdk/versions/mendix-*.yaml` entry → executor `checkFeature()` pre-check |
+| Gate a feature by Mendix version | `modelsdk/version/mendix-*.yaml` entry → executor `checkFeature()` pre-check |
 
 ---
 

@@ -542,13 +542,6 @@ func (r *Reader) ListAllCustomWidgetTypes() ([]*types.RawCustomWidgetType, error
 	return results, nil
 }
 
-// ScanOqlQueryUpdates is not yet ported to modelsdk/mpr. The signature is
-// preserved so backend.go can delegate to either reader implementation behind
-// a feature flag during the migration window.
-func (r *Reader) ScanOqlQueryUpdates(oldQualifiedName, newQualifiedName string) ([]types.UnitPatch, int, error) {
-	return nil, 0, fmt.Errorf("modelsdk/mpr.Reader.ScanOqlQueryUpdates not yet implemented; use sdk/mpr.Reader for OQL scans")
-}
-
 // ---------------------------------------------------------------------------
 // BSON walker helpers (kept local to avoid leaking into sibling files)
 // ---------------------------------------------------------------------------

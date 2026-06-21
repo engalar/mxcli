@@ -623,7 +623,7 @@ In `sdk/mpr/writer_customblob.go` (generic wrapper for all four types):
 #### 3.2 Version Gating
 
 - Agent documents (`CustomBlobDocuments$CustomBlobDocument`) require Mendix 11.x
-- Add to `sdk/versions/mendix-11.yaml`:
+- Add to `modelsdk/version/mendix-11.yaml`:
   ```yaml
   agents:
     agent_document:

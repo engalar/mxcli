@@ -150,27 +150,6 @@ func TestCatalogRefs_MicroflowRetrievesEntity(t *testing.T) {
 	assertRefExists(t, env, mod+".RetrieverMf", mod+".RefProduct", "retrieve")
 }
 
-func TestCatalogRefs_Association(t *testing.T) {
-	t.Skip("TODO: association references not yet extracted into refs table (RefKindAssociate defined but unused)")
-
-	env := setupTestEnv(t)
-	defer env.teardown()
-
-	mod := testModule
-
-	if err := env.executeMDL(fmt.Sprintf(`create or modify persistent entity %s.RefParent (Name: String(100));`, mod)); err != nil {
-		t.Fatal(err)
-	}
-	if err := env.executeMDL(fmt.Sprintf(`create or modify persistent entity %s.RefChild (Label: String(100));`, mod)); err != nil {
-		t.Fatal(err)
-	}
-	if err := env.executeMDL(fmt.Sprintf(`create association %s.RefChild_RefParent from %s.RefChild to %s.RefParent;`, mod, mod, mod)); err != nil {
-		t.Fatal(err)
-	}
-
-	buildCatalogFull(t, env)
-	assertRefExists(t, env, mod+".RefChild_RefParent", mod+".RefParent", "associate")
-}
 
 func TestCatalogRefs_MultipleRefKindsToSameTarget(t *testing.T) {
 	env := setupTestEnv(t)

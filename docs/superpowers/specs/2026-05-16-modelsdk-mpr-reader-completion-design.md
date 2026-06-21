@@ -190,4 +190,4 @@ go test ./...   # 期望：全 ok
 
 - 将 backend 接口从 model.* 改为 gen.*（Stage 5 独立工作）
 - 删除 model/* 包（另行设计）
-- sdk/versions 包（非冗余，保留）
+- ~~sdk/versions 包~~ ✅ 已迁移至 modelsdk/version

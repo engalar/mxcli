@@ -110,7 +110,7 @@ Examples:
 		}
 
 		// Create lint context
-		ctx := linter.NewLintContext(pg, exec.Backend())
+		ctx := linter.NewLintContext(pg, exec.LintReader())
 		ctx.SetExcludedModules(excludeModules)
 
 		// Create linter and register rules

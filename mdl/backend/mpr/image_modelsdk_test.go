@@ -4,14 +4,14 @@ import (
 	"testing"
 
 	"github.com/mendixlabs/mxcli/mdl/types"
+	"github.com/mendixlabs/mxcli/modelsdk/codec"
 	modelsdkmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
 )
 
-// TestParseImageCollectionRaw_RoundTrip guards against the read-path bug where
-// nested BSON documents decode as bson.D (not map[string]any) under mongo-driver
-// v2, causing every image to be silently skipped during parsing. The symptom is
-// ALTER ADD reporting success while describe shows zero images.
-func TestParseImageCollectionRaw_RoundTrip(t *testing.T) {
+// TestParseImageCollectionViaModelsdk_RoundTrip guards against the read-path bug
+// where the codec decoder correctly populates Image (BinaryPrimitive) and
+// Images (PartList) from raw BSON produced by SerializeImageCollection.
+func TestParseImageCollectionViaModelsdk_RoundTrip(t *testing.T) {
 	src := &types.ImageCollection{
 		Name:        "Icons",
 		ExportLevel: "Hidden",
@@ -25,9 +25,14 @@ func TestParseImageCollectionRaw_RoundTrip(t *testing.T) {
 		t.Fatalf("serialize: %v", err)
 	}
 
-	got, err := parseImageCollectionRaw("unit-1", "container-1", contents)
+	decoder := codec.NewDecoder(codec.DefaultRegistry)
+	got, err := decodeImageCollection(decoder, &types.RawUnit{
+		ID:          "unit-1",
+		ContainerID: "container-1",
+		Contents:    contents,
+	})
 	if err != nil {
-		t.Fatalf("parse: %v", err)
+		t.Fatalf("decode: %v", err)
 	}
 
 	if len(got.Images) != 2 {

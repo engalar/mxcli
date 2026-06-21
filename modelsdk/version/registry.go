@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
-// Package versions provides a version feature registry for Mendix projects.
+// Package version provides a version feature registry for Mendix projects.
 // Feature definitions are loaded from embedded YAML files, providing a single
 // source of truth for what MDL capabilities are available in each Mendix version.
 //
 // Version bounds use min_version / max_version semver notation, aligned with
 // the Mendix Content API (Marketplace) conventions.
-package versions
+package version
 
 import (
 	"embed"

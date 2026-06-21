@@ -39,5 +39,7 @@ func runShowExprSlot(out io.Writer, slotPath string) error {
 }
 
 func init() {
-	showCmd.AddCommand(showExprSlotCmd)
+	describeCmd.AddCommand(showExprSlotCmd)
+	clone := *showExprSlotCmd
+	showCmd.AddCommand(&clone)
 }

@@ -245,6 +245,8 @@ func applyInsertWidgetMutator(ctx *ExecContext, mutator backend.PageMutator, op 
 			fragments:         ctx.Fragments,
 			themeRegistry:     ctx.GetThemeRegistry(),
 			widgetBackend:     ctx.Backend,
+			microflowsRepo:    ctx.Microflows,
+			nanoflowsRepo:     ctx.Nanoflows,
 			snippetsRepo:      ctx.Snippets,
 			mxGraph:           ctx.Graph.MxGraph(),
 		}
@@ -384,6 +386,8 @@ func buildWidgetsFromASTGen(ctx *ExecContext, widgets []*ast.WidgetV3, moduleNam
 		fragments:         ctx.Fragments,
 		themeRegistry:     ctx.GetThemeRegistry(),
 		widgetBackend:     ctx.Backend,
+		microflowsRepo:    ctx.Microflows,
+		nanoflowsRepo:     ctx.Nanoflows,
 		snippetsRepo:      ctx.Snippets,
 		mxGraph:           ctx.Graph.MxGraph(),
 	}

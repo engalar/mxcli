@@ -8,7 +8,7 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
-	"github.com/mendixlabs/mxcli/sdk/versions"
+	"github.com/mendixlabs/mxcli/modelsdk/version"
 )
 
 // checkFeature verifies that a feature is available in the connected project's
@@ -19,18 +19,18 @@ func checkFeature(ctx *ExecContext, area, name, statement, hint string) error {
 	if !ctx.Connected() {
 		return nil // No project connected; skip check
 	}
-	reg, err := versions.Load()
+	reg, err := version.Load()
 	if err != nil {
 		return nil // Registry unavailable; don't block execution
 	}
 	rpv := ctx.ConnectionManager.ProjectVersion()
-	pv := versions.SemVer{Major: rpv.MajorVersion, Minor: rpv.MinorVersion, Patch: rpv.PatchVersion}
+	pv := version.SemVer{Major: rpv.MajorVersion, Minor: rpv.MinorVersion, Patch: rpv.PatchVersion}
 	if reg.IsAvailable(area, name, pv) {
 		return nil
 	}
 
 	// Find the min_version for the error message.
-	features := reg.FeaturesForVersion(versions.SemVer{Major: 99, Minor: 0, Patch: 0})
+	features := reg.FeaturesForVersion(version.SemVer{Major: 99, Minor: 0, Patch: 0})
 	minV := "a newer version"
 	for _, f := range features {
 		if f.Area == area && f.Name == name {
@@ -50,18 +50,18 @@ func checkFeature(ctx *ExecContext, area, name, statement, hint string) error {
 // SHOW FEATURES ADDED SINCE commands.
 func execShowFeatures(ctx *ExecContext, s *ast.ShowFeaturesStmt) error {
 
-	reg, err := versions.Load()
+	reg, err := version.Load()
 	if err != nil {
 		return mdlerrors.NewBackend("load version registry", err)
 	}
 
 	// Determine the project version to use.
-	var pv versions.SemVer
+	var pv version.SemVer
 
 	switch {
 	case s.AddedSince != "":
 		// SHOW FEATURES ADDED SINCE x.y
-		sinceV, err := versions.ParseSemVer(s.AddedSince)
+		sinceV, err := version.ParseSemVer(s.AddedSince)
 		if err != nil {
 			return mdlerrors.NewValidationf("invalid version %q: %v", s.AddedSince, err)
 		}
@@ -69,7 +69,7 @@ func execShowFeatures(ctx *ExecContext, s *ast.ShowFeaturesStmt) error {
 
 	case s.ForVersion != "":
 		// SHOW FEATURES FOR VERSION x.y — no project connection needed
-		pv, err = versions.ParseSemVer(s.ForVersion)
+		pv, err = version.ParseSemVer(s.ForVersion)
 		if err != nil {
 			return mdlerrors.NewValidationf("invalid version %q: %v", s.ForVersion, err)
 		}
@@ -80,7 +80,7 @@ func execShowFeatures(ctx *ExecContext, s *ast.ShowFeaturesStmt) error {
 			return mdlerrors.NewNotConnectedMsg("not connected to a project\n  hint: use show features for version x.y without a project connection")
 		}
 		rpv := ctx.ConnectionManager.ProjectVersion()
-		pv = versions.SemVer{Major: rpv.MajorVersion, Minor: rpv.MinorVersion, Patch: rpv.PatchVersion}
+		pv = version.SemVer{Major: rpv.MajorVersion, Minor: rpv.MinorVersion, Patch: rpv.PatchVersion}
 	}
 
 	if s.InArea != "" {
@@ -89,7 +89,7 @@ func execShowFeatures(ctx *ExecContext, s *ast.ShowFeaturesStmt) error {
 	return listFeaturesAll(ctx, reg, pv)
 }
 
-func listFeaturesAll(ctx *ExecContext, reg *versions.Registry, pv versions.SemVer) error {
+func listFeaturesAll(ctx *ExecContext, reg *version.Registry, pv version.SemVer) error {
 	features := reg.FeaturesForVersion(pv)
 	if len(features) == 0 && ctx.Format != FormatJSON {
 		fmt.Fprintf(ctx.Output, "No features found for version %s\n", pv)
@@ -125,7 +125,7 @@ func listFeaturesAll(ctx *ExecContext, reg *versions.Registry, pv versions.SemVe
 	return writeResult(ctx, tr)
 }
 
-func listFeaturesInArea(ctx *ExecContext, reg *versions.Registry, pv versions.SemVer, area string) error {
+func listFeaturesInArea(ctx *ExecContext, reg *version.Registry, pv version.SemVer, area string) error {
 	features := reg.FeaturesInArea(area, pv)
 	if len(features) == 0 && ctx.Format != FormatJSON {
 		// Check if the area exists at all.
@@ -159,7 +159,7 @@ func listFeaturesInArea(ctx *ExecContext, reg *versions.Registry, pv versions.Se
 	return writeResult(ctx, tr)
 }
 
-func listFeaturesAddedSince(ctx *ExecContext, reg *versions.Registry, sinceV versions.SemVer) error {
+func listFeaturesAddedSince(ctx *ExecContext, reg *version.Registry, sinceV version.SemVer) error {
 	added := reg.FeaturesAddedSince(sinceV)
 	if len(added) == 0 && ctx.Format != FormatJSON {
 		fmt.Fprintf(ctx.Output, "No new features found since %s\n", sinceV)

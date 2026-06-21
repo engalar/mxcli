@@ -322,17 +322,6 @@ func init() {
 	checkCmd.Flags().BoolP("references", "r", false, "Validate references against the project")
 	checkCmd.Flags().String("format", "text", "Output format: text, json, sarif")
 
-	// Diff command flags
-	diffCmd.Flags().StringP("format", "f", "unified", "Output format: unified, side, struct")
-	diffCmd.Flags().BoolP("color", "", false, "Use colored output")
-	diffCmd.Flags().IntP("width", "w", 120, "Terminal width for side-by-side format")
-
-	// Diff-local command flags
-	diffLocalCmd.Flags().StringP("ref", "r", "HEAD", "Git ref or range (e.g., HEAD, main, main..feature)")
-	diffLocalCmd.Flags().StringP("format", "f", "unified", "Output format: unified, side, struct")
-	diffLocalCmd.Flags().BoolP("color", "", false, "Use colored output")
-	diffLocalCmd.Flags().IntP("width", "w", 120, "Terminal width for side-by-side format")
-
 	// Describe command flags
 	describeCmd.Flags().StringP("format", "f", "mdl", "Output format: mdl, json, mermaid, elk")
 

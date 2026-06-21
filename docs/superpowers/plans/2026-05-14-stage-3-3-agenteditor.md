@@ -160,7 +160,7 @@ This is the **second major divergence** from the standard plan template (the fir
 
 ### S2.9 AgentEditorCommons module dependency
 
-Per CLAUDE.md: agent-editor documents require the `AgentEditorCommons` module + Mendix 11.9+. The version-awareness skill (`.claude/skills/version-awareness.md`) handles the `min_version` check at execute time. Migration does NOT change this; the version gate is in `sdk/versions/mendix-{10,11}.yaml` and `cmd_agenteditor_*.go` calls `checkFeature()` before any write.
+Per CLAUDE.md: agent-editor documents require the `AgentEditorCommons` module + Mendix 11.9+. The version-awareness skill (`.claude/skills/version-awareness.md`) handles the `min_version` check at execute time. Migration does NOT change this; the version gate is in `modelsdk/version/mendix-{10,11}.yaml` and `cmd_agenteditor_*.go` calls `checkFeature()` before any write.
 
 ---
 

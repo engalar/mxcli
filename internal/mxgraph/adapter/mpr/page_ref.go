@@ -76,6 +76,10 @@ func (a *PageRefAdapter) Build(ctx context.Context, sink mxgraph.EventSink) erro
 			}
 		}
 		if doc == nil {
+			// TODO(mxgraph): Replace raw BSON with gen/pages typed accessors once
+			// Forms$FormCallArgument (PageParameterMapping) exposes Widget/Widgets fields
+			// in generated types (LayoutCallArgument already has them; FormCallArgument is
+			// still missing them — tracked in codegen supplements).
 			if err := bson.Unmarshal(raw, &doc); err != nil {
 				continue
 			}

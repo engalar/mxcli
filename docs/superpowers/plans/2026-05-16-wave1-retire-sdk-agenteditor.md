@@ -351,6 +351,6 @@ GOPATH=~/go1.26 GOMODCACHE=~/go1.26/pkg/mod GOPROXY=https://goproxy.cn,direct ~/
 
 ## 注意事项
 
-- **sdk/versions 不在本计划范围内**：`modelsdk/version` 不是 `sdk/versions` 的等价替换（前者无 Registry/YAML 系统），sdk/versions 保留原位。
+- **sdk/versions 不在本计划范围内**（已于独立 PR 完成迁移：sdk/versions → modelsdk/version）。
 - **sdk/security 不在本计划范围内**：`modelsdk/gen/security` 使用 codec.Element 类型系统，与 sdk/security 的平结构体架构不同，需单独规划（Wave 2 独立设计）。
 - 如果 `sed` 对某文件产生了错误的替换（例如将注释中的 `agenteditor.` 也替换了），用 `git diff` 检查后手动修正。

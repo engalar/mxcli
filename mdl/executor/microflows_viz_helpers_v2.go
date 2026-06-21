@@ -21,7 +21,6 @@
 package executor
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/mendixlabs/mxcli/model"
@@ -748,6 +747,3 @@ func showPageActionPageNameGen(a *genMf.ShowPageAction) string {
 	return ""
 }
 
-// fmtBlankPlaceholder is unused — declaring `_ = fmt.Sprintf` keeps
-// the `fmt` import live for future extensions of the helpers above.
-var _ = fmt.Sprintf
