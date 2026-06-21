@@ -318,8 +318,46 @@ func AnalyzeFlow(ctx *ExecContext, entryKind, entryName string, maxDepth int) er
 		return nil
 	}
 
+	// entryKind specified but no entryName → list all entry points of that kind
+	if entryName == "" {
+		defer perfStart(ctx, "flow.list_kind")()
+		eps := ctx.Graph.AllEntryPoints()
+		var filtered []graphcatalog.EntryPoint
+		for _, ep := range eps {
+			if ep.Kind == entryKind {
+				filtered = append(filtered, ep)
+			}
+		}
+		if len(filtered) == 0 {
+			fmt.Fprintf(ctx.Output, "No %s entry points found.\n", entryKind)
+			return nil
+		}
+		fmt.Fprintf(ctx.Output, "\n%s Entry Points (%d):\n", entryKind, len(filtered))
+		for _, ep := range filtered {
+			fmt.Fprintf(ctx.Output, "  %s\n", ep.Description)
+		}
+		return nil
+	}
+
 	defer perfStart(ctx, "flow.chains")()
+
+	// Try exact match first; fall back to partial (case-insensitive contains)
 	chains := ctx.Graph.ReachablePagesFromEntry(entryKind, entryName)
+	if len(chains) == 0 {
+		// Partial match: find entry points where Name contains entryName
+		eps := ctx.Graph.AllEntryPoints()
+		entryNameLower := strings.ToLower(entryName)
+		for _, ep := range eps {
+			if ep.Kind == entryKind && strings.Contains(strings.ToLower(ep.Description), entryNameLower) {
+				chains = ctx.Graph.ReachablePagesFromEntry(entryKind, ep.Name)
+				if len(chains) > 0 {
+					entryName = ep.Name
+					break
+				}
+			}
+		}
+	}
+
 	if len(chains) == 0 {
 		fmt.Fprintf(ctx.Output, "No reachable pages from %s:%s\n", entryKind, entryName)
 		return nil
