@@ -285,13 +285,18 @@ Examples:
 
 // setupCompletionsCmd installs shell completion scripts.
 var setupCompletionsCmd = &cobra.Command{
-	Use:   "completions",
+	Use:   "completions [bash|zsh|fish]",
 	Short: "Install shell completion scripts for bash/zsh/fish/powershell",
+	Args:  cobra.MaximumNArgs(1),
+	ValidArgs: []string{"bash", "zsh", "fish"},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		shell := detectShell()
+		if len(args) > 0 {
+			shell = args[0]
+		}
 		path := completionPath(shell)
 		if path == "" {
-			return fmt.Errorf("unsupported shell: %s (try: mxcli completion bash|zsh|fish|powershell)", shell)
+			return fmt.Errorf("unsupported shell: %s (try: mxcli setup completions bash|zsh|fish, or mxcli completion bash|zsh|fish|powershell)", shell)
 		}
 
 		dir := filepath.Dir(path)

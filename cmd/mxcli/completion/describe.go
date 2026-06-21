@@ -119,7 +119,7 @@ func completeModuleName(cmd *cobra.Command, comp *Completer, toComplete string) 
 	return comp.ModuleSuggestions(toComplete), cobra.ShellCompDirectiveNoFileComp
 }
 
-// AnalyzeValidArgsFunction completes the analyze topic and optional qualified name.
+// AnalyzeValidArgsFunction completes the analyze topic, flow kind, and name.
 func AnalyzeValidArgsFunction(comp *Completer) func(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirective) {
 	return func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		if len(args) == 0 {
@@ -128,27 +128,47 @@ func AnalyzeValidArgsFunction(comp *Completer) func(*cobra.Command, []string, st
 		if len(args) == 1 && !isKnownAnalyzeTopic(args[0]) {
 			return filterPrefix(analyzeTopics, args[0]), cobra.ShellCompDirectiveNoFileComp
 		}
-		// Topic confirmed — complete the entity/page name
-		topic := args[len(args)-1]
-		name := toComplete
-		if len(args) > 1 {
-			name = args[len(args)-1]
-		}
+
+		topic := args[0] // first arg is always the topic
 		switch topic {
-		case "entity":
-			return completeProjectEntity(cmd, comp, "entity", name)
-		case "page":
-			return completeProjectEntity(cmd, comp, "entity", name)
-		case "flow":
-			// flow can be followed by: navigation, workflow, microflow, or entity name
-			if len(args) == 1 {
-				return filterPrefix([]string{"navigation", "workflow", "microflow"}, name), cobra.ShellCompDirectiveNoFileComp
+		case "entity", "page":
+			switch len(args) {
+			case 1:
+				// topic confirmed, complete the entity name
+				return completeProjectEntity(cmd, comp, "entity", toComplete)
+			default:
+				return completeProjectEntity(cmd, comp, "entity", toComplete)
 			}
-			return completeProjectEntity(cmd, comp, "entity", name)
+		case "flow":
+			switch len(args) {
+			case 1:
+				// flow topic confirmed, complete the kind
+				return filterPrefix(flowKinds, toComplete), cobra.ShellCompDirectiveNoFileComp
+			case 2:
+				kind := args[1]
+				if !isKnownFlowKind(kind) {
+					return filterPrefix(flowKinds, kind), cobra.ShellCompDirectiveNoFileComp
+				}
+				// kind confirmed, complete the name
+				return completeProjectEntity(cmd, comp, "entity", toComplete)
+			default:
+				return completeProjectEntity(cmd, comp, "entity", toComplete)
+			}
 		default:
 			return nil, cobra.ShellCompDirectiveNoFileComp
 		}
 	}
+}
+
+var flowKinds = []string{"navigation", "workflow", "microflow"}
+
+func isKnownFlowKind(word string) bool {
+	for _, k := range flowKinds {
+		if k == word {
+			return true
+		}
+	}
+	return false
 }
 
 var analyzeTopics = []string{
