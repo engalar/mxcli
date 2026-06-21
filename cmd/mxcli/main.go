@@ -408,6 +408,7 @@ func init() {
 	rootCmd.AddCommand(exportCmd)
 	rootCmd.AddCommand(importCmd)
 	rootCmd.AddCommand(gitCmd)
+	rootCmd.AddCommand(completionCmd)
 }
 
 // extractServeSocket scans args for "--serve <path>" or "--serve=<path>".

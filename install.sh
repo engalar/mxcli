@@ -159,3 +159,8 @@ if [ "$OS" = "windows" ]; then
 elif [ "$INSTALL_DIR" = "$HOME/.local/bin" ]; then
   echo "   NOTE: Restart your shell or run: export PATH=\"$INSTALL_DIR:\$PATH\""
 fi
+
+# Install shell completions (best-effort — requires mxcli in PATH)
+if command -v mxcli >/dev/null 2>&1; then
+  mxcli setup completions >/dev/null 2>&1 || true
+fi

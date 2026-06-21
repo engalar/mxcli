@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"path/filepath"
 	"runtime"
 	"strings"
 
@@ -282,6 +283,80 @@ Examples:
 	},
 }
 
+// setupCompletionsCmd installs shell completion scripts.
+var setupCompletionsCmd = &cobra.Command{
+	Use:   "completions",
+	Short: "Install shell completion scripts for bash/zsh/fish/powershell",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		shell := detectShell()
+		path := completionPath(shell)
+		if path == "" {
+			return fmt.Errorf("unsupported shell: %s (try: mxcli completion bash|zsh|fish|powershell)", shell)
+		}
+
+		dir := filepath.Dir(path)
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			return fmt.Errorf("create completion directory %s: %w", dir, err)
+		}
+
+		f, err := os.Create(path)
+		if err != nil {
+			return fmt.Errorf("create completion file %s: %w", path, err)
+		}
+		defer f.Close()
+
+		switch shell {
+		case "bash":
+			if err := rootCmd.GenBashCompletionV2(f, true); err != nil {
+				return err
+			}
+		case "zsh":
+			if err := rootCmd.GenZshCompletion(f); err != nil {
+				return err
+			}
+		case "fish":
+			if err := rootCmd.GenFishCompletion(f, true); err != nil {
+				return err
+			}
+		}
+		fmt.Fprintf(os.Stdout, "Shell completions installed: %s\n", path)
+		fmt.Fprintf(os.Stdout, "Restart your shell or run: source %s\n", path)
+		if shell == "zsh" {
+			fmt.Fprintf(os.Stdout, "  Or: compinit\n")
+		}
+		return nil
+	},
+}
+
+func detectShell() string {
+	path, _ := os.LookupEnv("SHELL")
+	if path == "" {
+		// Fallback: detect from parent process
+		return ""
+	}
+	switch filepath.Base(path) {
+	case "bash", "zsh", "fish":
+		return filepath.Base(path)
+	}
+	return ""
+}
+
+func completionPath(shell string) string {
+	home, _ := os.UserHomeDir()
+	if home == "" {
+		return ""
+	}
+	switch shell {
+	case "bash":
+		return filepath.Join(home, ".bash_completion.d", "mxcli")
+	case "zsh":
+		return filepath.Join(home, ".zsh", "completions", "_mxcli")
+	case "fish":
+		return filepath.Join(home, ".config", "fish", "completions", "mxcli.fish")
+	}
+	return ""
+}
+
 func init() {
 	setupMxBuildCmd.Flags().String("version", "", "Mendix version to download (e.g., 11.6.3)")
 	setupMxBuildCmd.Flags().Bool("dry-run", false, "Show what would be downloaded without downloading")
@@ -301,5 +376,6 @@ func init() {
 	setupCmd.AddCommand(setupMxBuildCmd)
 	setupCmd.AddCommand(setupMxRuntimeCmd)
 	setupCmd.AddCommand(setupMxcliCmd)
+	setupCmd.AddCommand(setupCompletionsCmd)
 	rootCmd.AddCommand(setupCmd)
 }

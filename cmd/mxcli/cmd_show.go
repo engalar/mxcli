@@ -7,6 +7,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/mendixlabs/mxcli/cmd/mxcli/completion"
 	"github.com/spf13/cobra"
 )
 
@@ -14,6 +15,7 @@ var showCmd = &cobra.Command{
 	Use:     "show <type> [name]",
 	Aliases: []string{"list"},
 	Short:   "List project elements",
+	ValidArgsFunction: completion.ShowValidArgsFunction(comp),
 	Long: `List elements from a Mendix project. (Also available as "mxcli list")
 
 Types:

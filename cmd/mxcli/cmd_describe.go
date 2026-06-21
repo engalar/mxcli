@@ -7,14 +7,20 @@ import (
 	"os"
 	"strings"
 
+	"github.com/mendixlabs/mxcli/cmd/mxcli/completion"
 	"github.com/mendixlabs/mxcli/mdl/executor"
 	"github.com/mendixlabs/mxcli/mdl/visitor"
 	"github.com/spf13/cobra"
 )
 
+// comp is a shared Completer instance for shell completions.
+// It lazy-connects to the MPR when the user provides -p.
+var comp = &completion.Completer{}
+
 var describeCmd = &cobra.Command{
 	Use:   "describe <type> <name>",
 	Short: "Describe a project element",
+	ValidArgsFunction: completion.DescribeValidArgsFunction(comp),
 	Long: `Describe an element from a Mendix project in MDL syntax.
 
 Types:
