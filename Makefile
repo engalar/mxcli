@@ -15,6 +15,7 @@
 #   make docs-serve - Serve docs site locally with live reload
 #   make sbom      - Generate CycloneDX SBOM (Go + TypeScript)
 #   make sbom-report - Generate Markdown dependency report
+#   make install-global - Build + install mxcli-daemon to /usr/local/bin/mxcli (requires sudo)
 #   make mine-exprgrammar MINE_MPR=path/to/app.mpr - Re-mine generated/exprgrammar/mined.go from an MPR
 #   make clean     - Remove build artifacts
 
@@ -56,7 +57,7 @@ TEST_PARALLEL ?= $(_85PCT)
 # Hard ceiling on how long the full test suite may run.
 TEST_TIMEOUT ?= 180s
 
-.PHONY: build mdlrun build-local install-local build-debug release release-launcher release-daemon release-local-bins clean test _test-inner test-mdl report report-bench report-reset-baseline bench-baseline grammar sync-skills sync-commands sync-lint-rules sync-changelog sync-examples sync-all docs documentation docs-site docs-serve source-tree sbom sbom-report lint lint-go fmt vet update-helpdesk-golden test-helpdesk-regression setup install install-daemon test-section-check update-snapshots validate-snapshots validate-academy-capstone
+.PHONY: build mdlrun build-local install-local build-debug release release-launcher release-daemon release-local-bins clean test _test-inner test-mdl report report-bench report-reset-baseline bench-baseline grammar sync-skills sync-commands sync-lint-rules sync-changelog sync-examples sync-all docs documentation docs-site docs-serve source-tree sbom sbom-report lint lint-go fmt vet update-helpdesk-golden test-helpdesk-regression setup install install-daemon install-global test-section-check update-snapshots validate-snapshots validate-academy-capstone
 
 setup:
 	git config core.hooksPath .githooks
@@ -101,6 +102,18 @@ install-daemon: build
 	else \
 		echo "Launcher not in PATH — copy manually: cp $$LAUNCHER_BIN <your-bin-dir>/mxcli$(if $(findstring windows,$(shell go env GOOS)),.exe,)"; \
 	fi
+
+# Install mxcli-daemon as `mxcli` to /usr/local/bin (requires sudo).
+# Also installs shell completions for the current user.
+install-global: build
+	@echo "Installing $(DAEMON_NAME) to /usr/local/bin/mxcli..."; \
+	cp "$(BUILD_DIR)/$(DAEMON_NAME)" /usr/local/bin/mxcli; \
+	chmod 755 /usr/local/bin/mxcli; \
+	echo "✅ Installed /usr/local/bin/mxcli"; \
+	echo ""; \
+	echo "Installing shell completions..."; \
+	/usr/local/bin/mxcli setup completions 2>/dev/null || true; \
+	echo "✅ Completions installed (restart shell or run: source <(/usr/local/bin/mxcli completion zsh))"
 
 # Helper: copy file only if content differs (avoids mtime updates that invalidate go build cache)
 # Usage: $(call copy-if-changed,src,dst)
