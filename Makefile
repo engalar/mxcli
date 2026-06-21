@@ -103,17 +103,19 @@ install-daemon: build
 		echo "Launcher not in PATH — copy manually: cp $$LAUNCHER_BIN <your-bin-dir>/mxcli$(if $(findstring windows,$(shell go env GOOS)),.exe,)"; \
 	fi
 
-# Install mxcli-daemon as `mxcli` to /usr/local/bin (requires sudo).
+# Install mxcli-daemon as `mxcli` to ~/.local/bin (no sudo needed).
 # Also installs shell completions for the current user.
 install-global: build
-	@echo "Installing $(DAEMON_NAME) to /usr/local/bin/mxcli..."; \
-	cp "$(BUILD_DIR)/$(DAEMON_NAME)" /usr/local/bin/mxcli; \
-	chmod 755 /usr/local/bin/mxcli; \
-	echo "✅ Installed /usr/local/bin/mxcli"; \
+	@INSTALL_DIR="$${HOME}/.local/bin"; \
+	mkdir -p "$$INSTALL_DIR"; \
+	echo "Installing $(DAEMON_NAME) to $$INSTALL_DIR/mxcli..."; \
+	cp "$(BUILD_DIR)/$(DAEMON_NAME)" "$$INSTALL_DIR/mxcli"; \
+	chmod 755 "$$INSTALL_DIR/mxcli"; \
+	echo "✅ Installed $$INSTALL_DIR/mxcli"; \
 	echo ""; \
 	echo "Installing shell completions..."; \
-	/usr/local/bin/mxcli setup completions 2>/dev/null || true; \
-	echo "✅ Completions installed (restart shell or run: source <(/usr/local/bin/mxcli completion zsh))"
+	"$$INSTALL_DIR/mxcli" setup completions 2>/dev/null || true; \
+	echo "✅ Completions installed (restart shell or run: source <($$INSTALL_DIR/mxcli completion zsh))"
 
 # Helper: copy file only if content differs (avoids mtime updates that invalidate go build cache)
 # Usage: $(call copy-if-changed,src,dst)
