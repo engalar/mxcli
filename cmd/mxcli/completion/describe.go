@@ -119,6 +119,51 @@ func completeModuleName(cmd *cobra.Command, comp *Completer, toComplete string) 
 	return comp.ModuleSuggestions(toComplete), cobra.ShellCompDirectiveNoFileComp
 }
 
+// AnalyzeValidArgsFunction completes the analyze topic and optional qualified name.
+func AnalyzeValidArgsFunction(comp *Completer) func(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirective) {
+	return func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+		if len(args) == 0 {
+			return analyzeTopics, cobra.ShellCompDirectiveNoFileComp
+		}
+		if len(args) == 1 && !isKnownAnalyzeTopic(args[0]) {
+			return filterPrefix(analyzeTopics, args[0]), cobra.ShellCompDirectiveNoFileComp
+		}
+		// Topic confirmed — complete the entity/page name
+		topic := args[len(args)-1]
+		name := toComplete
+		if len(args) > 1 {
+			name = args[len(args)-1]
+		}
+		switch topic {
+		case "entity":
+			return completeProjectEntity(cmd, comp, "entity", name)
+		case "page":
+			return completeProjectEntity(cmd, comp, "entity", name)
+		case "flow":
+			// flow can be followed by: navigation, workflow, microflow, or entity name
+			if len(args) == 1 {
+				return filterPrefix([]string{"navigation", "workflow", "microflow"}, name), cobra.ShellCompDirectiveNoFileComp
+			}
+			return completeProjectEntity(cmd, comp, "entity", name)
+		default:
+			return nil, cobra.ShellCompDirectiveNoFileComp
+		}
+	}
+}
+
+var analyzeTopics = []string{
+	"navigation", "page", "entity", "orphans", "flow",
+}
+
+func isKnownAnalyzeTopic(word string) bool {
+	for _, t := range analyzeTopics {
+		if t == word {
+			return true
+		}
+	}
+	return false
+}
+
 func filterPrefix(list []string, prefix string) []string {
 	if prefix == "" {
 		return list

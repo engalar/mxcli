@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/mendixlabs/mxcli/cmd/mxcli/completion"
 	"github.com/mendixlabs/mxcli/mdl/executor"
 	"github.com/mendixlabs/mxcli/mdl/visitor"
 	"github.com/spf13/cobra"
@@ -14,6 +15,7 @@ import (
 var analyzeCmd = &cobra.Command{
 	Use:   "analyze <topic> [name]",
 	Short: "Analyze project structure — navigation, page, entity, orphans, flow",
+	ValidArgsFunction: completion.AnalyzeValidArgsFunction(comp),
 	Long: `Analyze Mendix project structure using the in-memory graph.
 
 Topics:
