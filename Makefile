@@ -68,45 +68,14 @@ setup:
 test-section-check: build install-daemon
 	@./scripts/test-section-check.sh
 
-# Install the locally-built daemon over the downloaded release binary.
-# Ensures mxcli uses the current dev-branch code during local development.
-install: install-daemon
+# Install the locally-built binary to PATH.
+install: install-global
 
-# Windows: stop running daemon first (taskkill may fail if already stopped).
-install-daemon: build
-	@DAEMON_DIR="$$HOME/.mxcli/daemon"; \
-	DAEMON_BIN="$$DAEMON_DIR/mxcli-daemon$(if $(findstring windows,$(shell go env GOOS)),.exe,)"; \
-	if [ -f "$$DAEMON_BIN" ]; then \
-		echo "Stopping running daemon..."; \
-		pkill -f mxcli-daemon 2>/dev/null || powershell.exe -Command "Stop-Process -Name mxcli-daemon -Force -ErrorAction SilentlyContinue" 2>/dev/null || true; \
-		sleep 1; \
-	fi; \
-	cp "$(BUILD_DIR)/$(DAEMON_NAME)$(if $(findstring windows,$(shell go env GOOS)),.exe,)" "$$DAEMON_BIN"; \
-	DAEMON_VER=$$("$$DAEMON_BIN" --version 2>&1 | head -1); \
-	echo "$$DAEMON_VER" > "$$DAEMON_DIR/version"; \
-	echo "Installed: $$DAEMON_BIN ($$DAEMON_VER)"; \
-	LAUNCHER_DIR=$$(dirname "$$(command -v mxcli 2>/dev/null || true)"); \
-	LAUNCHER_BIN="$(BUILD_DIR)/$(BINARY_NAME)$(if $(findstring windows,$(shell go env GOOS)),.exe,)"; \
-	if [ -n "$$LAUNCHER_DIR" ] && [ -d "$$LAUNCHER_DIR" ]; then \
-		LAUNCHER_DEST="$$LAUNCHER_DIR/mxcli$(if $(findstring windows,$(shell go env GOOS)),.exe,)"; \
-		if [ -f "$$LAUNCHER_DEST" ]; then \
-			echo "Stopping running launcher..."; \
-			pkill -x mxcli 2>/dev/null || powershell.exe -Command "Stop-Process -Name mxcli -Force -ErrorAction SilentlyContinue" 2>/dev/null || true; \
-			sleep 1; \
-		fi; \
-		cp "$$LAUNCHER_BIN" "$$LAUNCHER_DEST"; \
-		echo "Installed launcher: $$LAUNCHER_DEST"; \
-	else \
-		echo "Launcher not in PATH — copy manually: cp $$LAUNCHER_BIN <your-bin-dir>/mxcli$(if $(findstring windows,$(shell go env GOOS)),.exe,)"; \
-	fi
-
-# Install mxcli-daemon as `mxcli` to ~/.local/bin (no sudo needed).
-# Also installs shell completions for the current user.
 install-global: build
 	@INSTALL_DIR="$${HOME}/.local/bin"; \
 	mkdir -p "$$INSTALL_DIR"; \
-	echo "Installing $(DAEMON_NAME) to $$INSTALL_DIR/mxcli..."; \
-	cp "$(BUILD_DIR)/$(DAEMON_NAME)" "$$INSTALL_DIR/mxcli"; \
+	echo "Installing mxcli to $$INSTALL_DIR/mxcli..."; \
+	cp "$(BUILD_DIR)/$(BINARY_NAME)" "$$INSTALL_DIR/mxcli"; \
 	chmod 755 "$$INSTALL_DIR/mxcli"; \
 	echo "✅ Installed $$INSTALL_DIR/mxcli"; \
 	echo ""; \
@@ -182,26 +151,8 @@ sync-all: sync-skills sync-commands sync-lint-rules sync-changelog sync-examples
 # On Windows, also creates .exe-suffixed copies so PowerShell can execute them.
 build: sync-all
 	@mkdir -p $(BUILD_DIR)
-	CGO_ENABLED=0 go build $(LDFLAGS) -o $(BUILD_DIR)/$(DAEMON_NAME) $(CMD_PATH)
-	CGO_ENABLED=0 go build $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME) ./cmd/mxcli-launcher
-	@if [ "$(OS)" = "Windows_NT" ] || echo "$$OSTYPE" | grep -qi msys; then \
-		cp $(BUILD_DIR)/$(DAEMON_NAME) $(BUILD_DIR)/$(DAEMON_NAME).exe 2>/dev/null || true; \
-		cp $(BUILD_DIR)/$(BINARY_NAME) $(BUILD_DIR)/$(BINARY_NAME).exe 2>/dev/null || true; \
-		echo "Built $(BUILD_DIR)/$(BINARY_NAME)[.exe] $(BUILD_DIR)/$(DAEMON_NAME)[.exe] (go build auto-adds .exe; cp is a MSYS2/Cygwin safety net)"; \
-	else \
-		echo "Built $(BUILD_DIR)/$(BINARY_NAME) $(BUILD_DIR)/$(DAEMON_NAME)"; \
-	fi
-
-build-local:
-	@mkdir -p $(BUILD_DIR)
-	CGO_ENABLED=0 go build $(LOCAL_LDFLAGS) -o $(BUILD_DIR)/$(LOCAL_NAME) $(LOCAL_PATH)
-	@echo "Built $(BUILD_DIR)/$(LOCAL_NAME)"
-
-install-local: build-local
-	@LOCAL_DIR="$$HOME/.mxcli/local"; \
-	mkdir -p "$$LOCAL_DIR"; \
-	cp "$(BUILD_DIR)/$(LOCAL_NAME)" "$$LOCAL_DIR/$(LOCAL_NAME)"; \
-	echo "Installed: $$LOCAL_DIR/$(LOCAL_NAME)"
+	CGO_ENABLED=0 go build $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME) $(CMD_PATH)
+	@echo "Built $(BUILD_DIR)/$(BINARY_NAME)"
 
 # Compress a single daemon binary: make compress-daemon BIN=bin/mxcli-daemon-linux-amd64
 compress-daemon:
@@ -222,98 +173,28 @@ release: clean sync-all
 	@mkdir -p $(BUILD_DIR)
 	@echo "Building release binaries..."
 
-	@echo "  -> Launchers (all platforms)"
-	CGO_ENABLED=0 GOOS=linux   GOARCH=amd64 go build $(LAUNCHER_LDFLAGS) -trimpath -o $(BUILD_DIR)/$(BINARY_NAME)-linux-amd64   ./cmd/mxcli-launcher
-	CGO_ENABLED=0 GOOS=linux   GOARCH=arm64 go build $(LAUNCHER_LDFLAGS) -trimpath -o $(BUILD_DIR)/$(BINARY_NAME)-linux-arm64   ./cmd/mxcli-launcher
-	CGO_ENABLED=0 GOOS=darwin  GOARCH=amd64 go build $(LAUNCHER_LDFLAGS) -trimpath -o $(BUILD_DIR)/$(BINARY_NAME)-darwin-amd64  ./cmd/mxcli-launcher
-	CGO_ENABLED=0 GOOS=darwin  GOARCH=arm64 go build $(LAUNCHER_LDFLAGS) -trimpath -o $(BUILD_DIR)/$(BINARY_NAME)-darwin-arm64  ./cmd/mxcli-launcher
-	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build $(LAUNCHER_LDFLAGS) -trimpath -o $(BUILD_DIR)/$(BINARY_NAME)-windows-amd64.exe ./cmd/mxcli-launcher
-	CGO_ENABLED=0 GOOS=windows GOARCH=arm64 go build $(LAUNCHER_LDFLAGS) -trimpath -o $(BUILD_DIR)/$(BINARY_NAME)-windows-arm64.exe ./cmd/mxcli-launcher
-
-	@echo "  -> Daemons (all platforms)"
-	CGO_ENABLED=0 GOOS=linux   GOARCH=amd64 go build $(RELEASE_LDFLAGS) -trimpath -o $(BUILD_DIR)/$(DAEMON_NAME)-linux-amd64   $(CMD_PATH)
-	CGO_ENABLED=0 GOOS=linux   GOARCH=arm64 go build $(RELEASE_LDFLAGS) -trimpath -o $(BUILD_DIR)/$(DAEMON_NAME)-linux-arm64   $(CMD_PATH)
-	CGO_ENABLED=0 GOOS=darwin  GOARCH=amd64 go build $(RELEASE_LDFLAGS) -trimpath -o $(BUILD_DIR)/$(DAEMON_NAME)-darwin-amd64  $(CMD_PATH)
-	CGO_ENABLED=0 GOOS=darwin  GOARCH=arm64 go build $(RELEASE_LDFLAGS) -trimpath -o $(BUILD_DIR)/$(DAEMON_NAME)-darwin-arm64  $(CMD_PATH)
-	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build $(RELEASE_LDFLAGS) -trimpath -o $(BUILD_DIR)/$(DAEMON_NAME)-windows-amd64.exe $(CMD_PATH)
-	CGO_ENABLED=0 GOOS=windows GOARCH=arm64 go build $(RELEASE_LDFLAGS) -trimpath -o $(BUILD_DIR)/$(DAEMON_NAME)-windows-arm64.exe $(CMD_PATH)
-
-	@echo "  -> Compressing daemon binaries (requires zstd)"
-	@for f in $(BUILD_DIR)/$(DAEMON_NAME)-linux-* $(BUILD_DIR)/$(DAEMON_NAME)-darwin-*; do \
-		echo "    $$f -> $$f.tar.zst"; \
-		cp "$$f" "$(BUILD_DIR)/$(DAEMON_NAME)"; \
-		tar -cf - -C $(BUILD_DIR) $(DAEMON_NAME) | zstd -19 -f -o $$f.tar.zst; \
-		rm -f "$(BUILD_DIR)/$(DAEMON_NAME)"; \
-	done
-	@for f in $(BUILD_DIR)/$(DAEMON_NAME)-windows-*.exe; do \
-		echo "    $$f -> $$f.zip"; \
-		cp "$$f" "$(BUILD_DIR)/$(DAEMON_NAME).exe"; \
-		zip -j $$f.zip "$(BUILD_DIR)/$(DAEMON_NAME).exe"; \
-		rm -f "$(BUILD_DIR)/$(DAEMON_NAME).exe"; \
-	done
+	@echo "  -> mxcli (all platforms)"
+	CGO_ENABLED=0 GOOS=linux   GOARCH=amd64 go build $(RELEASE_LDFLAGS) -trimpath -o $(BUILD_DIR)/$(BINARY_NAME)-linux-amd64   $(CMD_PATH)
+	CGO_ENABLED=0 GOOS=linux   GOARCH=arm64 go build $(RELEASE_LDFLAGS) -trimpath -o $(BUILD_DIR)/$(BINARY_NAME)-linux-arm64   $(CMD_PATH)
+	CGO_ENABLED=0 GOOS=darwin  GOARCH=amd64 go build $(RELEASE_LDFLAGS) -trimpath -o $(BUILD_DIR)/$(BINARY_NAME)-darwin-amd64  $(CMD_PATH)
+	CGO_ENABLED=0 GOOS=darwin  GOARCH=arm64 go build $(RELEASE_LDFLAGS) -trimpath -o $(BUILD_DIR)/$(BINARY_NAME)-darwin-arm64  $(CMD_PATH)
+	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build $(RELEASE_LDFLAGS) -trimpath -o $(BUILD_DIR)/$(BINARY_NAME)-windows-amd64.exe $(CMD_PATH)
+	CGO_ENABLED=0 GOOS=windows GOARCH=arm64 go build $(RELEASE_LDFLAGS) -trimpath -o $(BUILD_DIR)/$(BINARY_NAME)-windows-arm64.exe $(CMD_PATH)
 
 	@echo ""
 	@echo "Release binaries built in $(BUILD_DIR)/."
-	@echo "  Launchers: mxcli-{os}-{arch}"
-	@echo "  Daemons:   mxcli-daemon-{os}-{arch}.tar.zst (or .zip)"
 
-# Build launcher binaries for all platforms (v* release pipeline).
-release-launcher: sync-all
+# Build mxcli binaries for all platforms (v* release pipeline).
+release-mxcli: sync-all
 	@mkdir -p $(BUILD_DIR)
-	@echo "  -> Launcher (all platforms)"
-	CGO_ENABLED=0 GOOS=linux   GOARCH=amd64 go build $(LAUNCHER_LDFLAGS) -trimpath -o $(BUILD_DIR)/$(BINARY_NAME)-linux-amd64   ./cmd/mxcli-launcher
-	CGO_ENABLED=0 GOOS=linux   GOARCH=arm64 go build $(LAUNCHER_LDFLAGS) -trimpath -o $(BUILD_DIR)/$(BINARY_NAME)-linux-arm64   ./cmd/mxcli-launcher
-	CGO_ENABLED=0 GOOS=darwin  GOARCH=amd64 go build $(LAUNCHER_LDFLAGS) -trimpath -o $(BUILD_DIR)/$(BINARY_NAME)-darwin-amd64  ./cmd/mxcli-launcher
-	CGO_ENABLED=0 GOOS=darwin  GOARCH=arm64 go build $(LAUNCHER_LDFLAGS) -trimpath -o $(BUILD_DIR)/$(BINARY_NAME)-darwin-arm64  ./cmd/mxcli-launcher
-	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build $(LAUNCHER_LDFLAGS) -trimpath -o $(BUILD_DIR)/$(BINARY_NAME)-windows-amd64.exe ./cmd/mxcli-launcher
-	CGO_ENABLED=0 GOOS=windows GOARCH=arm64 go build $(LAUNCHER_LDFLAGS) -trimpath -o $(BUILD_DIR)/$(BINARY_NAME)-windows-arm64.exe ./cmd/mxcli-launcher
-	@echo "Launcher binaries built in $(BUILD_DIR)/."
-
-# Build daemon binaries for all platforms (daemon-v* release pipeline).
-release-daemon: sync-all
-	@mkdir -p $(BUILD_DIR)
-	@echo "  -> Daemon (all platforms)"
-	CGO_ENABLED=0 GOOS=linux   GOARCH=amd64 go build $(RELEASE_LDFLAGS) -trimpath -o $(BUILD_DIR)/$(DAEMON_NAME)-linux-amd64   $(CMD_PATH)
-	CGO_ENABLED=0 GOOS=linux   GOARCH=arm64 go build $(RELEASE_LDFLAGS) -trimpath -o $(BUILD_DIR)/$(DAEMON_NAME)-linux-arm64   $(CMD_PATH)
-	CGO_ENABLED=0 GOOS=darwin  GOARCH=amd64 go build $(RELEASE_LDFLAGS) -trimpath -o $(BUILD_DIR)/$(DAEMON_NAME)-darwin-amd64  $(CMD_PATH)
-	CGO_ENABLED=0 GOOS=darwin  GOARCH=arm64 go build $(RELEASE_LDFLAGS) -trimpath -o $(BUILD_DIR)/$(DAEMON_NAME)-darwin-arm64  $(CMD_PATH)
-	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build $(RELEASE_LDFLAGS) -trimpath -o $(BUILD_DIR)/$(DAEMON_NAME)-windows-amd64.exe $(CMD_PATH)
-	CGO_ENABLED=0 GOOS=windows GOARCH=arm64 go build $(RELEASE_LDFLAGS) -trimpath -o $(BUILD_DIR)/$(DAEMON_NAME)-windows-arm64.exe $(CMD_PATH)
-	@echo "  -> Compressing daemon binaries"
-	@for f in $(BUILD_DIR)/$(DAEMON_NAME)-linux-* $(BUILD_DIR)/$(DAEMON_NAME)-darwin-*; do \
-		cp "$$f" "$(BUILD_DIR)/$(DAEMON_NAME)"; \
-		tar -cf - -C $(BUILD_DIR) $(DAEMON_NAME) | zstd -19 -f -o $$f.tar.zst; \
-		rm -f "$(BUILD_DIR)/$(DAEMON_NAME)"; \
-	done
-	@for f in $(BUILD_DIR)/$(DAEMON_NAME)-windows-*.exe; do \
-		cp "$$f" "$(BUILD_DIR)/$(DAEMON_NAME).exe"; \
-		zip -j $$f.zip "$(BUILD_DIR)/$(DAEMON_NAME).exe"; \
-		rm -f "$(BUILD_DIR)/$(DAEMON_NAME).exe"; \
-	done
-	@echo "Daemon binaries built in $(BUILD_DIR)/."
-
-# Build mxcli-local binaries for all platforms (local-v* release pipeline).
-release-local-bins: sync-all
-	@mkdir -p $(BUILD_DIR)
-	@echo "  -> mxcli-local (all platforms)"
-	CGO_ENABLED=0 GOOS=linux   GOARCH=amd64 go build $(LOCAL_LDFLAGS) -trimpath -o $(BUILD_DIR)/$(LOCAL_NAME)-linux-amd64   $(LOCAL_PATH)
-	CGO_ENABLED=0 GOOS=linux   GOARCH=arm64 go build $(LOCAL_LDFLAGS) -trimpath -o $(BUILD_DIR)/$(LOCAL_NAME)-linux-arm64   $(LOCAL_PATH)
-	CGO_ENABLED=0 GOOS=darwin  GOARCH=amd64 go build $(LOCAL_LDFLAGS) -trimpath -o $(BUILD_DIR)/$(LOCAL_NAME)-darwin-amd64  $(LOCAL_PATH)
-	CGO_ENABLED=0 GOOS=darwin  GOARCH=arm64 go build $(LOCAL_LDFLAGS) -trimpath -o $(BUILD_DIR)/$(LOCAL_NAME)-darwin-arm64  $(LOCAL_PATH)
-	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build $(LOCAL_LDFLAGS) -trimpath -o $(BUILD_DIR)/$(LOCAL_NAME)-windows-amd64.exe $(LOCAL_PATH)
-	CGO_ENABLED=0 GOOS=windows GOARCH=arm64 go build $(LOCAL_LDFLAGS) -trimpath -o $(BUILD_DIR)/$(LOCAL_NAME)-windows-arm64.exe $(LOCAL_PATH)
-	@echo "  -> Compressing mxcli-local binaries"
-	@for f in $(BUILD_DIR)/$(LOCAL_NAME)-linux-* $(BUILD_DIR)/$(LOCAL_NAME)-darwin-*; do \
-		cp "$$f" "$(BUILD_DIR)/$(LOCAL_NAME)"; \
-		tar -cf - -C $(BUILD_DIR) $(LOCAL_NAME) | zstd -19 -f -o $$f.tar.zst; \
-		rm -f "$(BUILD_DIR)/$(LOCAL_NAME)"; \
-	done
-	@for f in $(BUILD_DIR)/$(LOCAL_NAME)-windows-*.exe; do \
-		cp "$$f" "$(BUILD_DIR)/$(LOCAL_NAME).exe"; \
-		zip -j $$f.zip "$(BUILD_DIR)/$(LOCAL_NAME).exe"; \
-		rm -f "$(BUILD_DIR)/$(LOCAL_NAME).exe"; \
-	done
-	@echo "mxcli-local binaries built in $(BUILD_DIR)/."
+	@echo "  -> mxcli (all platforms)"
+	CGO_ENABLED=0 GOOS=linux   GOARCH=amd64 go build $(RELEASE_LDFLAGS) -trimpath -o $(BUILD_DIR)/$(BINARY_NAME)-linux-amd64   $(CMD_PATH)
+	CGO_ENABLED=0 GOOS=linux   GOARCH=arm64 go build $(RELEASE_LDFLAGS) -trimpath -o $(BUILD_DIR)/$(BINARY_NAME)-linux-arm64   $(CMD_PATH)
+	CGO_ENABLED=0 GOOS=darwin  GOARCH=amd64 go build $(RELEASE_LDFLAGS) -trimpath -o $(BUILD_DIR)/$(BINARY_NAME)-darwin-amd64  $(CMD_PATH)
+	CGO_ENABLED=0 GOOS=darwin  GOARCH=arm64 go build $(RELEASE_LDFLAGS) -trimpath -o $(BUILD_DIR)/$(BINARY_NAME)-darwin-arm64  $(CMD_PATH)
+	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build $(RELEASE_LDFLAGS) -trimpath -o $(BUILD_DIR)/$(BINARY_NAME)-windows-amd64.exe $(CMD_PATH)
+	CGO_ENABLED=0 GOOS=windows GOARCH=arm64 go build $(RELEASE_LDFLAGS) -trimpath -o $(BUILD_DIR)/$(BINARY_NAME)-windows-arm64.exe $(CMD_PATH)
+	@echo "mxcli binaries built in $(BUILD_DIR)/."
 
 # Run tests. CPU is capped at 85% via _CPU_RUNNER (cpulimit or nice -n 15)
 # so the machine stays responsive. TEST_P/TEST_PARALLEL default to 85% nproc.
