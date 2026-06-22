@@ -32,11 +32,7 @@ BUILD_TIME = $(shell date -u +"%Y-%m-%dT%H:%M:%SZ" 2>/dev/null || echo "unknown"
 LDFLAGS = -ldflags "-X main.Version=$(VERSION) -X main.BuildTime=$(BUILD_TIME) -X main.CommitSHA=$(COMMIT_SHA)"
 # Release builds strip debug info and symbol table (~23% smaller).
 RELEASE_LDFLAGS = -ldflags "-X main.Version=$(VERSION) -X main.BuildTime=$(BUILD_TIME) -X main.CommitSHA=$(COMMIT_SHA) -s -w"
-LAUNCHER_LDFLAGS = -ldflags "-X main.Version=$(VERSION) -X main.LauncherBuild=$(BUILD_TIME) -X main.CommitSHA=$(COMMIT_SHA) -s -w"
 DAEMON_NAME = mxcli-daemon
-LOCAL_NAME = mxcli-local
-LOCAL_PATH = ./cmd/mxcli-local
-LOCAL_LDFLAGS = -ldflags "-X main.Version=$(VERSION) -X main.CommitSHA=$(COMMIT_SHA) -s -w"
 
 # Clean version for VS Code extension (must be valid semver: major.minor.patch)
 VSCE_VERSION = $(shell echo "$(VERSION)" | sed 's/^v//; s/-.*//' | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$$' || echo "0.0.0")
