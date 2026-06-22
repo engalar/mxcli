@@ -34,12 +34,14 @@ jobs:
 
       - name: Build mxcli binaries
         run: |
+          echo "=== plain go build ==="
+          CGO_ENABLED=0 go build -o /dev/null ./cmd/mxcli 2>&1
           echo "=== git describe ==="
           git describe --tags --always --dirty
           echo "=== VERSION ==="
           echo "VERSION=$(git describe --tags --always --dirty 2>/dev/null || echo dev)"
-          echo "=== build ==="
-          make release-mxcli VERSION="$(git describe --tags --always --dirty 2>/dev/null || echo dev)"
+          echo "=== make release-mxcli ==="
+          make release-mxcli VERSION="$(git describe --tags --always --dirty 2>/dev/null || echo dev)" 2>&1
 
       - name: Generate SHA256 checksums
         run: |
