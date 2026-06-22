@@ -3,8 +3,18 @@
 package mprbackend
 
 import (
+	"context"
+	"os"
+	"path/filepath"
+	"time"
+
 	"github.com/mendixlabs/mxcli/internal/mxgraph"
+	designdprops "github.com/mendixlabs/mxcli/internal/mxgraph/adapter/designdprops"
+	mpradapter "github.com/mendixlabs/mxcli/internal/mxgraph/adapter/mpr"
+	themescss "github.com/mendixlabs/mxcli/internal/mxgraph/adapter/themescss"
+	"github.com/mendixlabs/mxcli/mdl/graphcatalog"
 	"github.com/mendixlabs/mxcli/mdl/types"
+	"github.com/mendixlabs/mxcli/modelsdk"
 	modelsdkmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
 )
 
@@ -83,6 +93,85 @@ func (b *MprBackend) Connect(path string) error {
 	b.mappings = newMappingBackend(r)
 	b.subBackendsReady = true
 	return nil
+}
+
+// buildProjectGraph constructs the mxgraph index from the project at projectPath.
+// The graph is cached on the backend for fast reads by all commands.
+// Errors are non-fatal — the backend still works without the graph (fallback to direct reads).
+func (b *MprBackend) buildProjectGraph(projectPath string) {
+	projectDir := filepath.Dir(projectPath)
+	snapPath := graphcatalog.SnapshotPath(projectDir)
+	deltaPath := graphcatalog.DeltaPath(projectDir)
+
+	// Fast path: restore from cached snapshot + delta log.
+	if g, err := mxgraph.RestoreFromSnapshot(snapPath, deltaPath); err == nil && g != nil {
+		mgr := mxgraph.NewIndexManagerFromGraph(g)
+		b.graph = graphcatalog.NewProjectGraph(mgr)
+		return
+	}
+
+	m, err := modelsdk.Open(projectPath)
+	if err != nil {
+		return
+	}
+	defer m.Close()
+
+	mgr := mxgraph.NewIndexManager()
+	mgr.RegisterAdapter(&mpradapter.DomainModelAdapter{Model: m})
+	mgr.RegisterAdapter(&mpradapter.MicroflowAdapter{Model: m})
+	mgr.RegisterAdapter(&mpradapter.PageAdapter{Model: m})
+	mgr.RegisterAdapter(&mpradapter.SecurityAdapter{Model: m})
+	mgr.RegisterAdapter(&mpradapter.EnumerationAdapter{Model: m})
+	mgr.RegisterAdapter(&mpradapter.WorkflowAdapter{Model: m})
+	mgr.RegisterAdapter(&mpradapter.WidgetAdapter{ProjectDir: projectDir})
+	mgr.RegisterAdapter(&themescss.ThemeScssAdapter{ProjectDir: projectDir})
+	mgr.RegisterAdapter(&designdprops.DesignPropertyAdapter{ProjectDir: projectDir})
+	docCache := mpradapter.NewBsonDocCache()
+	mgr.RegisterAdapter(&mpradapter.WidgetInstanceAdapter{
+		Source:   &mpradapter.ModelsdkUnitSource{Model: m},
+		DocCache: docCache,
+	})
+	mgr.RegisterAdapter(&mpradapter.AccessRuleAdapter{Model: m})
+	mgr.RegisterAdapter(&mpradapter.DocumentGrantAdapter{Model: m})
+	mgr.RegisterAdapter(&mpradapter.PageRefAdapter{
+		Model:    m,
+		DocCache: docCache,
+	})
+	mgr.RegisterAdapter(&mpradapter.NavigationAdapter{
+		Source: &mpradapter.ModelsdkUnitSource{Model: m},
+	})
+	mgr.RegisterAdapter(&mpradapter.DataContainerAdapter{
+		Source:   &mpradapter.ModelsdkUnitSource{Model: m},
+		Model:    m,
+		DocCache: docCache,
+	})
+
+	os.MkdirAll(filepath.Dir(deltaPath), 0700)
+	deltaLog, err := mxgraph.OpenDeltaLog(deltaPath)
+	if err == nil {
+		defer deltaLog.Close()
+	}
+
+	sink := mxgraph.NewLoggingSink(mgr, deltaLog)
+
+	buildCtx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+
+	if err := mgr.BuildAll(buildCtx, sink); err != nil {
+		return
+	}
+
+	b.graph = graphcatalog.NewProjectGraph(mgr)
+
+	// Persist snapshot for fast reload on next startup.
+	if data, err := b.graph.MarshalSnapshot(); err == nil {
+		if mkErr := os.MkdirAll(filepath.Dir(snapPath), 0700); mkErr == nil {
+			os.WriteFile(snapPath, data, 0600)
+		}
+	}
+	if deltaLog != nil {
+		deltaLog.Reset()
+	}
 }
 
 // initSubBackends is a no-op when subBackendsReady is true, which is set
@@ -181,12 +270,23 @@ func (b *MprBackend) ProjectVersion() *types.ProjectVersion {
 }
 func (b *MprBackend) GetMendixVersion() (string, error) { return b.msdkReader.GetMendixVersion() }
 
-// GetMxGraph returns the cached mxgraph snapshot from the reader, or nil.
+// GetMxGraph returns the raw mxgraph Graph from the startup-built project graph.
 func (b *MprBackend) GetMxGraph() *mxgraph.Graph {
-	if b.reader != nil {
-		return b.reader.GetMxGraph()
+	if b.graph != nil {
+		return b.graph.MxGraph()
 	}
 	return nil
+}
+
+// GetProjectGraph returns the full ProjectGraph (typed query interface).
+func (b *MprBackend) GetProjectGraph() *graphcatalog.ProjectGraph {
+	return b.graph
+}
+
+// SetProjectGraph injects a pre-built project graph into the backend.
+// This is used by the executor's buildGraph to sync the graph to the backend.
+func (b *MprBackend) SetProjectGraph(pg *graphcatalog.ProjectGraph) {
+	b.graph = pg
 }
 
 // Commit is a no-op — the MPR writer auto-commits on each write operation.

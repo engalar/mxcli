@@ -10,6 +10,7 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/backend"
 	"github.com/mendixlabs/mxcli/mdl/backend/unitstore"
+	"github.com/mendixlabs/mxcli/mdl/graphcatalog"
 	"github.com/mendixlabs/mxcli/mdl/linter"
 	"github.com/mendixlabs/mxcli/mdl/types"
 	modelsdkmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
@@ -52,6 +53,9 @@ type MprBackend struct {
 	rawUnits        *rawUnitBackend
 	metadata        *metadataBackend
 	mappings        *mappingBackend
+
+	// graph is the in-memory project graph built at startup.
+	graph *graphcatalog.ProjectGraph
 }
 
 // widgetTypeCacheEntry holds the per-page cached type schema for one widget type.

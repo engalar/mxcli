@@ -5,11 +5,11 @@ package executor
 import (
 	"errors"
 	"fmt"
-	"path/filepath"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	"github.com/mendixlabs/mxcli/mdl/backend"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
+	"github.com/mendixlabs/mxcli/mdl/graphcatalog"
 )
 
 func execConnect(ctx *ExecContext, s *ast.ConnectStmt) error {
@@ -39,13 +39,14 @@ func execConnect(ctx *ExecContext, s *ast.ConnectStmt) error {
 	ctx.MprPath = s.Path
 	ctx.Cache = &executorCache{} // Initialize fresh cache
 
-	// Auto-load graph snapshot if available — lets subsequent commands use the
-	// pre-built index without an explicit "refresh graph" command.
-	if s.Path != "" {
-		if mgp, ok := ctx.Backend.(MxGraphProvider); ok {
-			tryLoadGraphSnapshot(filepath.Dir(s.Path), ctx.Cache, &ctx.Graph, mgp)
-		} else {
-			tryLoadGraphSnapshot(filepath.Dir(s.Path), ctx.Cache, &ctx.Graph)
+	// Build project graph and load into ctx.Graph.
+	// The graph is built from a fresh read-only model, synced to the backend
+	// via SetProjectGraph so that GetMxGraph() is available for warmup.
+	if graph, buildErr := BuildGraphAtPath(s.Path); buildErr == nil && graph != nil {
+		ctx.Graph = graph
+		warmCacheFromGraph(ctx.Cache, graph)
+		if bg, ok := ctx.Backend.(interface{ SetProjectGraph(*graphcatalog.ProjectGraph) }); ok {
+			bg.SetProjectGraph(graph)
 		}
 	}
 

@@ -19,6 +19,36 @@ import (
 	"github.com/mendixlabs/mxcli/modelsdk"
 )
 
+// BuildGraphAtPath constructs the in-memory project graph from projectPath,
+// returning a *graphcatalog.ProjectGraph ready for queries.
+// It persists a gob snapshot + delta log to <projectDir>/.mxcli/ so a
+// later session can reload without a full rebuild.
+//
+// The graph is built from a fresh read-only modelsdk.Model opened from the path,
+// avoiding coupling to the write-path backend.
+func BuildGraphAtPath(projectPath string) (*graphcatalog.ProjectGraph, error) {
+	projectDir := filepath.Dir(projectPath)
+	snapPath := graphcatalog.SnapshotPath(projectDir)
+	deltaPath := graphcatalog.DeltaPath(projectDir)
+
+	if g, err := mxgraph.RestoreFromSnapshot(snapPath, deltaPath); err == nil && g != nil {
+		mgr := mxgraph.NewIndexManagerFromGraph(g)
+		return graphcatalog.NewProjectGraph(mgr), nil
+	}
+
+	m, err := modelsdk.Open(projectPath)
+	if err != nil {
+		return nil, fmt.Errorf("open project for graph: %w", err)
+	}
+	defer m.Close()
+
+	pg, err := buildGraphFromModel(m, projectDir, snapPath, deltaPath)
+	if err != nil {
+		return nil, err
+	}
+	return pg, nil
+}
+
 // buildGraph constructs the in-memory project graph from the connected project,
 // registering all five domain adapters, and installs it as ctx.Graph.
 // It also persists a gob snapshot + delta log to <projectDir>/.mxcli/ so a
@@ -60,6 +90,27 @@ func buildGraph(ctx *ExecContext) error {
 	}
 	defer m.Close()
 
+	pg, err := buildGraphFromModel(m, projectDir, snapPath, deltaPath)
+	if err != nil {
+		return err
+	}
+
+	ctx.Graph = pg
+	if ctx.SyncGraph != nil {
+		ctx.SyncGraph(pg)
+	}
+
+	if !ctx.Quiet {
+		g := pg.MxGraph()
+		fmt.Fprintf(ctx.Output, "Graph built: %d nodes, %d edges\n",
+			len(g.AllNodes()), len(g.AllEdges()))
+	}
+	return nil
+}
+
+// buildGraphFromModel constructs a ProjectGraph from an opened modelsdk.Model.
+// Shared between buildGraph (executor path) and BuildGraphAtPath (standalone).
+func buildGraphFromModel(m *modelsdk.Model, projectDir, snapPath, deltaPath string) (*graphcatalog.ProjectGraph, error) {
 	mgr := mxgraph.NewIndexManager()
 	mgr.RegisterAdapter(&mpradapter.DomainModelAdapter{Model: m})
 	mgr.RegisterAdapter(&mpradapter.MicroflowAdapter{Model: m})
@@ -70,8 +121,6 @@ func buildGraph(ctx *ExecContext) error {
 	mgr.RegisterAdapter(&mpradapter.WidgetAdapter{ProjectDir: projectDir})
 	mgr.RegisterAdapter(&themescss.ThemeScssAdapter{ProjectDir: projectDir})
 	mgr.RegisterAdapter(&designdprops.DesignPropertyAdapter{ProjectDir: projectDir})
-	// 共享 BSON 解码缓存：3 个 page-walking adapter 共用同一份解码 map，
-	// 避免重复 bson.Unmarshal。首次解码的 adapter 存入 cache，后续命中。
 	docCache := mpradapter.NewBsonDocCache()
 
 	mgr.RegisterAdapter(&mpradapter.WidgetInstanceAdapter{
@@ -93,13 +142,10 @@ func buildGraph(ctx *ExecContext) error {
 		DocCache: docCache,
 	})
 
-	// Open delta log for event persistence during build.
-	if err := os.MkdirAll(filepath.Dir(deltaPath), 0700); err != nil {
-		return mdlerrors.NewBackend("create cache directory", err)
-	}
+	os.MkdirAll(filepath.Dir(deltaPath), 0700)
 	deltaLog, err := mxgraph.OpenDeltaLog(deltaPath)
 	if err != nil {
-		return mdlerrors.NewBackend("open delta log", err)
+		return nil, fmt.Errorf("open delta log: %w", err)
 	}
 	defer deltaLog.Close()
 
@@ -109,30 +155,19 @@ func buildGraph(ctx *ExecContext) error {
 	defer cancel()
 
 	if err := mgr.BuildAll(buildCtx, sink); err != nil {
-		return mdlerrors.NewBackend("build graph", err)
+		return nil, fmt.Errorf("build graph: %w", err)
 	}
 
 	pg := graphcatalog.NewProjectGraph(mgr)
-	ctx.Graph = pg
-	if ctx.SyncGraph != nil {
-		ctx.SyncGraph(pg)
-	}
 
-	// Persist snapshot and reset delta log so future restores are fast.
 	if data, err := pg.MarshalSnapshot(); err == nil {
 		if mkErr := os.MkdirAll(filepath.Dir(snapPath), 0700); mkErr == nil {
-			_ = os.WriteFile(snapPath, data, 0600)
+			os.WriteFile(snapPath, data, 0600)
 		}
 	}
-	// After snapshot is saved the delta log is no longer needed; reset it.
-	_ = deltaLog.Reset()
+	deltaLog.Reset()
 
-	if !ctx.Quiet {
-		g := mgr.Query()
-		fmt.Fprintf(ctx.Output, "Graph built: %d nodes, %d edges\n",
-			len(g.AllNodes()), len(g.AllEdges()))
-	}
-	return nil
+	return pg, nil
 }
 
 // execRefreshGraphStmt handles REFRESH GRAPH [FULL] — rebuilds the in-memory
