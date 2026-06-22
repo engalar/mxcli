@@ -13,6 +13,12 @@ Add MDL support for the three built-in properties (Commit, WithEvents/WithoutEve
 
 ### Syntax
 
+Rules:
+- CREATE/CHANGE: `REFRESH` only valid when `WITH COMMIT` is present
+- COMMIT: `REFRESH` only valid when `WITH EVENTS` is present  (⚠️ existing behavior change — see note)
+- DELETE/ROLLBACK: `REFRESH` standalone (no commit/events sub-clause)
+- Describe output format must be identical across CREATE/CHANGE/COMMIT
+
 ```sql
 -- CREATE
 $Obj = create Module.Entity (Name = 'x');
@@ -20,7 +26,6 @@ $Obj = create Module.Entity (Name = 'x') with commit;
 $Obj = create Module.Entity (Name = 'x') with commit refresh;
 $Obj = create Module.Entity (Name = 'x') with commit without events;
 $Obj = create Module.Entity (Name = 'x') with commit without events refresh;
-$Obj = create Module.Entity (Name = 'x') refresh;                        -- Commit=No, Refresh=true
 
 -- CHANGE
 change $Obj (Name = 'new');
@@ -28,12 +33,10 @@ change $Obj (Name = 'new') with commit;
 change $Obj (Name = 'new') with commit refresh;
 change $Obj (Name = 'new') with commit without events;
 change $Obj (Name = 'new') with commit without events refresh;
-change $Obj (Name = 'new') refresh;                                      -- Commit=No, Refresh=true
 
--- COMMIT (unchanged)
+-- COMMIT (refresh now requires with events)
 commit $Obj;
 commit $Obj with events;
-commit $Obj refresh;
 commit $Obj with events refresh;
 
 -- DELETE (new: refresh)
@@ -45,6 +48,8 @@ rollback $Obj;
 rollback $Obj refresh;
 ```
 
+> ⚠️ **COMMIT grammar change:** Previously `(WITH EVENTS)? REFRESH?` allowed `commit $V refresh;` (Refresh=true, WithEvents=false). With this rule, `REFRESH` requires `WITH EVENTS`, so `commit $V refresh;` becomes invalid (would need `commit $V with events refresh;`). If this breaks existing scripts, keep the old grammar and only apply the new rule to CREATE/CHANGE.
+
 ### Round-Trip Table (BSON ↔ MDL)
 
 Every line in the table below must round-trip: MDL → BSON → describe → identical MDL.
@@ -53,17 +58,17 @@ Every line in the table below must round-trip: MDL → BSON → describe → ide
 | Commit | RefreshInClient | MDL output |
 |--------|----------------|------------|
 | `"No"` | `false` | `$X = create Module.Entity (attr);` |
-| `"No"` | `true` | `$X = create Module.Entity (attr) refresh;` |
 | `"Yes"` | `false` | `$X = create Module.Entity (attr) with commit;` |
 | `"Yes"` | `true` | `$X = create Module.Entity (attr) with commit refresh;` |
 | `"YesWithoutEvents"` | `false` | `$X = create Module.Entity (attr) with commit without events;` |
 | `"YesWithoutEvents"` | `true` | `$X = create Module.Entity (attr) with commit without events refresh;` |
 
+> Note: `Commit="No"` + `RefreshInClient=true` (17 instances in real data) cannot be expressed in MDL. The formatter drops `refresh` silently when Commit="No". During round-trip, the describe output will drop this flag — acceptable as the runtime ignores RefreshInClient when there is no commit.
+
 **CHANGE:**
 | Commit | RefreshInClient | MDL output |
 |--------|----------------|------------|
 | `"No"` | `false` | `change $X (attr);` |
-| `"No"` | `true` | `change $X (attr) refresh;` |
 | `"Yes"` | `false` | `change $X (attr) with commit;` |
 | `"Yes"` | `true` | `change $X (attr) with commit refresh;` |
 | `"YesWithoutEvents"` | `false` | `change $X (attr) with commit without events;` |
@@ -73,9 +78,10 @@ Every line in the table below must round-trip: MDL → BSON → describe → ide
 | WithEvents | RefreshInClient | MDL output |
 |------------|----------------|------------|
 | `false` | `false` | `commit $X;` |
-| `false` | `true` | `commit $X refresh;` |
 | `true` | `false` | `commit $X with events;` |
 | `true` | `true` | `commit $X with events refresh;` |
+
+> Note: `WithEvents=false` + `RefreshInClient=true` also cannot be expressed. Same rule: formatter drops `refresh` silently.
 
 **DELETE:**
 | RefreshInClient | MDL output |
@@ -93,28 +99,32 @@ Every line in the table below must round-trip: MDL → BSON → describe → ide
 
 File: `mdl/grammar/domains/MDLMicroflow.g4`
 
-**createObjectStatement** (add commit clause):
+**createObjectStatement** (replace old clause with commit block):
 ```antlr
 createObjectStatement
     : (VARIABLE EQUALS)? CREATE nonListDataType (LPAREN memberAssignmentList? RPAREN)?
-      (WITH COMMIT (WITHOUT EVENTS)?)? REFRESH? onErrorClause?
+      (WITH COMMIT (WITHOUT EVENTS)? REFRESH?)? onErrorClause?
     ;
 ```
 
-**changeObjectStatement** (add commit clause):
+**changeObjectStatement** (replace old `REFRESH?` with commit block):
 ```antlr
 changeObjectStatement
     : CHANGE VARIABLE (LPAREN memberAssignmentList? RPAREN)?
-      (WITH COMMIT (WITHOUT EVENTS)?)? REFRESH? onErrorClause?
+      (WITH COMMIT (WITHOUT EVENTS)? REFRESH?)? onErrorClause?
     ;
 ```
 
-**commitStatement** (no change):
+> The commit block `(WITH COMMIT (WITHOUT EVENTS)? REFRESH?)?` is a single atomic clause: if any part appears, `WITH COMMIT` is the head. Standalone `REFRESH` is not valid for CREATE/CHANGE.
+
+**commitStatement** (keep existing grammar — `REFRESH` can appear alone):
 ```antlr
 commitStatement
     : COMMIT VARIABLE (WITH EVENTS)? REFRESH? onErrorClause?
     ;
 ```
+
+> For COMMIT, the describe formatter only outputs `REFRESH` when `WithEvents=true`. The case `WithEvents=false` + `RefreshInClient=true` drops refresh silently (same rule as CREATE/CHANGE).
 
 **deleteObjectStatement** (add refresh):
 ```antlr
@@ -267,31 +277,74 @@ The formatter must produce MDL that, when parsed back, produces identical BSON (
 
 **File: `mdl/executor/microflows_format_action_v2.go`**
 
+> **Consistency rule:** CREATE/CHANGE/COMMIT must use the same clause structure in describe output. If Commit/WithEvents is "No"/false, never emit `refresh` even if RefreshInClient=true (the runtime ignores it).
+
 **`formatCreateObjectActionGen`:** Replace hardcoded output with round-trip-aware clause:
 ```go
 func formatCreateObjectActionGen(a *genMf.CreateObjectAction) string {
     // ... existing format logic (entityName, outputVar, members) ...
     commitClause := ""
+    refreshClause := ""
     switch a.Commit() {
     case "Yes":
         commitClause = " with commit"
+        if a.RefreshInClient() {
+            refreshClause = " refresh"
+        }
     case "YesWithoutEvents":
         commitClause = " with commit without events"
+        if a.RefreshInClient() {
+            refreshClause = " refresh"
+        }
     }
-    refreshClause := ""
-    if a.RefreshInClient() {
-        refreshClause = " refresh"
-    }
-    // Output must match visitor: $X = create E (members)[commitClause][refreshClause];
+    // Commit="No": never emit refresh
     return fmt.Sprintf("$%s = create %s (%s)%s%s;", outputVar, entityName, members, commitClause, refreshClause)
 }
 ```
 
-**`formatChangeObjectActionGen`:** Same pattern — append `commitClause` + `refreshClause`. Currently outputs `change $V (members)[refresh];`. Add commitClause before refreshClause.
+**`formatChangeObjectActionGen`:** Same pattern. Currently outputs `change $V (members)[refresh];`. Replace with:
+```go
+func formatChangeObjectActionGen(a *genMf.ChangeObjectAction) string {
+    // ... existing format logic ...
+    commitClause := ""
+    refreshClause := ""
+    switch a.Commit() {
+    case "Yes":
+        commitClause = " with commit"
+        if a.RefreshInClient() {
+            refreshClause = " refresh"
+        }
+    case "YesWithoutEvents":
+        commitClause = " with commit without events"
+        if a.RefreshInClient() {
+            refreshClause = " refresh"
+        }
+    }
+    return fmt.Sprintf("change $%s (%s)%s%s;", varName, members, commitClause, refreshClause)
+}
+```
 
-**`formatCommitActionGen`:** No change needed (already handles `with events` + `refresh` for all 4 combinations).
+**`formatCommitActionGen`:** Already handles `with events` + `refresh`. One change: if `WithEvents=false` and `RefreshInClient=true`, drop `refresh`:
+```go
+func formatCommitActionGen(a *genMf.CommitAction) string {
+    varName := strings.TrimSpace(a.CommitVariableName())
+    if varName == "" { varName = "Object" }
+    suffix := ""
+    if a.WithEvents() {
+        suffix += " with events"
+        if a.RefreshInClient() {
+            suffix += " refresh"
+        }
+    }
+    // Note: consistent with CREATE/CHANGE — refresh is never standalone
+    if a.ErrorHandlingType() == "Continue" {
+        suffix += " on error continue"
+    }
+    return fmt.Sprintf("commit $%s%s;", varName, suffix)
+}
+```
 
-**`formatDeleteActionGen`:** Add refresh support (currently drops it):
+**`formatDeleteActionGen`:** Add refresh support:
 ```go
 func formatDeleteActionGen(a *genMf.DeleteAction) string {
     suffix := ""
@@ -321,14 +374,10 @@ File: `mdl/executor/roundtrip_microflow_test.go`
 Each test creates a microflow via MDL, describes it, and asserts the describe output matches the input. Every row in the Round-Trip Table must be covered:
 
 ```go
-// CREATE — 6 combinations
+// CREATE — 4 valid combinations
 func TestRoundtripMicroflow_CreateDefault(t *testing.T) {
     // Input:  $Obj = create Module.Entity (Name = 'x');
     // Expect: describe output must not add "with commit" or "refresh"
-}
-func TestRoundtripMicroflow_CreateRefreshOnly(t *testing.T) {
-    // Input:  $Obj = create Module.Entity (Name = 'x') refresh;
-    // Expect: $Obj = create Module.Entity (Name = 'x') refresh;
 }
 func TestRoundtripMicroflow_CreateWithCommit(t *testing.T) {
     // Input:  $Obj = create Module.Entity (Name = 'x') with commit;
@@ -346,18 +395,18 @@ func TestRoundtripMicroflow_CreateWithCommitWithoutEventsRefresh(t *testing.T) {
     // Input:  $Obj = create Module.Entity (Name = 'x') with commit without events refresh;
     // Expect: $Obj = create Module.Entity (Name = 'x') with commit without events refresh;
 }
+// Note: Commit="No"+Refresh=true cannot be expressed in MDL; BSON
+// coming from Studio Pro with this combo drops refresh on describe.
 
-// CHANGE — 6 combinations (same pattern)
+// CHANGE — 4 valid combinations (same pattern as CREATE)
 func TestRoundtripMicroflow_ChangeDefault(t *testing.T) { /* ... */ }
-func TestRoundtripMicroflow_ChangeRefreshOnly(t *testing.T) { /* ... */ }
 func TestRoundtripMicroflow_ChangeWithCommit(t *testing.T) { /* ... */ }
 func TestRoundtripMicroflow_ChangeWithCommitRefresh(t *testing.T) { /* ... */ }
 func TestRoundtripMicroflow_ChangeWithCommitWithoutEvents(t *testing.T) { /* ... */ }
 func TestRoundtripMicroflow_ChangeWithCommitWithoutEventsRefresh(t *testing.T) { /* ... */ }
 
-// COMMIT — 4 combinations (no change, existing tests)
+// COMMIT — 3 valid combinations (with events required for refresh)
 func TestRoundtripMicroflow_CommitDefault(t *testing.T) { /* ... */ }
-func TestRoundtripMicroflow_CommitRefreshOnly(t *testing.T) { /* ... */ }
 func TestRoundtripMicroflow_CommitWithEvents(t *testing.T) { /* ... */ }
 func TestRoundtripMicroflow_CommitWithEventsRefresh(t *testing.T) { /* ... */ }
 
