@@ -44,7 +44,6 @@ func (e *Executor) syncBack(ctx *ExecContext) {
 	if ctx.Graph != nil {
 		e.graphCatalog = ctx.Graph
 	}
-	e.themeRegistry = ctx.ThemeRegistry
 }
 
 // newExecContext builds an ExecContext from the current Executor state.
@@ -86,7 +85,6 @@ func (e *Executor) newExecContext(ctx context.Context) *ExecContext {
 		},
 		ExecConnection: ExecConnection{
 			MprPath:        e.mprPath,
-			ThemeRegistry:  e.themeRegistry,
 			Graph:          e.graphCatalog,
 			BackendFactory: e.backendFactory,
 		},

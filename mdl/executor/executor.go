@@ -329,7 +329,6 @@ type Executor struct {
 	format         OutputFormat               // output format (table, json)
 	logger         *diaglog.Logger            // session diagnostics logger (nil = no logging)
 	fragments      map[string]*ast.DefineFragmentStmt // script-scoped fragment definitions
-	themeRegistry  *ThemeRegistry             // cached theme design property definitions (lazy init)
 	registry       *Registry                  // statement dispatch registry
 
 	// perfStats accumulates per-statement execution timing so the
