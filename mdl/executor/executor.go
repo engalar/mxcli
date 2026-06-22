@@ -19,14 +19,8 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/graphcatalog"
 	"github.com/mendixlabs/mxcli/mdl/linter"
 	"github.com/mendixlabs/mxcli/mdl/repos"
-	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
 	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
-	genJA "github.com/mendixlabs/mxcli/modelsdk/gen/javaactions"
-	genJSA "github.com/mendixlabs/mxcli/modelsdk/gen/javascriptactions"
-	genPg "github.com/mendixlabs/mxcli/modelsdk/gen/pages"
-	genSec "github.com/mendixlabs/mxcli/modelsdk/gen/security"
-	genWf "github.com/mendixlabs/mxcli/modelsdk/gen/workflows"
 	sqllib "github.com/mendixlabs/mxcli/sql"
 )
 
@@ -50,119 +44,13 @@ type sessionTracker struct {
 // route through sub-backend caches. Session tracking moves to sessionTracker.
 type executorCache struct {
 	sessionTracker
-
-	modules   []*model.Module
-	units     []*types.UnitInfo
-	folders   []*types.FolderInfo
-	hierarchy *ContainerHierarchy
-
-	entityNames    map[model.ID]string
-	microflowNames map[model.ID]string
-	pageNames      map[model.ID]string
-
-	microflowsWithContainerGen []MicroflowGenWithContainer
-	nanoflowsWithContainerGen  []NanoflowGenWithContainer
-
-	projectSecurityGen             *genSec.ProjectSecurity
-	moduleSecurityWithContainerGen []ModuleSecurityGenWithContainer
-
-	javaActionsWithContainerGen       []ContainerWithGen[*genJA.JavaAction]
-	javaScriptActionsWithContainerGen []ContainerWithGen[*genJSA.JavaScriptAction]
-
-	domainModelsWithContainerGen []DomainModelGenWithContainer
-	domainModels                 []*genDm.DomainModel
-	domainModelsGen              []*genDm.DomainModel
-
-	workflowsWithContainerGen []ContainerWithGen[*genWf.Workflow]
-
-	pagesWithContainerGen    []ContainerWithGen[*genPg.Page]
-	layoutsWithContainerGen  []ContainerWithGen[*genPg.Layout]
-	snippetsWithContainerGen []ContainerWithGen[*genPg.Snippet]
-
-	domainModelByModule map[model.ID]*genDm.DomainModel
-}
-
-// ── Typed accessors — prefer these over direct field access ────────
-
-func (c *executorCache) EntityNames() map[model.ID]string        { return c.entityNames }
-func (c *executorCache) SetEntityNames(v map[model.ID]string)    { c.entityNames = v }
-func (c *executorCache) MicroflowNames() map[model.ID]string     { return c.microflowNames }
-func (c *executorCache) SetMicroflowNames(v map[model.ID]string) { c.microflowNames = v }
-func (c *executorCache) PageNames() map[model.ID]string          { return c.pageNames }
-func (c *executorCache) SetPageNames(v map[model.ID]string)      { c.pageNames = v }
-
-func (c *executorCache) MicroflowsWithContainer() []MicroflowGenWithContainer {
-	return c.microflowsWithContainerGen
-}
-func (c *executorCache) SetMicroflowsWithContainer(v []MicroflowGenWithContainer) {
-	c.microflowsWithContainerGen = v
-}
-func (c *executorCache) NanoflowsWithContainer() []NanoflowGenWithContainer {
-	return c.nanoflowsWithContainerGen
-}
-func (c *executorCache) SetNanoflowsWithContainer(v []NanoflowGenWithContainer) {
-	c.nanoflowsWithContainerGen = v
-}
-func (c *executorCache) PagesWithContainer() []ContainerWithGen[*genPg.Page] {
-	return c.pagesWithContainerGen
-}
-func (c *executorCache) SetPagesWithContainer(v []ContainerWithGen[*genPg.Page]) {
-	c.pagesWithContainerGen = v
-}
-func (c *executorCache) LayoutsWithContainer() []ContainerWithGen[*genPg.Layout] {
-	return c.layoutsWithContainerGen
-}
-func (c *executorCache) SetLayoutsWithContainer(v []ContainerWithGen[*genPg.Layout]) {
-	c.layoutsWithContainerGen = v
-}
-func (c *executorCache) SnippetsWithContainer() []ContainerWithGen[*genPg.Snippet] {
-	return c.snippetsWithContainerGen
-}
-func (c *executorCache) SetSnippetsWithContainer(v []ContainerWithGen[*genPg.Snippet]) {
-	c.snippetsWithContainerGen = v
-}
-func (c *executorCache) WorkflowsWithContainer() []ContainerWithGen[*genWf.Workflow] {
-	return c.workflowsWithContainerGen
-}
-func (c *executorCache) SetWorkflowsWithContainer(v []ContainerWithGen[*genWf.Workflow]) {
-	c.workflowsWithContainerGen = v
-}
-func (c *executorCache) JavaActionsWithContainer() []ContainerWithGen[*genJA.JavaAction] {
-	return c.javaActionsWithContainerGen
-}
-func (c *executorCache) SetJavaActionsWithContainer(v []ContainerWithGen[*genJA.JavaAction]) {
-	c.javaActionsWithContainerGen = v
-}
-func (c *executorCache) JavaScriptActionsWithContainer() []ContainerWithGen[*genJSA.JavaScriptAction] {
-	return c.javaScriptActionsWithContainerGen
-}
-func (c *executorCache) SetJavaScriptActionsWithContainer(v []ContainerWithGen[*genJSA.JavaScriptAction]) {
-	c.javaScriptActionsWithContainerGen = v
-}
-func (c *executorCache) DomainModelsWithContainer() []DomainModelGenWithContainer {
-	return c.domainModelsWithContainerGen
-}
-func (c *executorCache) SetDomainModelsWithContainer(v []DomainModelGenWithContainer) {
-	c.domainModelsWithContainerGen = v
-}
-func (c *executorCache) DomainModels() []*genDm.DomainModel        { return c.domainModels }
-func (c *executorCache) SetDomainModels(v []*genDm.DomainModel)    { c.domainModels = v }
-func (c *executorCache) DomainModelsGen() []*genDm.DomainModel     { return c.domainModelsGen }
-func (c *executorCache) SetDomainModelsGen(v []*genDm.DomainModel) { c.domainModelsGen = v }
-
-func (c *executorCache) ProjectSecurityGen() *genSec.ProjectSecurity     { return c.projectSecurityGen }
-func (c *executorCache) SetProjectSecurityGen(v *genSec.ProjectSecurity) { c.projectSecurityGen = v }
-func (c *executorCache) ModuleSecurityWithContainer() []ModuleSecurityGenWithContainer {
-	return c.moduleSecurityWithContainerGen
-}
-func (c *executorCache) SetModuleSecurityWithContainer(v []ModuleSecurityGenWithContainer) {
-	c.moduleSecurityWithContainerGen = v
-}
-func (c *executorCache) DomainModelByModule() map[model.ID]*genDm.DomainModel {
-	return c.domainModelByModule
-}
-func (c *executorCache) SetDomainModelByModule(v map[model.ID]*genDm.DomainModel) {
-	c.domainModelByModule = v
+	metadataCache
+	microflowCache
+	pageCache
+	domainModelCache
+	securityCache
+	workflowCache
+	javaCache
 }
 
 // createdMicroflowInfo tracks a microflow created during this session.

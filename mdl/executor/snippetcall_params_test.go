@@ -51,7 +51,7 @@ func newPageBuilder(mb *mock.MockBackend, h *ContainerHierarchy, moduleName stri
 			break
 		}
 	}
-	cache := &executorCache{hierarchy: h}
+	cache := &executorCache{metadataCache: metadataCache{hierarchy: h}}
 	return &pageBuilder{
 		pageReader:          mb,
 		metadataReader:      mb,
