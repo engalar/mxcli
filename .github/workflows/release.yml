@@ -1,4 +1,4 @@
-name: Release Launcher
+name: Release mxcli
 
 on:
   push:
@@ -11,8 +11,6 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
-    # Only run for launcher tags (v*), not daemon-v* or local-v*.
-    if: "!startsWith(github.ref_name, 'daemon-') && !startsWith(github.ref_name, 'local-')"
     steps:
       - uses: actions/checkout@v6
         with:
@@ -34,8 +32,17 @@ jobs:
         env:
           ANTLR4_TOOLS_ANTLR_VERSION: '4.13.2'
 
-      - name: Build launcher binaries
-        run: make release-launcher
+      - name: Build mxcli binaries
+        run: |
+          set -e
+          mkdir -p bin
+          LDFLAGS='-s -w -X main.Version=${{ github.ref_name }} -X main.BuildTime=$(date -u +"%Y-%m-%dT%H:%M:%SZ") -X main.CommitSHA=$(git rev-parse HEAD)'
+          CGO_ENABLED=0 GOOS=linux   GOARCH=amd64 go build -ldflags "$LDFLAGS" -trimpath -o bin/mxcli-linux-amd64   ./cmd/mxcli
+          CGO_ENABLED=0 GOOS=linux   GOARCH=arm64 go build -ldflags "$LDFLAGS" -trimpath -o bin/mxcli-linux-arm64   ./cmd/mxcli
+          CGO_ENABLED=0 GOOS=darwin  GOARCH=amd64 go build -ldflags "$LDFLAGS" -trimpath -o bin/mxcli-darwin-amd64  ./cmd/mxcli
+          CGO_ENABLED=0 GOOS=darwin  GOARCH=arm64 go build -ldflags "$LDFLAGS" -trimpath -o bin/mxcli-darwin-arm64  ./cmd/mxcli
+          CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags "$LDFLAGS" -trimpath -o bin/mxcli-windows-amd64.exe ./cmd/mxcli
+          CGO_ENABLED=0 GOOS=windows GOARCH=arm64 go build -ldflags "$LDFLAGS" -trimpath -o bin/mxcli-windows-arm64.exe ./cmd/mxcli
 
       - name: Generate SHA256 checksums
         run: |

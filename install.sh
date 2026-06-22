@@ -47,7 +47,7 @@ fi
 
 # ── Idempotent version check ─────────────────────────────────────────────────
 if command -v mxcli >/dev/null 2>&1; then
-  CURRENT=$(mxcli version 2>/dev/null | head -1 | awk '{print $3}' || echo "")
+  CURRENT=$(mxcli --version 2>/dev/null | sed 's/.*version //; s/ .*//' || echo "")
   if [ "$CURRENT" = "$LATEST" ]; then
     echo "✅ mxcli $CURRENT is already up to date."
     exit 0
@@ -115,7 +115,7 @@ TMP=$(mktemp /tmp/mxcli.XXXXXX)
 TMP_SUMS=$(mktemp /tmp/mxcli-sums.XXXXXX)
 trap 'rm -f "$TMP" "$TMP_SUMS"' EXIT
 
-echo "  Downloading launcher (${OS}/${ARCH}) from GitHub..."
+echo "  Downloading mxcli (${OS}/${ARCH}) from GitHub..."
 curl -fsSL --progress-bar "$BIN_URL" -o "$TMP"
 
 echo "  Verifying checksum..."
@@ -148,7 +148,6 @@ mv "$TMP" "${INSTALL_DIR}/mxcli${EXT}"
 
 echo ""
 echo "✅ mxcli $LATEST installed to ${INSTALL_DIR}/mxcli${EXT}"
-echo "   The daemon (~20 MB) will be downloaded automatically on first use."
 echo ""
 echo "   Run: mxcli version"
 echo ""
