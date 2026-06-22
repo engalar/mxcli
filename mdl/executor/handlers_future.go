@@ -16,6 +16,7 @@ import (
 	"github.com/mendixlabs/mxcli/model"
 	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
+	genSec "github.com/mendixlabs/mxcli/modelsdk/gen/security"
 )
 
 // execHelpFuture is the ExecContext-free version of execHelp.
@@ -1682,4 +1683,813 @@ func listBusinessEventsFuture(
 		result.Rows = append(result.Rows, []any{r.service, r.message, r.operation, r.entity, r.attrs})
 	}
 	return writeResultTo(output, format, result)
+}
+
+// ────────────────────────────────────────────────────────────
+// Phase 3d-1f: security show handlers migrated from *ExecContext
+// ────────────────────────────────────────────────────────────
+
+// listProjectSecurityFuture is the ExecContext-free version of listProjectSecurityGen.
+func listProjectSecurityFuture(
+	ctx context.Context,
+	output io.Writer,
+	format OutputFormat,
+	sec repos.SecurityRepository,
+) error {
+	ps, err := sec.Get()
+	if err != nil {
+		return mdlerrors.NewBackend("read project security", err)
+	}
+	if ps == nil {
+		return mdlerrors.NewBackend("read project security", fmt.Errorf("ProjectSecurity unit not found"))
+	}
+
+	var pp *genSec.PasswordPolicySettings
+	if raw := ps.PasswordPolicySettings(); raw != nil {
+		pp, _ = raw.(*genSec.PasswordPolicySettings)
+	}
+
+	if format == FormatJSON {
+		result := &TableResult{Columns: []string{"Property", "Value"}}
+		result.Rows = append(result.Rows,
+			[]any{"SecurityLevel", securityLevelDisplay(ps.SecurityLevel())},
+			[]any{"CheckSecurity", fmt.Sprintf("%v", ps.CheckSecurity())},
+			[]any{"StrictMode", fmt.Sprintf("%v", ps.StrictMode())},
+			[]any{"DemoUsersEnabled", fmt.Sprintf("%v", ps.EnableDemoUsers())},
+			[]any{"GuestAccess", fmt.Sprintf("%v", ps.EnableGuestAccess())},
+			[]any{"UserRoles", fmt.Sprintf("%d", len(ps.UserRolesItems()))},
+			[]any{"DemoUsers", fmt.Sprintf("%d", len(ps.DemoUsersItems()))},
+		)
+		if ps.AdminUserName() != "" {
+			result.Rows = append(result.Rows, []any{"AdminUser", ps.AdminUserName()})
+		}
+		if ps.GuestUserRoleName() != "" {
+			result.Rows = append(result.Rows, []any{"GuestUserRole", ps.GuestUserRoleName()})
+		}
+		if pp != nil {
+			result.Rows = append(result.Rows,
+				[]any{"PasswordPolicy.MinimumLength", fmt.Sprintf("%d", pp.MinimumLength())},
+				[]any{"PasswordPolicy.RequireDigit", fmt.Sprintf("%v", pp.RequireDigit())},
+				[]any{"PasswordPolicy.RequireMixedCase", fmt.Sprintf("%v", pp.RequireMixedCase())},
+				[]any{"PasswordPolicy.RequireSymbol", fmt.Sprintf("%v", pp.RequireSymbol())},
+			)
+		}
+		return writeResultTo(output, format, result)
+	}
+
+	fmt.Fprintf(output, "Security Level: %s\n", securityLevelDisplay(ps.SecurityLevel()))
+	fmt.Fprintf(output, "Check Security: %v\n", ps.CheckSecurity())
+	fmt.Fprintf(output, "Strict Mode: %v\n", ps.StrictMode())
+	fmt.Fprintf(output, "Demo Users Enabled: %v\n", ps.EnableDemoUsers())
+	fmt.Fprintf(output, "Guest Access: %v\n", ps.EnableGuestAccess())
+	if ps.AdminUserName() != "" {
+		fmt.Fprintf(output, "Admin User: %s\n", ps.AdminUserName())
+	}
+	if ps.GuestUserRoleName() != "" {
+		fmt.Fprintf(output, "Guest User Role: %s\n", ps.GuestUserRoleName())
+	}
+	fmt.Fprintf(output, "User Roles: %d\n", len(ps.UserRolesItems()))
+	fmt.Fprintf(output, "Demo Users: %d\n", len(ps.DemoUsersItems()))
+
+	if pp != nil {
+		fmt.Fprintf(output, "\nPassword Policy:\n")
+		fmt.Fprintf(output, "  Minimum Length: %d\n", pp.MinimumLength())
+		fmt.Fprintf(output, "  Require Digit: %v\n", pp.RequireDigit())
+		fmt.Fprintf(output, "  Require Mixed Case: %v\n", pp.RequireMixedCase())
+		fmt.Fprintf(output, "  Require Symbol: %v\n", pp.RequireSymbol())
+	}
+	return nil
+}
+
+// listModuleRolesFuture is the ExecContext-free version of listModuleRolesGen.
+func listModuleRolesFuture(
+	ctx context.Context,
+	output io.Writer,
+	format OutputFormat,
+	ml backend.ModuleLister,
+	mr backend.MetadataReader,
+	fm backend.FolderManager,
+	sec repos.SecurityRepository,
+	inModule string,
+) error {
+	h, err := NewContainerHierarchyFromRoles(ml, mr, fm)
+	if err != nil {
+		return mdlerrors.NewBackend("build hierarchy", err)
+	}
+
+	modules, err := ml.ListModules()
+	if err != nil {
+		return mdlerrors.NewBackend("list modules", err)
+	}
+
+	result := &TableResult{Columns: []string{"Qualified Name", "Module", "Role", "Description"}}
+	for _, mod := range modules {
+		if inModule != "" && mod.Name != inModule {
+			continue
+		}
+		ms, err := sec.GetModuleSecurity(mod.ID)
+		if err != nil || ms == nil {
+			continue
+		}
+		modName := h.GetModuleName(mod.ID)
+		if modName == "" {
+			continue
+		}
+		for _, mrItem := range ms.ModuleRolesItems() {
+			typed, ok := mrItem.(*genSec.ModuleRole)
+			if !ok {
+				continue
+			}
+			qn := modName + "." + typed.Name()
+			result.Rows = append(result.Rows, []any{qn, modName, typed.Name(), typed.Description()})
+		}
+	}
+	result.Summary = fmt.Sprintf("(%d module roles)", len(result.Rows))
+	return writeResultTo(output, format, result)
+}
+
+// listUserRolesFuture is the ExecContext-free version of listUserRolesGen.
+func listUserRolesFuture(
+	ctx context.Context,
+	output io.Writer,
+	format OutputFormat,
+	sec repos.SecurityRepository,
+) error {
+	ps, err := sec.Get()
+	if err != nil {
+		return mdlerrors.NewBackend("read project security", err)
+	}
+	if ps == nil {
+		return mdlerrors.NewBackend("read project security", fmt.Errorf("ProjectSecurity not found"))
+	}
+
+	result := &TableResult{Columns: []string{"Name", "Module Roles", "Manage All", "Check Security"}}
+	for _, ur := range ps.UserRolesItems() {
+		typed, ok := ur.(*genSec.UserRole)
+		if !ok {
+			continue
+		}
+		ma := "No"
+		if typed.ManageAllRoles() {
+			ma = "Yes"
+		}
+		cs := "No"
+		if typed.CheckSecurity() {
+			cs = "Yes"
+		}
+		result.Rows = append(result.Rows, []any{typed.Name(), len(typed.ModuleRolesQualifiedNames()), ma, cs})
+	}
+	result.Summary = fmt.Sprintf("(%d user roles)", len(result.Rows))
+	return writeResultTo(output, format, result)
+}
+
+// listDemoUsersFuture is the ExecContext-free version of listDemoUsersGen.
+func listDemoUsersFuture(
+	ctx context.Context,
+	output io.Writer,
+	format OutputFormat,
+	sec repos.SecurityRepository,
+) error {
+	ps, err := sec.Get()
+	if err != nil {
+		return mdlerrors.NewBackend("read project security", err)
+	}
+	if ps == nil {
+		return mdlerrors.NewBackend("read project security", fmt.Errorf("ProjectSecurity not found"))
+	}
+
+	if !ps.EnableDemoUsers() {
+		if format != FormatJSON {
+			fmt.Fprintln(output, "Demo users are disabled.")
+			fmt.Fprintln(output, "Enable with: alter project security demo users on;")
+			return nil
+		}
+		return writeResultTo(output, format, &TableResult{Columns: []string{"User Name", "User Roles"}})
+	}
+
+	result := &TableResult{Columns: []string{"User Name", "User Roles"}}
+	for _, du := range ps.DemoUsersItems() {
+		typed, ok := du.(*genSec.DemoUser)
+		if !ok {
+			continue
+		}
+		rolesStr := strings.Join(typed.UserRolesQualifiedNames(), ", ")
+		result.Rows = append(result.Rows, []any{typed.UserName(), rolesStr})
+	}
+	result.Summary = fmt.Sprintf("(%d demo users)", len(result.Rows))
+	return writeResultTo(output, format, result)
+}
+
+// listAccessOnEntityFuture is the ExecContext-free version of listAccessOnEntityGen.
+func listAccessOnEntityFuture(
+	ctx context.Context,
+	output io.Writer,
+	format OutputFormat,
+	ml backend.ModuleLister,
+	dmr repos.DomainModelRepository,
+	name *ast.QualifiedName,
+) error {
+	if name == nil {
+		return mdlerrors.NewValidation("entity name required")
+	}
+
+	pairs, err := dmr.ListAllWithContainerID()
+	if err != nil {
+		return mdlerrors.NewBackend("list domain models", err)
+	}
+
+	mods, err := ml.ListModules()
+	if err != nil {
+		return mdlerrors.NewBackend("list modules", err)
+	}
+	moduleNames := make(map[model.ID]string, len(mods))
+	for _, m := range mods {
+		moduleNames[m.ID] = m.Name
+	}
+
+	var entity *genDm.Entity
+	for _, p := range pairs {
+		if p.DM == nil {
+			continue
+		}
+		modName := moduleNames[p.ContainerID]
+		if modName != name.Module {
+			continue
+		}
+		for _, e := range p.DM.EntitiesItems() {
+			ent, ok := e.(*genDm.Entity)
+			if !ok {
+				continue
+			}
+			if ent.Name() == name.Name {
+				entity = ent
+				break
+			}
+		}
+	}
+	if entity == nil {
+		return mdlerrors.NewNotFound("entity", name.String())
+	}
+
+	attrNames := make(map[string]string)
+	for _, a := range entity.AttributesItems() {
+		attr, ok := a.(*genDm.Attribute)
+		if !ok {
+			continue
+		}
+		attrNames[string(attr.ID())] = attr.Name()
+		attrNames[attr.Name()] = attr.Name()
+	}
+
+	if format == FormatJSON {
+		result := &TableResult{
+			Columns: []string{"Rule", "Roles", "Rights", "DefaultMemberAccess", "MemberAccess", "XPath"},
+		}
+		ruleNum := 0
+		for _, r := range entity.AccessRulesItems() {
+			rule, ok := r.(*genDm.AccessRule)
+			if !ok {
+				continue
+			}
+			ruleNum++
+			var memberParts []string
+			for _, m := range rule.MemberAccessesItems() {
+				ma, ok := m.(*genDm.MemberAccess)
+				if !ok {
+					continue
+				}
+				memberParts = append(memberParts, memberAccessLocalName(ma, attrNames)+":"+ma.AccessRights())
+			}
+			result.Rows = append(result.Rows, []any{
+				ruleNum,
+				strings.Join(entityRuleRoleStringsGen(rule), ", "),
+				strings.ToLower(strings.Join(entityRuleRightStringsGen(rule), ", ")),
+				rule.DefaultMemberAccessRights(),
+				strings.Join(memberParts, ", "),
+				rule.XPathConstraint(),
+			})
+		}
+		return writeResultTo(output, format, result)
+	}
+
+	if len(entity.AccessRulesItems()) == 0 {
+		fmt.Fprintf(output, "No access rules on %s\n", name)
+		return nil
+	}
+
+	fmt.Fprintf(output, "Access rules for %s.%s:\n\n", name.Module, name.Name)
+
+	ruleNum := 0
+	for _, r := range entity.AccessRulesItems() {
+		rule, ok := r.(*genDm.AccessRule)
+		if !ok {
+			continue
+		}
+		ruleNum++
+		var rights []string
+		for _, right := range entityRuleRightStringsGen(rule) {
+			rights = append(rights, strings.ToLower(right))
+		}
+		fmt.Fprintf(output, "Rule %d: %s\n", ruleNum, strings.Join(entityRuleRoleStringsGen(rule), ", "))
+		fmt.Fprintf(output, "  Rights: %s\n", strings.Join(rights, ", "))
+
+		if rule.DefaultMemberAccessRights() != "" {
+			fmt.Fprintf(output, "  Default member access: %s\n", rule.DefaultMemberAccessRights())
+		}
+
+		for _, m := range rule.MemberAccessesItems() {
+			ma, ok := m.(*genDm.MemberAccess)
+			if !ok {
+				continue
+			}
+			fmt.Fprintf(output, "  %s: %s\n", memberAccessLocalName(ma, attrNames), ma.AccessRights())
+		}
+
+		if rule.XPathConstraint() != "" {
+			fmt.Fprintf(output, "  where '%s'\n", rule.XPathConstraint())
+		}
+		fmt.Fprintln(output)
+	}
+	return nil
+}
+
+// listAccessOnMicroflowFuture is the ExecContext-free version of listAccessOnMicroflowGen.
+func listAccessOnMicroflowFuture(
+	ctx context.Context,
+	output io.Writer,
+	format OutputFormat,
+	ml backend.ModuleLister,
+	mr backend.MetadataReader,
+	fm backend.FolderManager,
+	mfRepo repos.MicroflowRepository,
+	name *ast.QualifiedName,
+) error {
+	if name == nil {
+		return mdlerrors.NewValidation("microflow name required")
+	}
+
+	h, err := NewContainerHierarchyFromRoles(ml, mr, fm)
+	if err != nil {
+		return mdlerrors.NewBackend("build hierarchy", err)
+	}
+
+	mfs, err := mfRepo.ListAll()
+	if err != nil {
+		return mdlerrors.NewBackend("list microflows", err)
+	}
+
+	for _, mf := range mfs {
+		if mf == nil {
+			continue
+		}
+		containerID, _ := mfRepo.GetContainerUUID(model.ID(mf.ID()))
+		modName := h.GetModuleName(h.FindModuleID(containerID))
+		if modName != name.Module || mf.Name() != name.Name {
+			continue
+		}
+		roles := mf.AllowedModuleRolesQualifiedNames()
+		if format == FormatJSON {
+			result := &TableResult{Columns: []string{"Module", "Role"}}
+			for _, role := range roles {
+				mod, r := splitRoleQualifiedName(role)
+				result.Rows = append(result.Rows, []any{mod, r})
+			}
+			return writeResultTo(output, format, result)
+		}
+		if len(roles) == 0 {
+			fmt.Fprintf(output, "No module roles granted execute access on %s.%s\n", modName, mf.Name())
+			return nil
+		}
+		fmt.Fprintf(output, "Allowed module roles for %s.%s:\n", modName, mf.Name())
+		for _, role := range roles {
+			fmt.Fprintf(output, "  %s\n", role)
+		}
+		return nil
+	}
+
+	return mdlerrors.NewNotFound("microflow", name.String())
+}
+
+// listAccessOnPageFuture is the ExecContext-free version of listAccessOnPageGen.
+func listAccessOnPageFuture(
+	ctx context.Context,
+	output io.Writer,
+	format OutputFormat,
+	ml backend.ModuleLister,
+	mr backend.MetadataReader,
+	fm backend.FolderManager,
+	pgRepo repos.PageRepository,
+	name *ast.QualifiedName,
+) error {
+	if name == nil {
+		return mdlerrors.NewValidation("page name required")
+	}
+
+	h, err := NewContainerHierarchyFromRoles(ml, mr, fm)
+	if err != nil {
+		return mdlerrors.NewBackend("build hierarchy", err)
+	}
+
+	pages, err := pgRepo.ListAll()
+	if err != nil {
+		return mdlerrors.NewBackend("list pages", err)
+	}
+
+	for _, pg := range pages {
+		if pg == nil {
+			continue
+		}
+		containerID, _ := pgRepo.GetContainerUUID(model.ID(pg.ID()))
+		modName := h.GetModuleName(h.FindModuleID(containerID))
+		if modName == name.Module && pg.Name() == name.Name {
+			allowed := pg.AllowedRolesQualifiedNames()
+			if format == FormatJSON {
+				result := &TableResult{Columns: []string{"Module", "Role"}}
+				for _, role := range allowed {
+					parts := strings.SplitN(role, ".", 2)
+					mod, r := "", role
+					if len(parts) == 2 {
+						mod, r = parts[0], parts[1]
+					}
+					result.Rows = append(result.Rows, []any{mod, r})
+				}
+				return writeResultTo(output, format, result)
+			}
+			if len(allowed) == 0 {
+				fmt.Fprintf(output, "No module roles granted view access on %s.%s\n", modName, pg.Name())
+				return nil
+			}
+			fmt.Fprintf(output, "Allowed module roles for %s.%s:\n", modName, pg.Name())
+			for _, role := range allowed {
+				fmt.Fprintf(output, "  %s\n", role)
+			}
+			return nil
+		}
+	}
+
+	return mdlerrors.NewNotFound("page", name.String())
+}
+
+// listAccessOnWorkflowFuture is the ExecContext-free version of listAccessOnWorkflow.
+func listAccessOnWorkflowFuture(ctx context.Context, name *ast.QualifiedName) error {
+	return mdlerrors.NewUnsupported("show access on workflow is not supported: Mendix workflows do not have document-level AllowedModuleRoles (unlike microflows and pages). Workflow access is controlled through the microflow that triggers the workflow and UserTask targeting")
+}
+
+// listAccessOnNanoflowFuture is the ExecContext-free version of listAccessOnNanoflowGen.
+func listAccessOnNanoflowFuture(
+	ctx context.Context,
+	output io.Writer,
+	format OutputFormat,
+	ml backend.ModuleLister,
+	mr backend.MetadataReader,
+	fm backend.FolderManager,
+	nfRepo repos.NanoflowRepository,
+	name *ast.QualifiedName,
+) error {
+	if name == nil {
+		return mdlerrors.NewValidation("nanoflow name required")
+	}
+
+	h, err := NewContainerHierarchyFromRoles(ml, mr, fm)
+	if err != nil {
+		return mdlerrors.NewBackend("build hierarchy", err)
+	}
+
+	nfs, err := nfRepo.ListAll()
+	if err != nil {
+		return mdlerrors.NewBackend("list nanoflows", err)
+	}
+
+	for _, nf := range nfs {
+		if nf == nil {
+			continue
+		}
+		containerID, _ := nfRepo.GetContainerUUID(model.ID(nf.ID()))
+		modName := h.GetModuleName(h.FindModuleID(containerID))
+		if modName != name.Module || nf.Name() != name.Name {
+			continue
+		}
+		roles := nf.AllowedModuleRolesQualifiedNames()
+		if format == FormatJSON {
+			result := &TableResult{Columns: []string{"Module", "Role"}}
+			for _, role := range roles {
+				mod, r := splitRoleQualifiedName(role)
+				result.Rows = append(result.Rows, []any{mod, r})
+			}
+			return writeResultTo(output, format, result)
+		}
+		if len(roles) == 0 {
+			fmt.Fprintf(output, "No module roles granted execute access on %s.%s\n", modName, nf.Name())
+			return nil
+		}
+		fmt.Fprintf(output, "Allowed module roles for %s.%s:\n", modName, nf.Name())
+		for _, role := range roles {
+			fmt.Fprintf(output, "  %s\n", role)
+		}
+		return nil
+	}
+
+	return mdlerrors.NewNotFound("nanoflow", name.String())
+}
+
+// listSecurityMatrixFuture is the ExecContext-free version of listSecurityMatrixGen.
+func listSecurityMatrixFuture(
+	ctx context.Context,
+	output io.Writer,
+	format OutputFormat,
+	ml backend.ModuleLister,
+	mr backend.MetadataReader,
+	fm backend.FolderManager,
+	sec repos.SecurityRepository,
+	dmr repos.DomainModelRepository,
+	mfRepo repos.MicroflowRepository,
+	pgRepo repos.PageRepository,
+	inModule string,
+) error {
+	if format == FormatJSON {
+		return listSecurityMatrixJSONFuture(ctx, output, format, ml, mr, fm, sec, dmr, mfRepo, pgRepo, inModule)
+	}
+
+	h, err := NewContainerHierarchyFromRoles(ml, mr, fm)
+	if err != nil {
+		return mdlerrors.NewBackend("build hierarchy", err)
+	}
+
+	modules, err := ml.ListModules()
+	if err != nil {
+		return mdlerrors.NewBackend("list modules", err)
+	}
+
+	type moduleRoleInfo struct {
+		moduleName string
+		roleName   string
+	}
+	var roles []moduleRoleInfo
+	for _, mod := range modules {
+		if inModule != "" && mod.Name != inModule {
+			continue
+		}
+		ms, err := sec.GetModuleSecurity(mod.ID)
+		if err != nil || ms == nil {
+			continue
+		}
+		for _, mrItem := range ms.ModuleRolesItems() {
+			mr2, ok := mrItem.(*genSec.ModuleRole)
+			if !ok {
+				continue
+			}
+			roles = append(roles, moduleRoleInfo{mod.Name, mr2.Name()})
+		}
+	}
+
+	if len(roles) == 0 {
+		if inModule != "" {
+			fmt.Fprintf(output, "No module roles found in %s\n", inModule)
+		} else {
+			fmt.Fprintln(output, "No module roles found")
+		}
+		return nil
+	}
+
+	pairs, err := dmr.ListAllWithContainerID()
+	if err != nil {
+		return mdlerrors.NewBackend("list domain models", err)
+	}
+	moduleIDs := make(map[model.ID]bool, len(modules))
+	for _, m := range modules {
+		moduleIDs[m.ID] = true
+	}
+
+	fmt.Fprintf(output, "Security Matrix")
+	if inModule != "" {
+		fmt.Fprintf(output, " for %s", inModule)
+	}
+	fmt.Fprintln(output, ":")
+	fmt.Fprintln(output)
+
+	// Entities section
+	fmt.Fprintln(output, "## Entity Access")
+	fmt.Fprintln(output)
+
+	entityFound := false
+	for _, p := range pairs {
+		if p.DM == nil || !moduleIDs[p.ContainerID] {
+			continue
+		}
+		modID := h.FindModuleID(p.ContainerID)
+		modName := h.GetModuleName(modID)
+		if inModule != "" && modName != inModule {
+			continue
+		}
+		for _, e := range p.DM.EntitiesItems() {
+			entity, ok := e.(*genDm.Entity)
+			if !ok {
+				continue
+			}
+			rules := entity.AccessRulesItems()
+			if len(rules) == 0 {
+				continue
+			}
+			entityFound = true
+			fmt.Fprintf(output, "### %s.%s\n", modName, entity.Name())
+			for _, r := range rules {
+				rule, ok := r.(*genDm.AccessRule)
+				if !ok {
+					continue
+				}
+				roleStrs := entityRuleRoleStringsGen(rule)
+				rights := entityRuleRightStringsGen(rule)
+				fmt.Fprintf(output, "  %s: %s\n", strings.Join(roleStrs, ", "), strings.Join(rights, ""))
+			}
+			fmt.Fprintln(output)
+		}
+	}
+	if !entityFound {
+		fmt.Fprintln(output, "(no entity access rules configured)")
+		fmt.Fprintln(output)
+	}
+
+	// Microflow section
+	fmt.Fprintln(output, "## Microflow Access")
+	fmt.Fprintln(output)
+
+	mfs, err := mfRepo.ListAll()
+	if err != nil {
+		return mdlerrors.NewBackend("list microflows", err)
+	}
+
+	mfFound := false
+	for _, mf := range mfs {
+		if mf == nil {
+			continue
+		}
+		roleStrs := mf.AllowedModuleRolesQualifiedNames()
+		if len(roleStrs) == 0 {
+			continue
+		}
+		containerID, _ := mfRepo.GetContainerUUID(model.ID(mf.ID()))
+		modName := h.GetModuleName(h.FindModuleID(containerID))
+		if inModule != "" && modName != inModule {
+			continue
+		}
+		mfFound = true
+		fmt.Fprintf(output, "  %s.%s: %s\n", modName, mf.Name(), strings.Join(roleStrs, ", "))
+	}
+	if !mfFound {
+		fmt.Fprintln(output, "(no microflow access rules configured)")
+	}
+	fmt.Fprintln(output)
+
+	// Page section
+	fmt.Fprintln(output, "## Page Access")
+	fmt.Fprintln(output)
+
+	pages, err := pgRepo.ListAll()
+	if err != nil {
+		return mdlerrors.NewBackend("list pages", err)
+	}
+
+	pgFound := false
+	for _, pg := range pages {
+		if pg == nil {
+			continue
+		}
+		roles2 := pg.AllowedRolesQualifiedNames()
+		if len(roles2) == 0 {
+			continue
+		}
+		containerID2, _ := pgRepo.GetContainerUUID(model.ID(pg.ID()))
+		modName2 := h.GetModuleName(h.FindModuleID(containerID2))
+		if inModule != "" && modName2 != inModule {
+			continue
+		}
+		pgFound = true
+		fmt.Fprintf(output, "  %s.%s: %s\n", modName2, pg.Name(), strings.Join(roles2, ", "))
+	}
+	if !pgFound {
+		fmt.Fprintln(output, "(no page access rules configured)")
+	}
+	fmt.Fprintln(output)
+
+	// Workflow section
+	fmt.Fprintln(output, "## Workflow Access")
+	fmt.Fprintln(output)
+	fmt.Fprintln(output, "(workflow access is controlled through triggering microflows and UserTask targeting, not document-level roles)")
+	fmt.Fprintln(output)
+
+	return nil
+}
+
+// listSecurityMatrixJSONFuture is the JSON helper for listSecurityMatrixFuture.
+func listSecurityMatrixJSONFuture(
+	ctx context.Context,
+	output io.Writer,
+	format OutputFormat,
+	ml backend.ModuleLister,
+	mr backend.MetadataReader,
+	fm backend.FolderManager,
+	sec repos.SecurityRepository,
+	dmr repos.DomainModelRepository,
+	mfRepo repos.MicroflowRepository,
+	pgRepo repos.PageRepository,
+	inModule string,
+) error {
+	h, err := NewContainerHierarchyFromRoles(ml, mr, fm)
+	if err != nil {
+		return mdlerrors.NewBackend("build hierarchy", err)
+	}
+
+	tr := &TableResult{
+		Columns: []string{"ObjectType", "QualifiedName", "Roles", "Rights"},
+	}
+
+	modules, err := ml.ListModules()
+	if err != nil {
+		return mdlerrors.NewBackend("list modules", err)
+	}
+	moduleIDs := make(map[model.ID]bool, len(modules))
+	for _, m := range modules {
+		moduleIDs[m.ID] = true
+	}
+
+	// Entities
+	pairs, _ := dmr.ListAllWithContainerID()
+	for _, p := range pairs {
+		if p.DM == nil || !moduleIDs[p.ContainerID] {
+			continue
+		}
+		modID := h.FindModuleID(p.ContainerID)
+		modName := h.GetModuleName(modID)
+		if inModule != "" && modName != inModule {
+			continue
+		}
+		for _, e := range p.DM.EntitiesItems() {
+			entity, ok := e.(*genDm.Entity)
+			if !ok {
+				continue
+			}
+			for _, r := range entity.AccessRulesItems() {
+				rule, ok := r.(*genDm.AccessRule)
+				if !ok {
+					continue
+				}
+				roleStrs := entityRuleRoleStringsGen(rule)
+				rights := entityRuleRightStringsGen(rule)
+				tr.Rows = append(tr.Rows, []any{
+					"Entity",
+					modName + "." + entity.Name(),
+					strings.Join(roleStrs, ", "),
+					strings.Join(rights, ""),
+				})
+			}
+		}
+	}
+
+	// Microflows
+	mfs, _ := mfRepo.ListAll()
+	for _, mf := range mfs {
+		if mf == nil {
+			continue
+		}
+		roleStrs := mf.AllowedModuleRolesQualifiedNames()
+		if len(roleStrs) == 0 {
+			continue
+		}
+		containerID, _ := mfRepo.GetContainerUUID(model.ID(mf.ID()))
+		modName := h.GetModuleName(h.FindModuleID(containerID))
+		if inModule != "" && modName != inModule {
+			continue
+		}
+		tr.Rows = append(tr.Rows, []any{
+			"Microflow",
+			modName + "." + mf.Name(),
+			strings.Join(roleStrs, ", "),
+			"X",
+		})
+	}
+
+	// Pages
+	pages2, _ := pgRepo.ListAll()
+	for _, pg := range pages2 {
+		if pg == nil {
+			continue
+		}
+		roles3 := pg.AllowedRolesQualifiedNames()
+		if len(roles3) == 0 {
+			continue
+		}
+		containerID2, _ := pgRepo.GetContainerUUID(model.ID(pg.ID()))
+		modName2 := h.GetModuleName(h.FindModuleID(containerID2))
+		if inModule != "" && modName2 != inModule {
+			continue
+		}
+		tr.Rows = append(tr.Rows, []any{
+			"Page",
+			modName2 + "." + pg.Name(),
+			strings.Join(roles3, ", "),
+			"X",
+		})
+	}
+
+	return writeResultTo(output, format, tr)
 }

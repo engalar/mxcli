@@ -56,6 +56,9 @@ type HandlerDeps struct {
 	JavaScriptActionRepo repos.JavaScriptActionRepository
 	WorkflowRepo       repos.WorkflowRepository
 	BusinessEventBackend backend.BusinessEventBackend
+
+	// Security repo for project/module security reads (Phase 3d-1f).
+	Security repos.SecurityRepository
 }
 
 // registerFutureOverlays registers new-style handlers (StmtHandlerFunc) for
@@ -128,6 +131,26 @@ func (e *Executor) registerFutureOverlays() {
 			return listBusinessEventClientsFuture(ctx, deps.Output)
 		case ast.ShowBusinessEvents:
 			return listBusinessEventsFuture(ctx, deps.Output, e.format, deps.ConnectionManager, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, deps.BusinessEventBackend, s.InModule)
+		case ast.ShowProjectSecurity:
+			return listProjectSecurityFuture(ctx, deps.Output, e.format, deps.Security)
+		case ast.ShowModuleRoles:
+			return listModuleRolesFuture(ctx, deps.Output, e.format, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, deps.Security, s.InModule)
+		case ast.ShowUserRoles:
+			return listUserRolesFuture(ctx, deps.Output, e.format, deps.Security)
+		case ast.ShowDemoUsers:
+			return listDemoUsersFuture(ctx, deps.Output, e.format, deps.Security)
+		case ast.ShowAccessOn:
+			return listAccessOnEntityFuture(ctx, deps.Output, e.format, deps.ModuleLister, deps.DomainModels, s.Name)
+		case ast.ShowAccessOnMicroflow:
+			return listAccessOnMicroflowFuture(ctx, deps.Output, e.format, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, deps.MicroflowRepo, s.Name)
+		case ast.ShowAccessOnPage:
+			return listAccessOnPageFuture(ctx, deps.Output, e.format, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, deps.PageRepo, s.Name)
+		case ast.ShowAccessOnWorkflow:
+			return listAccessOnWorkflowFuture(ctx, s.Name)
+		case ast.ShowAccessOnNanoflow:
+			return listAccessOnNanoflowFuture(ctx, deps.Output, e.format, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, deps.NanoflowRepo, s.Name)
+		case ast.ShowSecurityMatrix:
+			return listSecurityMatrixFuture(ctx, deps.Output, e.format, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, deps.Security, deps.DomainModels, deps.MicroflowRepo, deps.PageRepo, s.InModule)
 		default:
 			return nil // fall through to old handler
 		}
@@ -164,5 +187,6 @@ func (e *Executor) buildHandlerDeps() *HandlerDeps {
 		JavaScriptActionRepo: extractJavaScriptActionsRepo(e.backend),
 		WorkflowRepo:         extractWorkflowsRepo(e.backend),
 		BusinessEventBackend: e.backend,
+		Security:             extractSecurityRepo(e.backend),
 	}
 }
