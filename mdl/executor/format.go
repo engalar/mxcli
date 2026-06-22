@@ -150,6 +150,30 @@ func writeDescribeJSON(ctx *ExecContext, name, objectType string, fn func() erro
 	return enc.Encode(result)
 }
 
+// writeDescribeJSONFuture is the ExecContext-free version of writeDescribeJSON.
+// In JSON mode it captures fn's text output and wraps it as
+// {"name": ..., "type": ..., "mdl": ...}.  In text mode it calls fn directly.
+func writeDescribeJSONFuture(output io.Writer, format OutputFormat, name, objectType string, fn func(io.Writer) error) error {
+	if format != FormatJSON {
+		return fn(output)
+	}
+
+	var buf bytes.Buffer
+	err := fn(&buf)
+	if err != nil {
+		return err
+	}
+
+	result := map[string]any{
+		"name": name,
+		"type": objectType,
+		"mdl":  buf.String(),
+	}
+	enc := json.NewEncoder(output)
+	enc.SetIndent("", "  ")
+	return enc.Encode(result)
+}
+
 // ----------------------------------------------------------------------------
 // Executor method wrappers (for callers in unmigrated files)
 // ----------------------------------------------------------------------------

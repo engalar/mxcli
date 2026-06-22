@@ -7,6 +7,7 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	"github.com/mendixlabs/mxcli/mdl/backend"
 	"github.com/mendixlabs/mxcli/mdl/diaglog"
+	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 	"github.com/mendixlabs/mxcli/mdl/repos"
 )
 
@@ -48,18 +49,22 @@ type HandlerDeps struct {
 	DomainModels repos.DomainModelRepository
 
 	// Stage 3 flow/page/action repos for show handlers.
-	MicroflowRepo      repos.MicroflowRepository
-	NanoflowRepo       repos.NanoflowRepository
-	PageRepo           repos.PageRepository
-	LayoutRepo         repos.LayoutRepository
-	SnippetRepo        repos.SnippetRepository
-	JavaActionRepo     repos.JavaActionRepository
+	MicroflowRepo        repos.MicroflowRepository
+	NanoflowRepo         repos.NanoflowRepository
+	PageRepo             repos.PageRepository
+	LayoutRepo           repos.LayoutRepository
+	SnippetRepo          repos.SnippetRepository
+	JavaActionRepo       repos.JavaActionRepository
 	JavaScriptActionRepo repos.JavaScriptActionRepository
-	WorkflowRepo       repos.WorkflowRepository
+	WorkflowRepo         repos.WorkflowRepository
 	BusinessEventBackend backend.BusinessEventBackend
 
 	// Security repo for project/module security reads (Phase 3d-1f).
 	Security repos.SecurityRepository
+
+	// Describe handler deps (Phase 3d-1h).
+	ServiceLister backend.ServiceLister
+	ImageBackend  backend.ImageBackend
 }
 
 // registerFutureOverlays registers new-style handlers (StmtHandlerFunc) for
@@ -170,6 +175,116 @@ func (e *Executor) registerFutureOverlays() {
 			return nil // fall through to old handler
 		}
 	})
+
+	// DESCRIBE handlers migrated from *ExecContext (Phase 3d-1h):
+	r.RegisterFuture("Describe", func(ctx context.Context, stmt ast.Statement) error {
+		s := stmt.(*ast.DescribeStmt)
+		entry, ok := describeHandlers[s.ObjectType]
+		if !ok {
+			return mdlerrors.NewUnsupported("unknown describe object type")
+		}
+		name := s.Name.String()
+
+		switch s.ObjectType {
+		case ast.DescribeSettings:
+			return writeDescribeJSONFuture(deps.Output, e.format, name, entry.label, func(output io.Writer) error {
+				return describeSettingsFuture(ctx, output, deps.ConnectionManager, deps.SettingsReader)
+			})
+		case ast.DescribeConstant:
+			return writeDescribeJSONFuture(deps.Output, e.format, name, entry.label, func(output io.Writer) error {
+				return describeConstantFuture(ctx, output, deps.ConstantReader, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, s.Name)
+			})
+		case ast.DescribeEnumeration:
+			return writeDescribeJSONFuture(deps.Output, e.format, name, entry.label, func(output io.Writer) error {
+				return describeEnumerationFuture(ctx, output, deps.EnumerationReader, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, s.Name)
+			})
+		case ast.DescribeDatabaseConnection:
+			return writeDescribeJSONFuture(deps.Output, e.format, name, entry.label, func(output io.Writer) error {
+				return describeDatabaseConnectionFuture(ctx, output, deps.ServiceLister, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, s.Name)
+			})
+		case ast.DescribeImageCollection:
+			return writeDescribeJSONFuture(deps.Output, e.format, name, entry.label, func(output io.Writer) error {
+				return describeImageCollectionFuture(ctx, output, deps.ImageBackend, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, s.Name)
+			})
+		case ast.DescribeNavigation:
+			return writeDescribeJSONFuture(deps.Output, e.format, name, entry.label, func(output io.Writer) error {
+				return describeNavigationFuture(ctx, output, deps.NavigationReader, s.Name)
+			})
+		case ast.DescribeModule:
+			return writeDescribeJSONFuture(deps.Output, e.format, name, entry.label, func(output io.Writer) error {
+				return describeModuleFuture(ctx, output, s.Name.Module, s.WithAll,
+					deps.ModuleLister, deps.MetadataReader, deps.FolderManager,
+					deps.EnumerationReader, deps.ConstantReader,
+					deps.DomainModels, deps.Security,
+					deps.MicroflowRepo, deps.NanoflowRepo,
+					deps.PageRepo, deps.SnippetRepo, deps.LayoutRepo, deps.WorkflowRepo,
+					deps.ImageBackend, deps.NavigationReader)
+			})
+		case ast.DescribeEntity:
+			return writeDescribeJSONFuture(deps.Output, e.format, name, entry.label, func(output io.Writer) error {
+				return describeEntityGenFuture(ctx, output, deps.ModuleLister, deps.DomainModels, deps.Security, s.Name)
+			})
+		case ast.DescribeAssociation:
+			return writeDescribeJSONFuture(deps.Output, e.format, name, entry.label, func(output io.Writer) error {
+				return describeAssociationFuture(ctx, output, deps.ModuleLister, deps.DomainModelReader, s.Name)
+			})
+		case ast.DescribeMicroflow:
+			return writeDescribeJSONFuture(deps.Output, e.format, name, entry.label, func(output io.Writer) error {
+				return describeMicroflowGenFuture(ctx, output, deps.MicroflowRepo, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, s.Name)
+			})
+		case ast.DescribeNanoflow:
+			return writeDescribeJSONFuture(deps.Output, e.format, name, entry.label, func(output io.Writer) error {
+				return describeNanoflowGenFuture(ctx, output, deps.NanoflowRepo, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, s.Name)
+			})
+		case ast.DescribePage:
+			return writeDescribeJSONFuture(deps.Output, e.format, name, entry.label, func(output io.Writer) error {
+				return describePageFuture(ctx, output, deps.PageRepo, deps.ImageBackend, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, s.Name)
+			})
+		case ast.DescribeSnippet:
+			return writeDescribeJSONFuture(deps.Output, e.format, name, entry.label, func(output io.Writer) error {
+				return describeSnippetFuture(ctx, output, deps.SnippetRepo, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, s.Name)
+			})
+		case ast.DescribeLayout:
+			return writeDescribeJSONFuture(deps.Output, e.format, name, entry.label, func(output io.Writer) error {
+				return describeLayoutFuture(ctx, output, deps.LayoutRepo, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, s.Name)
+			})
+		case ast.DescribeWorkflow:
+			return writeDescribeJSONFuture(deps.Output, e.format, name, entry.label, func(output io.Writer) error {
+				return describeWorkflowGenFuture(ctx, output, deps.WorkflowRepo, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, s.Name)
+			})
+		case ast.DescribeJavaAction:
+			return writeDescribeJSONFuture(deps.Output, e.format, name, entry.label, func(output io.Writer) error {
+				return describeJavaActionGenFuture(ctx, output, deps.JavaActionRepo, s.Name)
+			})
+		case ast.DescribeJavaScriptAction:
+			ectx := ctx.(*ExecContext)
+			return writeDescribeJSON(ectx, name, entry.label, func() error {
+				return entry.handler(ectx, s)
+			})
+		case ast.DescribeModuleRole:
+			return writeDescribeJSONFuture(deps.Output, e.format, name, entry.label, func(output io.Writer) error {
+				return describeModuleRoleGenFuture(ctx, output, deps.Security, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, s.Name)
+			})
+		case ast.DescribeUserRole:
+			return writeDescribeJSONFuture(deps.Output, e.format, name, entry.label, func(output io.Writer) error {
+				return describeUserRoleGenFuture(ctx, output, deps.Security, s.Name)
+			})
+		case ast.DescribeDemoUser:
+			return writeDescribeJSONFuture(deps.Output, e.format, name, entry.label, func(output io.Writer) error {
+				return describeDemoUserGenFuture(ctx, output, deps.Security, s.Name.Name)
+			})
+		case ast.DescribeFragment:
+			return writeDescribeJSONFuture(deps.Output, e.format, name, entry.label, func(output io.Writer) error {
+				return describeFragmentFuture(ctx, output, e.fragments, s.Name)
+			})
+		default:
+			// Not yet migrated — fall through to old handler.
+			ectx := ctx.(*ExecContext)
+			return writeDescribeJSON(ectx, name, entry.label, func() error {
+				return entry.handler(ectx, s)
+			})
+		}
+	})
 }
 
 // buildHandlerDeps populates a HandlerDeps from the current Executor state.
@@ -184,17 +299,17 @@ func (e *Executor) buildHandlerDeps() *HandlerDeps {
 		Quiet:        e.quiet,
 		Backend:      e.backend,
 
-		ConnectionManager:  e.backend,
-		ModuleLister:       e.backend,
-		FolderManager:      e.backend,
-		MetadataReader:     e.backend,
-		EnumerationReader:  e.backend,
-		ConstantReader:     e.backend,
+		ConnectionManager:    e.backend,
+		ModuleLister:         e.backend,
+		FolderManager:        e.backend,
+		MetadataReader:       e.backend,
+		EnumerationReader:    e.backend,
+		ConstantReader:       e.backend,
 		SettingsReader:       e.backend,
 		NavigationReader:     e.backend,
 		ScheduledEventReader: e.backend,
 		DomainModelReader:    e.backend,
-		DomainModels:       extractDomainModelsRepo(e.backend),
+		DomainModels:         extractDomainModelsRepo(e.backend),
 		MicroflowRepo:        extractMicroflowsRepo(e.backend),
 		NanoflowRepo:         extractNanoflowsRepo(e.backend),
 		PageRepo:             extractPagesRepo(e.backend),
@@ -205,5 +320,7 @@ func (e *Executor) buildHandlerDeps() *HandlerDeps {
 		WorkflowRepo:         extractWorkflowsRepo(e.backend),
 		BusinessEventBackend: e.backend,
 		Security:             extractSecurityRepo(e.backend),
+		ServiceLister:        e.backend,
+		ImageBackend:         e.backend,
 	}
 }
