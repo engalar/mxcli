@@ -87,6 +87,14 @@ func (e *Executor) registerFutureOverlays() {
 			return listConstantValuesFuture(ctx, deps.Output, e.format, deps.ConnectionManager, deps.ConstantReader, deps.SettingsReader, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, s.InModule)
 		case ast.ShowFragments:
 			return listFragmentsFuture(ctx, deps.Output, e.fragments)
+		case ast.ShowEntities:
+			return listEntitiesGenFuture(ctx, deps.Output, e.format, deps.ModuleLister, deps.DomainModels, s.InModule)
+		case ast.ShowEntity:
+			return listEntityFuture(ctx, deps.Output, deps.ModuleLister, deps.DomainModels, s.Name)
+		case ast.ShowAssociations:
+			return listAssociationsFuture(ctx, deps.Output, e.format, deps.ModuleLister, deps.DomainModels, s.InModule)
+		case ast.ShowAssociation:
+			return listAssociationFuture(ctx, deps.Output, deps.ModuleLister, deps.DomainModelReader, s.Name)
 		default:
 			return nil // fall through to old handler
 		}
@@ -112,6 +120,7 @@ func (e *Executor) buildHandlerDeps() *HandlerDeps {
 		EnumerationReader:  e.backend,
 		ConstantReader:     e.backend,
 		SettingsReader:     e.backend,
+		DomainModelReader:  e.backend,
 		DomainModels:       extractDomainModelsRepo(e.backend),
 	}
 }

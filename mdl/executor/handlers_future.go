@@ -14,6 +14,7 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/repos"
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
+	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 )
 
 // execHelpFuture is the ExecContext-free version of execHelp.
@@ -507,4 +508,455 @@ func listModulesFuture(
 		result.Rows = append(result.Rows, []any{r.name, r.source, r.entities, r.enums, r.pages, r.snippets, r.microflows, r.nanoflows, r.workflows, r.constants, r.javaActions, r.pubRest, r.pubOData, r.conOData, r.bizEvents, r.extDb})
 	}
 	return writeResultTo(output, format, result)
+}
+
+// listEntitiesGenFuture is the ExecContext-free version of listEntitiesGen.
+func listEntitiesGenFuture(
+	ctx context.Context,
+	output io.Writer,
+	format OutputFormat,
+	ml backend.ModuleLister,
+	dmr repos.DomainModelRepository,
+	inModule string,
+) error {
+	pairs, err := dmr.ListAllWithContainerID()
+	if err != nil {
+		return mdlerrors.NewBackend("list domain models", err)
+	}
+
+	mods, err := ml.ListModules()
+	if err != nil {
+		return mdlerrors.NewBackend("list modules", err)
+	}
+	moduleNames := make(map[model.ID]string, len(mods))
+	moduleIDs := make(map[model.ID]bool, len(mods))
+	for _, m := range mods {
+		moduleNames[m.ID] = m.Name
+		moduleIDs[m.ID] = true
+	}
+
+	assocCounts := make(map[model.ID]int)
+	var validPairs []repos.DomainModelWithContainer
+	for _, p := range pairs {
+		if p.DM == nil || !moduleIDs[p.ContainerID] {
+			continue
+		}
+		validPairs = append(validPairs, p)
+		for _, a := range p.DM.AssociationsItems() {
+			assoc, ok := a.(*genDm.Association)
+			if !ok {
+				continue
+			}
+			parent := model.ID(assoc.ParentRefID())
+			child := model.ID(assoc.ChildRefID())
+			if parent != "" {
+				assocCounts[parent]++
+			}
+			if child != "" {
+				assocCounts[child]++
+			}
+		}
+	}
+
+	systemEntitiesSet := make(map[string]bool)
+	for _, p := range validPairs {
+		for _, e := range p.DM.EntitiesItems() {
+			entity, ok := e.(*genDm.Entity)
+			if !ok {
+				continue
+			}
+			gen := entityGeneralizationQNGen(entity)
+			if gen != "" && strings.HasPrefix(gen, "System.") {
+				systemEntitiesSet[gen] = true
+			}
+		}
+	}
+
+	type row struct {
+		qualifiedName  string
+		entityType     string
+		generalization string
+		attrs          int
+		assocs         int
+		validations    int
+		indexes        int
+		events         int
+		accessRules    int
+	}
+	var rows []row
+
+	if inModule == "" || inModule == "System" {
+		systemNames := make([]string, 0, len(systemEntitiesSet))
+		for n := range systemEntitiesSet {
+			systemNames = append(systemNames, n)
+		}
+		sort.Strings(systemNames)
+		for _, n := range systemNames {
+			rows = append(rows, row{
+				qualifiedName: n,
+				entityType:    "System",
+				attrs:         -1,
+				assocs:        -1,
+				validations:   -1,
+				indexes:       -1,
+				events:        -1,
+				accessRules:   -1,
+			})
+		}
+	}
+
+	for _, p := range validPairs {
+		modName := moduleNames[p.ContainerID]
+		if inModule != "" && modName != inModule {
+			continue
+		}
+		for _, e := range p.DM.EntitiesItems() {
+			entity, ok := e.(*genDm.Entity)
+			if !ok {
+				continue
+			}
+			rows = append(rows, row{
+				qualifiedName:  modName + "." + entity.Name(),
+				entityType:     entityKindForGen(entity),
+				generalization: entityGeneralizationQNGen(entity),
+				attrs:          len(entity.AttributesItems()),
+				assocs:         assocCounts[model.ID(entity.ID())],
+				validations:    len(entity.ValidationRulesItems()),
+				indexes:        len(entity.IndexesItems()),
+				events:         len(entity.EventHandlersItems()),
+				accessRules:    len(entity.AccessRulesItems()),
+			})
+		}
+	}
+
+	hasGeneralizations := false
+	for _, r := range rows {
+		if r.generalization != "" {
+			hasGeneralizations = true
+			break
+		}
+	}
+
+	sort.Slice(rows, func(i, j int) bool {
+		return strings.ToLower(rows[i].qualifiedName) < strings.ToLower(rows[j].qualifiedName)
+	})
+
+	columns := []string{"Entity", "Type"}
+	if hasGeneralizations {
+		columns = append(columns, "Extends")
+	}
+	columns = append(columns, "Attrs", "Assocs", "Validations", "Indexes", "Events", "AccessRules")
+
+	result := &TableResult{
+		Columns: columns,
+		Summary: fmt.Sprintf("(%d entities)", len(rows)),
+	}
+	for _, r := range rows {
+		var rowData []any
+		rowData = append(rowData, r.qualifiedName, r.entityType)
+		if hasGeneralizations {
+			rowData = append(rowData, r.generalization)
+		}
+		if r.entityType == "System" {
+			rowData = append(rowData, "-", "-", "-", "-", "-", "-")
+		} else {
+			rowData = append(rowData, r.attrs, r.assocs, r.validations, r.indexes, r.events, r.accessRules)
+		}
+		result.Rows = append(result.Rows, rowData)
+	}
+	return writeResultTo(output, format, result)
+}
+
+// listEntityFuture is the ExecContext-free version of listEntity.
+func listEntityFuture(
+	ctx context.Context,
+	output io.Writer,
+	ml backend.ModuleLister,
+	dmr repos.DomainModelRepository,
+	name *ast.QualifiedName,
+) error {
+	if name == nil {
+		return mdlerrors.NewValidation("entity name required")
+	}
+
+	entity, modName, err := findEntityFromRepos(ml, dmr, *name)
+	if err != nil {
+		return mdlerrors.NewBackend("get entity", err)
+	}
+	if entity == nil {
+		return mdlerrors.NewNotFound("entity", name.String())
+	}
+
+	fmt.Fprintf(output, "**Entity: %s.%s**\n\n", modName, entity.Name())
+	fmt.Fprintf(output, "- Type: %s\n", entityKindForGen(entity))
+	if extends := entityGeneralizationQNGen(entity); extends != "" {
+		fmt.Fprintf(output, "- Extends: %s\n", extends)
+	}
+	if loc := entity.Location(); loc != "" {
+		fmt.Fprintf(output, "- Location: %s\n", loc)
+	}
+	fmt.Fprintln(output)
+
+	if len(entity.AttributesItems()) > 0 {
+		nameWidth, typeWidth := len("Attribute"), len("Type")
+		type attrRow struct {
+			name, typeName string
+		}
+		var rows []attrRow
+		for _, a := range entity.AttributesItems() {
+			attr, ok := a.(*genDm.Attribute)
+			if !ok {
+				continue
+			}
+			typeName := formatAttributeTypeGen(attr.Type())
+			rows = append(rows, attrRow{attr.Name(), typeName})
+			if len(attr.Name()) > nameWidth {
+				nameWidth = len(attr.Name())
+			}
+			if len(typeName) > typeWidth {
+				typeWidth = len(typeName)
+			}
+		}
+
+		fmt.Fprintf(output, "| %-*s | %-*s |\n", nameWidth, "Attribute", typeWidth, "Type")
+		fmt.Fprintf(output, "|-%s-|-%s-|\n", strings.Repeat("-", nameWidth), strings.Repeat("-", typeWidth))
+		for _, r := range rows {
+			fmt.Fprintf(output, "| %-*s | %-*s |\n", nameWidth, r.name, typeWidth, r.typeName)
+		}
+		fmt.Fprintf(output, "\n(%d attributes)\n", len(rows))
+	}
+
+	return nil
+}
+
+// findEntityFromRepos searches for an entity by qualified name across all domain models via repos.
+func findEntityFromRepos(ml backend.ModuleLister, dmr repos.DomainModelRepository, qn ast.QualifiedName) (*genDm.Entity, string, error) {
+	pairs, err := dmr.ListAllWithContainerID()
+	if err != nil {
+		return nil, "", err
+	}
+	mods, err := ml.ListModules()
+	if err != nil {
+		return nil, "", err
+	}
+	moduleNames := make(map[model.ID]string, len(mods))
+	for _, m := range mods {
+		moduleNames[m.ID] = m.Name
+	}
+	for _, p := range pairs {
+		if p.DM == nil {
+			continue
+		}
+		modName := moduleNames[p.ContainerID]
+		if modName != qn.Module {
+			continue
+		}
+		for _, e := range p.DM.EntitiesItems() {
+			entity, ok := e.(*genDm.Entity)
+			if !ok {
+				continue
+			}
+			if entity.Name() == qn.Name {
+				return entity, modName, nil
+			}
+		}
+	}
+	return nil, "", nil
+}
+
+// listAssociationsFuture is the ExecContext-free version of listAssociations.
+func listAssociationsFuture(
+	ctx context.Context,
+	output io.Writer,
+	format OutputFormat,
+	ml backend.ModuleLister,
+	dmr repos.DomainModelRepository,
+	inModule string,
+) error {
+	pairs, err := dmr.ListAllWithContainerID()
+	if err != nil {
+		return mdlerrors.NewBackend("list domain models", err)
+	}
+
+	mods, err := ml.ListModules()
+	if err != nil {
+		return mdlerrors.NewBackend("list modules", err)
+	}
+	moduleNames := make(map[model.ID]string, len(mods))
+	moduleIDs := make(map[model.ID]bool, len(mods))
+	for _, m := range mods {
+		moduleNames[m.ID] = m.Name
+		moduleIDs[m.ID] = true
+	}
+
+	entityNames := make(map[model.ID]string)
+	var validPairs []repos.DomainModelWithContainer
+	for _, p := range pairs {
+		if p.DM == nil || !moduleIDs[p.ContainerID] {
+			continue
+		}
+		validPairs = append(validPairs, p)
+		modName := moduleNames[p.ContainerID]
+		for _, e := range p.DM.EntitiesItems() {
+			entity, ok := e.(*genDm.Entity)
+			if !ok {
+				continue
+			}
+			entityNames[model.ID(entity.ID())] = modName + "." + entity.Name()
+		}
+	}
+
+	type row struct {
+		qualifiedName string
+		module        string
+		name          string
+		parent        string
+		child         string
+		multiplicity  string
+		assocType     string
+		owner         string
+		storage       string
+	}
+	var rows []row
+
+	for _, p := range validPairs {
+		modName := moduleNames[p.ContainerID]
+		if inModule != "" && modName != inModule {
+			continue
+		}
+		for _, a := range p.DM.AssociationsItems() {
+			assoc, ok := a.(*genDm.Association)
+			if !ok {
+				continue
+			}
+			parentID := model.ID(assoc.ParentRefID())
+			childID := model.ID(assoc.ChildRefID())
+			parent := entityNames[parentID]
+			if parent == "" {
+				parent = string(parentID)
+			}
+			child := entityNames[childID]
+			if child == "" {
+				child = string(childID)
+			}
+			rows = append(rows, row{
+				qualifiedName: modName + "." + assoc.Name(),
+				module:        modName,
+				name:          assoc.Name(),
+				parent:        parent,
+				child:         child,
+				multiplicity:  associationMultiplicity(assoc.Type(), assoc.Owner()),
+				assocType:     assoc.Type(),
+				owner:         assoc.Owner(),
+				storage:       assoc.StorageFormat(),
+			})
+		}
+		for _, c := range p.DM.CrossAssociationsItems() {
+			ca, ok := c.(*genDm.CrossAssociation)
+			if !ok {
+				continue
+			}
+			parentID := model.ID(ca.ParentRefID())
+			parent := entityNames[parentID]
+			if parent == "" {
+				parent = string(parentID)
+			}
+			rows = append(rows, row{
+				qualifiedName: modName + "." + ca.Name(),
+				module:        modName,
+				name:          ca.Name(),
+				parent:        parent,
+				child:         ca.ChildQualifiedName(),
+				multiplicity:  associationMultiplicity(ca.Type(), ca.Owner()),
+				assocType:     ca.Type(),
+				owner:         ca.Owner(),
+				storage:       ca.StorageFormat(),
+			})
+		}
+	}
+
+	sort.Slice(rows, func(i, j int) bool {
+		return strings.ToLower(rows[i].qualifiedName) < strings.ToLower(rows[j].qualifiedName)
+	})
+
+	result := &TableResult{
+		Columns: []string{"Qualified Name", "Module", "Name", "FROM (owner)", "TO (referenced)", "Multiplicity", "Type", "Owner", "Storage"},
+		Summary: fmt.Sprintf("(%d associations)", len(rows)),
+	}
+	for _, r := range rows {
+		result.Rows = append(result.Rows, []any{r.qualifiedName, r.module, r.name, r.parent, r.child, r.multiplicity, r.assocType, r.owner, r.storage})
+	}
+	return writeResultTo(output, format, result)
+}
+
+// listAssociationFuture is the ExecContext-free version of listAssociation.
+func listAssociationFuture(
+	ctx context.Context,
+	output io.Writer,
+	ml backend.ModuleLister,
+	dmr backend.DomainModelReader,
+	name *ast.QualifiedName,
+) error {
+	if name == nil {
+		return mdlerrors.NewValidation("association name required")
+	}
+
+	module, err := ml.GetModuleByName(name.Module)
+	if err != nil {
+		return mdlerrors.NewBackend("find module", err)
+	}
+	if module == nil {
+		return mdlerrors.NewNotFound("module", name.Module)
+	}
+
+	dm, err := dmr.GetDomainModelGen(module.ID)
+	if err != nil {
+		return mdlerrors.NewBackend("get domain model", err)
+	}
+	if dm == nil {
+		return mdlerrors.NewNotFound("association", name.String())
+	}
+
+	entityNames := make(map[model.ID]string)
+	for _, e := range dm.EntitiesItems() {
+		entity, ok := e.(*genDm.Entity)
+		if !ok {
+			continue
+		}
+		entityNames[model.ID(entity.ID())] = module.Name + "." + entity.Name()
+	}
+
+	for _, assocElem := range dm.AssociationsItems() {
+		assoc, ok := assocElem.(*genDm.Association)
+		if !ok || assoc.Name() != name.Name {
+			continue
+		}
+		parent := entityNames[model.ID(assoc.ParentRefID())]
+		child := entityNames[model.ID(assoc.ChildRefID())]
+		fmt.Fprintf(output, "Association: %s.%s\n", module.Name, assoc.Name())
+		fmt.Fprintf(output, "  Multiplicity: %s\n", associationMultiplicity(assoc.Type(), assoc.Owner()))
+		fmt.Fprintf(output, "  FROM (owner): %s\n", parent)
+		fmt.Fprintf(output, "  TO (referenced): %s\n", child)
+		fmt.Fprintf(output, "  Type: %s\n", assoc.Type())
+		fmt.Fprintf(output, "  Owner: %s\n", assoc.Owner())
+		fmt.Fprintf(output, "  Storage: %s\n", assoc.StorageFormat())
+		return nil
+	}
+	for _, crossElem := range dm.CrossAssociationsItems() {
+		ca, ok := crossElem.(*genDm.CrossAssociation)
+		if !ok || ca.Name() != name.Name {
+			continue
+		}
+		parent := entityNames[model.ID(ca.ParentRefID())]
+		fmt.Fprintf(output, "Association: %s.%s (cross-module)\n", module.Name, ca.Name())
+		fmt.Fprintf(output, "  Multiplicity: %s\n", associationMultiplicity(ca.Type(), ca.Owner()))
+		fmt.Fprintf(output, "  FROM (owner): %s\n", parent)
+		fmt.Fprintf(output, "  TO (referenced): %s\n", ca.ChildQualifiedName())
+		fmt.Fprintf(output, "  Type: %s\n", ca.Type())
+		fmt.Fprintf(output, "  Owner: %s\n", ca.Owner())
+		fmt.Fprintf(output, "  Storage: %s\n", ca.StorageFormat())
+		return nil
+	}
+
+	return mdlerrors.NewNotFound("association", name.String())
 }
