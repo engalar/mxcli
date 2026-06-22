@@ -15,6 +15,7 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
 	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
+	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 )
 
 // execHelpFuture is the ExecContext-free version of execHelp.
@@ -959,4 +960,484 @@ func listAssociationFuture(
 	}
 
 	return mdlerrors.NewNotFound("association", name.String())
+}
+
+// listMicroflowsFuture is the ExecContext-free version of listMicroflows.
+func listMicroflowsFuture(
+	ctx context.Context,
+	output io.Writer,
+	format OutputFormat,
+	ml backend.ModuleLister,
+	mr backend.MetadataReader,
+	fm backend.FolderManager,
+	mfRepo repos.MicroflowRepository,
+	inModule string,
+) error {
+	h, err := NewContainerHierarchyFromRoles(ml, mr, fm)
+	if err != nil {
+		return mdlerrors.NewBackend("build hierarchy", err)
+	}
+
+	mfs, err := mfRepo.ListAll()
+	if err != nil {
+		return mdlerrors.NewBackend("list microflows", err)
+	}
+
+	type row struct {
+		qualifiedName string
+		module        string
+		name          string
+		excluded      bool
+		folderPath    string
+		params        int
+		activities    int
+		complexity    int
+		returnType    string
+	}
+	var rows []row
+
+	for _, mf := range mfs {
+		if mf == nil {
+			continue
+		}
+		containerID, _ := mfRepo.GetContainerUUID(model.ID(mf.ID()))
+		modName := h.GetModuleName(h.FindModuleID(containerID))
+		if inModule != "" && modName != inModule {
+			continue
+		}
+		qualifiedName := modName + "." + mf.Name()
+		folderPath := h.BuildFolderPath(containerID)
+		returnType := strings.TrimSpace(mf.ReturnType())
+		oc, ok := mf.ObjectCollection().(*genMf.MicroflowObjectCollection)
+		if !ok {
+			oc = nil
+		}
+		p := genFlowParameterElems(mf.ObjectCollection())
+		activities := countGenFlowActivities(oc)
+		complexity := calculateGenFlowComplexity(oc)
+		rows = append(rows, row{
+			qualifiedName: qualifiedName,
+			module:        modName,
+			name:          mf.Name(),
+			excluded:      mf.Excluded(),
+			folderPath:    folderPath,
+			params:        len(p),
+			activities:    activities,
+			complexity:    complexity,
+			returnType:    returnType,
+		})
+	}
+
+	sort.Slice(rows, func(i, j int) bool {
+		return strings.ToLower(rows[i].qualifiedName) < strings.ToLower(rows[j].qualifiedName)
+	})
+
+	result := &TableResult{
+		Columns: []string{"Qualified Name", "Module", "Name", "Excluded", "Folder", "Params", "Actions", "McCabe", "Returns"},
+		Summary: fmt.Sprintf("(%d microflows)", len(rows)),
+	}
+	for _, r := range rows {
+		result.Rows = append(result.Rows, []any{r.qualifiedName, r.module, r.name, r.excluded, r.folderPath, r.params, r.activities, r.complexity, r.returnType})
+	}
+	return writeResultTo(output, format, result)
+}
+
+// listNanoflowsFuture is the ExecContext-free version of listNanoflows.
+func listNanoflowsFuture(
+	ctx context.Context,
+	output io.Writer,
+	format OutputFormat,
+	ml backend.ModuleLister,
+	mr backend.MetadataReader,
+	fm backend.FolderManager,
+	nfRepo repos.NanoflowRepository,
+	inModule string,
+) error {
+	h, err := NewContainerHierarchyFromRoles(ml, mr, fm)
+	if err != nil {
+		return mdlerrors.NewBackend("build hierarchy", err)
+	}
+
+	nfs, err := nfRepo.ListAll()
+	if err != nil {
+		return mdlerrors.NewBackend("list nanoflows", err)
+	}
+
+	type row struct {
+		qualifiedName string
+		module        string
+		name          string
+		excluded      bool
+		folderPath    string
+		params        int
+		activities    int
+		complexity    int
+		returnType    string
+	}
+	var rows []row
+
+	for _, nf := range nfs {
+		if nf == nil {
+			continue
+		}
+		containerID, _ := nfRepo.GetContainerUUID(model.ID(nf.ID()))
+		modName := h.GetModuleName(h.FindModuleID(containerID))
+		if inModule != "" && modName != inModule {
+			continue
+		}
+		qualifiedName := modName + "." + nf.Name()
+		folderPath := h.BuildFolderPath(containerID)
+		returnType := strings.TrimSpace(nf.ReturnType())
+		oc, ok := nf.ObjectCollection().(*genMf.MicroflowObjectCollection)
+		if !ok {
+			oc = nil
+		}
+		p := genFlowParameterElems(nf.ObjectCollection())
+		activities := countGenFlowActivities(oc)
+		complexity := calculateGenFlowComplexity(oc)
+		rows = append(rows, row{
+			qualifiedName: qualifiedName,
+			module:        modName,
+			name:          nf.Name(),
+			excluded:      nf.Excluded(),
+			folderPath:    folderPath,
+			params:        len(p),
+			activities:    activities,
+			complexity:    complexity,
+			returnType:    returnType,
+		})
+	}
+
+	sort.Slice(rows, func(i, j int) bool {
+		return strings.ToLower(rows[i].qualifiedName) < strings.ToLower(rows[j].qualifiedName)
+	})
+
+	result := &TableResult{
+		Columns: []string{"Qualified Name", "Module", "Name", "Excluded", "Folder", "Params", "Actions", "McCabe", "Returns"},
+		Summary: fmt.Sprintf("(%d nanoflows)", len(rows)),
+	}
+	for _, r := range rows {
+		result.Rows = append(result.Rows, []any{r.qualifiedName, r.module, r.name, r.excluded, r.folderPath, r.params, r.activities, r.complexity, r.returnType})
+	}
+	return writeResultTo(output, format, result)
+}
+
+// listPagesFuture is the ExecContext-free version of listPagesGen.
+func listPagesFuture(
+	ctx context.Context,
+	output io.Writer,
+	format OutputFormat,
+	ml backend.ModuleLister,
+	mr backend.MetadataReader,
+	fm backend.FolderManager,
+	pageRepo repos.PageRepository,
+	inModule string,
+) error {
+	h, err := NewContainerHierarchyFromRoles(ml, mr, fm)
+	if err != nil {
+		return mdlerrors.NewBackend("build hierarchy", err)
+	}
+
+	pages, err := pageRepo.ListAll()
+	if err != nil {
+		return mdlerrors.NewBackend("list pages", err)
+	}
+
+	type row struct {
+		qualifiedName string
+		module        string
+		name          string
+		excluded      bool
+		folderPath    string
+		title         string
+		url           string
+		params        int
+	}
+	var rows []row
+
+	for _, pg := range pages {
+		if pg == nil {
+			continue
+		}
+		containerID, _ := pageRepo.GetContainerUUID(model.ID(pg.ID()))
+		modName := h.GetModuleName(h.FindModuleID(containerID))
+		if inModule != "" && modName != inModule {
+			continue
+		}
+		qualifiedName := modName + "." + pg.Name()
+		folderPath := h.BuildFolderPath(containerID)
+		title := pickPageTitleGen(pg)
+		url := pg.Url()
+		params := len(pg.ParametersItems())
+		rows = append(rows, row{
+			qualifiedName: qualifiedName,
+			module:        modName,
+			name:          pg.Name(),
+			excluded:      pg.Excluded(),
+			folderPath:    folderPath,
+			title:         title,
+			url:           url,
+			params:        params,
+		})
+	}
+
+	sort.Slice(rows, func(i, j int) bool {
+		return strings.ToLower(rows[i].qualifiedName) < strings.ToLower(rows[j].qualifiedName)
+	})
+
+	result := &TableResult{
+		Columns: []string{"Qualified Name", "Module", "Name", "Excluded", "Folder", "Title", "url", "Params"},
+		Summary: fmt.Sprintf("(%d pages)", len(rows)),
+	}
+	for _, r := range rows {
+		result.Rows = append(result.Rows, []any{r.qualifiedName, r.module, r.name, r.excluded, r.folderPath, r.title, r.url, r.params})
+	}
+	return writeResultTo(output, format, result)
+}
+
+// listSnippetsFuture is the ExecContext-free version of listSnippetsGen.
+func listSnippetsFuture(
+	ctx context.Context,
+	output io.Writer,
+	format OutputFormat,
+	ml backend.ModuleLister,
+	mr backend.MetadataReader,
+	fm backend.FolderManager,
+	snpRepo repos.SnippetRepository,
+	inModule string,
+) error {
+	h, err := NewContainerHierarchyFromRoles(ml, mr, fm)
+	if err != nil {
+		return mdlerrors.NewBackend("build hierarchy", err)
+	}
+
+	snps, err := snpRepo.ListAll()
+	if err != nil {
+		return mdlerrors.NewBackend("list snippets", err)
+	}
+
+	type row struct {
+		qualifiedName string
+		module        string
+		name          string
+		folderPath    string
+		params        int
+	}
+	var rows []row
+
+	for _, s := range snps {
+		if s == nil {
+			continue
+		}
+		containerID, _ := snpRepo.GetContainerUUID(model.ID(s.ID()))
+		modName := h.GetModuleName(h.FindModuleID(containerID))
+		if inModule != "" && modName != inModule {
+			continue
+		}
+		qualifiedName := modName + "." + s.Name()
+		folderPath := h.BuildFolderPath(containerID)
+		rows = append(rows, row{
+			qualifiedName: qualifiedName,
+			module:        modName,
+			name:          s.Name(),
+			folderPath:    folderPath,
+			params:        len(s.ParametersItems()),
+		})
+	}
+
+	sort.Slice(rows, func(i, j int) bool {
+		return strings.ToLower(rows[i].qualifiedName) < strings.ToLower(rows[j].qualifiedName)
+	})
+
+	result := &TableResult{
+		Columns: []string{"Qualified Name", "Module", "Name", "Folder", "Params"},
+		Summary: fmt.Sprintf("(%d snippets)", len(rows)),
+	}
+	for _, r := range rows {
+		result.Rows = append(result.Rows, []any{r.qualifiedName, r.module, r.name, r.folderPath, r.params})
+	}
+	return writeResultTo(output, format, result)
+}
+
+// listLayoutsFuture is the ExecContext-free version of listLayoutsGen.
+func listLayoutsFuture(
+	ctx context.Context,
+	output io.Writer,
+	format OutputFormat,
+	ml backend.ModuleLister,
+	mr backend.MetadataReader,
+	fm backend.FolderManager,
+	layRepo repos.LayoutRepository,
+	inModule string,
+) error {
+	h, err := NewContainerHierarchyFromRoles(ml, mr, fm)
+	if err != nil {
+		return mdlerrors.NewBackend("build hierarchy", err)
+	}
+
+	lays, err := layRepo.ListAll()
+	if err != nil {
+		return mdlerrors.NewBackend("list layouts", err)
+	}
+
+	type row struct {
+		qualifiedName string
+		module        string
+		name          string
+		folderPath    string
+		layoutType    string
+	}
+	var rows []row
+
+	for _, l := range lays {
+		if l == nil {
+			continue
+		}
+		containerID, _ := layRepo.GetContainerUUID(model.ID(l.ID()))
+		modName := h.GetModuleName(h.FindModuleID(containerID))
+		if inModule != "" && modName != inModule {
+			continue
+		}
+		qualifiedName := modName + "." + l.Name()
+		folderPath := h.BuildFolderPath(containerID)
+		rows = append(rows, row{
+			qualifiedName: qualifiedName,
+			module:        modName,
+			name:          l.Name(),
+			folderPath:    folderPath,
+			layoutType:    l.LayoutType(),
+		})
+	}
+
+	sort.Slice(rows, func(i, j int) bool {
+		return strings.ToLower(rows[i].qualifiedName) < strings.ToLower(rows[j].qualifiedName)
+	})
+
+	result := &TableResult{
+		Columns: []string{"Qualified Name", "Module", "Name", "Folder", "Type"},
+		Summary: fmt.Sprintf("(%d layouts)", len(rows)),
+	}
+	for _, r := range rows {
+		result.Rows = append(result.Rows, []any{r.qualifiedName, r.module, r.name, r.folderPath, r.layoutType})
+	}
+	return writeResultTo(output, format, result)
+}
+
+// listJavaActionsFuture is the ExecContext-free version of listJavaActionsGen.
+func listJavaActionsFuture(
+	ctx context.Context,
+	output io.Writer,
+	format OutputFormat,
+	ml backend.ModuleLister,
+	mr backend.MetadataReader,
+	fm backend.FolderManager,
+	jaRepo repos.JavaActionRepository,
+	inModule string,
+) error {
+	h, err := NewContainerHierarchyFromRoles(ml, mr, fm)
+	if err != nil {
+		return mdlerrors.NewBackend("build hierarchy", err)
+	}
+
+	jas, err := jaRepo.ListAll()
+	if err != nil {
+		return mdlerrors.NewBackend("list java actions", err)
+	}
+
+	type row struct {
+		qualifiedName string
+		module        string
+		name          string
+		folderPath    string
+	}
+	var rows []row
+
+	for _, ja := range jas {
+		if ja == nil {
+			continue
+		}
+		containerID, _ := jaRepo.GetContainerUUID(model.ID(ja.ID()))
+		modName := h.GetModuleName(h.FindModuleID(containerID))
+		if inModule != "" && modName != inModule {
+			continue
+		}
+		qn := modName + "." + ja.Name()
+		folder := h.BuildFolderPath(containerID)
+		rows = append(rows, row{qn, modName, ja.Name(), folder})
+	}
+
+	sort.Slice(rows, func(i, j int) bool {
+		return strings.ToLower(rows[i].qualifiedName) < strings.ToLower(rows[j].qualifiedName)
+	})
+
+	result := &TableResult{
+		Columns: []string{"Qualified Name", "Module", "Name", "Folder"},
+		Summary: fmt.Sprintf("(%d java actions)", len(rows)),
+	}
+	for _, r := range rows {
+		result.Rows = append(result.Rows, []any{r.qualifiedName, r.module, r.name, r.folderPath})
+	}
+	return writeResultTo(output, format, result)
+}
+
+// listJavaScriptActionsFuture is the ExecContext-free version of listJavaScriptActionsGen.
+func listJavaScriptActionsFuture(
+	ctx context.Context,
+	output io.Writer,
+	format OutputFormat,
+	ml backend.ModuleLister,
+	mr backend.MetadataReader,
+	fm backend.FolderManager,
+	jsaRepo repos.JavaScriptActionRepository,
+	inModule string,
+) error {
+	h, err := NewContainerHierarchyFromRoles(ml, mr, fm)
+	if err != nil {
+		return mdlerrors.NewBackend("build hierarchy", err)
+	}
+
+	jsas, err := jsaRepo.ListAll()
+	if err != nil {
+		return mdlerrors.NewBackend("list javascript actions", err)
+	}
+
+	type row struct {
+		qualifiedName string
+		module        string
+		name          string
+		platform      string
+		folderPath    string
+	}
+	var rows []row
+
+	for _, jsa := range jsas {
+		if jsa == nil {
+			continue
+		}
+		containerID, _ := jsaRepo.GetContainerUUID(model.ID(jsa.ID()))
+		modName := h.GetModuleName(h.FindModuleID(containerID))
+		if inModule != "" && modName != inModule {
+			continue
+		}
+		qn := modName + "." + jsa.Name()
+		folder := h.BuildFolderPath(containerID)
+		platform := jsa.Platform()
+		if platform == "" {
+			platform = "All"
+		}
+		rows = append(rows, row{qn, modName, jsa.Name(), platform, folder})
+	}
+
+	sort.Slice(rows, func(i, j int) bool {
+		return strings.ToLower(rows[i].qualifiedName) < strings.ToLower(rows[j].qualifiedName)
+	})
+
+	result := &TableResult{
+		Columns: []string{"Qualified Name", "Module", "Name", "Platform", "Folder"},
+		Summary: fmt.Sprintf("(%d javascript actions)", len(rows)),
+	}
+	for _, r := range rows {
+		result.Rows = append(result.Rows, []any{r.qualifiedName, r.module, r.name, r.platform, r.folderPath})
+	}
+	return writeResultTo(output, format, result)
 }

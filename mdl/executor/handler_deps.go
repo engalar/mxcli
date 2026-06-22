@@ -45,6 +45,15 @@ type HandlerDeps struct {
 
 	// DomainModels repo for entity counting (Stage 3 repos).
 	DomainModels repos.DomainModelRepository
+
+	// Stage 3 flow/page/action repos for show handlers.
+	MicroflowRepo      repos.MicroflowRepository
+	NanoflowRepo       repos.NanoflowRepository
+	PageRepo           repos.PageRepository
+	LayoutRepo         repos.LayoutRepository
+	SnippetRepo        repos.SnippetRepository
+	JavaActionRepo     repos.JavaActionRepository
+	JavaScriptActionRepo repos.JavaScriptActionRepository
 }
 
 // registerFutureOverlays registers new-style handlers (StmtHandlerFunc) for
@@ -95,6 +104,20 @@ func (e *Executor) registerFutureOverlays() {
 			return listAssociationsFuture(ctx, deps.Output, e.format, deps.ModuleLister, deps.DomainModels, s.InModule)
 		case ast.ShowAssociation:
 			return listAssociationFuture(ctx, deps.Output, deps.ModuleLister, deps.DomainModelReader, s.Name)
+		case ast.ShowMicroflows:
+			return listMicroflowsFuture(ctx, deps.Output, e.format, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, deps.MicroflowRepo, s.InModule)
+		case ast.ShowNanoflows:
+			return listNanoflowsFuture(ctx, deps.Output, e.format, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, deps.NanoflowRepo, s.InModule)
+		case ast.ShowPages:
+			return listPagesFuture(ctx, deps.Output, e.format, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, deps.PageRepo, s.InModule)
+		case ast.ShowSnippets:
+			return listSnippetsFuture(ctx, deps.Output, e.format, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, deps.SnippetRepo, s.InModule)
+		case ast.ShowLayouts:
+			return listLayoutsFuture(ctx, deps.Output, e.format, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, deps.LayoutRepo, s.InModule)
+		case ast.ShowJavaActions:
+			return listJavaActionsFuture(ctx, deps.Output, e.format, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, deps.JavaActionRepo, s.InModule)
+		case ast.ShowJavaScriptActions:
+			return listJavaScriptActionsFuture(ctx, deps.Output, e.format, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, deps.JavaScriptActionRepo, s.InModule)
 		default:
 			return nil // fall through to old handler
 		}
@@ -122,5 +145,12 @@ func (e *Executor) buildHandlerDeps() *HandlerDeps {
 		SettingsReader:     e.backend,
 		DomainModelReader:  e.backend,
 		DomainModels:       extractDomainModelsRepo(e.backend),
+		MicroflowRepo:        extractMicroflowsRepo(e.backend),
+		NanoflowRepo:         extractNanoflowsRepo(e.backend),
+		PageRepo:             extractPagesRepo(e.backend),
+		LayoutRepo:           extractLayoutsRepo(e.backend),
+		SnippetRepo:          extractSnippetsRepo(e.backend),
+		JavaActionRepo:       extractJavaActionsRepo(e.backend),
+		JavaScriptActionRepo: extractJavaScriptActionsRepo(e.backend),
 	}
 }
