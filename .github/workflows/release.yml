@@ -33,7 +33,13 @@ jobs:
           ANTLR4_TOOLS_ANTLR_VERSION: '4.13.2'
 
       - name: Build mxcli binaries
-        run: make release-mxcli
+        run: |
+          echo "=== git describe ==="
+          git describe --tags --always --dirty
+          echo "=== VERSION ==="
+          echo "VERSION=$(git describe --tags --always --dirty 2>/dev/null || echo dev)"
+          echo "=== build ==="
+          make release-mxcli VERSION="$(git describe --tags --always --dirty 2>/dev/null || echo dev)"
 
       - name: Generate SHA256 checksums
         run: |
