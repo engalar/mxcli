@@ -4,7 +4,9 @@
 package executor
 
 import (
+	"context"
 	"fmt"
+	"io"
 	"strings"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
@@ -16,45 +18,120 @@ import (
 
 // execRename handles RENAME statements for all document types.
 func execRename(ctx *ExecContext, s *ast.RenameStmt) error {
-	if !ctx.Connected() {
+	deps := execContextToDeps(ctx)
+	return execRenameFn(ctx, s, deps)
+}
+
+// execRenameEntity renames an entity and updates all BY_NAME references.
+func execRenameEntity(ctx *ExecContext, s *ast.RenameStmt) error {
+	deps := execContextToDeps(ctx)
+	return execRenameEntityFn(ctx, s, deps)
+}
+
+// execRenameModule renames a module and updates all BY_NAME references with the module prefix.
+func execRenameModule(ctx *ExecContext, s *ast.RenameStmt) error {
+	deps := execContextToDeps(ctx)
+	return execRenameModuleFn(ctx, s, deps)
+}
+
+// execRenameDocument handles RENAME MICROFLOW/NANOFLOW/PAGE/CONSTANT.
+// These are standalone documents where the Name field is in the document BSON itself.
+// The reference scanner handles updating all BY_NAME references, and then we update
+// the document's own Name field via a raw BSON rewrite.
+func execRenameDocument(ctx *ExecContext, s *ast.RenameStmt, docType string) error {
+	deps := execContextToDeps(ctx)
+	return execRenameDocumentFn(ctx, s, deps, docType)
+}
+
+func execRenameEnumeration(ctx *ExecContext, s *ast.RenameStmt) error {
+	deps := execContextToDeps(ctx)
+	return execRenameEnumerationFn(ctx, s, deps)
+}
+
+func execRenameAssociation(ctx *ExecContext, s *ast.RenameStmt) error {
+	deps := execContextToDeps(ctx)
+	return execRenameAssociationFn(ctx, s, deps)
+}
+
+func execRenameJavaAction(ctx *ExecContext, s *ast.RenameStmt) error {
+	deps := execContextToDeps(ctx)
+	return execRenameJavaActionFn(ctx, s, deps)
+}
+
+func printRenameReport(ctx *ExecContext, oldName, newName string, hits []types.RenameHit) {
+	printRenameReportFn(ctx.Output, oldName, newName, hits)
+}
+
+func totalRefCount(hits []types.RenameHit) int {
+	total := 0
+	for _, h := range hits {
+		total += h.Count
+	}
+	return total
+}
+
+func mergeHits(a, b []types.RenameHit) []types.RenameHit {
+	seen := make(map[string]int) // unitID → index in result
+	result := make([]types.RenameHit, len(a))
+	copy(result, a)
+	for i := range result {
+		seen[result[i].UnitID] = i
+	}
+	for _, h := range b {
+		if idx, ok := seen[h.UnitID]; ok {
+			result[idx].Count += h.Count
+		} else {
+			seen[h.UnitID] = len(result)
+			result = append(result, h)
+		}
+	}
+	return result
+}
+
+// ────────────────────────────────────────────────────────────
+// Phase 3d-5h: Fn (HandlerDeps) versions of rename functions
+// ────────────────────────────────────────────────────────────
+
+func execRenameFn(ctx context.Context, s *ast.RenameStmt, deps *HandlerDeps) error {
+	if !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnected()
 	}
 
 	switch s.ObjectType {
 	case "entity":
-		return execRenameEntity(ctx, s)
+		return execRenameEntityFn(ctx, s, deps)
 	case "microflow":
-		return execRenameDocument(ctx, s, "microflow")
+		return execRenameDocumentFn(ctx, s, deps, "microflow")
 	case "nanoflow":
-		return execRenameDocument(ctx, s, "nanoflow")
+		return execRenameDocumentFn(ctx, s, deps, "nanoflow")
 	case "page":
-		return execRenameDocument(ctx, s, "page")
+		return execRenameDocumentFn(ctx, s, deps, "page")
 	case "enumeration":
-		return execRenameEnumeration(ctx, s)
+		return execRenameEnumerationFn(ctx, s, deps)
 	case "association":
-		return execRenameAssociation(ctx, s)
+		return execRenameAssociationFn(ctx, s, deps)
 	case "constant":
-		return execRenameDocument(ctx, s, "constant")
+		return execRenameDocumentFn(ctx, s, deps, "constant")
 	case "workflow":
-		return execRenameDocument(ctx, s, "workflow")
+		return execRenameDocumentFn(ctx, s, deps, "workflow")
 	case "javaaction":
-		return execRenameJavaAction(ctx, s)
+		return execRenameJavaActionFn(ctx, s, deps)
 	case "module":
-		return execRenameModule(ctx, s)
+		return execRenameModuleFn(ctx, s, deps)
 	default:
 		return mdlerrors.NewUnsupported(fmt.Sprintf("rename not supported for %s", s.ObjectType))
 	}
 }
 
-// execRenameEntity renames an entity and updates all BY_NAME references.
-func execRenameEntity(ctx *ExecContext, s *ast.RenameStmt) error {
-	// Find the entity
-	module, err := findModule(ctx, s.Name.Module)
+func execRenameEntityFn(ctx context.Context, s *ast.RenameStmt, deps *HandlerDeps) error {
+	ectx := phase3d2bNewExecContext(ctx, deps)
+
+	module, err := findModule(ectx, s.Name.Module)
 	if err != nil {
 		return err
 	}
 
-	dm, err := getDomainModelGenCached(ctx, module.ID)
+	dm, err := getDomainModelGenCached(ectx, module.ID)
 	if err != nil {
 		return mdlerrors.NewBackend("get domain model", err)
 	}
@@ -85,18 +162,16 @@ func execRenameEntity(ctx *ExecContext, s *ast.RenameStmt) error {
 	oldQualifiedName := s.Name.Module + "." + s.Name.Name
 	newQualifiedName := s.Name.Module + "." + s.NewName
 
-	// Scan for references
-	hits, err := ctx.RenameManager.RenameReferences(oldQualifiedName, newQualifiedName, s.DryRun)
+	hits, err := deps.RenameManager.RenameReferences(oldQualifiedName, newQualifiedName, s.DryRun)
 	if err != nil {
 		return mdlerrors.NewBackend("scan references", err)
 	}
 
 	if s.DryRun {
-		printRenameReport(ctx, oldQualifiedName, newQualifiedName, hits)
+		printRenameReportFn(deps.Output, oldQualifiedName, newQualifiedName, hits)
 		return nil
 	}
 
-	// Update the entity name in the domain model
 	for _, entityElem := range dm.EntitiesItems() {
 		ent, ok := entityElem.(*genDm.Entity)
 		if !ok {
@@ -107,78 +182,69 @@ func execRenameEntity(ctx *ExecContext, s *ast.RenameStmt) error {
 			break
 		}
 	}
-	if err := ctx.DomainModelWriter.UpdateDomainModelGen(dm); err != nil {
+	if err := deps.DomainModelWriter.UpdateDomainModelGen(dm); err != nil {
 		return mdlerrors.NewBackend("update entity name", err)
 	}
-	setDomainModelGenCached(ctx, module.ID, dm)
+	setDomainModelGenCached(ectx, module.ID, dm)
 
-	invalidateHierarchy(ctx)
-	invalidateDomainModelsCache(ctx)
+	invalidateHierarchy(ectx)
+	invalidateDomainModelsCache(ectx)
 
-	fmt.Fprintf(ctx.Output, "Renamed entity: %s → %s\n", oldQualifiedName, newQualifiedName)
+	fmt.Fprintf(deps.Output, "Renamed entity: %s → %s\n", oldQualifiedName, newQualifiedName)
 	if len(hits) > 0 {
-		fmt.Fprintf(ctx.Output, "Updated %d reference(s) in %d document(s)\n", totalRefCount(hits), len(hits))
+		fmt.Fprintf(deps.Output, "Updated %d reference(s) in %d document(s)\n", totalRefCount(hits), len(hits))
 	}
 	return nil
 }
 
-// execRenameModule renames a module and updates all BY_NAME references with the module prefix.
-func execRenameModule(ctx *ExecContext, s *ast.RenameStmt) error {
+func execRenameModuleFn(ctx context.Context, s *ast.RenameStmt, deps *HandlerDeps) error {
 	oldModuleName := s.Name.Module
 	newModuleName := s.NewName
 
-	module, err := findModule(ctx, oldModuleName)
+	ectx := phase3d2bNewExecContext(ctx, deps)
+	module, err := findModule(ectx, oldModuleName)
 	if err != nil {
 		return err
 	}
 
-	// Scan for all references with the old module prefix
-	// Module rename replaces "OldModule." with "NewModule." in all qualified names
-	hits, err := ctx.RenameManager.RenameReferences(oldModuleName+".", newModuleName+".", s.DryRun)
+	hits, err := deps.RenameManager.RenameReferences(oldModuleName+".", newModuleName+".", s.DryRun)
 	if err != nil {
 		return mdlerrors.NewBackend("scan references", err)
 	}
 
-	// Also scan for exact module name matches (e.g., in navigation, security role refs)
-	exactHits, err := ctx.RenameManager.RenameReferences(oldModuleName, newModuleName, s.DryRun)
+	exactHits, err := deps.RenameManager.RenameReferences(oldModuleName, newModuleName, s.DryRun)
 	if err != nil {
 		return mdlerrors.NewBackend("scan exact module references", err)
 	}
 
-	// Merge hit lists (deduplicate by unit ID)
 	allHits := mergeHits(hits, exactHits)
 
 	if s.DryRun {
-		printRenameReport(ctx, oldModuleName, newModuleName, allHits)
+		printRenameReportFn(deps.Output, oldModuleName, newModuleName, allHits)
 		return nil
 	}
 
-	// Update the module name
 	module.Name = newModuleName
-	if err := ctx.ModuleWriter.UpdateModule(module); err != nil {
+	if err := deps.ModuleWriter.UpdateModule(module); err != nil {
 		return mdlerrors.NewBackend("update module name", err)
 	}
 
-	invalidateHierarchy(ctx)
-	invalidateDomainModelsCache(ctx)
+	invalidateHierarchy(ectx)
+	invalidateDomainModelsCache(ectx)
 
-	fmt.Fprintf(ctx.Output, "Renamed module: %s → %s\n", oldModuleName, newModuleName)
+	fmt.Fprintf(deps.Output, "Renamed module: %s → %s\n", oldModuleName, newModuleName)
 	if len(allHits) > 0 {
-		fmt.Fprintf(ctx.Output, "Updated %d reference(s) in %d document(s)\n", totalRefCount(allHits), len(allHits))
+		fmt.Fprintf(deps.Output, "Updated %d reference(s) in %d document(s)\n", totalRefCount(allHits), len(allHits))
 	}
 	return nil
 }
 
-// execRenameDocument handles RENAME MICROFLOW/NANOFLOW/PAGE/CONSTANT.
-// These are standalone documents where the Name field is in the document BSON itself.
-// The reference scanner handles updating all BY_NAME references, and then we update
-// the document's own Name field via a raw BSON rewrite.
-func execRenameDocument(ctx *ExecContext, s *ast.RenameStmt, docType string) error {
+func execRenameDocumentFn(ctx context.Context, s *ast.RenameStmt, deps *HandlerDeps, docType string) error {
 	oldQualifiedName := s.Name.Module + "." + s.Name.Name
 	newQualifiedName := s.Name.Module + "." + s.NewName
 
-	// Verify the document exists
-	h, err := getHierarchy(ctx)
+	ectx := phase3d2bNewExecContext(ctx, deps)
+	h, err := getHierarchy(ectx)
 	if err != nil {
 		return err
 	}
@@ -187,12 +253,12 @@ func execRenameDocument(ctx *ExecContext, s *ast.RenameStmt, docType string) err
 	collision := false
 	switch docType {
 	case "microflow":
-		mfs, _ := listMicroflowsGen(ctx)
+		mfs, _ := listMicroflowsGen(ectx)
 		for _, mf := range mfs {
 			if mf == nil {
 				continue
 			}
-			modName := genFlowContainerModule(ctx, h, model.ID(mf.ID()))
+			modName := genFlowContainerModule(ectx, h, model.ID(mf.ID()))
 			if modName != s.Name.Module {
 				continue
 			}
@@ -203,12 +269,12 @@ func execRenameDocument(ctx *ExecContext, s *ast.RenameStmt, docType string) err
 			}
 		}
 	case "nanoflow":
-		nfs, _ := listNanoflowsGen(ctx)
+		nfs, _ := listNanoflowsGen(ectx)
 		for _, nf := range nfs {
 			if nf == nil {
 				continue
 			}
-			modName := genFlowContainerModule(ctx, h, model.ID(nf.ID()))
+			modName := genFlowContainerModule(ectx, h, model.ID(nf.ID()))
 			if modName != s.Name.Module {
 				continue
 			}
@@ -219,10 +285,7 @@ func execRenameDocument(ctx *ExecContext, s *ast.RenameStmt, docType string) err
 			}
 		}
 	case "page":
-		// Stage 3.3.5.C6: switch the rename validate-loop to the gen
-		// cache helper so the rest of the file no longer needs sdk-typed
-		// page listings.
-		pairs, _ := listPagesWithContainerGen(ctx)
+		pairs, _ := listPagesWithContainerGen(ectx)
 		for _, p := range pairs {
 			if p.Elem == nil {
 				continue
@@ -238,7 +301,7 @@ func execRenameDocument(ctx *ExecContext, s *ast.RenameStmt, docType string) err
 			}
 		}
 	case "constant":
-		cs, _ := ctx.ConstantReader.ListConstants()
+		cs, _ := deps.ConstantReader.ListConstants()
 		for _, c := range cs {
 			modID := h.FindModuleID(c.ContainerID)
 			if h.GetModuleName(modID) != s.Name.Module {
@@ -251,7 +314,7 @@ func execRenameDocument(ctx *ExecContext, s *ast.RenameStmt, docType string) err
 			}
 		}
 	case "workflow":
-		pairs, _ := listWorkflowsWithContainerGen(ctx)
+		pairs, _ := listWorkflowsWithContainerGen(ectx)
 		for _, p := range pairs {
 			if p.Elem == nil {
 				continue
@@ -275,47 +338,40 @@ func execRenameDocument(ctx *ExecContext, s *ast.RenameStmt, docType string) err
 		return mdlerrors.NewValidationf("%s %s already exists in module %s", docType, s.NewName, s.Name.Module)
 	}
 
-	// The reference scanner will also update the document's own Name field
-	// when it matches the old qualified name. But the Name field is just the
-	// simple name (e.g., "OldName"), not the qualified name. So we need to
-	// handle it separately — the scanner updates cross-references, and we
-	// update the Name field directly.
-	hits, err := ctx.RenameManager.RenameReferences(oldQualifiedName, newQualifiedName, s.DryRun)
+	hits, err := deps.RenameManager.RenameReferences(oldQualifiedName, newQualifiedName, s.DryRun)
 	if err != nil {
 		return mdlerrors.NewBackend("scan references", err)
 	}
 
 	if s.DryRun {
-		printRenameReport(ctx, oldQualifiedName, newQualifiedName, hits)
+		printRenameReportFn(deps.Output, oldQualifiedName, newQualifiedName, hits)
 		return nil
 	}
 
-	// Update the document's own Name field via the raw BSON name updater
-	if err := ctx.RenameManager.RenameDocumentByName(s.Name.Module, s.Name.Name, s.NewName); err != nil {
+	if err := deps.RenameManager.RenameDocumentByName(s.Name.Module, s.Name.Name, s.NewName); err != nil {
 		return mdlerrors.NewBackend(fmt.Sprintf("rename %s", docType), err)
 	}
 
-	invalidateHierarchy(ctx)
-	invalidateAllDocumentCaches(ctx)
+	invalidateHierarchy(ectx)
+	invalidateAllDocumentCaches(ectx)
 
-	fmt.Fprintf(ctx.Output, "Renamed %s: %s → %s\n", docType, oldQualifiedName, newQualifiedName)
+	fmt.Fprintf(deps.Output, "Renamed %s: %s → %s\n", docType, oldQualifiedName, newQualifiedName)
 	if len(hits) > 0 {
-		fmt.Fprintf(ctx.Output, "Updated %d reference(s) in %d document(s)\n", totalRefCount(hits), len(hits))
+		fmt.Fprintf(deps.Output, "Updated %d reference(s) in %d document(s)\n", totalRefCount(hits), len(hits))
 	}
 	return nil
 }
 
-// execRenameEnumeration renames an enumeration and updates all references.
-func execRenameEnumeration(ctx *ExecContext, s *ast.RenameStmt) error {
+func execRenameEnumerationFn(ctx context.Context, s *ast.RenameStmt, deps *HandlerDeps) error {
 	oldQualifiedName := s.Name.Module + "." + s.Name.Name
 	newQualifiedName := s.Name.Module + "." + s.NewName
 
-	// Verify it exists
-	enums, err := ctx.EnumerationReader.ListEnumerations()
+	enums, err := deps.EnumerationReader.ListEnumerations()
 	if err != nil {
 		return mdlerrors.NewBackend("list enumerations", err)
 	}
-	h, err := getHierarchy(ctx)
+	ectx := phase3d2bNewExecContext(ctx, deps)
+	h, err := getHierarchy(ectx)
 	if err != nil {
 		return err
 	}
@@ -339,47 +395,45 @@ func execRenameEnumeration(ctx *ExecContext, s *ast.RenameStmt) error {
 		return mdlerrors.NewValidationf("enumeration %s already exists in module %s", s.NewName, s.Name.Module)
 	}
 
-	hits, err := ctx.RenameManager.RenameReferences(oldQualifiedName, newQualifiedName, s.DryRun)
+	hits, err := deps.RenameManager.RenameReferences(oldQualifiedName, newQualifiedName, s.DryRun)
 	if err != nil {
 		return mdlerrors.NewBackend("scan references", err)
 	}
 
 	if s.DryRun {
-		printRenameReport(ctx, oldQualifiedName, newQualifiedName, hits)
+		printRenameReportFn(deps.Output, oldQualifiedName, newQualifiedName, hits)
 		return nil
 	}
 
-	// Update enumeration name via raw BSON
-	if err := ctx.RenameManager.RenameDocumentByName(s.Name.Module, s.Name.Name, s.NewName); err != nil {
+	if err := deps.RenameManager.RenameDocumentByName(s.Name.Module, s.Name.Name, s.NewName); err != nil {
 		return mdlerrors.NewBackend("rename enumeration", err)
 	}
 
-	// Also update enumeration refs in domain models (attribute types store qualified enum names)
-	if err := ctx.DomainModelWriter.UpdateEnumerationRefsInAllDomainModels(oldQualifiedName, newQualifiedName); err != nil {
-		fmt.Fprintf(ctx.Output, "Warning: failed to update enumeration references in domain models: %v\n", err)
+	if err := deps.DomainModelWriter.UpdateEnumerationRefsInAllDomainModels(oldQualifiedName, newQualifiedName); err != nil {
+		fmt.Fprintf(deps.Output, "Warning: failed to update enumeration references in domain models: %v\n", err)
 	}
 
-	invalidateHierarchy(ctx)
-	invalidateDomainModelsCache(ctx)
+	invalidateHierarchy(ectx)
+	invalidateDomainModelsCache(ectx)
 
-	fmt.Fprintf(ctx.Output, "Renamed enumeration: %s → %s\n", oldQualifiedName, newQualifiedName)
+	fmt.Fprintf(deps.Output, "Renamed enumeration: %s → %s\n", oldQualifiedName, newQualifiedName)
 	if len(hits) > 0 {
-		fmt.Fprintf(ctx.Output, "Updated %d reference(s) in %d document(s)\n", totalRefCount(hits), len(hits))
+		fmt.Fprintf(deps.Output, "Updated %d reference(s) in %d document(s)\n", totalRefCount(hits), len(hits))
 	}
 	return nil
 }
 
-// execRenameAssociation renames an association and updates all references.
-func execRenameAssociation(ctx *ExecContext, s *ast.RenameStmt) error {
+func execRenameAssociationFn(ctx context.Context, s *ast.RenameStmt, deps *HandlerDeps) error {
 	oldQualifiedName := s.Name.Module + "." + s.Name.Name
 	newQualifiedName := s.Name.Module + "." + s.NewName
 
-	module, err := findModule(ctx, s.Name.Module)
+	ectx := phase3d2bNewExecContext(ctx, deps)
+	module, err := findModule(ectx, s.Name.Module)
 	if err != nil {
 		return err
 	}
 
-	dm, err := getDomainModelGenCached(ctx, module.ID)
+	dm, err := getDomainModelGenCached(ectx, module.ID)
 	if err != nil {
 		return mdlerrors.NewBackend("get domain model", err)
 	}
@@ -407,17 +461,16 @@ func execRenameAssociation(ctx *ExecContext, s *ast.RenameStmt) error {
 		return mdlerrors.NewValidationf("association %s already exists in module %s", s.NewName, s.Name.Module)
 	}
 
-	hits, err := ctx.RenameManager.RenameReferences(oldQualifiedName, newQualifiedName, s.DryRun)
+	hits, err := deps.RenameManager.RenameReferences(oldQualifiedName, newQualifiedName, s.DryRun)
 	if err != nil {
 		return mdlerrors.NewBackend("scan references", err)
 	}
 
 	if s.DryRun {
-		printRenameReport(ctx, oldQualifiedName, newQualifiedName, hits)
+		printRenameReportFn(deps.Output, oldQualifiedName, newQualifiedName, hits)
 		return nil
 	}
 
-	// Update association name in domain model
 	for _, assocElem := range dm.AssociationsItems() {
 		assoc, ok := assocElem.(*genDm.Association)
 		if !ok {
@@ -428,36 +481,31 @@ func execRenameAssociation(ctx *ExecContext, s *ast.RenameStmt) error {
 			break
 		}
 	}
-	if err := ctx.DomainModelWriter.UpdateDomainModelGen(dm); err != nil {
+	if err := deps.DomainModelWriter.UpdateDomainModelGen(dm); err != nil {
 		return mdlerrors.NewBackend("update association name", err)
 	}
-	setDomainModelGenCached(ctx, module.ID, dm)
+	setDomainModelGenCached(ectx, module.ID, dm)
 
-	invalidateHierarchy(ctx)
-	invalidateDomainModelsCache(ctx)
+	invalidateHierarchy(ectx)
+	invalidateDomainModelsCache(ectx)
 
-	fmt.Fprintf(ctx.Output, "Renamed association: %s → %s\n", oldQualifiedName, newQualifiedName)
+	fmt.Fprintf(deps.Output, "Renamed association: %s → %s\n", oldQualifiedName, newQualifiedName)
 	if len(hits) > 0 {
-		fmt.Fprintf(ctx.Output, "Updated %d reference(s) in %d document(s)\n", totalRefCount(hits), len(hits))
+		fmt.Fprintf(deps.Output, "Updated %d reference(s) in %d document(s)\n", totalRefCount(hits), len(hits))
 	}
 	return nil
 }
 
-// execRenameJavaAction renames a Java action and its .java source file.
-//
-// Stage 3.3.2.E1 prep: migrated from legacy ctx.Backend.ListJavaActions
-// to listJavaActionsWithContainerGen — the cache helper carries the
-// gen-typed JavaAction + its container UUID without needing a
-// hierarchy.FindModuleID lookup.
-func execRenameJavaAction(ctx *ExecContext, s *ast.RenameStmt) error {
+func execRenameJavaActionFn(ctx context.Context, s *ast.RenameStmt, deps *HandlerDeps) error {
 	oldQualifiedName := s.Name.Module + "." + s.Name.Name
 	newQualifiedName := s.Name.Module + "." + s.NewName
 
-	pairs, err := listJavaActionsWithContainerGen(ctx)
+	ectx := phase3d2bNewExecContext(ctx, deps)
+	pairs, err := listJavaActionsWithContainerGen(ectx)
 	if err != nil {
 		return mdlerrors.NewBackend("list java actions", err)
 	}
-	h, err := getHierarchy(ctx)
+	h, err := getHierarchy(ectx)
 	if err != nil {
 		return err
 	}
@@ -467,11 +515,6 @@ func execRenameJavaAction(ctx *ExecContext, s *ast.RenameStmt) error {
 		if p.Elem == nil {
 			continue
 		}
-		// Mock test contexts (no ctx.JavaActions repo) leave
-		// p.ContainerID empty; the test wires withContainer using the
-		// element ID directly, so walk the hierarchy from the element ID
-		// itself which works in both production (Unit→Container chain)
-		// and mock (direct ID→Module mapping).
 		startID := model.ID(p.ContainerID)
 		if startID == "" {
 			startID = model.ID(p.Elem.ID())
@@ -494,37 +537,36 @@ func execRenameJavaAction(ctx *ExecContext, s *ast.RenameStmt) error {
 		return mdlerrors.NewValidationf("java action %s already exists in module %s", s.NewName, s.Name.Module)
 	}
 
-	hits, err := ctx.RenameManager.RenameReferences(oldQualifiedName, newQualifiedName, s.DryRun)
+	hits, err := deps.RenameManager.RenameReferences(oldQualifiedName, newQualifiedName, s.DryRun)
 	if err != nil {
 		return mdlerrors.NewBackend("scan references", err)
 	}
 
 	if s.DryRun {
-		printRenameReport(ctx, oldQualifiedName, newQualifiedName, hits)
+		printRenameReportFn(deps.Output, oldQualifiedName, newQualifiedName, hits)
 		return nil
 	}
 
-	if err := ctx.RenameManager.RenameDocumentByName(s.Name.Module, s.Name.Name, s.NewName); err != nil {
+	if err := deps.RenameManager.RenameDocumentByName(s.Name.Module, s.Name.Name, s.NewName); err != nil {
 		return mdlerrors.NewBackend("rename java action", err)
 	}
-	if err := ctx.JavaActionWriter.RenameJavaSourceFile(s.Name.Module, s.Name.Name, s.NewName); err != nil {
+	if err := deps.JavaActionWriter.RenameJavaSourceFile(s.Name.Module, s.Name.Name, s.NewName); err != nil {
 		return mdlerrors.NewBackend("rename java source file", err)
 	}
 
-	invalidateHierarchy(ctx)
-	invalidateAllDocumentCaches(ctx)
+	invalidateHierarchy(ectx)
+	invalidateAllDocumentCaches(ectx)
 
-	fmt.Fprintf(ctx.Output, "Renamed java action: %s → %s\n", oldQualifiedName, newQualifiedName)
+	fmt.Fprintf(deps.Output, "Renamed java action: %s → %s\n", oldQualifiedName, newQualifiedName)
 	if len(hits) > 0 {
-		fmt.Fprintf(ctx.Output, "Updated %d reference(s) in %d document(s)\n", totalRefCount(hits), len(hits))
+		fmt.Fprintf(deps.Output, "Updated %d reference(s) in %d document(s)\n", totalRefCount(hits), len(hits))
 	}
 	return nil
 }
 
-// printRenameReport outputs a dry-run report of what would change.
-func printRenameReport(ctx *ExecContext, oldName, newName string, hits []types.RenameHit) {
-	fmt.Fprintf(ctx.Output, "Would rename: %s → %s\n", oldName, newName)
-	fmt.Fprintf(ctx.Output, "References found: %d in %d document(s)\n", totalRefCount(hits), len(hits))
+func printRenameReportFn(output io.Writer, oldName, newName string, hits []types.RenameHit) {
+	fmt.Fprintf(output, "Would rename: %s → %s\n", oldName, newName)
+	fmt.Fprintf(output, "References found: %d in %d document(s)\n", totalRefCount(hits), len(hits))
 
 	for _, h := range hits {
 		label := h.Name
@@ -535,32 +577,8 @@ func printRenameReport(ctx *ExecContext, oldName, newName string, hits []types.R
 		if idx := strings.Index(typeName, "$"); idx >= 0 {
 			typeName = typeName[idx+1:]
 		}
-		fmt.Fprintf(ctx.Output, "  %s (%s) — %d reference(s)\n", label, typeName, h.Count)
+		fmt.Fprintf(output, "  %s (%s) — %d reference(s)\n", label, typeName, h.Count)
 	}
 }
 
-func totalRefCount(hits []types.RenameHit) int {
-	total := 0
-	for _, h := range hits {
-		total += h.Count
-	}
-	return total
-}
 
-func mergeHits(a, b []types.RenameHit) []types.RenameHit {
-	seen := make(map[string]int) // unitID → index in result
-	result := make([]types.RenameHit, len(a))
-	copy(result, a)
-	for i := range result {
-		seen[result[i].UnitID] = i
-	}
-	for _, h := range b {
-		if idx, ok := seen[h.UnitID]; ok {
-			result[idx].Count += h.Count
-		} else {
-			seen[h.UnitID] = len(result)
-			result = append(result, h)
-		}
-	}
-	return result
-}
