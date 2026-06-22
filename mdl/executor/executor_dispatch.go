@@ -44,7 +44,6 @@ func (e *Executor) syncBack(ctx *ExecContext) {
 	if ctx.Graph != nil {
 		e.graphCatalog = ctx.Graph
 	}
-	e.settings = ctx.Settings
 	e.fragments = ctx.Fragments
 	e.sqlMgr = ctx.SqlMgr
 	e.themeRegistry = ctx.ThemeRegistry
@@ -86,7 +85,6 @@ func (e *Executor) newExecContext(ctx context.Context) *ExecContext {
 		ExecSession: ExecSession{
 			Fragments: e.fragments,
 			Cache:     e.cache,
-			Settings:  e.settings,
 		},
 		ExecConnection: ExecConnection{
 			MprPath:        e.mprPath,

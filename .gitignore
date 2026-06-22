@@ -77,3 +77,4 @@ snap-bson
 tmp/
 vscode-mdl/
 vscode-mdl/*.vsix
+.mxcli

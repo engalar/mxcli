@@ -323,7 +323,6 @@ type Executor struct {
 	statusOutput   io.Writer    // writer for status/informational messages (stderr by default)
 	guard          *outputGuard // line-limit wrapper around output
 	mprPath        string
-	settings       map[string]any
 	cache          *executorCache
 	graphCatalog   *graphcatalog.ProjectGraph // in-memory project graph (lazy build) for code-search + lint
 	quiet          bool                       // suppress connection and status messages
@@ -356,7 +355,6 @@ func New(output io.Writer) *Executor {
 		output:       guard,
 		statusOutput: os.Stderr,
 		guard:        guard,
-		settings:     make(map[string]any),
 		registry:     NewRegistry(),
 	}
 }

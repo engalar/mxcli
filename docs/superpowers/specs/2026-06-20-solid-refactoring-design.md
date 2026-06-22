@@ -507,60 +507,160 @@ mdl/
 
 ---
 
-## 4. 迁移计划（Big Bang）
+## 3. 当前完成状态（截至 2026-06-22）
 
-### 阶段 0：基础设施
+| 阶段 | 状态 | 证据 |
+|------|------|------|
+| 1 (model/types 拆分) | ✅ 完成 | `model/types.go` 从 981→273 行 |
+| 2 (MprBackend 重构) | ✅ 完成 | `mdl/backend/mpr/backend.go` 从 1659→67 行；`FullBackend` 已有 Deprecated 标注 |
+| OCP pages 注册表 | ✅ 完成 | 3 个注册文件 (`page_widget_registry`, `page_datasource_registry`, `page_action_registry`); `pages_builder_v3.go` 从 3088→452 行 |
+| Registry TypeName | ✅ 完成 | 无 `reflect.TypeOf` |
+| goroutine-per-stmt | ✅ 完成 | 已移除 |
+| **3a** Executor 瘦身 | ⬜ 未开始 | Executor 仍有 15 个字段 |
+| **3b** executorCache 分解 | ⬜ 未开始 | 仍为单体 25+ 文档类型 |
+| **3c** FullBackend→角色最后 55 处 | ⬜ 未开始 | 23 文件，55 处引用 |
+| **3d** ExecContext 消除 | ⬜ 未开始 | 1229 处引用，200 文件 |
+| **3e** Registry OCP | ⬜ 未开始 | `NewRegistry()` 仍显式列出 30+ 注册 |
+| **4** CLI 层 | ⬜ 未开始 | 依赖阶段 3 |
+| **5** LSP 断言 | ⬜ 部分 | 需全量审计 |
+| **0** 门控工具 | ⬜ 未开始 | 最后写（避免中途重写） |
 
-1. 编写 `cmd/check-solid` 工具，强制执行：
-   - 无 `*ExecContext` 类型的导入
-   - 无 `backend.FullBackend` 类型的导入（`mock.Backend` 除外）
-   - 无类型断言忽略 `ok`
-2. 设置 CI 门控，通过 `cmd/check-solid` 检查，并编译验证
+## 4. 迁移计划（增量可提交顺序）
 
-### 阶段 1：重构模型包（无风险，独立）
+### Phase 3a — Executor 瘦身 (SRP)
 
-- 将 `model/types.go` 拆分为每个领域一个文件
-- 机械操作，零逻辑变化
-- 验证：`go build ./model/...` 成功
+从 `Executor` 摘除非核心字段，降低耦合：
 
-### 阶段 2：重构 MprBackend
+| 字段 | 移入目标 | 方案 |
+|------|---------|------|
+| `cache *executorCache` | 独立 `ExecutorCache` 类型，Executor 通过接口引用 | 提取 accessor 方法 |
+| `graphCatalog *graphcatalog.ProjectGraph` | 懒加载，从 factory 获取 | `executor_connect.go` 中改为 `BackendFactory.GraphCatalog()` |
+| `sqlMgr *sqllib.Manager` | `executor_connect.go` 中独立初始化 | Executor 不再直接持有 |
+| `themeRegistry *ThemeRegistry` | `executor_connect.go` 中独立初始化 | 同 sqlMgr |
+| `fragments map[string]*ast.DefineFragmentStmt` | 移到 session 局部作用域 | Execute() 参数或闭包 |
+| `settings map[string]any` | 移到 Builder 或外部配置 | 不通过 Executor 传递 |
 
-- 用 `BackendFactory` 方法替换 `FullBackend`：
-  - `MprBackend` 移除所有领域特定方法，变为仅工厂
-  - 每个子后端获得自己的文件并实现角色接口
-  - `Connect()` 急切地创建子后端
-  - 移除 `initSubBackends()` 和 `concreteWriter()`
-- 每个子后端获得自己的缓存类型
-- 移除 `repos_provider.go`（`concreteWriter()` 模式）
-- 验证：`go build ./mdl/backend/...` 成功；所有测试通过
+**目标：** `Executor` 只保留 `registry`, `guard`, `output`, `statusOutput`, `backendFactory`, `perfStats`, `quiet`, `format`, `logger`, `mprPath`（~10 字段，全是执行基础设施）。
 
-### 阶段 3：重构 Executor + Registry
+**验证：** `go build ./mdl/executor/...` + 全部测试通过。
 
-- `Executor` 瘦身：移除 backend、cache、catalog、sqlMgr、themeRegistry 字段
-- `executorCache` 分解
-- `ExecContext` 消除：处理函数变为纯闭包
-- 注册迁移到处理函数特定的文件，每个文件捕获其依赖关系
-- `Registry` 获取泛型 `Register[T]` 方法
-- `Builder` 更新以反映新架构
-- 验证：`go build ./mdl/executor/...` 成功；所有测试通过
+### Phase 3b — executorCache 分解 (SRP)
 
-### 阶段 4：更新 CLI 层
+将单体缓存拆为按域的独立缓存类型，每个类靠近其消费者：
 
-- 更新 `cmd/mxcli/main.go` 以使用新的 `Builder` + 处理函数注册
-- 移除所有 `cmd/mxcli/` 中对 `ExecContext.Backend` 的引用
-- 验证：`go build ./cmd/...` 成功
+| 缓存 | 新位置 | 模式 |
+|------|--------|------|
+| `module`, `folder`, `unit` | `mdl/executor/module_cache.go` | `ModuleCache` struct + typed accessors |
+| `microflowWithContainer`, `nanoflowWithContainer` | `mdl/executor/microflow_cache.go` | `MicroflowCache` struct + typed accessors |
+| `page`, `layout`, `snippet` | `mdl/executor/page_cache.go` | `PageCache` struct + typed accessors |
+| `domainModel`, `entity` | `mdl/executor/domainmodel_cache.go` | `DomainModelCache` struct |
+| `projectSecurity`, `moduleSecurity` | `mdl/executor/security_cache.go` | `SecurityCache` struct |
+| `workflow`, `javaAction`, `javaScriptAction` | `mdl/executor/flow_cache.go` | `FlowCache` struct |
 
-### 阶段 5：修复 LSP 违规
+`executorCache` 结构体删除，原来 `sessionTracker` 保留（它是会话状态，不是缓存）。
 
-- 在项目范围内的所有未检查断言中添加 `ok` 检查
-- 验证：`cmd/check-solid` 通过，零未检查类型断言
+**验证：** 每个缓存独立测试可读性；`go test ./mdl/executor/...` 全部通过。
 
-### 阶段 6：最终验证
+### Phase 3c — FullBackend→角色最后 55 处 (ISP)
 
-- 完整测试套件运行：`make test`
-- 集成测试运行
-- 性能基准测试：确保重构没有显著降级
-- 黄金文件更新
+23 个文件中 55 处 `FullBackend` 引用，逐个文件迁移：
+
+| 文件 | FullBackend 用途 | 替换为 |
+|------|-----------------|--------|
+| `executor.go` (7 处) | Connect/Disconnect/Version | `ConnectionBackend` + `BackendFactory` |
+| `flowbuilder_v2.go` (1) | microflow builder | `MicroflowReader` + `MicroflowWriter` |
+| `cmd_pages_builder.go` (1) | page builder | `PageModelAccess` + `PageMutationOperator` |
+| `cmd_workflows_write_v2.go` (2) | workflow write | `WorkflowReader` + `WorkflowWriter` + `WorkflowMutationOperator` |
+| `hierarchy.go` (3) | container hierarchy | `ModuleLister` + `FolderManager` |
+| `cmd_export_mappings.go` (1) | export | `MappingReader` |
+| `cmd_import_mappings.go` (1) | import | `MappingReader` + `MappingWriter` |
+| `backend/page.go` (1) | page interface | `PageReader` |
+| `backend/role.go` (1) | role definitions | 保持（定义处） |
+| `backend/workflow.go` (1) | workflow interface | `WorkflowReader` |
+| 其余 internal/expr + mock + mpr | 测试/基础设施 | `BackendFactory` 或窄接口 |
+| `executor.go` | Execute() | 通过 ExecContext 已有 role 字段 |
+
+**验证：** 每改一个文件就编译。`go vet ./...`。
+
+### Phase 3e — Registry OCP (OCP)
+
+`NewRegistry()` 的 30+ 显式注册消除策略：
+
+1. 在 `Registry` 上加 `RegisterHandlerFunc(typeName string, fn StmtHandlerFunc)` 方法
+2. 创建 `handlers/` 子包，每个 handler 文件一个 `Register*()` 导出函数
+3. 每个导出函数接受 `*Registry` + 它需要的依赖，闭包捕获
+4. 用 `NewRegistryFromOpts(opts ...func(*Registry))` 替代 `NewRegistry()`
+5. 每个 `register*Handlers` 函数改为接受窄接口而非 `*ExecContext`
+
+**过渡策略：** `Registry` 同时支持 `StmtHandler`（旧）和 `StmtHandlerFunc`（新）。旧 handler 从 `ExecContext` 依赖中提取 role 字段。等全部迁移完后删除 `StmtHandler`。
+
+**验证：** 覆盖率测试 `TestRegistry_Completeness` 确保所有 AST 类型都有 handler。
+
+### Phase 3d — ExecContext 消除 (SRP+DIP+DIP)
+
+**最危险，最后做。** 1229 处引用，用两阶段消除：
+
+**阶段 3d-1 (机械迁移):** 在每个 handler 函数中，将 `ctx.Backend.SomeMethod()` 替换为 `ctx.SomeReader.SomeMethod()`。不改变函数签名，只改内部调用。可以批量 sed 完成大部分。
+
+**阶段 3d-2 (签名变更):** 改 handler 签名从 `func(ctx *ExecContext, stmt ast.Statement) error` 到 `func(ctx context.Context, stmt ast.Statement) error`。用闭包在注册时捕获依赖。
+
+```
+// 迁移前
+func execCreateModule(ctx *ExecContext, stmt *ast.CreateModuleStmt) error {
+    modules, err := ctx.Backend.ListModules()
+    ...
+}
+
+// 迁移后
+func execCreateModule(
+    ctx context.Context,
+    stmt *ast.CreateModuleStmt,
+    lister backend.ModuleLister,
+    writer backend.ModuleWriter,
+) error {
+    modules, err := lister.ListModules()
+    ...
+}
+```
+
+**分 10 批迁移（每批 ~120 refs）：** 按文件列表排序，从最简单（纯查询）到最复杂（写+事务）。
+
+### Phase 4 — CLI 层更新
+
+- 更新 `cmd/mxcli/main.go` 使用新的 `Builder` + handler 注册组合
+- 移除所有对 `ExecContext.Backend` 的直接引用
+- `cmd/mxcli-daemon/` 同步更新
+
+**验证：** `go build ./cmd/...` 成功。
+
+### Phase 5 — LSP 修复
+
+审计所有文件中的 `val, _ := expr.(*Type)` 模式：
+
+```bash
+rg '_, _ := .+\.\(' --type go | grep -v '_test.go' | grep -v 'ok :='
+```
+
+每个改为：
+```go
+val, ok := expr.(*Type)
+if !ok {
+    // handle gracefully
+}
+```
+
+**验证：** `rg '_, _ := .+\.\(' --type go | grep -v '_test.go'` 输出为空（排除文件读取等非类型断言模式）。
+
+### Phase 0 — 门控工具（最后写）
+
+在所有重构完成后写 `cmd/check-solid`，确保新代码不会出现旧模式。这样工具逻辑基于最终代码状态，不需要中途修改。
+
+### Phase 6 — 最终验证
+
+- `make test` 全部通过
+- `make bench` 无显著性能退化
+- golden snapshot idempotency 验证
+- `mx check` 在 baseline 项目上验证 BSON 正确性
 
 ---
 
@@ -568,11 +668,11 @@ mdl/
 
 | 风险 | 可能性 | 影响 | 缓解措施 |
 |------|--------|------|----------|
-| `ExecContext` 消除暴露隐藏的耦合 | 中 | 高 | 每步都编译测试；如果耦合证明太复杂，改用参数对象模式——一个命名的 `HandlerDeps` 结构体，每个处理函数显式声明为最后一个参数，不具备"上下文"的语义重量 |
-| 缓存失效行为改变 | 中 | 中 | 迁移后运行黄金文件/回归测试；编写显式的缓存竞争测试 |
-| 注册语法错误 | 低 | 中 | 注册表具有编译时验证测试（`TestNewRegistry_Completeness` 和 `TestNewRegistry_HandlerCountSnapshot` 更新以匹配新模式） |
-| 性能回归 | 低 | 中 | 基准测试 `make bench` 比较 before/after；缓存/密集代码路径的微基准测试 |
-| 回滚计划 | — | — | Big Bang 提交被标记；如果失败，`git revert <commit>` 并恢复原状 |
+| `ExecContext` 消除暴露隐藏的耦合 | 中 | 高 | 每步都编译测试；使用分层策略（3a→3b→3c→3e→3d）确保 ExecContext 消除是最后一步，前面的解耦减少其耦合度。如果仍然复杂，改用 `HandlerDeps` 参数对象模式 |
+| 缓存失效行为改变 | 中 | 中 | 每个缓存拆分后运行 golden test；编写显式缓存竞争测试 |
+| 注册迁移中断 | 低 | 中 | Registry 同时支持旧 `StmtHandler` 和新 `StmtHandlerFunc` 过渡；覆盖率测试确保无遗漏 |
+| 性能回归 | 低 | 中 | `make bench` + 黄金文件比较 |
+| 回滚计划 | — | — | 每个 Phase 独立 commit，`git revert <phase-commit>` 精确回滚 |
 
 ---
 
@@ -580,8 +680,9 @@ mdl/
 
 1. 所有现有测试通过（零回归）
 2. `go vet ./...` 清理
-3. 无新导入 `backend.FullBackend` 或 `executor.ExecContext`
+3. 无新导入 `backend.FullBackend` 或 `executor.ExecContext`（`FullBackend` 只在 `backend.go` 和 `mock_backend.go` 定义处保留）
 4. 所有类型断言检查 `ok`
 5. 注册表注册是组合式的：新语句类型在不需要修改 `NewRegistry()` 的情况下添加它自己的 `Register` 调用
 6. 每个处理函数声明它的依赖关系，作为函数参数（通过闭包捕获）
-7. 包依赖图是无环的（已验证通过 `go mod graph`）
+7. `Executor` 字段 ≤ 10（仅执行基础设施）
+8. `executorCache` 不再存在（拆分为 N 个域缓存）
