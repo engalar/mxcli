@@ -20,6 +20,7 @@ $Obj = create Module.Entity (Name = 'x') with commit;
 $Obj = create Module.Entity (Name = 'x') with commit refresh;
 $Obj = create Module.Entity (Name = 'x') with commit without events;
 $Obj = create Module.Entity (Name = 'x') with commit without events refresh;
+$Obj = create Module.Entity (Name = 'x') refresh;                        -- Commit=No, Refresh=true
 
 -- CHANGE
 change $Obj (Name = 'new');
@@ -27,6 +28,7 @@ change $Obj (Name = 'new') with commit;
 change $Obj (Name = 'new') with commit refresh;
 change $Obj (Name = 'new') with commit without events;
 change $Obj (Name = 'new') with commit without events refresh;
+change $Obj (Name = 'new') refresh;                                      -- Commit=No, Refresh=true
 
 -- COMMIT (unchanged)
 commit $Obj;
@@ -42,6 +44,50 @@ delete $Obj refresh;
 rollback $Obj;
 rollback $Obj refresh;
 ```
+
+### Round-Trip Table (BSON ↔ MDL)
+
+Every line in the table below must round-trip: MDL → BSON → describe → identical MDL.
+
+**CREATE:**
+| Commit | RefreshInClient | MDL output |
+|--------|----------------|------------|
+| `"No"` | `false` | `$X = create Module.Entity (attr);` |
+| `"No"` | `true` | `$X = create Module.Entity (attr) refresh;` |
+| `"Yes"` | `false` | `$X = create Module.Entity (attr) with commit;` |
+| `"Yes"` | `true` | `$X = create Module.Entity (attr) with commit refresh;` |
+| `"YesWithoutEvents"` | `false` | `$X = create Module.Entity (attr) with commit without events;` |
+| `"YesWithoutEvents"` | `true` | `$X = create Module.Entity (attr) with commit without events refresh;` |
+
+**CHANGE:**
+| Commit | RefreshInClient | MDL output |
+|--------|----------------|------------|
+| `"No"` | `false` | `change $X (attr);` |
+| `"No"` | `true` | `change $X (attr) refresh;` |
+| `"Yes"` | `false` | `change $X (attr) with commit;` |
+| `"Yes"` | `true` | `change $X (attr) with commit refresh;` |
+| `"YesWithoutEvents"` | `false` | `change $X (attr) with commit without events;` |
+| `"YesWithoutEvents"` | `true` | `change $X (attr) with commit without events refresh;` |
+
+**COMMIT:**
+| WithEvents | RefreshInClient | MDL output |
+|------------|----------------|------------|
+| `false` | `false` | `commit $X;` |
+| `false` | `true` | `commit $X refresh;` |
+| `true` | `false` | `commit $X with events;` |
+| `true` | `true` | `commit $X with events refresh;` |
+
+**DELETE:**
+| RefreshInClient | MDL output |
+|----------------|------------|
+| `false` | `delete $X;` |
+| `true` | `delete $X refresh;` |
+
+**ROLLBACK:**
+| RefreshInClient | MDL output |
+|----------------|------------|
+| `false` | `rollback $X;` |
+| `true` | `rollback $X refresh;` |
 
 ### Grammar Changes
 
@@ -217,12 +263,14 @@ func (fb *flowBuilderGen) addCreateObjectActionGen(s *ast.CreateObjectStmt) elem
 
 ### Formatter (BSON Read → MDL) Changes
 
+The formatter must produce MDL that, when parsed back, produces identical BSON (round-trip). All six combinations per activity type from the Round-Trip Table above must be covered.
+
 **File: `mdl/executor/microflows_format_action_v2.go`**
 
-**`formatCreateObjectActionGen`:** Append commit clause:
+**`formatCreateObjectActionGen`:** Replace hardcoded output with round-trip-aware clause:
 ```go
 func formatCreateObjectActionGen(a *genMf.CreateObjectAction) string {
-    // ... existing format logic ...
+    // ... existing format logic (entityName, outputVar, members) ...
     commitClause := ""
     switch a.Commit() {
     case "Yes":
@@ -234,26 +282,27 @@ func formatCreateObjectActionGen(a *genMf.CreateObjectAction) string {
     if a.RefreshInClient() {
         refreshClause = " refresh"
     }
+    // Output must match visitor: $X = create E (members)[commitClause][refreshClause];
     return fmt.Sprintf("$%s = create %s (%s)%s%s;", outputVar, entityName, members, commitClause, refreshClause)
 }
 ```
 
-**`formatChangeObjectActionGen`:** Same pattern — append commit clause and refresh.
+**`formatChangeObjectActionGen`:** Same pattern — append `commitClause` + `refreshClause`. Currently outputs `change $V (members)[refresh];`. Add commitClause before refreshClause.
 
-**`formatCommitActionGen`:** No change needed (already handles WithEvents + RefreshInClient).
+**`formatCommitActionGen`:** No change needed (already handles `with events` + `refresh` for all 4 combinations).
 
-**`formatDeleteActionGen`:** Add refresh:
+**`formatDeleteActionGen`:** Add refresh support (currently drops it):
 ```go
 func formatDeleteActionGen(a *genMf.DeleteAction) string {
     suffix := ""
     if a.RefreshInClient() {
         suffix = " refresh"
     }
-    return fmt.Sprintf("delete $%s%s;", varName, suffix)
+    return fmt.Sprintf("delete $%s%s;", a.DeleteVariableName(), suffix)
 }
 ```
 
-**`formatRollbackActionGen`:** No change needed (already handles refresh).
+**`formatRollbackActionGen`:** No change needed (already handles `refresh`).
 
 ### BSON Field Mapping Reference
 
@@ -269,28 +318,62 @@ func formatDeleteActionGen(a *genMf.DeleteAction) string {
 
 File: `mdl/executor/roundtrip_microflow_test.go`
 
-Each test creates a microflow via MDL, describes it, and asserts the describe output matches the input:
+Each test creates a microflow via MDL, describes it, and asserts the describe output matches the input. Every row in the Round-Trip Table must be covered:
 
 ```go
+// CREATE — 6 combinations
+func TestRoundtripMicroflow_CreateDefault(t *testing.T) {
+    // Input:  $Obj = create Module.Entity (Name = 'x');
+    // Expect: describe output must not add "with commit" or "refresh"
+}
+func TestRoundtripMicroflow_CreateRefreshOnly(t *testing.T) {
+    // Input:  $Obj = create Module.Entity (Name = 'x') refresh;
+    // Expect: $Obj = create Module.Entity (Name = 'x') refresh;
+}
 func TestRoundtripMicroflow_CreateWithCommit(t *testing.T) {
+    // Input:  $Obj = create Module.Entity (Name = 'x') with commit;
+    // Expect: $Obj = create Module.Entity (Name = 'x') with commit;
+}
+func TestRoundtripMicroflow_CreateWithCommitRefresh(t *testing.T) {
     // Input:  $Obj = create Module.Entity (Name = 'x') with commit refresh;
     // Expect: $Obj = create Module.Entity (Name = 'x') with commit refresh;
 }
-
 func TestRoundtripMicroflow_CreateWithCommitWithoutEvents(t *testing.T) {
     // Input:  $Obj = create Module.Entity (Name = 'x') with commit without events;
     // Expect: $Obj = create Module.Entity (Name = 'x') with commit without events;
 }
-
-func TestRoundtripMicroflow_ChangeWithCommitRefresh(t *testing.T) {
-    // Input:  change $Obj (Name = 'new') with commit refresh;
-    // Expect: change $Obj (Name = 'new') with commit refresh;
+func TestRoundtripMicroflow_CreateWithCommitWithoutEventsRefresh(t *testing.T) {
+    // Input:  $Obj = create Module.Entity (Name = 'x') with commit without events refresh;
+    // Expect: $Obj = create Module.Entity (Name = 'x') with commit without events refresh;
 }
 
+// CHANGE — 6 combinations (same pattern)
+func TestRoundtripMicroflow_ChangeDefault(t *testing.T) { /* ... */ }
+func TestRoundtripMicroflow_ChangeRefreshOnly(t *testing.T) { /* ... */ }
+func TestRoundtripMicroflow_ChangeWithCommit(t *testing.T) { /* ... */ }
+func TestRoundtripMicroflow_ChangeWithCommitRefresh(t *testing.T) { /* ... */ }
+func TestRoundtripMicroflow_ChangeWithCommitWithoutEvents(t *testing.T) { /* ... */ }
+func TestRoundtripMicroflow_ChangeWithCommitWithoutEventsRefresh(t *testing.T) { /* ... */ }
+
+// COMMIT — 4 combinations (no change, existing tests)
+func TestRoundtripMicroflow_CommitDefault(t *testing.T) { /* ... */ }
+func TestRoundtripMicroflow_CommitRefreshOnly(t *testing.T) { /* ... */ }
+func TestRoundtripMicroflow_CommitWithEvents(t *testing.T) { /* ... */ }
+func TestRoundtripMicroflow_CommitWithEventsRefresh(t *testing.T) { /* ... */ }
+
+// DELETE — 2 combinations
+func TestRoundtripMicroflow_DeleteDefault(t *testing.T) {
+    // Input:  delete $Obj;
+    // Expect: delete $Obj;
+}
 func TestRoundtripMicroflow_DeleteWithRefresh(t *testing.T) {
     // Input:  delete $Obj refresh;
     // Expect: delete $Obj refresh;
 }
+
+// ROLLBACK — 2 combinations (no change, existing tests)
+func TestRoundtripMicroflow_RollbackDefault(t *testing.T) { /* ... */ }
+func TestRoundtripMicroflow_RollbackWithRefresh(t *testing.T) { /* ... */ }
 ```
 
 ### Files to Modify
