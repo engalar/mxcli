@@ -398,10 +398,10 @@ func FindAllMPK(projectDir string) (map[string]string, error) {
 // FindMPK looks in the project's widgets/ directory for an .mpk matching the widgetID.
 // Returns the path to the .mpk file, or empty string if not found.
 func FindMPK(projectDir string, widgetID string) (string, error) {
-	// Check directory cache
+	// Check directory cache (keys stored lowercased)
 	dirCacheLock.RLock()
 	if dirMap, ok := dirCache[projectDir]; ok {
-		if mpkPath, ok := dirMap[widgetID]; ok {
+		if mpkPath, ok := dirMap[strings.ToLower(widgetID)]; ok {
 			dirCacheLock.RUnlock()
 			return mpkPath, nil
 		}
@@ -420,6 +420,8 @@ func FindMPK(projectDir string, widgetID string) (string, error) {
 
 	// Build mapping by parsing each .mpk's package.xml and widget XML.
 	// Multi-widget MPKs list multiple widget IDs; map each one to this file.
+	// Keys are stored lowercased for case-insensitive lookup — widget ID
+	// casing in MDL scripts may differ from the MPK definition.
 	dirMap := make(map[string]string)
 	for _, mpkPath := range matches {
 		wids, err := getWidgetIDsFromMPK(mpkPath)
@@ -428,7 +430,7 @@ func FindMPK(projectDir string, widgetID string) (string, error) {
 		}
 		for _, wid := range wids {
 			if wid != "" {
-				dirMap[wid] = mpkPath
+				dirMap[strings.ToLower(wid)] = mpkPath
 			}
 		}
 	}
@@ -438,7 +440,7 @@ func FindMPK(projectDir string, widgetID string) (string, error) {
 	dirCache[projectDir] = dirMap
 	dirCacheLock.Unlock()
 
-	return dirMap[widgetID], nil
+	return dirMap[strings.ToLower(widgetID)], nil
 }
 
 // getWidgetIDsFromMPK returns ALL widget IDs declared in an .mpk package.xml.
@@ -617,7 +619,7 @@ func ParseMPKForWidget(mpkPath string, widgetID string) (*WidgetDefinition, erro
 			if err := xml.Unmarshal(data, &widget); err != nil {
 				continue
 			}
-			if widget.ID != widgetID {
+			if !strings.EqualFold(widget.ID, widgetID) {
 				continue
 			}
 

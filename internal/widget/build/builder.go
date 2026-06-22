@@ -1,8 +1,11 @@
 package build
 
 import (
+	"archive/zip"
 	"context"
+	"encoding/xml"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -44,18 +47,90 @@ func Build(ctx context.Context, cfg Config) (*Result, error) {
 		return nil, fmt.Errorf("no .mpk found in dist/1.0.0/")
 	}
 
-	fi, _ := os.Stat(matches[0])
+	mpkPath := matches[0]
+	if err := verifyMPK(mpkPath); err != nil {
+		return nil, fmt.Errorf("mpk verification failed: %w", err)
+	}
+
+	fi, _ := os.Stat(mpkPath)
 	var size int64
 	if fi != nil {
 		size = fi.Size() / 1024
 	}
-	return &Result{MPKPath: matches[0], SizeKB: size}, nil
+	return &Result{MPKPath: mpkPath, SizeKB: size}, nil
 }
 
-// patchRollupCP replaces a bash extended glob (@(tile|icon)?(.dark))
-// in pluggable-widgets-tools' rollup.config.mjs with explicit file checks.
-// The `glob` npm package does not support bash @()/?!() patterns on any OS.
-// `src/**/*.xml` works fine on Windows — only the @() line needs fixing.
+// verifyMPK opens the generated .mpk and checks for the required files:
+// package.xml and at least one widget XML file. Catches issues where the
+// build toolchain produces a ZIP without the XML manifest.
+func verifyMPK(mpkPath string) error {
+	r, err := zip.OpenReader(mpkPath)
+	if err != nil {
+		return fmt.Errorf("open mpk: %w", err)
+	}
+	defer r.Close()
+
+	// Find and parse package.xml
+	var widgetFiles []string
+	for _, f := range r.File {
+		if f.Name != "package.xml" {
+			continue
+		}
+		rc, err := f.Open()
+		if err != nil {
+			return fmt.Errorf("open package.xml: %w", err)
+		}
+		data, err := io.ReadAll(rc)
+		rc.Close()
+		if err != nil {
+			return fmt.Errorf("read package.xml: %w", err)
+		}
+		var pkg struct {
+			ClientModule struct {
+				WidgetFiles []struct {
+					Path string `xml:"path,attr"`
+				} `xml:"widgetFiles>widgetFile"`
+			} `xml:"clientModule"`
+		}
+		if err := xml.Unmarshal(data, &pkg); err != nil {
+			return fmt.Errorf("parse package.xml: %w", err)
+		}
+		for _, wf := range pkg.ClientModule.WidgetFiles {
+			if wf.Path != "" {
+				widgetFiles = append(widgetFiles, wf.Path)
+			}
+		}
+		break
+	}
+
+	if len(widgetFiles) == 0 {
+		return fmt.Errorf("no package.xml or widget XML files found in mpk - build toolchain may have omitted them")
+	}
+
+	// Verify at least one widget XML exists
+	widgetsByName := make(map[string]bool, len(r.File))
+	for _, f := range r.File {
+		widgetsByName[f.Name] = true
+	}
+	var found bool
+	for _, wf := range widgetFiles {
+		if widgetsByName[wf] {
+			found = true
+			break
+		}
+	}
+	if !found {
+		return fmt.Errorf("widget XML file(s) declared in package.xml not found in mpk: %v", widgetFiles)
+	}
+	return nil
+}
+
+// patchRollupCP patches pluggable-widgets-tools' rollup.config.mjs for Windows
+// compatibility. Two issues:
+//  1. `@(tile|icon)?(.dark).png` — bash extended glob not supported by fast-glob.
+//  2. `src/**/*.xml` — fast-glob on Windows returns 0 matches for absolute
+//     paths with drive letters and ** globstar. package.xml and widget XML
+//     are silently omitted from the MPK.
 func patchRollupCP(projectDir string) error {
 	cfg := filepath.Join(projectDir, "node_modules",
 		"@mendix", "pluggable-widgets-tools", "configs", "rollup.config.mjs")
@@ -66,23 +141,29 @@ func patchRollupCP(projectDir string) error {
 	}
 	content := string(data)
 
-	sentinel := "[mxcli-patched]"
-	if strings.Contains(content, sentinel) {
+	// Patch 1: bash @() glob for PNG files
+	oldPng := "if (existsSync(`src/${widgetName}.icon.png`) || existsSync(`src/${widgetName}.tile.png`)) {\n                        cp(join(sourcePath, `src/${widgetName}.@(tile|icon)?(.dark).png`), outDir);\n                    }"
+	newPng := "// [mxcli-patched-png]\n                    ['icon.png','icon.dark.png','tile.png','tile.dark.png'].forEach(function(f){var p=join(sourcePath,'src',widgetName+'.'+f);if(existsSync(p))cp(p,join(outDir,widgetName+'.'+f));})"
+	if strings.Contains(content, oldPng) {
+		content = strings.ReplaceAll(content, oldPng, newPng)
+	}
+
+	// Patch 2: src/**/*.xml glob — fast-glob on Windows can't resolve ** globstar
+	// in absolute paths with drive letters. Replace with explicit file copies.
+	oldXml := "cp(join(sourcePath, \"src/**/*.xml\"), outDir);"
+	newXml := "// [mxcli-patched-xml]\n                    var f0=['package.xml',widgetName+'.xml'];f0.forEach(function(f){var p=join(sourcePath,'src',f);if(existsSync(p))cp(p,outDir);});"
+	if strings.Contains(content, oldXml) {
+		content = strings.ReplaceAll(content, oldXml, newXml)
+	}
+
+	// Write only if something changed
+	if content == string(data) {
 		return nil
 	}
-
-	oldPng := "if (existsSync(`src/${widgetName}.icon.png`) || existsSync(`src/${widgetName}.tile.png`)) {\n                        cp(join(sourcePath, `src/${widgetName}.@(tile|icon)?(.dark).png`), outDir);\n                    }"
-	newPng := "// " + sentinel + "\n                    ['icon.png','icon.dark.png','tile.png','tile.dark.png'].forEach(function(f){var p=join(sourcePath,'src',widgetName+'.'+f);if(existsSync(p))cp(p,join(outDir,widgetName+'.'+f));})"
-
-	if !strings.Contains(content, oldPng) {
-		return fmt.Errorf("rollup config: @() glob pattern not found")
-	}
-	content = strings.ReplaceAll(content, oldPng, newPng)
-
 	if err := os.WriteFile(cfg, []byte(content), 0644); err != nil {
 		return fmt.Errorf("write patched rollup config: %w", err)
 	}
-	fmt.Println("[mxcli] patched bash @() glob in rollup.config.mjs — see: https://github.com/mendix/pluggable-widgets-tools/issues")
+	fmt.Println("[mxcli] patched rollup.config.mjs for Windows compatibility")
 	return nil
 }
 

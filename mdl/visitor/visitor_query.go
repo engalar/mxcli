@@ -1049,6 +1049,11 @@ func (b *Builder) ExitDescribeStatement(ctx *parser.DescribeStatementContext) {
 			ObjectType: ast.DescribeExportMapping,
 			Name:       name,
 		})
+	} else if ctx.WIDGET() != nil {
+		b.statements = append(b.statements, &ast.DescribeStmt{
+			ObjectType: ast.DescribeWidget,
+			Name:       name,
+		})
 	}
 }
 

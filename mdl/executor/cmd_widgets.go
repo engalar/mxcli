@@ -343,6 +343,37 @@ func execShowInstalledWidgets(ctx *ExecContext, _ *ast.ShowInstalledWidgetsStmt)
 	return nil
 }
 
+// describeWidget handles DESCRIBE WIDGET Module.WidgetName
+func describeWidget(ctx *ExecContext, name ast.QualifiedName) error {
+	if !ctx.Connected() {
+		return mdlerrors.NewNotConnected()
+	}
+	if err := ensureCatalog(ctx, true); err != nil {
+		return mdlerrors.NewBackend("build catalog", err)
+	}
+	// Look up by widget name (optionally scoped to module)
+	widgetName := name.Name
+	query := "select Name, WidgetType, ContainerQualifiedName, ModuleName from widgets where Name = ?"
+	args := []any{widgetName}
+	if name.Module != "" {
+		query += " and ModuleName = ?"
+		args = append(args, name.Module)
+	}
+	result, err := executeCatalogQueryWithArgs(ctx, query, args...)
+	if err != nil {
+		return mdlerrors.NewBackend("query widget", err)
+	}
+	if result.Count == 0 {
+		return mdlerrors.NewNotFound("widget", name.String())
+	}
+	row := result.Rows[0]
+	fmt.Fprintf(ctx.Output, "Widget: %v\n", row[0])
+	fmt.Fprintf(ctx.Output, "Type: %v\n", row[1])
+	fmt.Fprintf(ctx.Output, "Container: %v\n", row[2])
+	fmt.Fprintf(ctx.Output, "Module: %v\n", row[3])
+	return nil
+}
+
 // formatCell formats a cell value for display, truncating if needed.
 func formatCell(val any, maxLen int) string {
 	s := fmt.Sprintf("%v", val)

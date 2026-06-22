@@ -185,6 +185,12 @@ var describeHandlers = map[ast.DescribeObjectType]describeEntry{
 		},
 		label: "jardependency",
 	},
+	ast.DescribeWidget: {
+		handler: func(ctx *ExecContext, s *ast.DescribeStmt) error {
+			return describeWidget(ctx, s.Name)
+		},
+		label: "widget",
+	},
 }
 
 // DescribeHandlers returns the describe handler map (exported for tests).

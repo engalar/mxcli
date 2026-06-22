@@ -322,6 +322,7 @@ const (
 	DescribeKnowledgeBase        // DESCRIBE KNOWLEDGE BASE Module.Name (agent-editor KB document)
 	DescribeConsumedMCPService   // DESCRIBE CONSUMED MCP SERVICE Module.Name (agent-editor MCP document)
 	DescribeJarDependency        // DESCRIBE JAR DEPENDENCY ModuleName 'group:artifact'
+	DescribeWidget               // DESCRIBE WIDGET Module.WidgetName
 )
 
 // String returns the human-readable name of the describe object type.
@@ -405,6 +406,8 @@ func (t DescribeObjectType) String() string {
 		return "CONSUMED MCP SERVICE"
 	case DescribeJarDependency:
 		return "JAR DEPENDENCY"
+	case DescribeWidget:
+		return "WIDGET"
 	default:
 		return "UNKNOWN"
 	}

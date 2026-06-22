@@ -172,6 +172,7 @@ describeStatement
     | DESCRIBE DATA TRANSFORMER qualifiedName          // DESCRIBE DATA TRANSFORMER Module.Name
     | DESCRIBE FRAGMENT identifierOrKeyword            // DESCRIBE FRAGMENT Name
     | DESCRIBE JAR DEPENDENCY (qualifiedName | IDENTIFIER) STRING_LITERAL   // DESCRIBE JAR DEPENDENCY ModuleName 'group:artifact'
+    | DESCRIBE WIDGET qualifiedName                    // DESCRIBE WIDGET Module.WidgetName
     ;
 
 catalogSelectQuery
