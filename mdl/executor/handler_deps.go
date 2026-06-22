@@ -75,6 +75,9 @@ type HandlerDeps struct {
 	// ServiceWriter provides write operations for OData, REST, etc. (Phase 3d-5).
 	ServiceWriter backend.ServiceWriter
 
+	// ImageCollectionWriter provides image collection read/write operations (Phase 3d-5).
+	ImageCollectionWriter backend.ImageCollectionWriter
+
 	// DomainModelWriter provides entity/association write operations (Phase 3d-5).
 	DomainModelWriter backend.DomainModelWriter
 
@@ -927,6 +930,7 @@ func execContextToDeps(ectx *ExecContext) *HandlerDeps {
 		PageModelAccess:   ectx.PageModelAccess,
 		PageMutationOperator:    ectx.PageMutationOperator,
 		SecurityEntityAccessManager: ectx.SecurityEntityAccessManager,
+		ImageCollectionWriter:      ectx.ImageCollectionWriter,
 		Format:            ectx.Format,
 		MprPath:           ectx.MprPath,
 		Graph:             ectx.Graph,
@@ -982,6 +986,7 @@ func (e *Executor) buildHandlerDeps() *HandlerDeps {
 		PageModelAccess:           e.backend,
 		PageMutationOperator:      e.backend,
 		SecurityEntityAccessManager: e.backend,
+		ImageCollectionWriter:      e.backend,
 		Format:                   e.format,
 		MprPath:                   e.mprPath,
 		Graph:                     nil, // Populated lazily; see Analyzer.

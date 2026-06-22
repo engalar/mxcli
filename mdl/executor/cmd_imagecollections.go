@@ -4,30 +4,42 @@
 package executor
 
 import (
+	"context"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
+	"github.com/mendixlabs/mxcli/mdl/backend"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 	"github.com/mendixlabs/mxcli/mdl/types"
+	"github.com/mendixlabs/mxcli/model"
 )
 
-// execCreateImageCollection handles CREATE IMAGE COLLECTION statements.
-func execCreateImageCollection(ctx *ExecContext, s *ast.CreateImageCollectionStmt) error {
-	if !ctx.Connected() {
+// ────────────────────────────────────────────────────────────
+// Fn (HandlerDeps) versions
+// ────────────────────────────────────────────────────────────
+
+func execCreateImageCollectionFn(ctx context.Context, s *ast.CreateImageCollectionStmt, deps *HandlerDeps) error {
+	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnected()
 	}
 
-	// Find or auto-create module
-	module, err := findOrCreateModule(ctx, s.Name.Module)
+	module, err := findModuleFn(deps.ModuleLister, s.Name.Module)
 	if err != nil {
-		return err
+		tmpCtx := phase3d2bNewExecContext(ctx, deps)
+		if createErr := execCreateModule(tmpCtx, &ast.CreateModuleStmt{Name: s.Name.Module}); createErr != nil {
+			return mdlerrors.NewBackend("auto-create module "+s.Name.Module, createErr)
+		}
+		module, err = findModuleFn(deps.ModuleLister, s.Name.Module)
+		if err != nil {
+			return err
+		}
 	}
 
-	// Check if image collection already exists
-	existing := findImageCollection(ctx, s.Name.Module, s.Name.Name)
+	existing := findImageCollectionFn(deps, s.Name.Module, s.Name.Name)
 	if existing != nil && !s.CreateOrModify {
 		return mdlerrors.NewAlreadyExists("image collection", s.Name.Module+"."+s.Name.Name)
 	}
@@ -37,7 +49,6 @@ func execCreateImageCollection(ctx *ExecContext, s *ast.CreateImageCollectionStm
 		containerID = existing.ContainerID
 	}
 
-	// Build ImageCollection
 	ic := &types.ImageCollection{
 		ContainerID:   containerID,
 		Name:          s.Name.Name,
@@ -48,7 +59,6 @@ func execCreateImageCollection(ctx *ExecContext, s *ast.CreateImageCollectionStm
 		ic.ID = existing.ID
 	}
 
-	// Load image files
 	for _, item := range s.Images {
 		filePath := item.FilePath
 		if !filepath.IsAbs(filePath) {
@@ -71,49 +81,48 @@ func execCreateImageCollection(ctx *ExecContext, s *ast.CreateImageCollectionStm
 	}
 
 	if existing != nil {
-		if err := ctx.ImageCollectionWriter.UpdateImageCollection(ic); err != nil {
+		if err := deps.ImageCollectionWriter.UpdateImageCollection(ic); err != nil {
 			return mdlerrors.NewBackend("update image collection", err)
 		}
-		fmt.Fprintf(ctx.Output, "Modified image collection: %s\n", s.Name)
+		fmt.Fprintf(deps.Output, "Modified image collection: %s\n", s.Name)
 	} else {
-		if err := ctx.ImageCollectionWriter.CreateImageCollection(ic); err != nil {
+		if err := deps.ImageCollectionWriter.CreateImageCollection(ic); err != nil {
 			return mdlerrors.NewBackend("create image collection", err)
 		}
-		fmt.Fprintf(ctx.Output, "Created image collection: %s\n", s.Name)
+		fmt.Fprintf(deps.Output, "Created image collection: %s\n", s.Name)
 	}
 
-	// Invalidate hierarchy cache so the collection's container is visible
-	invalidateHierarchy(ctx)
+	if deps.Backend != nil {
+		deps.Backend.InvalidateCache()
+	}
 	return nil
 }
 
-// execDropImageCollection handles DROP IMAGE COLLECTION statements.
-func execDropImageCollection(ctx *ExecContext, s *ast.DropImageCollectionStmt) error {
-	if !ctx.Connected() {
+func execDropImageCollectionFn(ctx context.Context, s *ast.DropImageCollectionStmt, deps *HandlerDeps) error {
+	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnected()
 	}
 
-	ic := findImageCollection(ctx, s.Name.Module, s.Name.Name)
+	ic := findImageCollectionFn(deps, s.Name.Module, s.Name.Name)
 	if ic == nil {
 		return mdlerrors.NewNotFound("image collection", s.Name.String())
 	}
 
-	if err := ctx.ImageCollectionWriter.DeleteImageCollection(string(ic.ID)); err != nil {
+	if err := deps.ImageCollectionWriter.DeleteImageCollection(string(ic.ID)); err != nil {
 		return mdlerrors.NewBackend("delete image collection", err)
 	}
 
-	fmt.Fprintf(ctx.Output, "Dropped image collection: %s\n", s.Name)
+	fmt.Fprintf(deps.Output, "Dropped image collection: %s\n", s.Name)
 	return nil
 }
 
-// describeImageCollection handles DESCRIBE IMAGE COLLECTION Module.Name.
-func describeImageCollection(ctx *ExecContext, name ast.QualifiedName) error {
-	ic := findImageCollection(ctx, name.Module, name.Name)
+func describeImageCollectionFn(ctx context.Context, output io.Writer, deps *HandlerDeps, name ast.QualifiedName) error {
+	ic := findImageCollectionFn(deps, name.Module, name.Name)
 	if ic == nil {
 		return mdlerrors.NewNotFound("image collection", name.String())
 	}
 
-	h, err := getHierarchy(ctx)
+	h, err := NewContainerHierarchyFromRoles(deps.ModuleLister, deps.MetadataReader, deps.FolderManager)
 	if err != nil {
 		return err
 	}
@@ -121,7 +130,7 @@ func describeImageCollection(ctx *ExecContext, name ast.QualifiedName) error {
 	modName := h.GetModuleName(modID)
 
 	if ic.Documentation != "" {
-		fmt.Fprintf(ctx.Output, "/**\n * %s\n */\n", ic.Documentation)
+		fmt.Fprintf(output, "/**\n * %s\n */\n", ic.Documentation)
 	}
 
 	exportLevel := ic.ExportLevel
@@ -132,26 +141,25 @@ func describeImageCollection(ctx *ExecContext, name ast.QualifiedName) error {
 	qualifiedName := fmt.Sprintf("%s.%s", modName, ic.Name)
 
 	if len(ic.Images) == 0 {
-		fmt.Fprintf(ctx.Output, "create or modify image collection %s", qualifiedName)
+		fmt.Fprintf(output, "create or modify image collection %s", qualifiedName)
 		if exportLevel != "Hidden" {
-			fmt.Fprintf(ctx.Output, " export level '%s'", exportLevel)
+			fmt.Fprintf(output, " export level '%s'", exportLevel)
 		}
-		fmt.Fprintln(ctx.Output, ";")
-		fmt.Fprintln(ctx.Output, "/")
+		fmt.Fprintln(output, ";")
+		fmt.Fprintln(output, "/")
 		return nil
 	}
 
-	// Write image data to temp files and output CREATE statement with IMAGE lines
 	previewDir := filepath.Join("/tmp/mxcli-preview", qualifiedName)
 	if err := os.MkdirAll(previewDir, 0o755); err != nil {
 		return mdlerrors.NewBackend("create preview directory", err)
 	}
 
-	fmt.Fprintf(ctx.Output, "create or modify image collection %s", qualifiedName)
+	fmt.Fprintf(output, "create or modify image collection %s", qualifiedName)
 	if exportLevel != "Hidden" {
-		fmt.Fprintf(ctx.Output, " export level '%s'", exportLevel)
+		fmt.Fprintf(output, " export level '%s'", exportLevel)
 	}
-	fmt.Fprintln(ctx.Output, " (")
+	fmt.Fprintln(output, " (")
 
 	for i, img := range ic.Images {
 		ext := imageFormatToExt(img.Format)
@@ -166,13 +174,231 @@ func describeImageCollection(ctx *ExecContext, name ast.QualifiedName) error {
 		if i == len(ic.Images)-1 {
 			comma = ""
 		}
-		fmt.Fprintf(ctx.Output, "    image %s from file '%s'%s\n", img.Name, filePath, comma)
+		fmt.Fprintf(output, "    image %s from file '%s'%s\n", img.Name, filePath, comma)
 	}
 
-	fmt.Fprintln(ctx.Output, ");")
-	fmt.Fprintln(ctx.Output, "/")
+	fmt.Fprintln(output, ");")
+	fmt.Fprintln(output, "/")
 	return nil
 }
+
+func listImageCollectionsFn(ctx context.Context, output io.Writer, format OutputFormat, deps *HandlerDeps, moduleName string) error {
+	collections, err := deps.ImageCollectionWriter.ListImageCollections()
+	if err != nil {
+		return mdlerrors.NewBackend("list image collections", err)
+	}
+
+	h, err := NewContainerHierarchyFromRoles(deps.ModuleLister, deps.MetadataReader, deps.FolderManager)
+	if err != nil {
+		return err
+	}
+
+	result := &TableResult{
+		Columns: []string{"Image Collection", "Export Level", "Images"},
+	}
+
+	for _, ic := range collections {
+		modID := h.FindModuleID(ic.ContainerID)
+		modName := h.GetModuleName(modID)
+		if moduleName != "" && modName != moduleName {
+			continue
+		}
+
+		qualifiedName := fmt.Sprintf("%s.%s", modName, ic.Name)
+		exportLevel := ic.ExportLevel
+		if exportLevel == "" {
+			exportLevel = "Hidden"
+		}
+		result.Rows = append(result.Rows, []any{qualifiedName, exportLevel, len(ic.Images)})
+	}
+
+	result.Summary = fmt.Sprintf("(%d image collection(s))", len(result.Rows))
+	return writeResultTo(output, format, result)
+}
+
+func findImageCollectionFn(deps *HandlerDeps, moduleName, collectionName string) *types.ImageCollection {
+	collections, err := deps.ImageCollectionWriter.ListImageCollections()
+	if err != nil {
+		return nil
+	}
+
+	h, err := NewContainerHierarchyFromRoles(deps.ModuleLister, deps.MetadataReader, deps.FolderManager)
+	if err != nil {
+		return nil
+	}
+
+	for _, ic := range collections {
+		modID := h.FindModuleID(ic.ContainerID)
+		modName := h.GetModuleName(modID)
+		if ic.Name == collectionName && modName == moduleName {
+			return ic
+		}
+	}
+	return nil
+}
+
+func execAlterImageCollectionFn(ctx context.Context, s *ast.AlterImageCollectionStmt, deps *HandlerDeps) error {
+	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
+		return mdlerrors.NewNotConnected()
+	}
+
+	ic := findImageCollectionFn(deps, s.Name.Module, s.Name.Name)
+	if ic == nil {
+		return mdlerrors.NewNotFound("image collection", s.Name.String())
+	}
+
+	dirty := false
+
+	for _, rawAction := range s.Actions {
+		switch action := rawAction.(type) {
+
+		case *ast.AddImageAction:
+			data, format, err := readImageFile(action.FilePath)
+			if err != nil {
+				return err
+			}
+			ic.Images = append(ic.Images, types.Image{
+				Name:   action.ImageName,
+				Data:   data,
+				Format: format,
+			})
+			dirty = true
+			fmt.Fprintf(deps.Output, "Added image %q to %s\n", action.ImageName, s.Name)
+
+		case *ast.DropImageAction:
+			idx := findImageIndex(ic, action.ImageName)
+			if idx < 0 {
+				return mdlerrors.NewNotFound("image", action.ImageName)
+			}
+			ic.Images = append(ic.Images[:idx], ic.Images[idx+1:]...)
+			dirty = true
+			fmt.Fprintf(deps.Output, "Dropped image %q from %s\n", action.ImageName, s.Name)
+
+		case *ast.RenameImageAction:
+			idx := findImageIndex(ic, action.From)
+			if idx < 0 {
+				return mdlerrors.NewNotFound("image", action.From)
+			}
+			if findImageIndex(ic, action.To) >= 0 {
+				return mdlerrors.NewAlreadyExists("image", action.To)
+			}
+			ic.Images[idx].Name = action.To
+			dirty = true
+			fmt.Fprintf(deps.Output, "Renamed image %q to %q in %s\n", action.From, action.To, s.Name)
+
+		case *ast.SetImageAction:
+			idx := findImageIndex(ic, action.ImageName)
+			if idx < 0 {
+				return mdlerrors.NewNotFound("image", action.ImageName)
+			}
+			data, format, err := readImageFile(action.FilePath)
+			if err != nil {
+				return err
+			}
+			ic.Images[idx].Data = data
+			ic.Images[idx].Format = format
+			dirty = true
+			fmt.Fprintf(deps.Output, "Updated image %q in %s\n", action.ImageName, s.Name)
+
+		case *ast.MoveImageCollectionAction:
+			if dirty {
+				if err := deps.ImageCollectionWriter.UpdateImageCollection(ic); err != nil {
+					return mdlerrors.NewBackend("update image collection before move", err)
+				}
+				dirty = false
+			}
+			targetMod, err := findModuleFn(deps.ModuleLister, action.Target.Module)
+			if err != nil {
+				return mdlerrors.NewNotFound("module", action.Target.Module)
+			}
+			ic.ContainerID = targetMod.ID
+			if err := deps.ImageCollectionWriter.MoveImageCollection(ic); err != nil {
+				return mdlerrors.NewBackend("move image collection", err)
+			}
+			if deps.Backend != nil {
+				deps.Backend.InvalidateCache()
+			}
+			fmt.Fprintf(deps.Output, "Moved image collection %s to module %s\n", s.Name, action.Target.Module)
+
+		case *ast.ExportImageAction:
+			idx := findImageIndex(ic, action.ImageName)
+			if idx < 0 {
+				return mdlerrors.NewNotFound("image", action.ImageName)
+			}
+			filePath := action.FilePath
+			if !filepath.IsAbs(filePath) {
+				cwd, err := os.Getwd()
+				if err != nil {
+					return mdlerrors.NewBackend("get working directory", err)
+				}
+				filePath = filepath.Join(cwd, filePath)
+			}
+			if err := os.MkdirAll(filepath.Dir(filePath), 0o755); err != nil {
+				return mdlerrors.NewBackend("create output directory", err)
+			}
+			if err := os.WriteFile(filePath, ic.Images[idx].Data, 0o644); err != nil {
+				return mdlerrors.NewBackend(fmt.Sprintf("write image file %q", filePath), err)
+			}
+			fmt.Fprintf(deps.Output, "Exported image %q to %s\n", action.ImageName, filePath)
+		}
+	}
+
+	if dirty {
+		if err := deps.ImageCollectionWriter.UpdateImageCollection(ic); err != nil {
+			return mdlerrors.NewBackend("update image collection", err)
+		}
+	}
+
+	return nil
+}
+
+// findModuleFn finds a module by name via ModuleLister.
+func findModuleFn(ml backend.ModuleLister, name string) (*model.Module, error) {
+	modules, err := ml.ListModules()
+	if err != nil {
+		return nil, mdlerrors.NewBackend("list modules", err)
+	}
+	for _, m := range modules {
+		if m.Name == name {
+			return m, nil
+		}
+	}
+	return nil, mdlerrors.NewNotFound("module", name)
+}
+
+// ────────────────────────────────────────────────────────────
+// Old ExecContext wrappers (delegate to Fn versions)
+// ────────────────────────────────────────────────────────────
+
+func execCreateImageCollection(ctx *ExecContext, s *ast.CreateImageCollectionStmt) error {
+	return execCreateImageCollectionFn(ctx, s, execContextToDeps(ctx))
+}
+
+func execDropImageCollection(ctx *ExecContext, s *ast.DropImageCollectionStmt) error {
+	return execDropImageCollectionFn(ctx, s, execContextToDeps(ctx))
+}
+
+func describeImageCollection(ctx *ExecContext, name ast.QualifiedName) error {
+	deps := execContextToDeps(ctx)
+	return describeImageCollectionFn(ctx, deps.Output, deps, name)
+}
+
+func listImageCollections(ctx *ExecContext, moduleName string) error {
+	deps := execContextToDeps(ctx)
+	return listImageCollectionsFn(ctx, deps.Output, deps.Format, deps, moduleName)
+}
+
+func findImageCollection(ctx *ExecContext, moduleName, collectionName string) *types.ImageCollection {
+	return findImageCollectionFn(execContextToDeps(ctx), moduleName, collectionName)
+}
+
+func execAlterImageCollection(ctx *ExecContext, s *ast.AlterImageCollectionStmt) error {
+	return execAlterImageCollectionFn(ctx, s, execContextToDeps(ctx))
+}
+
+// ────────────────────────────────────────────────────────────
+// Stateless helpers (no ctx/deps needed)
+// ────────────────────────────────────────────────────────────
 
 // imageFormatToExt converts a Mendix ImageFormat value to a file extension.
 func imageFormatToExt(format string) string {
@@ -208,177 +434,6 @@ func extToImageFormat(ext string) string {
 	default:
 		return "Png"
 	}
-}
-
-// listImageCollections handles SHOW IMAGE COLLECTION [IN module].
-func listImageCollections(ctx *ExecContext, moduleName string) error {
-	collections, err := ctx.ImageCollectionWriter.ListImageCollections()
-	if err != nil {
-		return mdlerrors.NewBackend("list image collections", err)
-	}
-
-	h, err := getHierarchy(ctx)
-	if err != nil {
-		return err
-	}
-
-	result := &TableResult{
-		Columns: []string{"Image Collection", "Export Level", "Images"},
-	}
-
-	for _, ic := range collections {
-		modID := h.FindModuleID(ic.ContainerID)
-		modName := h.GetModuleName(modID)
-		if moduleName != "" && modName != moduleName {
-			continue
-		}
-
-		qualifiedName := fmt.Sprintf("%s.%s", modName, ic.Name)
-		exportLevel := ic.ExportLevel
-		if exportLevel == "" {
-			exportLevel = "Hidden"
-		}
-		result.Rows = append(result.Rows, []any{qualifiedName, exportLevel, len(ic.Images)})
-	}
-
-	result.Summary = fmt.Sprintf("(%d image collection(s))", len(result.Rows))
-	return writeResult(ctx, result)
-}
-
-// findImageCollection finds an image collection by module and name.
-func findImageCollection(ctx *ExecContext, moduleName, collectionName string) *types.ImageCollection {
-	collections, err := ctx.ImageCollectionWriter.ListImageCollections()
-	if err != nil {
-		return nil
-	}
-
-	h, err := getHierarchy(ctx)
-	if err != nil {
-		return nil
-	}
-
-	for _, ic := range collections {
-		modID := h.FindModuleID(ic.ContainerID)
-		modName := h.GetModuleName(modID)
-		if ic.Name == collectionName && modName == moduleName {
-			return ic
-		}
-	}
-	return nil
-}
-
-// execAlterImageCollection handles ALTER IMAGE COLLECTION statements.
-func execAlterImageCollection(ctx *ExecContext, s *ast.AlterImageCollectionStmt) error {
-	if !ctx.ConnectedForWrite() {
-		return mdlerrors.NewNotConnected()
-	}
-
-	ic := findImageCollection(ctx, s.Name.Module, s.Name.Name)
-	if ic == nil {
-		return mdlerrors.NewNotFound("image collection", s.Name.String())
-	}
-
-	dirty := false
-
-	for _, rawAction := range s.Actions {
-		switch action := rawAction.(type) {
-
-		case *ast.AddImageAction:
-			data, format, err := readImageFile(action.FilePath)
-			if err != nil {
-				return err
-			}
-			ic.Images = append(ic.Images, types.Image{
-				Name:   action.ImageName,
-				Data:   data,
-				Format: format,
-			})
-			dirty = true
-			fmt.Fprintf(ctx.Output, "Added image %q to %s\n", action.ImageName, s.Name)
-
-		case *ast.DropImageAction:
-			idx := findImageIndex(ic, action.ImageName)
-			if idx < 0 {
-				return mdlerrors.NewNotFound("image", action.ImageName)
-			}
-			ic.Images = append(ic.Images[:idx], ic.Images[idx+1:]...)
-			dirty = true
-			fmt.Fprintf(ctx.Output, "Dropped image %q from %s\n", action.ImageName, s.Name)
-
-		case *ast.RenameImageAction:
-			idx := findImageIndex(ic, action.From)
-			if idx < 0 {
-				return mdlerrors.NewNotFound("image", action.From)
-			}
-			if findImageIndex(ic, action.To) >= 0 {
-				return mdlerrors.NewAlreadyExists("image", action.To)
-			}
-			ic.Images[idx].Name = action.To
-			dirty = true
-			fmt.Fprintf(ctx.Output, "Renamed image %q to %q in %s\n", action.From, action.To, s.Name)
-
-		case *ast.SetImageAction:
-			idx := findImageIndex(ic, action.ImageName)
-			if idx < 0 {
-				return mdlerrors.NewNotFound("image", action.ImageName)
-			}
-			data, format, err := readImageFile(action.FilePath)
-			if err != nil {
-				return err
-			}
-			ic.Images[idx].Data = data
-			ic.Images[idx].Format = format
-			dirty = true
-			fmt.Fprintf(ctx.Output, "Updated image %q in %s\n", action.ImageName, s.Name)
-
-		case *ast.MoveImageCollectionAction:
-			if dirty {
-				if err := ctx.ImageCollectionWriter.UpdateImageCollection(ic); err != nil {
-					return mdlerrors.NewBackend("update image collection before move", err)
-				}
-				dirty = false
-			}
-			targetMod, err := findModule(ctx, action.Target.Module)
-			if err != nil {
-				return mdlerrors.NewNotFound("module", action.Target.Module)
-			}
-			ic.ContainerID = targetMod.ID
-			if err := ctx.ImageCollectionWriter.MoveImageCollection(ic); err != nil {
-				return mdlerrors.NewBackend("move image collection", err)
-			}
-			invalidateHierarchy(ctx)
-			fmt.Fprintf(ctx.Output, "Moved image collection %s to module %s\n", s.Name, action.Target.Module)
-
-		case *ast.ExportImageAction:
-			idx := findImageIndex(ic, action.ImageName)
-			if idx < 0 {
-				return mdlerrors.NewNotFound("image", action.ImageName)
-			}
-			filePath := action.FilePath
-			if !filepath.IsAbs(filePath) {
-				cwd, err := os.Getwd()
-				if err != nil {
-					return mdlerrors.NewBackend("get working directory", err)
-				}
-				filePath = filepath.Join(cwd, filePath)
-			}
-			if err := os.MkdirAll(filepath.Dir(filePath), 0o755); err != nil {
-				return mdlerrors.NewBackend("create output directory", err)
-			}
-			if err := os.WriteFile(filePath, ic.Images[idx].Data, 0o644); err != nil {
-				return mdlerrors.NewBackend(fmt.Sprintf("write image file %q", filePath), err)
-			}
-			fmt.Fprintf(ctx.Output, "Exported image %q to %s\n", action.ImageName, filePath)
-		}
-	}
-
-	if dirty {
-		if err := ctx.ImageCollectionWriter.UpdateImageCollection(ic); err != nil {
-			return mdlerrors.NewBackend("update image collection", err)
-		}
-	}
-
-	return nil
 }
 
 // readImageFile reads an image file and returns (data, format, error).

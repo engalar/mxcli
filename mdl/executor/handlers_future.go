@@ -3022,18 +3022,15 @@ func execAlterNavigationFuture(ctx context.Context, stmt ast.Statement, deps *Ha
 }
 
 func execCreateImageCollectionFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
-	return execCreateImageCollection(ectx, stmt.(*ast.CreateImageCollectionStmt))
+	return execCreateImageCollectionFn(ctx, stmt.(*ast.CreateImageCollectionStmt), deps)
 }
 
 func execDropImageCollectionFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
-	return execDropImageCollection(ectx, stmt.(*ast.DropImageCollectionStmt))
+	return execDropImageCollectionFn(ctx, stmt.(*ast.DropImageCollectionStmt), deps)
 }
 
 func execAlterImageCollectionFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
-	return execAlterImageCollection(ectx, stmt.(*ast.AlterImageCollectionStmt))
+	return execAlterImageCollectionFn(ctx, stmt.(*ast.AlterImageCollectionStmt), deps)
 }
 
 func execAlterSettingsFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
