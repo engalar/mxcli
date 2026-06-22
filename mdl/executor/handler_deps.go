@@ -72,14 +72,42 @@ type HandlerDeps struct {
 // set so concrete dependencies are available for closure capture.
 // Overrides old-style StmtHandler registrations from NewRegistry().
 func (e *Executor) registerFutureOverlays() {
+	r := e.registry
+
+	// Connection handlers — registered even without backend because Connect
+	// must work before any backend exists, and Disconnect must handle the
+	// nil backend case gracefully.
+	r.RegisterFuture("Connect", func(ctx context.Context, stmt ast.Statement) error {
+		return execConnectFuture(ctx, stmt.(*ast.ConnectStmt), e)
+	})
+	r.RegisterFuture("Disconnect", func(ctx context.Context, stmt ast.Statement) error {
+		return execDisconnectFuture(ctx, e)
+	})
+
 	deps := e.buildHandlerDeps()
 	if deps == nil {
 		return
 	}
-	r := e.registry
+
+	// Connection status — uses ConnectionManager/ModuleLister (simple deps).
+	r.RegisterFuture("Status", func(ctx context.Context, stmt ast.Statement) error {
+		return execStatusFuture(ctx, deps.Output, deps.ConnectionManager, deps.ModuleLister, e.mprPath)
+	})
 
 	// Session handlers migrated from *ExecContext:
 	// e.format is captured by reference (e is *Executor pointer) — reflects SET format changes.
+	r.RegisterFuture("Set", func(ctx context.Context, stmt ast.Statement) error {
+		return execSetFuture(ctx, stmt.(*ast.SetStmt), deps.Output, &e.format)
+	})
+	r.RegisterFuture("Update", func(ctx context.Context, stmt ast.Statement) error {
+		return execUpdateFuture(ctx, deps, e)
+	})
+	r.RegisterFuture("Refresh", func(ctx context.Context, stmt ast.Statement) error {
+		return execRefreshFuture(ctx, deps, e)
+	})
+	r.RegisterFuture("ExecuteScript", func(ctx context.Context, stmt ast.Statement) error {
+		return execExecuteScriptFuture(ctx, stmt.(*ast.ExecuteScriptStmt), deps, e)
+	})
 	r.RegisterFuture("Help", func(ctx context.Context, stmt ast.Statement) error {
 		return execHelpFuture(ctx, stmt.(*ast.HelpStmt), deps.Output, e.format)
 	})
@@ -284,6 +312,218 @@ func (e *Executor) registerFutureOverlays() {
 				return entry.handler(ectx, s)
 			})
 		}
+	})
+
+	// ────────────────────────────────────────────────────
+	// Phase 3d-2b: module/entity/association CRUD handlers
+	// ────────────────────────────────────────────────────
+
+	r.RegisterFuture("CreateModule", func(ctx context.Context, stmt ast.Statement) error {
+		ectx := phase3d2bNewExecContext(ctx, deps)
+		return execCreateModule(ectx, stmt.(*ast.CreateModuleStmt))
+	})
+	r.RegisterFuture("DropModule", func(ctx context.Context, stmt ast.Statement) error {
+		ectx := phase3d2bNewExecContext(ctx, deps)
+		return execDropModule(ectx, stmt.(*ast.DropModuleStmt))
+	})
+
+	r.RegisterFuture("CreateEntity", func(ctx context.Context, stmt ast.Statement) error {
+		ectx := phase3d2bNewExecContext(ctx, deps)
+		return execCreateEntity(ectx, stmt.(*ast.CreateEntityStmt))
+	})
+	r.RegisterFuture("AlterEntity", func(ctx context.Context, stmt ast.Statement) error {
+		ectx := phase3d2bNewExecContext(ctx, deps)
+		return execAlterEntity(ectx, stmt.(*ast.AlterEntityStmt))
+	})
+	r.RegisterFuture("DropEntity", func(ctx context.Context, stmt ast.Statement) error {
+		ectx := phase3d2bNewExecContext(ctx, deps)
+		return execDropEntity(ectx, stmt.(*ast.DropEntityStmt))
+	})
+	r.RegisterFuture("CreateViewEntity", func(ctx context.Context, stmt ast.Statement) error {
+		ectx := phase3d2bNewExecContext(ctx, deps)
+		return execCreateViewEntity(ectx, stmt.(*ast.CreateViewEntityStmt))
+	})
+
+	r.RegisterFuture("CreateAssociation", func(ctx context.Context, stmt ast.Statement) error {
+		ectx := phase3d2bNewExecContext(ctx, deps)
+		return execCreateAssociation(ectx, stmt.(*ast.CreateAssociationStmt))
+	})
+	r.RegisterFuture("AlterAssociation", func(ctx context.Context, stmt ast.Statement) error {
+		ectx := phase3d2bNewExecContext(ctx, deps)
+		return execAlterAssociation(ectx, stmt.(*ast.AlterAssociationStmt))
+	})
+	r.RegisterFuture("DropAssociation", func(ctx context.Context, stmt ast.Statement) error {
+		ectx := phase3d2bNewExecContext(ctx, deps)
+		return execDropAssociation(ectx, stmt.(*ast.DropAssociationStmt))
+	})
+
+	// ────────────────────────────────────────────────────
+	// Phase 3d-2c: microflow/page/workflow CRUD handlers
+	// ────────────────────────────────────────────────────
+
+	// Microflow handlers
+	r.RegisterFuture("CreateMicroflow", func(ctx context.Context, stmt ast.Statement) error {
+		ectx := phase3d2bNewExecContext(ctx, deps)
+		return execCreateMicroflowGen(ectx, stmt.(*ast.CreateMicroflowStmt))
+	})
+	r.RegisterFuture("DropMicroflow", func(ctx context.Context, stmt ast.Statement) error {
+		ectx := phase3d2bNewExecContext(ctx, deps)
+		return execDropMicroflow(ectx, stmt.(*ast.DropMicroflowStmt))
+	})
+
+	// Nanoflow handlers
+	r.RegisterFuture("CreateNanoflow", func(ctx context.Context, stmt ast.Statement) error {
+		ectx := phase3d2bNewExecContext(ctx, deps)
+		return execCreateNanoflowGen(ectx, stmt.(*ast.CreateNanoflowStmt))
+	})
+	r.RegisterFuture("DropNanoflow", func(ctx context.Context, stmt ast.Statement) error {
+		ectx := phase3d2bNewExecContext(ctx, deps)
+		return execDropNanoflowGen(ectx, stmt.(*ast.DropNanoflowStmt))
+	})
+
+	// Page handlers
+	r.RegisterFuture("CreatePageStmtV3", func(ctx context.Context, stmt ast.Statement) error {
+		ectx := phase3d2bNewExecContext(ctx, deps)
+		return execCreatePageV3(ectx, stmt.(*ast.CreatePageStmtV3))
+	})
+	r.RegisterFuture("DropPage", func(ctx context.Context, stmt ast.Statement) error {
+		ectx := phase3d2bNewExecContext(ctx, deps)
+		return execDropPage(ectx, stmt.(*ast.DropPageStmt))
+	})
+	r.RegisterFuture("CreateSnippetStmtV3", func(ctx context.Context, stmt ast.Statement) error {
+		ectx := phase3d2bNewExecContext(ctx, deps)
+		return execCreateSnippetV3(ectx, stmt.(*ast.CreateSnippetStmtV3))
+	})
+	r.RegisterFuture("DropSnippet", func(ctx context.Context, stmt ast.Statement) error {
+		ectx := phase3d2bNewExecContext(ctx, deps)
+		return execDropSnippet(ectx, stmt.(*ast.DropSnippetStmt))
+	})
+
+	// Layout handler
+	r.RegisterFuture("CreateLayout", func(ctx context.Context, stmt ast.Statement) error {
+		ectx := phase3d2bNewExecContext(ctx, deps)
+		return execCreateOrModifyLayout(ectx, stmt.(*ast.CreateLayoutStmt))
+	})
+
+	// ALTER PAGE handler
+	r.RegisterFuture("AlterPage", func(ctx context.Context, stmt ast.Statement) error {
+		ectx := phase3d2bNewExecContext(ctx, deps)
+		return execAlterPage(ectx, stmt.(*ast.AlterPageStmt))
+	})
+
+	// Workflow handlers
+	r.RegisterFuture("CreateWorkflow", func(ctx context.Context, stmt ast.Statement) error {
+		ectx := phase3d2bNewExecContext(ctx, deps)
+		return execCreateWorkflowGen(ectx, stmt.(*ast.CreateWorkflowStmt))
+	})
+	r.RegisterFuture("DropWorkflow", func(ctx context.Context, stmt ast.Statement) error {
+		ectx := phase3d2bNewExecContext(ctx, deps)
+		return execDropWorkflowGen(ectx, stmt.(*ast.DropWorkflowStmt))
+	})
+	r.RegisterFuture("AlterWorkflow", func(ctx context.Context, stmt ast.Statement) error {
+		ectx := phase3d2bNewExecContext(ctx, deps)
+		return execAlterWorkflow(ectx, stmt.(*ast.AlterWorkflowStmt))
+	})
+
+	// ────────────────────────────────────────────────────
+	// Phase 3d-2d: security CRUD handlers migrated from *ExecContext
+	// ────────────────────────────────────────────────────
+
+	r.RegisterFuture("CreateModuleRole", func(ctx context.Context, stmt ast.Statement) error {
+		ectx := phase3d2bNewExecContext(ctx, deps)
+		return execCreateModuleRoleGen(ectx, stmt.(*ast.CreateModuleRoleStmt))
+	})
+	r.RegisterFuture("DropModuleRole", func(ctx context.Context, stmt ast.Statement) error {
+		ectx := phase3d2bNewExecContext(ctx, deps)
+		return execDropModuleRoleGen(ectx, stmt.(*ast.DropModuleRoleStmt))
+	})
+	r.RegisterFuture("CreateUserRole", func(ctx context.Context, stmt ast.Statement) error {
+		ectx := phase3d2bNewExecContext(ctx, deps)
+		return execCreateUserRoleGen(ectx, stmt.(*ast.CreateUserRoleStmt))
+	})
+	r.RegisterFuture("AlterUserRole", func(ctx context.Context, stmt ast.Statement) error {
+		ectx := phase3d2bNewExecContext(ctx, deps)
+		return execAlterUserRoleGen(ectx, stmt.(*ast.AlterUserRoleStmt))
+	})
+	r.RegisterFuture("DropUserRole", func(ctx context.Context, stmt ast.Statement) error {
+		ectx := phase3d2bNewExecContext(ctx, deps)
+		return execDropUserRoleGen(ectx, stmt.(*ast.DropUserRoleStmt))
+	})
+	r.RegisterFuture("GrantEntityAccess", func(ctx context.Context, stmt ast.Statement) error {
+		ectx := phase3d2bNewExecContext(ctx, deps)
+		return execGrantEntityAccessGen(ectx, stmt.(*ast.GrantEntityAccessStmt))
+	})
+	r.RegisterFuture("RevokeEntityAccess", func(ctx context.Context, stmt ast.Statement) error {
+		ectx := phase3d2bNewExecContext(ctx, deps)
+		return execRevokeEntityAccessGen(ectx, stmt.(*ast.RevokeEntityAccessStmt))
+	})
+	r.RegisterFuture("GrantPageAccess", func(ctx context.Context, stmt ast.Statement) error {
+		ectx := phase3d2bNewExecContext(ctx, deps)
+		return execGrantPageAccessGen(ectx, stmt.(*ast.GrantPageAccessStmt))
+	})
+	r.RegisterFuture("RevokePageAccess", func(ctx context.Context, stmt ast.Statement) error {
+		ectx := phase3d2bNewExecContext(ctx, deps)
+		return execRevokePageAccessGen(ectx, stmt.(*ast.RevokePageAccessStmt))
+	})
+	r.RegisterFuture("GrantMicroflowAccess", func(ctx context.Context, stmt ast.Statement) error {
+		ectx := phase3d2bNewExecContext(ctx, deps)
+		return execGrantMicroflowAccessGen(ectx, stmt.(*ast.GrantMicroflowAccessStmt))
+	})
+	r.RegisterFuture("RevokeMicroflowAccess", func(ctx context.Context, stmt ast.Statement) error {
+		ectx := phase3d2bNewExecContext(ctx, deps)
+		return execRevokeMicroflowAccessGen(ectx, stmt.(*ast.RevokeMicroflowAccessStmt))
+	})
+	r.RegisterFuture("GrantNanoflowAccess", func(ctx context.Context, stmt ast.Statement) error {
+		ectx := phase3d2bNewExecContext(ctx, deps)
+		return execGrantNanoflowAccessGen(ectx, stmt.(*ast.GrantNanoflowAccessStmt))
+	})
+	r.RegisterFuture("RevokeNanoflowAccess", func(ctx context.Context, stmt ast.Statement) error {
+		ectx := phase3d2bNewExecContext(ctx, deps)
+		return execRevokeNanoflowAccessGen(ectx, stmt.(*ast.RevokeNanoflowAccessStmt))
+	})
+	r.RegisterFuture("GrantWorkflowAccess", func(ctx context.Context, stmt ast.Statement) error {
+		ectx := phase3d2bNewExecContext(ctx, deps)
+		return execGrantWorkflowAccess(ectx, stmt.(*ast.GrantWorkflowAccessStmt))
+	})
+	r.RegisterFuture("RevokeWorkflowAccess", func(ctx context.Context, stmt ast.Statement) error {
+		ectx := phase3d2bNewExecContext(ctx, deps)
+		return execRevokeWorkflowAccess(ectx, stmt.(*ast.RevokeWorkflowAccessStmt))
+	})
+	r.RegisterFuture("GrantODataServiceAccess", func(ctx context.Context, stmt ast.Statement) error {
+		ectx := phase3d2bNewExecContext(ctx, deps)
+		return execGrantODataServiceAccessGen(ectx, stmt.(*ast.GrantODataServiceAccessStmt))
+	})
+	r.RegisterFuture("RevokeODataServiceAccess", func(ctx context.Context, stmt ast.Statement) error {
+		ectx := phase3d2bNewExecContext(ctx, deps)
+		return execRevokeODataServiceAccessGen(ectx, stmt.(*ast.RevokeODataServiceAccessStmt))
+	})
+	r.RegisterFuture("GrantPublishedRestServiceAccess", func(ctx context.Context, stmt ast.Statement) error {
+		ectx := phase3d2bNewExecContext(ctx, deps)
+		return execGrantPublishedRestServiceAccessGen(ectx, stmt.(*ast.GrantPublishedRestServiceAccessStmt))
+	})
+	r.RegisterFuture("RevokePublishedRestServiceAccess", func(ctx context.Context, stmt ast.Statement) error {
+		ectx := phase3d2bNewExecContext(ctx, deps)
+		return execRevokePublishedRestServiceAccessGen(ectx, stmt.(*ast.RevokePublishedRestServiceAccessStmt))
+	})
+	r.RegisterFuture("AlterProjectSecurity", func(ctx context.Context, stmt ast.Statement) error {
+		ectx := phase3d2bNewExecContext(ctx, deps)
+		return execAlterProjectSecurityGen(ectx, stmt.(*ast.AlterProjectSecurityStmt))
+	})
+	r.RegisterFuture("UpdateSecurity", func(ctx context.Context, stmt ast.Statement) error {
+		ectx := phase3d2bNewExecContext(ctx, deps)
+		return execUpdateSecurityGen(ectx, stmt.(*ast.UpdateSecurityStmt))
+	})
+	r.RegisterFuture("CreateDemoUser", func(ctx context.Context, stmt ast.Statement) error {
+		ectx := phase3d2bNewExecContext(ctx, deps)
+		return execCreateDemoUserGen(ectx, stmt.(*ast.CreateDemoUserStmt))
+	})
+	r.RegisterFuture("DropDemoUser", func(ctx context.Context, stmt ast.Statement) error {
+		ectx := phase3d2bNewExecContext(ctx, deps)
+		return execDropDemoUserGen(ectx, stmt.(*ast.DropDemoUserStmt))
+	})
+	r.RegisterFuture("AlterLanguage", func(ctx context.Context, stmt ast.Statement) error {
+		ectx := phase3d2bNewExecContext(ctx, deps)
+		return alterLanguage(ectx, stmt.(*ast.AlterLanguageStmt))
 	})
 }
 
