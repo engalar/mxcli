@@ -13,42 +13,40 @@ Add MDL support for the three built-in properties (Commit, WithEvents/WithoutEve
 
 ### Syntax
 
-Rules:
-- CREATE/CHANGE: `REFRESH` only valid when `WITH COMMIT` is present
-- COMMIT: `REFRESH` only valid when `WITH EVENTS` is present  (⚠️ existing behavior change — see note)
-- DELETE/ROLLBACK: `REFRESH` standalone (no commit/events sub-clause)
-- Describe output format must be identical across CREATE/CHANGE/COMMIT
+**Core rule:** `refresh` must always follow a `with` clause — `with commit`, `with commit without events`, `with events`. Standalone `refresh` is only valid for DELETE and ROLLBACK (which have no commit/event sub-clause).
+
+Describe output must be consistent across CREATE/CHANGE/COMMIT — same clause structure.
 
 ```sql
 -- CREATE
-$Obj = create Module.Entity (Name = 'x');
-$Obj = create Module.Entity (Name = 'x') with commit;
-$Obj = create Module.Entity (Name = 'x') with commit refresh;
-$Obj = create Module.Entity (Name = 'x') with commit without events;
+$Obj = create Module.Entity (Name = 'x');                          -- Commit=No
+$Obj = create Module.Entity (Name = 'x') with commit;              -- Commit=Yes
+$Obj = create Module.Entity (Name = 'x') with commit refresh;      -- Commit=Yes, Refresh=true
+$Obj = create Module.Entity (Name = 'x') with commit without events; -- YesWithoutEvents
 $Obj = create Module.Entity (Name = 'x') with commit without events refresh;
 
 -- CHANGE
-change $Obj (Name = 'new');
+change $Obj (Name = 'new');                                         -- Commit=No
 change $Obj (Name = 'new') with commit;
 change $Obj (Name = 'new') with commit refresh;
 change $Obj (Name = 'new') with commit without events;
 change $Obj (Name = 'new') with commit without events refresh;
 
--- COMMIT (refresh now requires with events)
-commit $Obj;
-commit $Obj with events;
-commit $Obj with events refresh;
+-- COMMIT (refresh requires with events — grammar change ⚠️)
+commit $Obj;                                                       -- WithEvents=false
+commit $Obj with events;                                           -- WithEvents=true
+commit $Obj with events refresh;                                   -- WithEvents=true, Refresh=true
 
--- DELETE (new: refresh)
+-- DELETE
 delete $Obj;
 delete $Obj refresh;
 
--- ROLLBACK (unchanged, already has refresh)
+-- ROLLBACK
 rollback $Obj;
 rollback $Obj refresh;
 ```
 
-> ⚠️ **COMMIT grammar change:** Previously `(WITH EVENTS)? REFRESH?` allowed `commit $V refresh;` (Refresh=true, WithEvents=false). With this rule, `REFRESH` requires `WITH EVENTS`, so `commit $V refresh;` becomes invalid (would need `commit $V with events refresh;`). If this breaks existing scripts, keep the old grammar and only apply the new rule to CREATE/CHANGE.
+> ⚠️ **COMMIT grammar change:** `(WITH EVENTS)? REFRESH?` → `(WITH EVENTS REFRESH?)?`. `commit $V refresh;` is no longer valid — use `commit $V with events refresh;`. This matches the CREATE/CHANGE pattern where `refresh` requires `with`.
 
 ### Round-Trip Table (BSON ↔ MDL)
 
@@ -81,7 +79,7 @@ Every line in the table below must round-trip: MDL → BSON → describe → ide
 | `true` | `false` | `commit $X with events;` |
 | `true` | `true` | `commit $X with events refresh;` |
 
-> Note: `WithEvents=false` + `RefreshInClient=true` also cannot be expressed. Same rule: formatter drops `refresh` silently.
+> Note: `refresh` is only valid inside `with events`, so `WithEvents=false` + `RefreshInClient=true` drops refresh silently — consistent with CREATE/CHANGE rule.
 
 **DELETE:**
 | RefreshInClient | MDL output |
@@ -117,14 +115,14 @@ changeObjectStatement
 
 > The commit block `(WITH COMMIT (WITHOUT EVENTS)? REFRESH?)?` is a single atomic clause: if any part appears, `WITH COMMIT` is the head. Standalone `REFRESH` is not valid for CREATE/CHANGE.
 
-**commitStatement** (keep existing grammar — `REFRESH` can appear alone):
+**commitStatement** (change to match CREATE/CHANGE pattern — refresh requires with):
 ```antlr
 commitStatement
-    : COMMIT VARIABLE (WITH EVENTS)? REFRESH? onErrorClause?
+    : COMMIT VARIABLE (WITH EVENTS REFRESH?)? onErrorClause?
     ;
 ```
 
-> For COMMIT, the describe formatter only outputs `REFRESH` when `WithEvents=true`. The case `WithEvents=false` + `RefreshInClient=true` drops refresh silently (same rule as CREATE/CHANGE).
+> Previously `(WITH EVENTS)? REFRESH?` which allowed `commit $V refresh;`. Now `REFRESH` is nested inside the `WITH EVENTS` clause, consistent with CREATE/CHANGE's `WITH COMMIT (WITHOUT EVENTS)? REFRESH?`.
 
 **deleteObjectStatement** (add refresh):
 ```antlr
@@ -277,7 +275,7 @@ The formatter must produce MDL that, when parsed back, produces identical BSON (
 
 **File: `mdl/executor/microflows_format_action_v2.go`**
 
-> **Consistency rule:** CREATE/CHANGE/COMMIT must use the same clause structure in describe output. If Commit/WithEvents is "No"/false, never emit `refresh` even if RefreshInClient=true (the runtime ignores it).
+> **Consistency rule:** CREATE/CHANGE/COMMIT must produce the same clause pattern in describe output: `with <type> [(without events)] [refresh]`. If Commit/WithEvents is "No"/false, never emit `refresh` even if RefreshInClient=true (the runtime ignores it).
 
 **`formatCreateObjectActionGen`:** Replace hardcoded output with round-trip-aware clause:
 ```go
@@ -324,19 +322,19 @@ func formatChangeObjectActionGen(a *genMf.ChangeObjectAction) string {
 }
 ```
 
-**`formatCommitActionGen`:** Already handles `with events` + `refresh`. One change: if `WithEvents=false` and `RefreshInClient=true`, drop `refresh`:
+**`formatCommitActionGen`:** Already handles `with events` + `refresh`. Verify the pattern matches CREATE/CHANGE:
 ```go
 func formatCommitActionGen(a *genMf.CommitAction) string {
     varName := strings.TrimSpace(a.CommitVariableName())
     if varName == "" { varName = "Object" }
     suffix := ""
     if a.WithEvents() {
-        suffix += " with events"
+        suffix += " with events"          // same `with <type>` head as CREATE/CHANGE
         if a.RefreshInClient() {
-            suffix += " refresh"
+            suffix += " refresh"           // refresh only inside `with` clause
         }
     }
-    // Note: consistent with CREATE/CHANGE — refresh is never standalone
+    // No `with events` → no refresh (consistent with CREATE/CHANGE rule)
     if a.ErrorHandlingType() == "Continue" {
         suffix += " on error continue"
     }
