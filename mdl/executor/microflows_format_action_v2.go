@@ -258,10 +258,27 @@ func formatCreateObjectActionGen(a *genMf.CreateObjectAction) string {
 		entityModule = parts[0]
 	}
 	members := collectInitialMemberAssignmentsGen(a.ItemsItems(), entityModule)
-	if len(members) > 0 {
-		return fmt.Sprintf("$%s = create %s (%s);", outputVar, entityName, strings.Join(members, ", "))
+
+	commitClause := ""
+	refreshClause := ""
+	switch a.Commit() {
+	case "Yes":
+		commitClause = " with commit"
+		if a.RefreshInClient() {
+			refreshClause = " refresh"
+		}
+	case "YesWithoutEvents":
+		commitClause = " with commit without events"
+		if a.RefreshInClient() {
+			refreshClause = " refresh"
+		}
 	}
-	return fmt.Sprintf("$%s = create %s;", outputVar, entityName)
+
+	if len(members) > 0 {
+		return fmt.Sprintf("$%s = create %s (%s)%s%s;", outputVar, entityName,
+			strings.Join(members, ", "), commitClause, refreshClause)
+	}
+	return fmt.Sprintf("$%s = create %s%s%s;", outputVar, entityName, commitClause, refreshClause)
 }
 
 // collectInitialMemberAssignmentsGen renders MemberChange items the
@@ -297,7 +314,7 @@ func collectInitialMemberAssignmentsGen(items []element.Element, entityModule st
 	return out
 }
 
-// formatChangeObjectActionGen emits `change $Var (…) [refresh];`.
+// formatChangeObjectActionGen emits `change $Var (…) [with commit [without events] [refresh]];`.
 // Mirrors legacy ChangeObjectAction handling.
 func formatChangeObjectActionGen(a *genMf.ChangeObjectAction) string {
 	varName := strings.TrimSpace(a.ChangeVariableName())
@@ -305,14 +322,26 @@ func formatChangeObjectActionGen(a *genMf.ChangeObjectAction) string {
 		varName = "Object"
 	}
 	members := collectChangeMemberAssignmentsGen(a.ItemsItems())
-	refreshSuffix := ""
-	if a.RefreshInClient() {
-		refreshSuffix = " refresh"
+
+	commitClause := ""
+	refreshClause := ""
+	switch a.Commit() {
+	case "Yes":
+		commitClause = " with commit"
+		if a.RefreshInClient() {
+			refreshClause = " refresh"
+		}
+	case "YesWithoutEvents":
+		commitClause = " with commit without events"
+		if a.RefreshInClient() {
+			refreshClause = " refresh"
+		}
 	}
+
 	if len(members) > 0 {
-		return fmt.Sprintf("change $%s (%s)%s;", varName, strings.Join(members, ", "), refreshSuffix)
+		return fmt.Sprintf("change $%s (%s)%s%s;", varName, strings.Join(members, ", "), commitClause, refreshClause)
 	}
-	return fmt.Sprintf("change $%s%s;", varName, refreshSuffix)
+	return fmt.Sprintf("change $%s%s%s;", varName, commitClause, refreshClause)
 }
 
 // collectChangeMemberAssignmentsGen renders MemberChange items the same
@@ -343,18 +372,26 @@ func collectChangeMemberAssignmentsGen(items []element.Element) []string {
 	return out
 }
 
-// formatDeleteActionGen emits `delete $Var;` (matches legacy verbatim).
+// formatDeleteActionGen emits `delete $Var [refresh];` (matches legacy verbatim).
 func formatDeleteActionGen(a *genMf.DeleteAction) string {
-	return fmt.Sprintf("delete $%s;", a.DeleteVariableName())
+	suffix := ""
+	if a.RefreshInClient() {
+		suffix = " refresh"
+	}
+	return fmt.Sprintf("delete $%s%s;", a.DeleteVariableName(), suffix)
 }
 
-// formatCommitActionGen emits `commit $Var [with events] [refresh];`.
+// formatCommitActionGen emits `commit $Var [with events [refresh]];`.
 // Mirrors legacy CommitObjectsAction.
 //
 // Note: ErrorHandlingType is always "Rollback" for commit activities in
 // microflows (it is the BSON default). The MDL "on error rollback" modifier
 // is therefore indistinguishable from a plain commit in stored BSON and is
 // not emitted here.
+//
+// Refresh is only emitted inside "with events" — never standalone per
+// plan constraint: "When Commit='No' or WithEvents=false, never emit
+// refresh even if RefreshInClient=true".
 func formatCommitActionGen(a *genMf.CommitAction) string {
 	varName := strings.TrimSpace(a.CommitVariableName())
 	if varName == "" {
@@ -363,9 +400,9 @@ func formatCommitActionGen(a *genMf.CommitAction) string {
 	suffix := ""
 	if a.WithEvents() {
 		suffix += " with events"
-	}
-	if a.RefreshInClient() {
-		suffix += " refresh"
+		if a.RefreshInClient() {
+			suffix += " refresh"
+		}
 	}
 	if a.ErrorHandlingType() == "Continue" {
 		suffix += " on error continue"

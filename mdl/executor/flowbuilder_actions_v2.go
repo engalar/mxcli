@@ -155,6 +155,7 @@ func (fb *flowBuilderGen) addDeleteActionGen(s *ast.DeleteObjectStmt) element.ID
 	assignFreshID(action)
 	action.SetErrorHandlingType(fb.ehTypeGen(s.ErrorHandling))
 	action.SetDeleteVariableName(s.Variable)
+	action.SetRefreshInClient(s.RefreshInClient)
 	return fb.genActivityWrap(action, s.ErrorHandling, "")
 }
 

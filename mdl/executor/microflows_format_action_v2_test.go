@@ -57,7 +57,7 @@ func TestFormatActionGen_CommitAction(t *testing.T) {
 	}{
 		{"bare", "Order", false, false, "commit $Order;"},
 		{"with events", "Order", true, false, "commit $Order with events;"},
-		{"refresh", "Order", false, true, "commit $Order refresh;"},
+		{"refresh", "Order", false, true, "commit $Order;"}, // refresh suppressed when WithEvents=false
 		{"both", "Order", true, true, "commit $Order with events refresh;"},
 		{"empty var defaults to Object", "", false, false, "commit $Object;"},
 	}
@@ -181,7 +181,7 @@ func TestFormatActionGen_ChangeObjectAction(t *testing.T) {
 		a.AddItems(m)
 
 		got := formatActionGen(nil, a)
-		want := "change $Account (Password = $AccountPasswordData/NewPassword) refresh;"
+		want := "change $Account (Password = $AccountPasswordData/NewPassword);"
 		if got != want {
 			t.Errorf("got %q, want %q", got, want)
 		}
@@ -1071,7 +1071,7 @@ func TestDescribeMicroflowGenToString_ObjectActions_Fixture(t *testing.T) {
 		{
 			"Administration.SaveNewAccount",
 			[]string{
-				"change $Account (Password = $AccountPasswordData/NewPassword) refresh;",
+				"change $Account (Password = $AccountPasswordData/NewPassword) with commit refresh;",
 				"delete $AccountPasswordData;",
 			},
 		},
