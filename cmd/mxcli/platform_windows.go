@@ -4,7 +4,10 @@
 
 package main
 
-import "os/exec"
+import (
+	"os/exec"
+	"syscall"
+)
 
 func hideDaemonWindow(cmd *exec.Cmd) {
 	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
