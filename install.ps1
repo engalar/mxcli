@@ -39,7 +39,7 @@ if (-not $Latest) {
 $MxcliCmd = Get-Command mxcli -ErrorAction SilentlyContinue
 if ($MxcliCmd) {
     try {
-        $VersionOutput = & mxcli version 2>$null | Select-Object -First 1
+        $VersionOutput = & mxcli --version 2>$null | Select-Object -First 1
         $Current = ($VersionOutput -split "\s+")[2]
     } catch {
         $Current = ""
@@ -68,13 +68,13 @@ if ($UserPath -notlike "*$InstallDir*") {
     Write-Host "  Added $InstallDir to user PATH"
 }
 
-# ── Download launcher binary ──────────────────────────────────────────────────
+# ── Download mxcli binary ─────────────────────────────────────────────────────
 $BinName = "mxcli-windows-$Arch.exe"
 $BinUrl = "https://github.com/$Repo/releases/download/$Latest/$BinName"
 $Dest = Join-Path $InstallDir "mxcli.exe"
 $Tmp = [System.IO.Path]::Combine([System.IO.Path]::GetTempPath(), "mxcli-install-$([System.Guid]::NewGuid()).exe")
 
-Write-Host "  Downloading launcher (windows/$Arch) from GitHub..."
+Write-Host "  Downloading mxcli (windows/$Arch) from GitHub..."
 try {
     Invoke-WebRequest -Uri $BinUrl -OutFile $Tmp -UseBasicParsing
 } catch {
@@ -88,7 +88,6 @@ Unblock-File -Path $Dest
 
 Write-Host ""
 Write-Host "✅ mxcli $Latest installed to $Dest"
-Write-Host "   The daemon (~20 MB) will be downloaded automatically on first use."
 Write-Host ""
 Write-Host "   Run: mxcli version"
 Write-Host "   NOTE: Restart your terminal for PATH changes to take effect."

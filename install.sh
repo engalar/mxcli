@@ -107,7 +107,7 @@ if [ "$INSTALL_DIR" != "/usr/local/bin" ]; then
   fi
 fi
 
-# ── Download launcher binary ──────────────────────────────────────────────────
+# ── Download mxcli binary ─────────────────────────────────────────────────────
 BIN_NAME="mxcli-${OS}-${ARCH}${EXT}"
 BIN_URL="https://github.com/${REPO}/releases/download/${LATEST}/${BIN_NAME}"
 SUMS_URL="https://github.com/${REPO}/releases/download/${LATEST}/SHA256SUMS"
