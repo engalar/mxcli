@@ -44,7 +44,6 @@ func (e *Executor) syncBack(ctx *ExecContext) {
 	if ctx.Graph != nil {
 		e.graphCatalog = ctx.Graph
 	}
-	e.fragments = ctx.Fragments
 	e.sqlMgr = ctx.SqlMgr
 	e.themeRegistry = ctx.ThemeRegistry
 }

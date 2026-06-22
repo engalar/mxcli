@@ -355,6 +355,7 @@ func New(output io.Writer) *Executor {
 		output:       guard,
 		statusOutput: os.Stderr,
 		guard:        guard,
+		fragments:    make(map[string]*ast.DefineFragmentStmt),
 		registry:     NewRegistry(),
 	}
 }
