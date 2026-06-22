@@ -32,9 +32,9 @@ type moduleOverviewEdge struct {
 }
 
 var systemModuleNames = map[string]bool{
-	"System":                  true,
-	"Atlas_Core":              true,
-	"Atlas_UI_Resources":      true,
+	"System":                      true,
+	"Atlas_Core":                  true,
+	"Atlas_UI_Resources":          true,
 	"Atlas_Native_Mobile_Content": true,
 }
 

@@ -18,8 +18,8 @@ import (
 var comp = &completion.Completer{}
 
 var describeCmd = &cobra.Command{
-	Use:   "describe <type> <name>",
-	Short: "Describe a project element",
+	Use:               "describe <type> <name>",
+	Short:             "Describe a project element",
 	ValidArgsFunction: completion.DescribeValidArgsFunction(comp),
 	Long: `Describe an element from a Mendix project in MDL syntax.
 

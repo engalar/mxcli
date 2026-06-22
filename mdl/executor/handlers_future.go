@@ -2757,14 +2757,14 @@ func execShowStructureGenFuture(ctx context.Context, output io.Writer, format Ou
 		Backend:              deps.Backend,
 
 		ExecRepos: ExecRepos{
-			Microflows:        deps.MicroflowRepo,
-			Nanoflows:         deps.NanoflowRepo,
-			DomainModels:      deps.DomainModels,
-			Workflows:         deps.WorkflowRepo,
-			Pages:             deps.PageRepo,
-			Snippets:          deps.SnippetRepo,
-			JavaActions:       deps.JavaActionRepo,
-			Layouts:           deps.LayoutRepo,
+			Microflows:   deps.MicroflowRepo,
+			Nanoflows:    deps.NanoflowRepo,
+			DomainModels: deps.DomainModels,
+			Workflows:    deps.WorkflowRepo,
+			Pages:        deps.PageRepo,
+			Snippets:     deps.SnippetRepo,
+			JavaActions:  deps.JavaActionRepo,
+			Layouts:      deps.LayoutRepo,
 		},
 	}
 

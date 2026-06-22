@@ -53,19 +53,19 @@ func newPageBuilder(mb *mock.MockBackend, h *ContainerHierarchy, moduleName stri
 	}
 	cache := &executorCache{metadataCache: metadataCache{hierarchy: h}}
 	return &pageBuilder{
-		pageReader:          mb,
-		metadataReader:      mb,
-		moduleLister:        mb,
-		folderManager:       mb,
-		connectionManager:   mb,
+		pageReader:           mb,
+		metadataReader:       mb,
+		moduleLister:         mb,
+		folderManager:        mb,
+		connectionManager:    mb,
 		serializationBackend: mb,
-		moduleID:            modID,
-		moduleName:       moduleName,
-		widgetScope:      make(map[string]model.ID),
-		paramScope:       make(map[string]model.ID),
-		paramEntityNames: make(map[string]string),
-		execCache:        cache,
-		widgetBackend:    mb,
+		moduleID:             modID,
+		moduleName:           moduleName,
+		widgetScope:          make(map[string]model.ID),
+		paramScope:           make(map[string]model.ID),
+		paramEntityNames:     make(map[string]string),
+		execCache:            cache,
+		widgetBackend:        mb,
 	}
 }
 

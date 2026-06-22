@@ -140,8 +140,6 @@ func matchWidgetFilter(name, widgetType, container, module string, s *ast.ShowWi
 	return true
 }
 
-
-
 // execUpdateWidgets handles the UPDATE WIDGETS statement.
 func execUpdateWidgets(ctx *ExecContext, s *ast.UpdateWidgetsStmt) error {
 	if !ctx.Connected() {
@@ -282,8 +280,6 @@ func mapWidgetFilterField(field string) string {
 		return field
 	}
 }
-
-
 
 // execShowInstalledWidgets uses MXGraph to list all installed widget definitions.
 // 优先从 MXGraph Widget 节点获取；若 graph 不可用则附底面到 MPK 扫描。

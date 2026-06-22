@@ -23,7 +23,7 @@ const mxcliRepo = "engalar/mxcli"
 var upgradeCmd = &cobra.Command{
 	Use:   "upgrade [tag]",
 	Short: "Upgrade mxcli to the latest version",
-	Args: cobra.MaximumNArgs(1),
+	Args:  cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return runSelfUpgrade(args)
 	},

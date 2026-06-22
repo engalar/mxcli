@@ -37,13 +37,13 @@ func TestResolveSnippetRef_FromCache(t *testing.T) {
 	withContainer(h, mod.ID, mod.ID)
 
 	pb := &pageBuilder{
-		pageReader:          mb,
-		metadataReader:      mb,
-		moduleLister:        mb,
-		folderManager:       mb,
-		connectionManager:   mb,
+		pageReader:           mb,
+		metadataReader:       mb,
+		moduleLister:         mb,
+		folderManager:        mb,
+		connectionManager:    mb,
 		serializationBackend: mb,
-		execCache:           cache,
+		execCache:            cache,
 	}
 	pb.execCache.hierarchy = h
 
@@ -77,13 +77,13 @@ func TestResolveSnippetRef_NotFoundInCache(t *testing.T) {
 	withContainer(h, mod.ID, mod.ID)
 
 	pb := &pageBuilder{
-		pageReader:          mb,
-		metadataReader:      mb,
-		moduleLister:        mb,
-		folderManager:       mb,
-		connectionManager:   mb,
+		pageReader:           mb,
+		metadataReader:       mb,
+		moduleLister:         mb,
+		folderManager:        mb,
+		connectionManager:    mb,
 		serializationBackend: mb,
-		execCache:           cache,
+		execCache:            cache,
 	}
 	pb.execCache.hierarchy = h
 

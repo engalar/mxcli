@@ -212,12 +212,12 @@ type Executor struct {
 	guard          *outputGuard // line-limit wrapper around output
 	mprPath        string
 	cache          *executorCache
-	graphCatalog   *graphcatalog.ProjectGraph // in-memory project graph (lazy build) for code-search + lint
-	quiet          bool                       // suppress connection and status messages
-	format         OutputFormat               // output format (table, json)
-	logger         *diaglog.Logger            // session diagnostics logger (nil = no logging)
+	graphCatalog   *graphcatalog.ProjectGraph         // in-memory project graph (lazy build) for code-search + lint
+	quiet          bool                               // suppress connection and status messages
+	format         OutputFormat                       // output format (table, json)
+	logger         *diaglog.Logger                    // session diagnostics logger (nil = no logging)
 	fragments      map[string]*ast.DefineFragmentStmt // script-scoped fragment definitions
-	registry       *Registry                  // statement dispatch registry
+	registry       *Registry                          // statement dispatch registry
 
 	// perfStats accumulates per-statement execution timing so the
 	// caller can print a summary when the script finishes.

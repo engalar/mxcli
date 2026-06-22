@@ -127,5 +127,3 @@ func searchBackend(ctx *ExecContext, keyword string) error {
 // ensureCatalog is a no-op — catalog SQLite system has been removed.
 // All data queries should use MXGraph or backend directly.
 func ensureCatalog(_ *ExecContext, _ bool) error { return nil }
-
-

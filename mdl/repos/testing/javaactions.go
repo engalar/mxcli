@@ -16,14 +16,14 @@ type RecordingJavaActionRepository struct {
 	Updated         []*genJA.JavaAction
 	Deleted         []model.ID
 
-	GetFunc              func(model.ID) (*genJA.JavaAction, error)
-	ListFunc             func(model.ID) ([]*genJA.JavaAction, error)
-	ListAllFunc          func() ([]*genJA.JavaAction, error)
+	GetFunc                 func(model.ID) (*genJA.JavaAction, error)
+	ListFunc                func(model.ID) ([]*genJA.JavaAction, error)
+	ListAllFunc             func() ([]*genJA.JavaAction, error)
 	FindByQualifiedNameFunc func(string) (*genJA.JavaAction, error)
-	GetContainerUUIDFunc func(model.ID) (model.ID, error)
-	CreateFunc           func(parentUUID, containmentName string, ja *genJA.JavaAction) error
-	UpdateFunc           func(*genJA.JavaAction) error
-	DeleteFunc           func(model.ID) error
+	GetContainerUUIDFunc    func(model.ID) (model.ID, error)
+	CreateFunc              func(parentUUID, containmentName string, ja *genJA.JavaAction) error
+	UpdateFunc              func(*genJA.JavaAction) error
+	DeleteFunc              func(model.ID) error
 }
 
 var _ repos.JavaActionRepository = (*RecordingJavaActionRepository)(nil)

@@ -13,8 +13,8 @@ import (
 )
 
 var analyzeCmd = &cobra.Command{
-	Use:   "analyze <topic> [name]",
-	Short: "Analyze project structure — navigation, page, entity, orphans, flow",
+	Use:               "analyze <topic> [name]",
+	Short:             "Analyze project structure — navigation, page, entity, orphans, flow",
 	ValidArgsFunction: completion.AnalyzeValidArgsFunction(comp),
 	Long: `Analyze Mendix project structure using the in-memory graph.
 

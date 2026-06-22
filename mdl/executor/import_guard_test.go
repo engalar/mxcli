@@ -33,12 +33,12 @@ func TestNoDirectBSONImportInExecutor(t *testing.T) {
 	// Batch 3 (cmd_diff_local.go, flowbuilder_raw_setter_v2.go): investigation
 	// pending — see docs/superpowers/specs/2026-05-27-executor-bson-cleanup-design.md
 	allowlist := map[string]bool{
-		"pages_builder_v3.go":          true, // Task 10 — see comment above
+		"pages_builder_v3.go":            true, // Task 10 — see comment above
 		"pages_builder_datasource_v3.go": true, // Task 10 — code moved from pages_builder_v3.go
 		"pages_builder_types_v3.go":      true, // Task 10 — code moved from pages_builder_v3.go
 		"pages_builder_widgets_v3.go":    true, // Task 10 — code moved from pages_builder_v3.go
-		"diff_local.go":                true, // Batch 3, investigation pending
-		"flowbuilder_raw_setter_v2.go": true, // Batch 3, investigation pending
+		"diff_local.go":                  true, // Batch 3, investigation pending
+		"flowbuilder_raw_setter_v2.go":   true, // Batch 3, investigation pending
 	}
 
 	entries, err := os.ReadDir(".")
@@ -101,16 +101,16 @@ func TestNoRawBSONTypeStringsInExecutor(t *testing.T) {
 	// New files must NOT be added here without explanation.
 	// The purpose of this test is to prevent NEW violations, not to fix all existing ones at once.
 	allowlist := map[string]bool{
-		"pages_builder_v3.go":          true, // Task 10: buildDataGridDataSourceBSON still uses raw bson.D
+		"pages_builder_v3.go":            true, // Task 10: buildDataGridDataSourceBSON still uses raw bson.D
 		"pages_builder_datasource_v3.go": true, // Task 10 — code moved from pages_builder_v3.go
 		"pages_builder_widgets_v3.go":    true, // Task 10 — code moved from pages_builder_v3.go
-		"diff_local.go":                true, // Batch 3, investigation pending
-		"flowbuilder_raw_setter_v2.go": true, // Batch 3, investigation pending
-		"theme_reader.go":              true, // (b) reads/identifies existing widget types; no construction
-		"cmd_workflows_write_v2.go":    true, // (b) type switch/comparisons for reading, not construction
-		"flowbuilder_calls_page_v2.go": true, // (c) SetTypeName override — gen element, not raw bson.D
-		"workflows_v2.go":              true, // (b) type switch/comparisons when reading workflow activities
-		"structure.go":                 true, // (b) type switch/comparisons for structure display
+		"diff_local.go":                  true, // Batch 3, investigation pending
+		"flowbuilder_raw_setter_v2.go":   true, // Batch 3, investigation pending
+		"theme_reader.go":                true, // (b) reads/identifies existing widget types; no construction
+		"cmd_workflows_write_v2.go":      true, // (b) type switch/comparisons for reading, not construction
+		"flowbuilder_calls_page_v2.go":   true, // (c) SetTypeName override — gen element, not raw bson.D
+		"workflows_v2.go":                true, // (b) type switch/comparisons when reading workflow activities
+		"structure.go":                   true, // (b) type switch/comparisons for structure display
 		// (b) type strings used for reading/identifying existing BSON in describe/show commands:
 		"cmd_drop_entity_v2.go":           true,
 		"entities_v2.go":                  true,

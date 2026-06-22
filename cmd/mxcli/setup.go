@@ -285,9 +285,9 @@ Examples:
 
 // setupCompletionsCmd installs shell completion scripts.
 var setupCompletionsCmd = &cobra.Command{
-	Use:   "completions [bash|zsh|fish]",
-	Short: "Install shell completion scripts for bash/zsh/fish/powershell",
-	Args:  cobra.MaximumNArgs(1),
+	Use:       "completions [bash|zsh|fish]",
+	Short:     "Install shell completion scripts for bash/zsh/fish/powershell",
+	Args:      cobra.MaximumNArgs(1),
 	ValidArgs: []string{"bash", "zsh", "fish"},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		shell := detectShell()

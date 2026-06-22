@@ -27,23 +27,23 @@ import (
 
 // pageBuilder constructs pages from AST.
 type pageBuilder struct {
-	moduleLister      backend.ModuleLister
-	domainModelReader backend.DomainModelReader
-	pageReader        backend.PageReader
-	metadataReader    backend.MetadataReader
-	folderManager     backend.FolderManager
-	connectionManager backend.ConnectionManager
+	moduleLister         backend.ModuleLister
+	domainModelReader    backend.DomainModelReader
+	pageReader           backend.PageReader
+	metadataReader       backend.MetadataReader
+	folderManager        backend.FolderManager
+	connectionManager    backend.ConnectionManager
 	serializationBackend backend.WidgetSerializationBackend
-	moduleID          model.ID
-	moduleName        string
-	widgetScope       map[string]model.ID                // widget name -> widget ID
-	paramScope        map[string]model.ID                // param name -> entity ID
-	paramEntityNames  map[string]string                  // param name -> qualified entity name
-	execCache         *executorCache                     // Shared cache from executor
-	isSnippet         bool                               // True if building a snippet (affects parameter datasource)
-	fragments         map[string]*ast.DefineFragmentStmt // Fragment registry from executor
-	themeRegistry     *ThemeRegistry                     // Theme design property definitions (may be nil)
-	widgetBackend     backend.WidgetBuilderBackend       // Backend for pluggable widget construction
+	moduleID             model.ID
+	moduleName           string
+	widgetScope          map[string]model.ID                // widget name -> widget ID
+	paramScope           map[string]model.ID                // param name -> entity ID
+	paramEntityNames     map[string]string                  // param name -> qualified entity name
+	execCache            *executorCache                     // Shared cache from executor
+	isSnippet            bool                               // True if building a snippet (affects parameter datasource)
+	fragments            map[string]*ast.DefineFragmentStmt // Fragment registry from executor
+	themeRegistry        *ThemeRegistry                     // Theme design property definitions (may be nil)
+	widgetBackend        backend.WidgetBuilderBackend       // Backend for pluggable widget construction
 
 	// Pluggable widget engine (lazily initialized)
 	widgetRegistry     *WidgetRegistry

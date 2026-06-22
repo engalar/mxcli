@@ -408,10 +408,10 @@ func execCreateJavaActionGen(ctx *ExecContext, s *ast.CreateJavaActionStmt) erro
 		// in `public X executeAction() throws Exception { ... }`.
 		if strings.Contains(s.JavaCode, "executeAction") {
 			return mdlerrors.NewValidationf(
-				"code block must contain only the method body, not the method signature\n"+
-					"  hint: write only the statements inside executeAction(), e.g.:\n"+
-					"    code $$\n"+
-					"      return this.Input.trim();\n"+
+				"code block must contain only the method body, not the method signature\n" +
+					"  hint: write only the statements inside executeAction(), e.g.:\n" +
+					"    code $$\n" +
+					"      return this.Input.trim();\n" +
 					"    $$")
 		}
 		params := make([]*genJA.JavaActionParameter, 0, len(ja.ActionParametersItems()))

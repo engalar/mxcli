@@ -64,4 +64,3 @@ type widgetTypeCacheEntry struct {
 	rawObject   bson.D                               // template object; deep-cloned per instance
 	propTypeIDs map[string]types.PropertyTypeIDEntry // for property-key → TypePointer lookups
 }
-

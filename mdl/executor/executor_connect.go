@@ -45,7 +45,9 @@ func execConnect(ctx *ExecContext, s *ast.ConnectStmt) error {
 	if graph, buildErr := BuildGraphAtPath(s.Path); buildErr == nil && graph != nil {
 		ctx.Graph = graph
 		warmCacheFromGraph(ctx.Cache, graph)
-		if bg, ok := ctx.Backend.(interface{ SetProjectGraph(*graphcatalog.ProjectGraph) }); ok {
+		if bg, ok := ctx.Backend.(interface {
+			SetProjectGraph(*graphcatalog.ProjectGraph)
+		}); ok {
 			bg.SetProjectGraph(graph)
 		}
 	}

@@ -206,7 +206,7 @@ type supplements struct {
 	ExtraTypes             map[string]json.RawMessage `json:"extra_types"`
 	TypeRenames            map[string]string          `json:"type_renames"`           // old_bson → new_bson
 	BinaryUUIDPropsList    []string                   `json:"binary_uuid_properties"` // "ClassName.propName" or "*.propName"
-	BinaryPropsList        []string                   `json:"binary_properties"`       // "ClassName.propName" or "*.propName"
+	BinaryPropsList        []string                   `json:"binary_properties"`      // "ClassName.propName" or "*.propName"
 
 	// Derived after loading.
 	forceConcreteSet       map[string]bool // built from ForceConcreteTypes slice

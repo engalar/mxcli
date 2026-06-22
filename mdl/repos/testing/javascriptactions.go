@@ -16,14 +16,14 @@ type RecordingJavaScriptActionRepository struct {
 	Updated         []*genJSA.JavaScriptAction
 	Deleted         []model.ID
 
-	GetFunc              func(model.ID) (*genJSA.JavaScriptAction, error)
-	ListFunc             func(model.ID) ([]*genJSA.JavaScriptAction, error)
-	ListAllFunc          func() ([]*genJSA.JavaScriptAction, error)
+	GetFunc                 func(model.ID) (*genJSA.JavaScriptAction, error)
+	ListFunc                func(model.ID) ([]*genJSA.JavaScriptAction, error)
+	ListAllFunc             func() ([]*genJSA.JavaScriptAction, error)
 	FindByQualifiedNameFunc func(string) (*genJSA.JavaScriptAction, error)
-	GetContainerUUIDFunc func(model.ID) (model.ID, error)
-	CreateFunc           func(parentUUID, containmentName string, jsa *genJSA.JavaScriptAction) error
-	UpdateFunc           func(*genJSA.JavaScriptAction) error
-	DeleteFunc           func(model.ID) error
+	GetContainerUUIDFunc    func(model.ID) (model.ID, error)
+	CreateFunc              func(parentUUID, containmentName string, jsa *genJSA.JavaScriptAction) error
+	UpdateFunc              func(*genJSA.JavaScriptAction) error
+	DeleteFunc              func(model.ID) error
 }
 
 var _ repos.JavaScriptActionRepository = (*RecordingJavaScriptActionRepository)(nil)
