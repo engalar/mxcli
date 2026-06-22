@@ -54,6 +54,8 @@ type HandlerDeps struct {
 	SnippetRepo        repos.SnippetRepository
 	JavaActionRepo     repos.JavaActionRepository
 	JavaScriptActionRepo repos.JavaScriptActionRepository
+	WorkflowRepo       repos.WorkflowRepository
+	BusinessEventBackend backend.BusinessEventBackend
 }
 
 // registerFutureOverlays registers new-style handlers (StmtHandlerFunc) for
@@ -118,6 +120,14 @@ func (e *Executor) registerFutureOverlays() {
 			return listJavaActionsFuture(ctx, deps.Output, e.format, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, deps.JavaActionRepo, s.InModule)
 		case ast.ShowJavaScriptActions:
 			return listJavaScriptActionsFuture(ctx, deps.Output, e.format, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, deps.JavaScriptActionRepo, s.InModule)
+		case ast.ShowWorkflows:
+			return listWorkflowsFuture(ctx, deps.Output, e.format, deps.ConnectionManager, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, deps.WorkflowRepo, s.InModule)
+		case ast.ShowBusinessEventServices:
+			return listBusinessEventServicesFuture(ctx, deps.Output, e.format, deps.ConnectionManager, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, deps.BusinessEventBackend, s.InModule)
+		case ast.ShowBusinessEventClients:
+			return listBusinessEventClientsFuture(ctx, deps.Output)
+		case ast.ShowBusinessEvents:
+			return listBusinessEventsFuture(ctx, deps.Output, e.format, deps.ConnectionManager, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, deps.BusinessEventBackend, s.InModule)
 		default:
 			return nil // fall through to old handler
 		}
@@ -152,5 +162,7 @@ func (e *Executor) buildHandlerDeps() *HandlerDeps {
 		SnippetRepo:          extractSnippetsRepo(e.backend),
 		JavaActionRepo:       extractJavaActionsRepo(e.backend),
 		JavaScriptActionRepo: extractJavaScriptActionsRepo(e.backend),
+		WorkflowRepo:         extractWorkflowsRepo(e.backend),
+		BusinessEventBackend: e.backend,
 	}
 }

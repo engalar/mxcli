@@ -1441,3 +1441,245 @@ func listJavaScriptActionsFuture(
 	}
 	return writeResultTo(output, format, result)
 }
+
+// listWorkflowsFuture is the ExecContext-free version of listWorkflowsGen.
+func listWorkflowsFuture(
+	ctx context.Context,
+	output io.Writer,
+	format OutputFormat,
+	cm backend.ConnectionManager,
+	ml backend.ModuleLister,
+	mr backend.MetadataReader,
+	fm backend.FolderManager,
+	wfRepo repos.WorkflowRepository,
+	inModule string,
+) error {
+	if cm == nil || !cm.IsConnected() {
+		return mdlerrors.NewNotConnected()
+	}
+
+	h, err := NewContainerHierarchyFromRoles(ml, mr, fm)
+	if err != nil {
+		return mdlerrors.NewBackend("build hierarchy", err)
+	}
+
+	all, err := wfRepo.ListAll()
+	if err != nil {
+		return mdlerrors.NewBackend("list workflows", err)
+	}
+
+	type row struct {
+		qualifiedName string
+		module        string
+		name          string
+		activities    int
+		userTasks     int
+		decisions     int
+		paramEntity   string
+	}
+	var rows []row
+
+	for _, wf := range all {
+		if wf == nil {
+			continue
+		}
+		containerID, _ := wfRepo.GetContainerUUID(model.ID(wf.ID()))
+		modName := h.GetModuleName(h.FindModuleID(containerID))
+		if inModule != "" && modName != inModule {
+			continue
+		}
+		qualifiedName := modName + "." + wf.Name()
+		paramEntity := workflowParameterEntityGen(wf)
+		acts, uts, decs := countWorkflowActivitiesGen(wf)
+		rows = append(rows, row{qualifiedName, modName, wf.Name(), acts, uts, decs, paramEntity})
+	}
+
+	sort.Slice(rows, func(i, j int) bool {
+		return strings.ToLower(rows[i].qualifiedName) < strings.ToLower(rows[j].qualifiedName)
+	})
+
+	result := &TableResult{
+		Columns: []string{"Qualified Name", "Activities", "User Tasks", "Decisions", "Parameter Entity"},
+		Summary: fmt.Sprintf("(%d workflows)", len(rows)),
+	}
+	for _, r := range rows {
+		result.Rows = append(result.Rows, []any{r.qualifiedName, r.activities, r.userTasks, r.decisions, r.paramEntity})
+	}
+	return writeResultTo(output, format, result)
+}
+
+// listBusinessEventServicesFuture is the ExecContext-free version of listBusinessEventServices.
+func listBusinessEventServicesFuture(
+	ctx context.Context,
+	output io.Writer,
+	format OutputFormat,
+	cm backend.ConnectionManager,
+	ml backend.ModuleLister,
+	mr backend.MetadataReader,
+	fm backend.FolderManager,
+	beBackend backend.BusinessEventBackend,
+	inModule string,
+) error {
+	if cm == nil || !cm.IsConnected() {
+		return mdlerrors.NewNotConnected()
+	}
+
+	services, err := beBackend.ListBusinessEventServices()
+	if err != nil {
+		return mdlerrors.NewBackend("list business event services", err)
+	}
+
+	h, err := NewContainerHierarchyFromRoles(ml, mr, fm)
+	if err != nil {
+		return mdlerrors.NewBackend("build hierarchy", err)
+	}
+
+	var filtered []*model.BusinessEventService
+	for _, svc := range services {
+		modID := h.FindModuleID(svc.ContainerID)
+		moduleName := h.GetModuleName(modID)
+		if inModule != "" && !strings.EqualFold(moduleName, inModule) {
+			continue
+		}
+		filtered = append(filtered, svc)
+	}
+
+	if len(filtered) == 0 && format != FormatJSON {
+		if inModule != "" {
+			fmt.Fprintf(output, "No business event services found in module %s\n", inModule)
+		} else {
+			fmt.Fprintln(output, "No business event services found")
+		}
+		return nil
+	}
+
+	type row struct {
+		module, qualifiedName, name            string
+		msgCount, publishCount, subscribeCount int
+	}
+	var rows []row
+
+	for _, svc := range filtered {
+		modID := h.FindModuleID(svc.ContainerID)
+		moduleName := h.GetModuleName(modID)
+		qn := moduleName + "." + svc.Name
+		r := row{module: moduleName, qualifiedName: qn, name: svc.Name}
+
+		if svc.Definition != nil {
+			for _, ch := range svc.Definition.Channels {
+				r.msgCount += len(ch.Messages)
+			}
+		}
+		for _, op := range svc.OperationImplementations {
+			switch op.Operation {
+			case "publish":
+				r.publishCount++
+			case "subscribe":
+				r.subscribeCount++
+			}
+		}
+
+		rows = append(rows, r)
+	}
+
+	result := &TableResult{
+		Columns: []string{"Module", "QualifiedName", "Service", "Messages", "Publish", "Subscribe"},
+		Summary: fmt.Sprintf("(%d business event services)", len(filtered)),
+	}
+	for _, r := range rows {
+		result.Rows = append(result.Rows, []any{r.module, r.qualifiedName, r.name, r.msgCount, r.publishCount, r.subscribeCount})
+	}
+	return writeResultTo(output, format, result)
+}
+
+// listBusinessEventClientsFuture is the ExecContext-free stub version of listBusinessEventClients.
+func listBusinessEventClientsFuture(ctx context.Context, output io.Writer) error {
+	fmt.Fprintln(output, "Business event clients are not yet implemented.")
+	return nil
+}
+
+// listBusinessEventsFuture is the ExecContext-free version of listBusinessEvents.
+func listBusinessEventsFuture(
+	ctx context.Context,
+	output io.Writer,
+	format OutputFormat,
+	cm backend.ConnectionManager,
+	ml backend.ModuleLister,
+	mr backend.MetadataReader,
+	fm backend.FolderManager,
+	beBackend backend.BusinessEventBackend,
+	inModule string,
+) error {
+	if cm == nil || !cm.IsConnected() {
+		return mdlerrors.NewNotConnected()
+	}
+
+	services, err := beBackend.ListBusinessEventServices()
+	if err != nil {
+		return mdlerrors.NewBackend("list business event services", err)
+	}
+
+	h, err := NewContainerHierarchyFromRoles(ml, mr, fm)
+	if err != nil {
+		return mdlerrors.NewBackend("build hierarchy", err)
+	}
+
+	type row struct {
+		service, message, operation, entity string
+		attrs                               int
+	}
+	var rows []row
+
+	for _, svc := range services {
+		modID := h.FindModuleID(svc.ContainerID)
+		moduleName := h.GetModuleName(modID)
+		if inModule != "" && !strings.EqualFold(moduleName, inModule) {
+			continue
+		}
+
+		svcQN := moduleName + "." + svc.Name
+
+		opMap := make(map[string]*model.ServiceOperation)
+		for _, op := range svc.OperationImplementations {
+			opMap[op.MessageName] = op
+		}
+
+		if svc.Definition != nil {
+			for _, ch := range svc.Definition.Channels {
+				for _, msg := range ch.Messages {
+					opStr := ""
+					entityStr := ""
+					if op, ok := opMap[msg.MessageName]; ok {
+						opStr = strings.ToUpper(op.Operation)
+						entityStr = op.Entity
+					}
+					rows = append(rows, row{
+						service:   svcQN,
+						message:   msg.MessageName,
+						operation: opStr,
+						entity:    entityStr,
+						attrs:     len(msg.Attributes),
+					})
+				}
+			}
+		}
+	}
+
+	if len(rows) == 0 && format != FormatJSON {
+		if inModule != "" {
+			fmt.Fprintf(output, "No business events found in module %s\n", inModule)
+		} else {
+			fmt.Fprintln(output, "No business events found")
+		}
+		return nil
+	}
+
+	result := &TableResult{
+		Columns: []string{"Service", "Message", "Operation", "Entity", "Attributes"},
+		Summary: fmt.Sprintf("(%d business events)", len(rows)),
+	}
+	for _, r := range rows {
+		result.Rows = append(result.Rows, []any{r.service, r.message, r.operation, r.entity, r.attrs})
+	}
+	return writeResultTo(output, format, result)
+}
