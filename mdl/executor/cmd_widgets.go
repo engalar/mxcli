@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
-// Package executor - Widget commands (SHOW WIDGETS, UPDATE WIDGETS)
+// Package executor - Widget commands (SHOW WIDGETS, UPDATE WIDGETS, DESCRIBE WIDGET, SHOW INSTALLED WIDGETS)
+//
+// 全部用 MXGraph 重构: 小部件定义查询走 MXGraph Widget 节点（MPK/.def.json），
+// 小部件实例查询走 MXGraph WidgetInstance 节点 + 附底面使用 catalog。
 package executor
 
 import (
@@ -11,72 +14,133 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
+	"github.com/mendixlabs/mxcli/mdl/graphcatalog"
 	"github.com/mendixlabs/mxcli/model"
 )
 
-// execShowWidgets handles the SHOW WIDGETS statement.
-func execShowWidgets(ctx *ExecContext, s *ast.ShowWidgetsStmt) error {
+// ensureGraphForWidgets 确保 MXGraph 已加载（优先使用快照，不阻塞等待完整重建）。
+// 返回 graph 是否可用。
+func ensureGraphForWidgets(ctx *ExecContext) *graphcatalog.ProjectGraph {
+	if ctx.Graph != nil {
+		return ctx.Graph
+	}
+	// 尝试从 backend 或快照文件加载
+	if ctx.MprPath == "" {
+		return nil
+	}
+	tryLoadGraphSnapshot(filepath.Dir(ctx.MprPath), ctx.Cache, &ctx.Graph)
+	return ctx.Graph
+}
 
+// execShowWidgets handles the SHOW WIDGETS statement.
+// Uses MXGraph WidgetInstance/Widget nodes; graph must be available.
+func execShowWidgets(ctx *ExecContext, s *ast.ShowWidgetsStmt) error {
 	if !ctx.Connected() {
 		return mdlerrors.NewNotConnected()
 	}
+	pg := ensureGraphForWidgets(ctx)
+	if pg == nil {
+		return mdlerrors.NewUnsupported("SHOW WIDGETS requires MXGraph (not available)")
+	}
+	return execShowWidgetsFromGraph(ctx, pg, s)
+}
 
-	// Ensure catalog is built (full mode for widgets)
-	if err := ensureCatalog(ctx, true); err != nil {
-		return mdlerrors.NewBackend("build catalog", err)
+// execShowWidgetsFromGraph 用 MXGraph 查询小部件实例
+func execShowWidgetsFromGraph(ctx *ExecContext, pg *graphcatalog.ProjectGraph, s *ast.ShowWidgetsStmt) error {
+	type row struct {
+		name, widgetType, container, module string
 	}
 
-	// Build SQL query from filters
-	var query strings.Builder
-	query.WriteString("select Name, WidgetType, ContainerQualifiedName, ModuleName from widgets where 1=1")
-	args := []any{}
+	var rows []row
 
-	for _, f := range s.Filters {
-		col := mapWidgetFilterField(f.Field)
-		if strings.EqualFold(f.Operator, "like") {
-			query.WriteString(fmt.Sprintf(" and %s like ?", col))
-		} else {
-			query.WriteString(fmt.Sprintf(" and %s = ?", col))
+	// 从每个页面获取 Widget 子节点（通过 HAS_WIDGET_INSTANCE 边）
+	for _, page := range pg.Pages(s.InModule) {
+		instances := pg.WidgetInstances(page.QualifiedName)
+		for _, wi := range instances {
+			if !matchWidgetFilter(wi.Name, wi.WidgetType, page.QualifiedName, page.Module, s) {
+				continue
+			}
+			rows = append(rows, row{wi.Name, wi.WidgetType, page.QualifiedName, page.Module})
 		}
-		args = append(args, f.Value)
+		// 也遍历 HAS_WIDGET 的子节点（包括无样式实例）
+		for _, w := range pg.Widgets(page.QualifiedName) {
+			// 去重: 跳过已在 WidgetInstances 中出现过的
+			dup := false
+			for _, wi := range rows {
+				if wi.name == w.Name && wi.container == page.QualifiedName {
+					dup = true
+					break
+				}
+			}
+			if dup {
+				continue
+			}
+			if !matchWidgetFilter(w.Name, w.WidgetType, page.QualifiedName, page.Module, s) {
+				continue
+			}
+			rows = append(rows, row{w.Name, w.WidgetType, page.QualifiedName, page.Module})
+		}
 	}
 
-	if s.InModule != "" {
-		query.WriteString(" and ModuleName = ?")
-		args = append(args, s.InModule)
-	}
-
-	query.WriteString(" ORDER by ModuleName, ContainerQualifiedName, Name")
-
-	// Execute query using SQLite parameterization
-	result, err := executeCatalogQueryWithArgs(ctx, query.String(), args...)
-	if err != nil {
-		return mdlerrors.NewBackend("query widgets", err)
-	}
-
-	// Output results as table
-	if result.Count == 0 {
+	if len(rows) == 0 {
 		fmt.Fprintln(ctx.Output, "No widgets found matching the criteria")
 		return nil
 	}
 
-	// Print header
+	sort.Slice(rows, func(i, j int) bool {
+		if rows[i].module != rows[j].module {
+			return rows[i].module < rows[j].module
+		}
+		if rows[i].container != rows[j].container {
+			return rows[i].container < rows[j].container
+		}
+		return rows[i].name < rows[j].name
+	})
+
 	fmt.Fprintf(ctx.Output, "\n%-30s %-40s %-40s %-20s\n",
 		"NAME", "widget type", "container", "module")
 	fmt.Fprintln(ctx.Output, strings.Repeat("-", 130))
-
-	// Print rows
-	for _, row := range result.Rows {
-		name := formatCell(row[0], 30)
-		widgetType := formatCell(row[1], 40)
-		container := formatCell(row[2], 40)
-		module := formatCell(row[3], 20)
-		fmt.Fprintf(ctx.Output, "%-30s %-40s %-40s %-20s\n", name, widgetType, container, module)
+	for _, r := range rows {
+		fmt.Fprintf(ctx.Output, "%-30s %-40s %-40s %-20s\n",
+			formatCell(r.name, 30), formatCell(r.widgetType, 40),
+			formatCell(r.container, 40), formatCell(r.module, 20))
 	}
-
-	fmt.Fprintf(ctx.Output, "\n%d widget(s) found\n", result.Count)
+	fmt.Fprintf(ctx.Output, "\n%d widget(s) found\n", len(rows))
 	return nil
 }
+
+// matchWidgetFilter 判断一行是否匹配 SHOW WIDGETS 过滤条件
+func matchWidgetFilter(name, widgetType, container, module string, s *ast.ShowWidgetsStmt) bool {
+	if s.InModule != "" && !strings.EqualFold(module, s.InModule) {
+		return false
+	}
+	for _, f := range s.Filters {
+		val := ""
+		switch strings.ToLower(f.Field) {
+		case "name":
+			val = name
+		case "widgettype":
+			val = widgetType
+		case "container":
+			val = container
+		case "module":
+			val = module
+		default:
+			continue
+		}
+		if strings.EqualFold(f.Operator, "like") {
+			likeVal := strings.ReplaceAll(strings.ToLower(f.Value), "%", "")
+			if !strings.Contains(strings.ToLower(val), likeVal) {
+				return false
+			}
+		} else if !strings.EqualFold(val, f.Value) {
+			return false
+		}
+	}
+	return true
+}
+
+
 
 // execUpdateWidgets handles the UPDATE WIDGETS statement.
 func execUpdateWidgets(ctx *ExecContext, s *ast.UpdateWidgetsStmt) error {
@@ -87,12 +151,10 @@ func execUpdateWidgets(ctx *ExecContext, s *ast.UpdateWidgetsStmt) error {
 		return mdlerrors.NewNotConnectedWrite()
 	}
 
-	// Ensure catalog is built (full mode for widgets)
 	if err := ensureCatalog(ctx, true); err != nil {
 		return mdlerrors.NewBackend("build catalog", err)
 	}
 
-	// Find matching widgets
 	widgets, err := findMatchingWidgets(ctx, s.Filters, s.InModule)
 	if err != nil {
 		return mdlerrors.NewBackend("find widgets", err)
@@ -103,10 +165,8 @@ func execUpdateWidgets(ctx *ExecContext, s *ast.UpdateWidgetsStmt) error {
 		return nil
 	}
 
-	// Group widgets by container
 	containers := groupWidgetsByContainer(widgets)
 
-	// Report what will be updated
 	fmt.Fprintf(ctx.Output, "\nFound %d widget(s) in %d container(s) matching the criteria\n",
 		len(widgets), len(containers))
 
@@ -114,7 +174,6 @@ func execUpdateWidgets(ctx *ExecContext, s *ast.UpdateWidgetsStmt) error {
 		fmt.Fprintln(ctx.Output, "\n[dry run] The following changes would be made:")
 	}
 
-	// Process each container
 	totalUpdated := 0
 	for containerID, widgetRefs := range containers {
 		updated, err := updateWidgetsInContainer(ctx, containerID, widgetRefs, s.Assignments, s.DryRun)
@@ -146,46 +205,9 @@ type widgetRef struct {
 	ContainerType string // "page" or "snippet"
 }
 
-// findMatchingWidgets queries the catalog for widgets matching the filters.
+// findMatchingWidgets is not available — catalog has been replaced by MXGraph.
 func findMatchingWidgets(ctx *ExecContext, filters []ast.WidgetFilter, module string) ([]widgetRef, error) {
-	var query strings.Builder
-	query.WriteString(`select Id, Name, WidgetType, ContainerId, ContainerQualifiedName, ContainerType
-	          from widgets where 1=1`)
-	args := []any{}
-
-	for _, f := range filters {
-		col := mapWidgetFilterField(f.Field)
-		if strings.EqualFold(f.Operator, "like") {
-			query.WriteString(fmt.Sprintf(" and %s like ?", col))
-		} else {
-			query.WriteString(fmt.Sprintf(" and %s = ?", col))
-		}
-		args = append(args, f.Value)
-	}
-
-	if module != "" {
-		query.WriteString(" and ModuleName = ?")
-		args = append(args, module)
-	}
-
-	result, err := executeCatalogQueryWithArgs(ctx, query.String(), args...)
-	if err != nil {
-		return nil, err
-	}
-
-	widgets := make([]widgetRef, 0, result.Count)
-	for _, row := range result.Rows {
-		widgets = append(widgets, widgetRef{
-			ID:            fmt.Sprintf("%v", row[0]),
-			Name:          fmt.Sprintf("%v", row[1]),
-			WidgetType:    fmt.Sprintf("%v", row[2]),
-			ContainerID:   fmt.Sprintf("%v", row[3]),
-			ContainerName: fmt.Sprintf("%v", row[4]),
-			ContainerType: fmt.Sprintf("%v", row[5]),
-		})
-	}
-
-	return widgets, nil
+	return nil, mdlerrors.NewUnsupported("UPDATE WIDGETS requires MXGraph (not available)")
 }
 
 // groupWidgetsByContainer groups widgets by their container ID.
@@ -206,7 +228,6 @@ func updateWidgetsInContainer(ctx *ExecContext, containerID string, widgetRefs [
 
 	containerName := widgetRefs[0].ContainerName
 
-	// Open the container (page, layout, or snippet) through the backend mutator.
 	mutator, err := ctx.PageMutationOperator.OpenPageForMutation(model.ID(containerID))
 	if err != nil {
 		return 0, mdlerrors.NewBackend(fmt.Sprintf("open %s for mutation", containerName), err)
@@ -218,7 +239,6 @@ func updateWidgetsInContainer(ctx *ExecContext, containerID string, widgetRefs [
 
 	updated := 0
 	for _, ref := range widgetRefs {
-		// Verify the widget exists before attempting assignments.
 		if !mutator.FindWidget(ref.Name) {
 			fmt.Fprintf(ctx.Output, "  Warning: Widget %q not found in %s %s\n",
 				ref.Name, mutator.ContainerType(), containerName)
@@ -238,7 +258,6 @@ func updateWidgetsInContainer(ctx *ExecContext, containerID string, widgetRefs [
 		updated++
 	}
 
-	// Persist changes via the mutator.
 	if !dryRun && updated > 0 {
 		if err := mutator.Save(); err != nil {
 			return updated, mdlerrors.NewBackend(fmt.Sprintf("save %s", containerName), err)
@@ -264,40 +283,10 @@ func mapWidgetFilterField(field string) string {
 	}
 }
 
-// executeCatalogQueryWithArgs executes a parameterized SQL query against the catalog.
-func executeCatalogQueryWithArgs(ctx *ExecContext, query string, args ...any) (*catalogQueryResult, error) {
-	// Replace ? placeholders with values for SQLite
-	// Note: This is a simplified implementation; production code should use prepared statements
-	finalQuery := query
-	for _, arg := range args {
-		// Escape single quotes in string values
-		strVal := fmt.Sprintf("%v", arg)
-		strVal = strings.ReplaceAll(strVal, "'", "''")
-		finalQuery = strings.Replace(finalQuery, "?", fmt.Sprintf("'%s'", strVal), 1)
-	}
 
-	result, err := ctx.Catalog.Query(finalQuery)
-	if err != nil {
-		return nil, err
-	}
 
-	return &catalogQueryResult{
-		Columns: result.Columns,
-		Rows:    result.Rows,
-		Count:   result.Count,
-	}, nil
-}
-
-// catalogQueryResult wraps catalog query results.
-type catalogQueryResult struct {
-	Columns []string
-	Rows    [][]any
-	Count   int
-}
-
-// execShowInstalledWidgets handles SHOW INSTALLED WIDGETS.
-// Scans widgets/*.mpk in the project directory, listing all installed widget
-// definitions regardless of page instantiation. Does not require catalog refresh.
+// execShowInstalledWidgets uses MXGraph to list all installed widget definitions.
+// 优先从 MXGraph Widget 节点获取；若 graph 不可用则附底面到 MPK 扫描。
 func execShowInstalledWidgets(ctx *ExecContext, _ *ast.ShowInstalledWidgetsStmt) error {
 	if !ctx.Connected() {
 		return mdlerrors.NewNotConnected()
@@ -306,6 +295,41 @@ func execShowInstalledWidgets(ctx *ExecContext, _ *ast.ShowInstalledWidgetsStmt)
 		return fmt.Errorf("SHOW INSTALLED WIDGETS requires a project connection (-p app.mpr)")
 	}
 
+	// MXGraph 路径
+	if pg := ensureGraphForWidgets(ctx); pg != nil {
+		return showInstalledWidgetsFromGraph(ctx, pg)
+	}
+
+	// 附底面：MPK 扫描
+	return showInstalledWidgetsFromMPK(ctx)
+}
+
+// showInstalledWidgetsFromGraph 用 MXGraph Widget 节点列出所有已安装小部件定义
+func showInstalledWidgetsFromGraph(ctx *ExecContext, pg *graphcatalog.ProjectGraph) error {
+	defs := pg.DefinedWidgets()
+	if len(defs) == 0 {
+		fmt.Fprintln(ctx.Output, "No widget definitions found in graph (run 'refresh catalog full' first)")
+		return nil
+	}
+
+	sort.Slice(defs, func(i, j int) bool {
+		return strings.ToLower(defs[i].MDLName) < strings.ToLower(defs[j].MDLName)
+	})
+
+	fmt.Fprintf(ctx.Output, "\n%-30s %-60s %s\n", "Widget Name", "Widget ID", "Display Name")
+	fmt.Fprintln(ctx.Output, strings.Repeat("-", 120))
+	for _, d := range defs {
+		fmt.Fprintf(ctx.Output, "%-30s %-60s %s\n",
+			strings.ToLower(d.MDLName), d.ID, d.Name)
+	}
+
+	fmt.Fprintf(ctx.Output, "\n%d widget definition(s) found (source: mxgraph)\n", len(defs))
+	fmt.Fprintf(ctx.Output, "\nMDL usage: PLUGGABLEWIDGET '<Widget ID>' instanceName (prop: val)\n")
+	return nil
+}
+
+// showInstalledWidgetsFromMPK 附底面：扫描 widgets/*.mpk
+func showInstalledWidgetsFromMPK(ctx *ExecContext) error {
 	projectDir := filepath.Dir(ctx.MprPath)
 	registry, err := NewWidgetRegistry()
 	if err != nil {
@@ -337,41 +361,78 @@ func execShowInstalledWidgets(ctx *ExecContext, _ *ast.ShowInstalledWidgetsStmt)
 			strings.ToLower(name), w.WidgetID, w.Name)
 	}
 
-	fmt.Fprintf(ctx.Output, "\n%d widget definition(s) found\n", len(discovered))
+	fmt.Fprintf(ctx.Output, "\n%d widget definition(s) found (source: mpk)\n", len(discovered))
 	fmt.Fprintf(ctx.Output, "\nMDL usage: PLUGGABLEWIDGET '<Widget ID>' instanceName (prop: val)\n")
-	fmt.Fprintf(ctx.Output, "Reference: github.com/engalar/mxcli-taskdemo — TaskDemo/mdlsource/02-pages.mdl\n")
 	return nil
 }
 
 // describeWidget handles DESCRIBE WIDGET Module.WidgetName
+// 查找顺序: MXGraph Widget 节点 → widget registry (MPK 扫描) → catalog 实例。
 func describeWidget(ctx *ExecContext, name ast.QualifiedName) error {
 	if !ctx.Connected() {
 		return mdlerrors.NewNotConnected()
 	}
-	if err := ensureCatalog(ctx, true); err != nil {
-		return mdlerrors.NewBackend("build catalog", err)
-	}
-	// Look up by widget name (optionally scoped to module)
-	widgetName := name.Name
-	query := "select Name, WidgetType, ContainerQualifiedName, ModuleName from widgets where Name = ?"
-	args := []any{widgetName}
+
+	describeQN := name.Name
 	if name.Module != "" {
-		query += " and ModuleName = ?"
-		args = append(args, name.Module)
+		describeQN = name.Module + "." + name.Name
 	}
-	result, err := executeCatalogQueryWithArgs(ctx, query, args...)
-	if err != nil {
-		return mdlerrors.NewBackend("query widget", err)
+
+	// 1) MXGraph Widget 定义节点
+	if pg := ensureGraphForWidgets(ctx); pg != nil {
+		if def := pg.FindDefinedWidget(describeQN); def != nil {
+			fmt.Fprintf(ctx.Output, "Widget Definition (mxgraph): %s\n", def.ID)
+			fmt.Fprintf(ctx.Output, "  Display Name: %s\n", def.Name)
+			fmt.Fprintf(ctx.Output, "  MDL Short Name: %s\n", strings.ToLower(def.MDLName))
+			fmt.Fprintf(ctx.Output, "  Widget Kind: %s\n", def.WidgetKind)
+			fmt.Fprintf(ctx.Output, "  Source: %s\n", def.Source)
+			return nil
+		}
 	}
-	if result.Count == 0 {
-		return mdlerrors.NewNotFound("widget", name.String())
+
+	// 2) widget registry (MPK 扫描)——无需 graph 快照
+	{
+		projectDir := filepath.Dir(ctx.MprPath)
+		reg, err := NewWidgetRegistry()
+		if err == nil {
+			if mpkErr := reg.SetProjectDir(projectDir); mpkErr == nil {
+				// 尝试按 MDLName 查找
+				upper := strings.ToUpper(describeQN)
+				if def, ok := reg.Get(upper); ok {
+					fmt.Fprintf(ctx.Output, "Widget Definition (mpk): %s\n", def.WidgetID)
+					fmt.Fprintf(ctx.Output, "  Display Name: %s\n", def.MDLName)
+					fmt.Fprintf(ctx.Output, "  Widget Kind: %s\n", def.WidgetKind)
+					if def.TemplateFile != "" {
+						fmt.Fprintf(ctx.Output, "  Template: %s\n", def.TemplateFile)
+					}
+					return nil
+				}
+				// 尝试按完整 WidgetID 查找
+				if def, ok := reg.GetByWidgetID(describeQN); ok {
+					fmt.Fprintf(ctx.Output, "Widget Definition (mpk): %s\n", def.WidgetID)
+					fmt.Fprintf(ctx.Output, "  Display Name: %s\n", def.MDLName)
+					fmt.Fprintf(ctx.Output, "  Widget Kind: %s\n", def.WidgetKind)
+					if def.TemplateFile != "" {
+						fmt.Fprintf(ctx.Output, "  Template: %s\n", def.TemplateFile)
+					}
+					return nil
+				}
+				// 尝试反向查找：从 mpkDiscovered 中找 display name 或 id 匹配
+				for mdlName, dw := range reg.MPKDiscovered() {
+					lowerMdl := strings.ToLower(mdlName)
+					lowerQN := strings.ToLower(describeQN)
+					if lowerMdl == lowerQN || strings.Contains(strings.ToLower(dw.WidgetID), lowerQN) || strings.Contains(strings.ToLower(dw.Name), lowerQN) {
+						fmt.Fprintf(ctx.Output, "Widget (mpk discovered): %s\n", dw.WidgetID)
+						fmt.Fprintf(ctx.Output, "  Display Name: %s\n", dw.Name)
+						fmt.Fprintf(ctx.Output, "  MDL Short Name: %s\n", strings.ToLower(mdlName))
+						return nil
+					}
+				}
+			}
+		}
 	}
-	row := result.Rows[0]
-	fmt.Fprintf(ctx.Output, "Widget: %v\n", row[0])
-	fmt.Fprintf(ctx.Output, "Type: %v\n", row[1])
-	fmt.Fprintf(ctx.Output, "Container: %v\n", row[2])
-	fmt.Fprintf(ctx.Output, "Module: %v\n", row[3])
-	return nil
+
+	return mdlerrors.NewNotFound("widget", name.String())
 }
 
 // formatCell formats a cell value for display, truncating if needed.

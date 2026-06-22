@@ -216,9 +216,9 @@ func TestExecShowStructureGen_Depth2_ContainsJavaAction(t *testing.T) {
 		t.Fatalf("execShowStructureGen depth=2: %v", err)
 	}
 	output := out.String()
-	// Depth=2 renders java actions as a per-module summary line "Java Actions: N".
-	if !strings.Contains(output, "Java Actions:") {
-		t.Errorf("expected 'Java Actions:' summary in depth=2 output, got:\n%s", output)
+	// Depth=2 renders java actions as individual "JavaAction" lines.
+	if !strings.Contains(output, "JavaAction ") {
+		t.Errorf("expected 'JavaAction' lines in depth=2 output, got:\n%s", output)
 	}
 }
 

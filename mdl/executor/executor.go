@@ -10,12 +10,10 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
-	"sync"
 	"time"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	"github.com/mendixlabs/mxcli/mdl/backend"
-	"github.com/mendixlabs/mxcli/mdl/catalog"
 	"github.com/mendixlabs/mxcli/mdl/diaglog"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 	"github.com/mendixlabs/mxcli/mdl/graphcatalog"
@@ -327,17 +325,14 @@ type Executor struct {
 	mprPath        string
 	settings       map[string]any
 	cache          *executorCache
-	catalog        *catalog.Catalog
-	graphCatalog   *graphcatalog.ProjectGraph         // in-memory project graph (lazy build) for code-search + lint
-	quiet          bool                               // suppress connection and status messages
-	format         OutputFormat                       // output format (table, json)
-	logger         *diaglog.Logger                    // session diagnostics logger (nil = no logging)
+	graphCatalog   *graphcatalog.ProjectGraph // in-memory project graph (lazy build) for code-search + lint
+	quiet          bool                       // suppress connection and status messages
+	format         OutputFormat               // output format (table, json)
+	logger         *diaglog.Logger            // session diagnostics logger (nil = no logging)
 	fragments      map[string]*ast.DefineFragmentStmt // script-scoped fragment definitions
-	sqlMgr         *sqllib.Manager                    // external SQL connection manager (lazy init)
-	themeRegistry  *ThemeRegistry                     // cached theme design property definitions (lazy init)
-	registry       *Registry                          // statement dispatch registry
-	catalogMu      sync.RWMutex                       // protects catalog field from background goroutine writes
-	catalogGen     uint64                             // monotonic generation counter for catalog swaps
+	sqlMgr         *sqllib.Manager            // external SQL connection manager (lazy init)
+	themeRegistry  *ThemeRegistry             // cached theme design property definitions (lazy init)
+	registry       *Registry                  // statement dispatch registry
 
 	// perfStats accumulates per-statement execution timing so the
 	// caller can print a summary when the script finishes.
@@ -395,6 +390,34 @@ func (e *Executor) SetFormat(f OutputFormat) {
 // SetLogger sets the diagnostics logger for session logging.
 func (e *Executor) SetLogger(l *diaglog.Logger) {
 	e.logger = l
+}
+
+// formatDuration formats a duration in a human-readable way.
+func formatDuration(d time.Duration) string {
+	if d < time.Microsecond {
+		return fmt.Sprintf("%dns", d.Nanoseconds())
+	}
+	if d < time.Millisecond {
+		return fmt.Sprintf("%dµs", d.Microseconds())
+	}
+	if d < time.Second {
+		return fmt.Sprintf("%dms", d.Milliseconds())
+	}
+	if d < time.Minute {
+		s := d.Seconds()
+		return fmt.Sprintf("%.2fs", s)
+	}
+	m := int(d.Minutes())
+	s := int(d.Seconds()) % 60
+	if s == 0 {
+		return fmt.Sprintf("%dm", m)
+	}
+	return fmt.Sprintf("%d:%02d", m, s)
+}
+
+// FormatDuration is the exported equivalent of formatDuration.
+func FormatDuration(d time.Duration) string {
+	return formatDuration(d)
 }
 
 // PerfReport returns a human-readable performance report of all
@@ -584,14 +607,6 @@ func (e *Executor) finalizeProgramExecution() error {
 	return nil
 }
 
-// Catalog returns the catalog, or nil if not built.
-func (e *Executor) Catalog() *catalog.Catalog {
-	e.catalogMu.RLock()
-	c := e.catalog
-	e.catalogMu.RUnlock()
-	return c
-}
-
 // Graph returns the in-memory project graph, or nil if not built.
 func (e *Executor) Graph() *graphcatalog.ProjectGraph {
 	return e.graphCatalog
@@ -606,6 +621,18 @@ func (e *Executor) BuildGraph() (*graphcatalog.ProjectGraph, error) {
 	}
 	e.syncBack(ctx)
 	return e.graphCatalog, nil
+}
+
+// ModuleOverview builds the module overview as JSON.
+func (e *Executor) ModuleOverview() error {
+	ctx := e.newExecContext(context.Background())
+	return ModuleOverview(ctx)
+}
+
+// Search executes a SEARCH query with the given format.
+// Any non-empty format enables JSON output; the SEARCH text is returned directly.
+func (e *Executor) Search(query, format string) error {
+	return fmt.Errorf("SEARCH command is not available in batch mode; use mxcli exec with SEARCH statement")
 }
 
 // IsConnected returns true if connected to a project.
@@ -760,7 +787,6 @@ type ExecConnection struct {
 	BackendFactory BackendFactory
 	SqlMgr         *sqllib.Manager
 	ThemeRegistry  *ThemeRegistry
-	Catalog        *catalog.Catalog
 	// Graph is the in-memory project graph. *ProjectGraph implements both
 	// graphcatalog.TraversalReader (executor code-search) and LintReader
 	// (linter), so a single concrete-typed field serves both consumers.
@@ -774,7 +800,6 @@ type ExecCallbacks struct {
 	ExecuteFn        func(ast.Statement) error
 	ExecuteProgramFn func(*ast.Program) error
 	FinalizeFn       func() error
-	SyncCatalog      func(*catalog.Catalog)
 	SyncGraph        func(*graphcatalog.ProjectGraph)
 }
 
@@ -1161,15 +1186,6 @@ func setDomainModelGenCached(ctx *ExecContext, moduleID model.ID, dm *genDm.Doma
 		ctx.Cache.domainModelByModule = make(map[model.ID]*genDm.DomainModel)
 	}
 	ctx.Cache.domainModelByModule[moduleID] = dm
-}
-
-// CatalogReader returns ctx.Backend as a catalog reader.
-// FullBackend implements CatalogReader via BackendFactory embedding.
-func (ctx *ExecContext) CatalogReader() catalog.CatalogReader {
-	if ctx.Backend == nil {
-		return nil
-	}
-	return ctx.Backend
 }
 
 // LintReader returns ctx.Backend as a lint reader.

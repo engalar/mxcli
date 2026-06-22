@@ -75,12 +75,22 @@ type RoleMappingNode struct {
 	ModuleRole string
 }
 
-// WidgetNode 对应 label="Widget"。
+// WidgetNode 对应 label="Widget"（页面上的 widget 实例）。
 type WidgetNode struct {
 	ID         string
 	WidgetType string
 	Name       string
 	PageID     string
+}
+
+// WidgetDefinitionNode 对应 label="Widget"（来自 MPK/.def.json 的定义）。
+// NodeID 就是 WidgetID。
+type WidgetDefinitionNode struct {
+	ID         string // WidgetID
+	MDLName    string // 大写短名称（用于 SHOW INSTALLED WIDGETS 的 "Widget Name" 列）
+	Name       string // 显示名称
+	WidgetKind string // "pluggable" | "custom"
+	Source     string // "mpk" | "def.json"
 }
 
 // DatabaseConnectionNode 对应 label="DatabaseConnection"。

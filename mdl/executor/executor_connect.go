@@ -49,9 +49,8 @@ func execConnect(ctx *ExecContext, s *ast.ConnectStmt) error {
 		}
 	}
 
-	// Reset project-scoped caches — previous project's catalog and theme
-	// registry are invalid for the new connection.
-	ctx.Catalog = nil
+	// Reset project-scoped caches — previous project's theme
+	// registry is invalid for the new connection.
 	ctx.ThemeRegistry = nil
 
 	// Display connection info with version.
@@ -102,7 +101,6 @@ func reconnect(ctx *ExecContext) error {
 	ctx.Cache = &executorCache{} // Reset cache
 
 	// Reset project-scoped caches — file may have changed externally.
-	ctx.Catalog = nil
 	ctx.ThemeRegistry = nil
 
 	return nil

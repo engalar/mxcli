@@ -84,29 +84,20 @@ type structureModule struct {
 
 // getStructureModules returns filtered and sorted modules for structure output.
 func getStructureModules(ctx *ExecContext, filterModule string, includeAll bool) ([]structureModule, error) {
-	result, err := ctx.Catalog.Query("select Id, Name, Source, AppStoreGuid from modules ORDER by Name")
+	mods, err := ctx.ModuleLister.ListModules()
 	if err != nil {
-		return nil, mdlerrors.NewBackend("query modules", err)
+		return nil, mdlerrors.NewBackend("list modules", err)
 	}
 
 	var modules []structureModule
-	for _, row := range result.Rows {
-		id := asString(row[0])
-		name := asString(row[1])
-		source := asString(row[2])
-		appStoreGuid := asString(row[3])
-
-		// Filter by module name if specified
-		if filterModule != "" && !strings.EqualFold(name, filterModule) {
+	for _, m := range mods {
+		if filterModule != "" && !strings.EqualFold(m.Name, filterModule) {
 			continue
 		}
-
-		// Skip system/marketplace modules unless --all
-		if !includeAll && !isUserModule(name, source, appStoreGuid) {
+		if !includeAll && !isUserModule(m.Name, "", "") {
 			continue
 		}
-
-		modules = append(modules, structureModule{Name: name, ID: model.ID(id)})
+		modules = append(modules, structureModule{Name: m.Name, ID: m.ID})
 	}
 
 	sort.Slice(modules, func(i, j int) bool {
@@ -227,19 +218,10 @@ func structureDepth1(ctx *ExecContext, modules []structureModule) error {
 	return nil
 }
 
-// queryCountByModule queries a catalog table and returns a map of module name → count.
+// queryCountByModule is a no-op — catalog has been replaced by MXGraph.
+// Use countByModuleViaBackend for backend-based counting.
 func queryCountByModule(ctx *ExecContext, tableAndWhere string) map[string]int {
-	counts := make(map[string]int)
-	sql := fmt.Sprintf("select ModuleName, count(*) from %s GROUP by ModuleName", tableAndWhere)
-	result, err := ctx.Catalog.Query(sql)
-	if err != nil {
-		return counts
-	}
-	for _, row := range result.Rows {
-		name := asString(row[0])
-		counts[name] = toInt(row[1])
-	}
-	return counts
+	return make(map[string]int)
 }
 
 // countByModuleFromBackend counts elements per module using the backend (for types without catalog tables).
@@ -283,67 +265,43 @@ func pluralize(count int, singular, plural string) string {
 // Shared Element Formatters
 // ============================================================================
 
-// structurePages outputs pages for a module from the catalog.
+// structurePages outputs pages for a module via backend.
 func structurePages(ctx *ExecContext, moduleName string) {
-	// Query pages from catalog
-	result, err := ctx.Catalog.Query(fmt.Sprintf(
-		"select Name from pages where ModuleName = '%s' ORDER by Name",
-		escapeSQLString(moduleName)))
-	if err != nil || len(result.Rows) == 0 {
+	if ctx.Pages == nil {
 		return
 	}
-
-	// Try to get top-level data widgets from widgets table
-	widgetsByPage := make(map[string][]string)
-	widgetResult, err := ctx.Catalog.Query(fmt.Sprintf(
-		"select ContainerQualifiedName, WidgetType, EntityRef from widgets where ModuleName = '%s' and ParentWidget = '' ORDER by ContainerQualifiedName, WidgetType",
-		escapeSQLString(moduleName)))
-	if err == nil {
-		for _, row := range widgetResult.Rows {
-			pageName := asString(row[0])
-			widgetType := asString(row[1])
-			entityRef := asString(row[2])
-
-			// Only include data-bound widgets
-			if !isDataWidget(widgetType) {
-				continue
-			}
-
-			// Extract short widget type name
-			shortType := shortWidgetType(widgetType)
-			if entityRef != "" {
-				// Extract entity name from qualified name
-				shortEntity := shortName(entityRef)
-				widgetsByPage[pageName] = append(widgetsByPage[pageName], fmt.Sprintf("%s<%s>", shortType, shortEntity))
-			} else {
-				widgetsByPage[pageName] = append(widgetsByPage[pageName], shortType)
-			}
-		}
+	pages, err := ctx.Pages.ListAll()
+	if err != nil {
+		return
 	}
-
-	for _, row := range result.Rows {
-		name := asString(row[0])
-		qualName := moduleName + "." + name
-		if widgets, ok := widgetsByPage[qualName]; ok && len(widgets) > 0 {
-			fmt.Fprintf(ctx.Output, "  Page %s [%s]\n", qualName, strings.Join(widgets, ", "))
-		} else {
-			fmt.Fprintf(ctx.Output, "  Page %s\n", qualName)
+	for _, p := range pages {
+		if p == nil {
+			continue
+		}
+		modName := findModuleNameByContainer(ctx, model.ID(p.ID()))
+		if modName == moduleName {
+			fmt.Fprintf(ctx.Output, "  Page %s.%s\n", moduleName, p.Name())
 		}
 	}
 }
 
-// structureSnippets outputs snippets for a module from the catalog.
+// structureSnippets outputs snippets for a module via backend.
 func structureSnippets(ctx *ExecContext, moduleName string) {
-	result, err := ctx.Catalog.Query(fmt.Sprintf(
-		"select Name from snippets where ModuleName = '%s' ORDER by Name",
-		escapeSQLString(moduleName)))
-	if err != nil || len(result.Rows) == 0 {
+	if ctx.Snippets == nil {
 		return
 	}
-
-	for _, row := range result.Rows {
-		name := asString(row[0])
-		fmt.Fprintf(ctx.Output, "  Snippet %s.%s\n", moduleName, name)
+	snippets, err := ctx.Snippets.ListAll()
+	if err != nil {
+		return
+	}
+	for _, s := range snippets {
+		if s == nil {
+			continue
+		}
+		modName := findModuleNameByContainer(ctx, model.ID(s.ID()))
+		if modName == moduleName {
+			fmt.Fprintf(ctx.Output, "  Snippet %s.%s\n", moduleName, s.Name())
+		}
 	}
 }
 
@@ -399,82 +357,19 @@ func formatJavaActionSignatureGen(ja *genJA.JavaAction, withNames bool) string {
 	return sig
 }
 
-// structureODataClients outputs OData clients for a module.
+// structureODataClients outputs OData clients for a module (stub — catalog removed).
 func structureODataClients(ctx *ExecContext, moduleName string) {
-	result, err := ctx.Catalog.Query(fmt.Sprintf(
-		"select Name, ODataVersion from odata_clients where ModuleName = '%s' ORDER by Name",
-		escapeSQLString(moduleName)))
-	if err != nil || len(result.Rows) == 0 {
-		return
-	}
-
-	for _, row := range result.Rows {
-		name := asString(row[0])
-		version := asString(row[1])
-		qualName := moduleName + "." + name
-		if version != "" {
-			fmt.Fprintf(ctx.Output, "  ODataClient %s (%s)\n", qualName, version)
-		} else {
-			fmt.Fprintf(ctx.Output, "  ODataClient %s\n", qualName)
-		}
-	}
+	// OData indexing requires MXGraph adapter; not yet available.
 }
 
-// structureODataServices outputs OData services for a module.
+// structureODataServices outputs OData services for a module (stub — catalog removed).
 func structureODataServices(ctx *ExecContext, moduleName string) {
-	result, err := ctx.Catalog.Query(fmt.Sprintf(
-		"select Name, Path, EntitySetCount from odata_services where ModuleName = '%s' ORDER by Name",
-		escapeSQLString(moduleName)))
-	if err != nil || len(result.Rows) == 0 {
-		return
-	}
-
-	for _, row := range result.Rows {
-		name := asString(row[0])
-		path := asString(row[1])
-		entitySetCount := toInt(row[2])
-		qualName := moduleName + "." + name
-		if path != "" {
-			fmt.Fprintf(ctx.Output, "  ODataService %s %s (%s)\n", qualName, path, pluralize(entitySetCount, "entity", "entities"))
-		} else {
-			fmt.Fprintf(ctx.Output, "  ODataService %s\n", qualName)
-		}
-	}
+	// OData indexing requires MXGraph adapter; not yet available.
 }
 
-// structureBusinessEventServices outputs business event services for a module.
+// structureBusinessEventServices outputs business event services for a module (stub — catalog removed).
 func structureBusinessEventServices(ctx *ExecContext, moduleName string) {
-	result, err := ctx.Catalog.Query(fmt.Sprintf(
-		"select Name, MessageCount, PublishCount, SubscribeCount from business_event_services where ModuleName = '%s' ORDER by Name",
-		escapeSQLString(moduleName)))
-	if err != nil || len(result.Rows) == 0 {
-		return
-	}
-
-	for _, row := range result.Rows {
-		name := asString(row[0])
-		msgCount := toInt(row[1])
-		publishCount := toInt(row[2])
-		subscribeCount := toInt(row[3])
-		qualName := moduleName + "." + name
-
-		var parts []string
-		if msgCount > 0 {
-			parts = append(parts, pluralize(msgCount, "message", "messages"))
-		}
-		if publishCount > 0 {
-			parts = append(parts, pluralize(publishCount, "publish", "publish"))
-		}
-		if subscribeCount > 0 {
-			parts = append(parts, pluralize(subscribeCount, "subscribe", "subscribe"))
-		}
-
-		if len(parts) > 0 {
-			fmt.Fprintf(ctx.Output, "  BusinessEventService %s (%s)\n", qualName, strings.Join(parts, ", "))
-		} else {
-			fmt.Fprintf(ctx.Output, "  BusinessEventService %s\n", qualName)
-		}
-	}
+	// Business event indexing requires MXGraph adapter; not yet available.
 }
 
 // structureWorkflows outputs workflows for a module (gen-typed).

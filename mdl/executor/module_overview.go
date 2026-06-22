@@ -3,19 +3,16 @@
 package executor
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
+	"github.com/mendixlabs/mxcli/model"
 )
 
-// moduleOverviewData is the JSON output schema for the module overview ELK diagram.
 type moduleOverviewData struct {
 	Format  string               `json:"format"`
-	Type    string               `json:"type"`
 	Modules []moduleOverviewNode `json:"modules"`
-	Edges   []moduleOverviewEdge `json:"edges"`
 }
 
 type moduleOverviewNode struct {
@@ -28,85 +25,84 @@ type moduleOverviewNode struct {
 }
 
 type moduleOverviewEdge struct {
-	Source string         `json:"source"`
-	Target string         `json:"target"`
-	Count  int            `json:"count"`
-	Kinds  map[string]int `json:"kinds"`
+	Source   string `json:"source"`
+	Target   string `json:"target"`
+	RefKind  string `json:"refKind"`
+	RefCount int    `json:"refCount"`
 }
 
-// systemModuleNames is the set of well-known system/marketplace modules.
 var systemModuleNames = map[string]bool{
-	"System":               true,
-	"Administration":       true,
-	"Atlas_Core":           true,
-	"Atlas_Web_Content":    true,
-	"Atlas_Native_Content": true,
-	"MxModelReflection":    true,
-	"CommunityCommons":     true,
+	"System":                  true,
+	"Atlas_Core":              true,
+	"Atlas_UI_Resources":      true,
+	"Atlas_Native_Mobile_Content": true,
 }
 
-// ModuleOverview generates a JSON graph of all project modules and their
-// cross-module dependencies, suitable for rendering with ELK.js.
+// ModuleOverview builds the module dependency overview using backend sources.
 func ModuleOverview(ctx *ExecContext) error {
 	if !ctx.Connected() {
 		return mdlerrors.NewNotConnected()
 	}
 
-	// Ensure catalog is built with full mode for refs
-	if err := ensureCatalog(ctx, true); err != nil {
-		return mdlerrors.NewBackend("build catalog", err)
-	}
-
-	// Get all module names
-	moduleResult, err := ctx.Catalog.Query("select Name from modules")
+	modules, err := ctx.ModuleLister.ListModules()
 	if err != nil {
-		return mdlerrors.NewBackend("query modules", err)
+		return mdlerrors.NewBackend("list modules", err)
 	}
 
-	moduleNames := make(map[string]bool)
-	for _, row := range moduleResult.Rows {
-		if name, ok := row[0].(string); ok {
-			moduleNames[name] = true
-		}
+	modNames := make([]string, 0, len(modules))
+	modMap := make(map[string]model.ID)
+	for _, m := range modules {
+		modNames = append(modNames, m.Name)
+		modMap[m.Name] = m.ID
 	}
+	sortStrings(modNames)
 
-	// Get entity counts per module
+	// Count entities via domain models
 	entityCounts := make(map[string]int)
-	result, err := ctx.Catalog.Query("select ModuleName, count(*) from entities GROUP by ModuleName")
-	if err == nil {
-		for _, row := range result.Rows {
-			if name, ok := row[0].(string); ok {
-				entityCounts[name] = toInt(row[1])
+	if dms, err := ctx.DomainModelReader.ListDomainModelsGen(); err == nil {
+		for _, dm := range dms {
+			if dm == nil {
+				continue
+			}
+			modName := findModuleNameByContainer(ctx, model.ID(dm.ID()))
+			if modName != "" {
+				for range dm.EntitiesItems() {
+					entityCounts[modName]++
+				}
 			}
 		}
 	}
 
-	// Get microflow counts per module
+	// Count microflows per module via hierarchy
 	mfCounts := make(map[string]int)
-	result, err = ctx.Catalog.Query("select ModuleName, count(*) from microflows GROUP by ModuleName")
-	if err == nil {
-		for _, row := range result.Rows {
-			if name, ok := row[0].(string); ok {
-				mfCounts[name] = toInt(row[1])
+	if mfs, err := ctx.Microflows.ListAll(); err == nil {
+		for _, mf := range mfs {
+			if mf == nil {
+				continue
+			}
+			modName := findModuleNameByContainer(ctx, model.ID(mf.ID()))
+			if modName != "" {
+				mfCounts[modName]++
 			}
 		}
 	}
 
-	// Get page counts per module
 	pageCounts := make(map[string]int)
-	result, err = ctx.Catalog.Query("select ModuleName, count(*) from pages GROUP by ModuleName")
-	if err == nil {
-		for _, row := range result.Rows {
-			if name, ok := row[0].(string); ok {
-				pageCounts[name] = toInt(row[1])
+	if pages, err := ctx.Pages.ListAll(); err == nil {
+		for _, p := range pages {
+			if p == nil {
+				continue
+			}
+			modName := findModuleNameByContainer(ctx, model.ID(p.ID()))
+			if modName != "" {
+				pageCounts[modName]++
 			}
 		}
 	}
 
-	// Build module nodes
-	var modules []moduleOverviewNode
-	for name := range moduleNames {
-		modules = append(modules, moduleOverviewNode{
+	var nodes []moduleOverviewNode
+	for _, name := range modNames {
+		nodes = append(nodes, moduleOverviewNode{
 			ID:             name,
 			Name:           name,
 			IsSystem:       systemModuleNames[name],
@@ -116,120 +112,21 @@ func ModuleOverview(ctx *ExecContext) error {
 		})
 	}
 
-	// Sort modules alphabetically for deterministic output
-	sortModuleNodes(modules)
-
-	// Query cross-module dependency edges from REFS
-	edgeResult, err := ctx.Catalog.Query(`
-		select
-			SUBSTR(SourceName, 1, INSTR(SourceName, '.') - 1) as SourceModule,
-			SUBSTR(TargetName, 1, INSTR(TargetName, '.') - 1) as TargetModule,
-			RefKind,
-			count(*) as RefCount
-		from refs
-		where INSTR(SourceName, '.') > 0 and INSTR(TargetName, '.') > 0
-		GROUP by SourceModule, TargetModule, RefKind
-		having SourceModule != TargetModule
-	`)
-	if err != nil {
-		return mdlerrors.NewBackend("query refs", err)
-	}
-
-	// Aggregate edges by source/target pair
-	type edgeKey struct {
-		source, target string
-	}
-	edgeMap := make(map[edgeKey]*moduleOverviewEdge)
-	for _, row := range edgeResult.Rows {
-		src, _ := row[0].(string)
-		tgt, _ := row[1].(string)
-		kind, _ := row[2].(string)
-		count := toInt(row[3])
-
-		if src == "" || tgt == "" {
-			continue
-		}
-
-		key := edgeKey{src, tgt}
-		edge, ok := edgeMap[key]
-		if !ok {
-			edge = &moduleOverviewEdge{
-				Source: src,
-				Target: tgt,
-				Kinds:  make(map[string]int),
-			}
-			edgeMap[key] = edge
-		}
-		edge.Kinds[kind] += count
-		edge.Count += count
-	}
-
-	// Collect edges into slice, filtering out edges referencing unknown modules
-	var edges []moduleOverviewEdge
-	for _, edge := range edgeMap {
-		if moduleNames[edge.Source] && moduleNames[edge.Target] {
-			edges = append(edges, *edge)
-		}
-	}
-
-	// Sort edges for deterministic output
-	sortModuleEdges(edges)
-
-	data := moduleOverviewData{
-		Format:  "elk",
-		Type:    "module-overview",
-		Modules: modules,
-		Edges:   edges,
-	}
-
+	data := moduleOverviewData{Format: "module-overview", Modules: nodes}
 	out, err := json.MarshalIndent(data, "", "  ")
 	if err != nil {
-		return mdlerrors.NewBackend("marshal json", err)
+		return fmt.Errorf("encode module overview: %w", err)
 	}
-
-	fmt.Fprint(ctx.Output, string(out))
+	fmt.Fprintln(ctx.Output, string(out))
 	return nil
 }
 
-// toInt converts an interface{} value to int.
-func toInt(v any) int {
-	switch n := v.(type) {
-	case int64:
-		return int(n)
-	case float64:
-		return int(n)
-	case int:
-		return n
-	default:
-		return 0
+// findModuleNameByContainer resolves the module name for an element ID.
+func findModuleNameByContainer(ctx *ExecContext, elemID model.ID) string {
+	h, err := getHierarchy(ctx)
+	if err != nil {
+		return ""
 	}
-}
-
-// sortModuleNodes sorts module nodes alphabetically by name.
-func sortModuleNodes(nodes []moduleOverviewNode) {
-	for i := 0; i < len(nodes)-1; i++ {
-		for j := i + 1; j < len(nodes); j++ {
-			if nodes[i].Name > nodes[j].Name {
-				nodes[i], nodes[j] = nodes[j], nodes[i]
-			}
-		}
-	}
-}
-
-// sortModuleEdges sorts edges by source then target.
-func sortModuleEdges(edges []moduleOverviewEdge) {
-	for i := 0; i < len(edges)-1; i++ {
-		for j := i + 1; j < len(edges); j++ {
-			if edges[i].Source > edges[j].Source ||
-				(edges[i].Source == edges[j].Source && edges[i].Target > edges[j].Target) {
-				edges[i], edges[j] = edges[j], edges[i]
-			}
-		}
-	}
-}
-
-// --- Executor method wrapper for backward compatibility ---
-
-func (e *Executor) ModuleOverview() error {
-	return ModuleOverview(e.newExecContext(context.Background()))
+	modID := h.FindModuleID(elemID)
+	return h.GetModuleName(modID)
 }

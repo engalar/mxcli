@@ -263,6 +263,65 @@ func (pg *ProjectGraph) DatabaseConnections() []DatabaseConnectionNode {
 	return result
 }
 
+// ── WidgetDefinitionReader ────────────────────────────────────
+
+// DefinedWidgets 返回所有 Widget 定义节点（来自 MPK/.def.json 的 label="Widget"）。
+func (pg *ProjectGraph) DefinedWidgets() []WidgetDefinitionNode {
+	nodes := pg.g().FindNodes("Widget", nil)
+	result := make([]WidgetDefinitionNode, 0, len(nodes))
+	for _, n := range nodes {
+		result = append(result, WidgetDefinitionNode{
+			ID:         strProp(n, "WidgetID"),
+			MDLName:    strProp(n, "MDLName"),
+			Name:       strProp(n, "Name"),
+			WidgetKind: strProp(n, "WidgetKind"),
+			Source:     strProp(n, "Source"),
+		})
+	}
+	return result
+}
+
+// FindDefinedWidget 按 WidgetID 或 MDLName 查找单个 Widget 定义。
+func (pg *ProjectGraph) FindDefinedWidget(idOrName string) *WidgetDefinitionNode {
+	// 先按 WidgetID 精确匹配
+	nodes := pg.g().FindNodes("Widget", map[string]any{"WidgetID": idOrName})
+	if len(nodes) > 0 {
+		n := nodes[0]
+		return &WidgetDefinitionNode{
+			ID:         strProp(n, "WidgetID"),
+			MDLName:    strProp(n, "MDLName"),
+			Name:       strProp(n, "Name"),
+			WidgetKind: strProp(n, "WidgetKind"),
+			Source:     strProp(n, "Source"),
+		}
+	}
+	// 再按 MDLName 匹配
+	nodes = pg.g().FindNodes("Widget", map[string]any{"MDLName": strings.ToUpper(idOrName)})
+	if len(nodes) > 0 {
+		n := nodes[0]
+		return &WidgetDefinitionNode{
+			ID:         strProp(n, "WidgetID"),
+			MDLName:    strProp(n, "MDLName"),
+			Name:       strProp(n, "Name"),
+			WidgetKind: strProp(n, "WidgetKind"),
+			Source:     strProp(n, "Source"),
+		}
+	}
+	// 最后按显示 Name 匹配（区分大小写）
+	nodes = pg.g().FindNodes("Widget", map[string]any{"Name": idOrName})
+	if len(nodes) > 0 {
+		n := nodes[0]
+		return &WidgetDefinitionNode{
+			ID:         strProp(n, "WidgetID"),
+			MDLName:    strProp(n, "MDLName"),
+			Name:       strProp(n, "Name"),
+			WidgetKind: strProp(n, "WidgetKind"),
+			Source:     strProp(n, "Source"),
+		}
+	}
+	return nil
+}
+
 // ── TraversalReader ───────────────────────────────────────────
 //
 // 引用边的 To 存的是目标 QualifiedName 字符串。因此查 target 的入边时，直接把

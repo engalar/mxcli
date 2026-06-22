@@ -6,7 +6,6 @@ import (
 	"context"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
-	"github.com/mendixlabs/mxcli/mdl/catalog"
 	"github.com/mendixlabs/mxcli/mdl/graphcatalog"
 )
 
@@ -42,20 +41,6 @@ func (e *Executor) syncBack(ctx *ExecContext) {
 	e.mprPath = ctx.MprPath
 	e.cache = ctx.Cache
 	e.format = ctx.Format
-	e.catalogMu.Lock()
-	old := e.catalog
-	e.catalog = ctx.Catalog
-	if old != ctx.Catalog {
-		e.catalogGen++
-	}
-	e.catalogMu.Unlock()
-	// Close the previously installed catalog whenever ownership moved to a
-	// different catalog value. This includes transitions to nil; otherwise the
-	// previous catalog can leak if a handler clears ctx.Catalog without closing
-	// the old instance itself.
-	if old != nil && old != ctx.Catalog {
-		old.Close()
-	}
 	if ctx.Graph != nil {
 		e.graphCatalog = ctx.Graph
 	}
@@ -67,11 +52,6 @@ func (e *Executor) syncBack(ctx *ExecContext) {
 
 // newExecContext builds an ExecContext from the current Executor state.
 func (e *Executor) newExecContext(ctx context.Context) *ExecContext {
-	e.catalogMu.RLock()
-	cat := e.catalog
-	gen := e.catalogGen
-	e.catalogMu.RUnlock()
-
 	// Ensure cache exists (Connect sets it; direct Executor construction may leave it nil).
 	if e.cache == nil {
 		e.cache = &executorCache{}
@@ -112,7 +92,6 @@ func (e *Executor) newExecContext(ctx context.Context) *ExecContext {
 			MprPath:        e.mprPath,
 			SqlMgr:         e.sqlMgr,
 			ThemeRegistry:  e.themeRegistry,
-			Catalog:        cat,
 			Graph:          e.graphCatalog,
 			BackendFactory: e.backendFactory,
 		},
@@ -122,24 +101,6 @@ func (e *Executor) newExecContext(ctx context.Context) *ExecContext {
 			FinalizeFn:       e.finalizeProgramExecution,
 			SyncGraph: func(pg *graphcatalog.ProjectGraph) {
 				e.graphCatalog = pg
-			},
-			SyncCatalog: func(cat *catalog.Catalog) {
-				e.catalogMu.Lock()
-				defer e.catalogMu.Unlock()
-				// Only apply the background result if no newer catalog has been
-				// installed since the build started (generation check). This
-				// prevents an out-of-date background build from overwriting a
-				// fresher foreground refresh.
-				if e.catalogGen != gen {
-					cat.Close()
-					return
-				}
-				old := e.catalog
-				e.catalog = cat
-				e.catalogGen++
-				if old != nil && old != cat {
-					old.Close()
-				}
 			},
 		},
 	}
