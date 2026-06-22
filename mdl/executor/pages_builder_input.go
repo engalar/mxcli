@@ -218,7 +218,7 @@ func (pb *pageBuilder) resolveSnippetRef(snippetRef string) (model.ID, error) {
 
 	// Fallback: gen-typed backend listing without per-call container resolution.
 	// (snippetsRepo is the preferred path; this branch covers the no-repo case.)
-	snippets, err := pb.backend.ListSnippetsGen()
+	snippets, err := pb.pageReader.ListSnippetsGen()
 	if err != nil {
 		return "", err
 	}
@@ -232,7 +232,7 @@ func (pb *pageBuilder) resolveSnippetRef(snippetRef string) (model.ID, error) {
 		if s == nil {
 			continue
 		}
-		containerID, err := pb.backend.GetPageContainerUUID(model.ID(s.ID()))
+		containerID, err := pb.pageReader.GetPageContainerUUID(model.ID(s.ID()))
 		if err != nil {
 			continue
 		}
@@ -333,7 +333,7 @@ func (pb *pageBuilder) resolvePageRef(pageRef string) (model.ID, error) {
 	}
 
 	for _, p := range pgs {
-		containerID, _ := pb.backend.GetPageContainerUUID(model.ID(p.ID()))
+		containerID, _ := pb.pageReader.GetPageContainerUUID(model.ID(p.ID()))
 		modName := h.GetModuleName(h.FindModuleID(containerID))
 		if p.Name() == pageName && (moduleName == "" || modName == moduleName) {
 			return model.ID(p.ID()), nil

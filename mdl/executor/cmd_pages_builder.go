@@ -27,13 +27,13 @@ import (
 
 // pageBuilder constructs pages from AST.
 type pageBuilder struct {
-	// Deprecated: use role-specific fields below.
-	backend           backend.FullBackend
 	moduleLister      backend.ModuleLister
 	domainModelReader backend.DomainModelReader
 	pageReader        backend.PageReader
+	metadataReader    backend.MetadataReader
 	folderManager     backend.FolderManager
 	connectionManager backend.ConnectionManager
+	serializationBackend backend.WidgetSerializationBackend
 	moduleID          model.ID
 	moduleName        string
 	widgetScope       map[string]model.ID                // widget name -> widget ID
@@ -74,37 +74,12 @@ type pageBuilder struct {
 	mxGraph *mxgraph.Graph // Injected from ExecContext for widget registry fast path
 }
 
-// role helpers — prefer role-specific field, fall back to deprecated backend.
-func (pb *pageBuilder) moduleListerOrBackend() backend.ModuleLister {
-	if pb.moduleLister != nil {
-		return pb.moduleLister
-	}
-	return pb.backend
-}
-func (pb *pageBuilder) dmReaderOrBackend() backend.DomainModelReader {
-	if pb.domainModelReader != nil {
-		return pb.domainModelReader
-	}
-	return pb.backend
-}
-func (pb *pageBuilder) pageReaderOrBackend() backend.PageReader {
-	if pb.pageReader != nil {
-		return pb.pageReader
-	}
-	return pb.backend
-}
-func (pb *pageBuilder) folderMgrOrBackend() backend.FolderManager {
-	if pb.folderManager != nil {
-		return pb.folderManager
-	}
-	return pb.backend
-}
-func (pb *pageBuilder) connMgrOrBackend() backend.ConnectionManager {
-	if pb.connectionManager != nil {
-		return pb.connectionManager
-	}
-	return pb.backend
-}
+// role helpers return the role-specific field (always set when constructed from ExecContext).
+func (pb *pageBuilder) moduleListerOrBackend() backend.ModuleLister  { return pb.moduleLister }
+func (pb *pageBuilder) dmReaderOrBackend() backend.DomainModelReader { return pb.domainModelReader }
+func (pb *pageBuilder) pageReaderOrBackend() backend.PageReader      { return pb.pageReader }
+func (pb *pageBuilder) folderMgrOrBackend() backend.FolderManager    { return pb.folderManager }
+func (pb *pageBuilder) connMgrOrBackend() backend.ConnectionManager  { return pb.connectionManager }
 
 // initPluggableEngine lazily initializes the pluggable widget engine.
 func (pb *pageBuilder) initPluggableEngine() {
@@ -120,7 +95,7 @@ func (pb *pageBuilder) initPluggableEngine() {
 	if pb.mxGraph != nil {
 		registry.SetMxGraph(pb.mxGraph)
 	}
-	if pb.backend != nil {
+	if pb.connMgrOrBackend() != nil {
 		if loadErr := registry.LoadUserDefinitions(pb.connMgrOrBackend().Path()); loadErr != nil {
 			log.Printf("warning: loading user widget definitions: %v", loadErr)
 		}
@@ -173,7 +148,7 @@ func (pb *pageBuilder) getHierarchy() (*ContainerHierarchy, error) {
 	}
 	h, err := NewContainerHierarchyFromRoles(
 		pb.moduleListerOrBackend(),
-		pb.backend, // MetadataReader
+		pb.metadataReader,
 		pb.folderMgrOrBackend(),
 	)
 	if err != nil {

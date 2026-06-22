@@ -738,7 +738,7 @@ func (pb *pageBuilder) buildDataGridV3(w *ast.WidgetV3) (element.Element, error)
 	}
 
 	// Use gen-native DataGrid2 builder
-	grid, err := pb.widgetBackend.BuildDataGrid2WidgetGen(widgetID, w.Name, spec, pb.backend.Path())
+	grid, err := pb.widgetBackend.BuildDataGrid2WidgetGen(widgetID, w.Name, spec, pb.connMgrOrBackend().Path())
 	if err != nil {
 		return nil, err
 	}
@@ -809,7 +809,7 @@ func (pb *pageBuilder) buildWidgetBSON(w *ast.WidgetV3) (bson.D, error) {
 			FilterName: w.Name,
 			FilterType: w.GetFilterType(),
 			Attributes: resolvedAttrs,
-		}, pb.backend.Path())
+		}, pb.connMgrOrBackend().Path())
 		if err != nil {
 			return nil, mdlerrors.NewBackend("build controlbar filter widget", err)
 		}
@@ -1435,7 +1435,7 @@ func (pb *pageBuilder) buildSnippetCallV3(w *ast.WidgetV3) (element.Element, err
 // buildSnippetCallParamsGen validates the supplied param mappings against the
 // snippet's declared parameters and populates sc.ParameterMappings.
 func (pb *pageBuilder) buildSnippetCallParamsGen(sc *genPg.SnippetCall, snippetQName string, supplied []ast.SnippetCallParam) error {
-	snippets, err := pb.backend.ListSnippetsGen()
+	snippets, err := pb.pageReader.ListSnippetsGen()
 	if err != nil {
 		return err
 	}

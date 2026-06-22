@@ -21,7 +21,7 @@ import (
 // genElementToBSONDoc encodes a gen element to bson.D via the backend serializer.
 // Routes through WidgetSerializationBackend so executor does not import modelsdk/codec directly.
 func (pb *pageBuilder) genElementToBSONDoc(elem element.Element) (bson.D, error) {
-	raw, err := pb.backend.SerializePageGenElement(elem)
+	raw, err := pb.serializationBackend.SerializePageGenElement(elem)
 	if err != nil {
 		return nil, err
 	}
