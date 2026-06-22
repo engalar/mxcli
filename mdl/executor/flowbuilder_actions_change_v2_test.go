@@ -199,3 +199,40 @@ func TestMemberExpressionToStringGenOfflineLeavesLiteralsUnchanged(t *testing.T)
 		t.Fatalf("got %q, want %q", got, "'Open'")
 	}
 }
+
+func TestAddCreateObjectActionGenWithCommit(t *testing.T) {
+	fb := newActionTestFb()
+	stmt := &ast.CreateObjectStmt{
+		Variable:        "Obj",
+		EntityType:      ast.QualifiedName{Module: "Mod", Name: "Entity"},
+		WithCommit:      true,
+		RefreshInClient: true,
+	}
+	fb.addCreateObjectActionGen(stmt)
+	act := actionFromObjects(t, fb).(*genMf.CreateObjectAction)
+	if act.Commit() != "Yes" {
+		t.Errorf("expected Commit=Yes, got %q", act.Commit())
+	}
+	if !act.RefreshInClient() {
+		t.Error("expected RefreshInClient=true")
+	}
+}
+
+func TestAddCreateObjectActionGenWithCommitWithoutEvents(t *testing.T) {
+	fb := newActionTestFb()
+	stmt := &ast.CreateObjectStmt{
+		Variable:        "Obj",
+		EntityType:      ast.QualifiedName{Module: "Mod", Name: "Entity"},
+		WithCommit:      true,
+		WithoutEvents:   true,
+		RefreshInClient: true,
+	}
+	fb.addCreateObjectActionGen(stmt)
+	act := actionFromObjects(t, fb).(*genMf.CreateObjectAction)
+	if act.Commit() != "YesWithoutEvents" {
+		t.Errorf("expected Commit=YesWithoutEvents, got %q", act.Commit())
+	}
+	if !act.RefreshInClient() {
+		t.Error("expected RefreshInClient=true")
+	}
+}

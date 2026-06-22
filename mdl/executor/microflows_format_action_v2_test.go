@@ -37,14 +37,26 @@ import (
 // ────────────────────────────────────────────────────────
 
 func TestFormatActionGen_DeleteAction(t *testing.T) {
-	a := newGenAction(t, "Microflows$DeleteAction").(*genMf.DeleteAction)
-	a.SetDeleteVariableName("Account")
+	t.Run("bare", func(t *testing.T) {
+		a := newGenAction(t, "Microflows$DeleteAction").(*genMf.DeleteAction)
+		a.SetDeleteVariableName("Account")
 
-	got := formatActionGen(nil, a)
-	want := "delete $Account;"
-	if got != want {
-		t.Errorf("DeleteAction:\n got: %q\nwant: %q", got, want)
-	}
+		got := formatActionGen(nil, a)
+		want := "delete $Account;"
+		if got != want {
+			t.Errorf("DeleteAction:\n got: %q\nwant: %q", got, want)
+		}
+	})
+
+	t.Run("with refresh", func(t *testing.T) {
+		a := newGenAction(t, "Microflows$DeleteAction").(*genMf.DeleteAction)
+		a.SetDeleteVariableName("Obj")
+		a.SetRefreshInClient(true)
+		got := formatActionGen(nil, a)
+		if !strings.Contains(got, "refresh") {
+			t.Errorf("expected 'delete $Obj refresh', got: %s", got)
+		}
+	})
 }
 
 func TestFormatActionGen_CommitAction(t *testing.T) {
@@ -155,6 +167,54 @@ func TestFormatActionGen_CreateObjectAction(t *testing.T) {
 		want := "$X = create Entity;"
 		if got != want {
 			t.Errorf("got %q, want %q", got, want)
+		}
+	})
+
+	t.Run("with commit default", func(t *testing.T) {
+		a := newGenAction(t, "Microflows$CreateObjectAction").(*genMf.CreateObjectAction)
+		a.SetOutputVariableName("Obj")
+		a.SetEntityQualifiedName("Mod.Entity")
+		a.SetCommit("No")
+		got := formatActionGen(nil, a)
+		if !strings.Contains(got, "$Obj = create Mod.Entity") {
+			t.Errorf("expected create with default commit, got: %s", got)
+		}
+		if strings.Contains(got, "with commit") || strings.Contains(got, "refresh") {
+			t.Errorf("no commit clause expected for Commit=No, got: %s", got)
+		}
+	})
+
+	t.Run("with commit yes", func(t *testing.T) {
+		a := newGenAction(t, "Microflows$CreateObjectAction").(*genMf.CreateObjectAction)
+		a.SetOutputVariableName("Obj")
+		a.SetEntityQualifiedName("Mod.Entity")
+		a.SetCommit("Yes")
+		got := formatActionGen(nil, a)
+		if !strings.Contains(got, "with commit") || strings.Contains(got, "without events") {
+			t.Errorf("expected 'with commit' without 'without events', got: %s", got)
+		}
+	})
+
+	t.Run("with commit and refresh", func(t *testing.T) {
+		a := newGenAction(t, "Microflows$CreateObjectAction").(*genMf.CreateObjectAction)
+		a.SetOutputVariableName("Obj")
+		a.SetEntityQualifiedName("Mod.Entity")
+		a.SetCommit("Yes")
+		a.SetRefreshInClient(true)
+		got := formatActionGen(nil, a)
+		if !strings.Contains(got, "with commit") || !strings.Contains(got, "refresh") {
+			t.Errorf("expected 'with commit refresh', got: %s", got)
+		}
+	})
+
+	t.Run("with commit without events", func(t *testing.T) {
+		a := newGenAction(t, "Microflows$CreateObjectAction").(*genMf.CreateObjectAction)
+		a.SetOutputVariableName("Obj")
+		a.SetEntityQualifiedName("Mod.Entity")
+		a.SetCommit("YesWithoutEvents")
+		got := formatActionGen(nil, a)
+		if !strings.Contains(got, "without events") {
+			t.Errorf("expected 'without events', got: %s", got)
 		}
 	})
 }

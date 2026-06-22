@@ -740,3 +740,94 @@ func TestRoundtripMicroflow_Position(t *testing.T) {
 		nil,
 	)
 }
+
+// TestRoundtripMicroflow_CreateWithCommitRefresh tests CREATE with "with commit refresh".
+func TestRoundtripMicroflow_CreateWithCommitRefresh(t *testing.T) {
+	env := setupTestEnv(t)
+	defer env.teardown()
+
+	if err := env.executeMDL(`create or modify persistent entity RoundtripTest.MfCrItem (Name: String(50));`); err != nil {
+		t.Fatalf("Failed to create entity: %v", err)
+	}
+
+	mfName := testModule + ".RT_CreateCommit"
+	createMDL := `create microflow ` + mfName + ` () returns Boolean
+{
+  $Obj = create RoundtripTest.MfCrItem (Name = 'x') with commit refresh;
+  return true;
+}`
+
+	assertMicroflowContains(t, env, mfName, createMDL,
+		[]string{"with commit", "refresh"},
+		nil,
+	)
+}
+
+// TestRoundtripMicroflow_CreateWithCommitWithoutEventsRefresh tests CREATE with
+// "with commit without events refresh".
+func TestRoundtripMicroflow_CreateWithCommitWithoutEventsRefresh(t *testing.T) {
+	env := setupTestEnv(t)
+	defer env.teardown()
+
+	if err := env.executeMDL(`create or modify persistent entity RoundtripTest.MfCrItem2 (Name: String(50));`); err != nil {
+		t.Fatalf("Failed to create entity: %v", err)
+	}
+
+	mfName := testModule + ".RT_CreateCommitWE"
+	createMDL := `create microflow ` + mfName + ` () returns Boolean
+{
+  $Obj = create RoundtripTest.MfCrItem2 (Name = 'x') with commit without events refresh;
+  return true;
+}`
+
+	assertMicroflowContains(t, env, mfName, createMDL,
+		[]string{"without events", "refresh"},
+		nil,
+	)
+}
+
+// TestRoundtripMicroflow_ChangeWithCommit tests CHANGE with "with commit".
+func TestRoundtripMicroflow_ChangeWithCommit(t *testing.T) {
+	env := setupTestEnv(t)
+	defer env.teardown()
+
+	if err := env.executeMDL(`create or modify persistent entity RoundtripTest.MfChItem (Name: String(50));`); err != nil {
+		t.Fatalf("Failed to create entity: %v", err)
+	}
+
+	mfName := testModule + ".RT_ChangeCommit"
+	createMDL := `create microflow ` + mfName + ` () returns Boolean
+{
+  $Obj = create RoundtripTest.MfChItem;
+  change $Obj (Name = 'x') with commit;
+  return true;
+}`
+
+	assertMicroflowContains(t, env, mfName, createMDL,
+		[]string{"with commit"},
+		[]string{"without events"},
+	)
+}
+
+// TestRoundtripMicroflow_DeleteWithRefresh tests DELETE with "refresh".
+func TestRoundtripMicroflow_DeleteWithRefresh(t *testing.T) {
+	env := setupTestEnv(t)
+	defer env.teardown()
+
+	if err := env.executeMDL(`create or modify persistent entity RoundtripTest.MfDelItem (Name: String(50));`); err != nil {
+		t.Fatalf("Failed to create entity: %v", err)
+	}
+
+	mfName := testModule + ".RT_DeleteRefresh"
+	createMDL := `create microflow ` + mfName + ` () returns Boolean
+{
+  $Obj = create RoundtripTest.MfDelItem;
+  delete $Obj refresh;
+  return true;
+}`
+
+	assertMicroflowContains(t, env, mfName, createMDL,
+		[]string{"refresh"},
+		nil,
+	)
+}
