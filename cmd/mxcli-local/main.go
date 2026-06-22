@@ -10,13 +10,20 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var Version = "dev"
+var (
+	Version   = "dev"
+	CommitSHA = ""
+)
 
 func main() {
+	ver := Version
+	if CommitSHA != "" {
+		ver += " commit " + CommitSHA
+	}
 	root := &cobra.Command{
 		Use:          "mxcli-local",
 		Short:        "Build and run Mendix apps without Docker",
-		Version:      Version,
+		Version:      ver,
 		SilenceUsage: true,
 	}
 	root.AddCommand(buildCmd(), runCmd(), reloadCmd())

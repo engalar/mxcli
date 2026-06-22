@@ -27,6 +27,7 @@ import (
 var (
 	Version       = "dev"
 	LauncherBuild = ""
+	CommitSHA     = ""
 )
 
 func main() {
@@ -193,14 +194,22 @@ func ttyEnv(launcherPath string) []string {
 }
 
 func printVersion(e *Env) {
-	v := Version
+	launcherVer := Version
 	if LauncherBuild != "" {
-		v += " (" + LauncherBuild + ")"
+		launcherVer += " (" + LauncherBuild + ")"
 	}
-	fmt.Printf("mxcli launcher %s\n", v)
+	if CommitSHA != "" {
+		launcherVer += " commit " + CommitSHA
+	}
+	fmt.Printf("mxcli launcher %s\n", launcherVer)
 	if daemonBinaryExists(e.daemonBinaryPath()) {
 		if out, err := exec.Command(e.daemonBinaryPath(), "--version").Output(); err == nil {
 			fmt.Printf("mxcli daemon   %s\n", strings.TrimSpace(string(out)))
+		}
+	}
+	if daemonBinaryExists(e.localBinaryPath()) {
+		if out, err := exec.Command(e.localBinaryPath(), "--version").Output(); err == nil {
+			fmt.Printf("mxcli local    %s\n", strings.TrimSpace(string(out)))
 		}
 	}
 }

@@ -25,6 +25,7 @@ var (
 	version   = "0.1.0"
 	Version   = ""
 	BuildTime = ""
+	CommitSHA = ""
 )
 
 const warningBanner = "WARNING: This is a vibe-coded PoC, alpha quality, use with caution.\n"
@@ -269,10 +270,14 @@ func init() {
 	if Version != "" {
 		version = Version
 	}
+	shaSuffix := ""
+	if CommitSHA != "" {
+		shaSuffix = " commit " + CommitSHA
+	}
 	if BuildTime != "" {
-		rootCmd.Version = version + " (" + BuildTime + ")"
+		rootCmd.Version = version + " (" + BuildTime + ")" + shaSuffix
 	} else {
-		rootCmd.Version = version
+		rootCmd.Version = version + shaSuffix
 	}
 
 	// Normalise -p to an absolute path before any subcommand runs, so that
