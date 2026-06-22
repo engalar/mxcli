@@ -329,7 +329,6 @@ type Executor struct {
 	format         OutputFormat               // output format (table, json)
 	logger         *diaglog.Logger            // session diagnostics logger (nil = no logging)
 	fragments      map[string]*ast.DefineFragmentStmt // script-scoped fragment definitions
-	sqlMgr         *sqllib.Manager            // external SQL connection manager (lazy init)
 	themeRegistry  *ThemeRegistry             // cached theme design property definitions (lazy init)
 	registry       *Registry                  // statement dispatch registry
 
@@ -663,12 +662,14 @@ func (e *Executor) LintReader() linter.LintReader {
 func (e *Executor) Close() error {
 	var closeErr error
 	if e.backend != nil && e.backend.IsConnected() {
+		// Close SQL connections before the backend so the backend can cleanly
+		// disconnect without pending SQL operations.
+		ec := e.newExecContext(context.Background())
+		if ec.SqlMgr != nil {
+			ec.SqlMgr.CloseAll()
+		}
 		closeErr = e.backend.Disconnect()
 		e.backend = nil
-	}
-	if e.sqlMgr != nil {
-		e.sqlMgr.CloseAll()
-		e.sqlMgr = nil
 	}
 	return closeErr
 }

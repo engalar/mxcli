@@ -44,7 +44,6 @@ func (e *Executor) syncBack(ctx *ExecContext) {
 	if ctx.Graph != nil {
 		e.graphCatalog = ctx.Graph
 	}
-	e.sqlMgr = ctx.SqlMgr
 	e.themeRegistry = ctx.ThemeRegistry
 }
 
@@ -87,7 +86,6 @@ func (e *Executor) newExecContext(ctx context.Context) *ExecContext {
 		},
 		ExecConnection: ExecConnection{
 			MprPath:        e.mprPath,
-			SqlMgr:         e.sqlMgr,
 			ThemeRegistry:  e.themeRegistry,
 			Graph:          e.graphCatalog,
 			BackendFactory: e.backendFactory,
