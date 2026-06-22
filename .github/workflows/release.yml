@@ -32,18 +32,8 @@ jobs:
         env:
           ANTLR4_TOOLS_ANTLR_VERSION: '4.13.2'
 
-      - name: Sync assets and build mxcli binaries
-        run: |
-          set -e
-          make sync-all
-          mkdir -p bin
-          LDFLAGS='-s -w -X main.Version=${{ github.ref_name }} -X main.BuildTime=$(date -u +"%Y-%m-%dT%H:%M:%SZ") -X main.CommitSHA=$(git rev-parse HEAD)'
-          CGO_ENABLED=0 GOOS=linux   GOARCH=amd64 go build -ldflags "$LDFLAGS" -trimpath -o bin/mxcli-linux-amd64   ./cmd/mxcli
-          CGO_ENABLED=0 GOOS=linux   GOARCH=arm64 go build -ldflags "$LDFLAGS" -trimpath -o bin/mxcli-linux-arm64   ./cmd/mxcli
-          CGO_ENABLED=0 GOOS=darwin  GOARCH=amd64 go build -ldflags "$LDFLAGS" -trimpath -o bin/mxcli-darwin-amd64  ./cmd/mxcli
-          CGO_ENABLED=0 GOOS=darwin  GOARCH=arm64 go build -ldflags "$LDFLAGS" -trimpath -o bin/mxcli-darwin-arm64  ./cmd/mxcli
-          CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags "$LDFLAGS" -trimpath -o bin/mxcli-windows-amd64.exe ./cmd/mxcli
-          CGO_ENABLED=0 GOOS=windows GOARCH=arm64 go build -ldflags "$LDFLAGS" -trimpath -o bin/mxcli-windows-arm64.exe ./cmd/mxcli
+      - name: Build mxcli binaries
+        run: make release-mxcli
 
       - name: Generate SHA256 checksums
         run: |
