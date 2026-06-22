@@ -32,9 +32,10 @@ jobs:
         env:
           ANTLR4_TOOLS_ANTLR_VERSION: '4.13.2'
 
-      - name: Build mxcli binaries
+      - name: Sync assets and build mxcli binaries
         run: |
           set -e
+          make sync-all
           mkdir -p bin
           LDFLAGS='-s -w -X main.Version=${{ github.ref_name }} -X main.BuildTime=$(date -u +"%Y-%m-%dT%H:%M:%SZ") -X main.CommitSHA=$(git rev-parse HEAD)'
           CGO_ENABLED=0 GOOS=linux   GOARCH=amd64 go build -ldflags "$LDFLAGS" -trimpath -o bin/mxcli-linux-amd64   ./cmd/mxcli
