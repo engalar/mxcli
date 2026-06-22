@@ -79,6 +79,12 @@ func (e *Executor) registerFutureOverlays() {
 			return execShowCatalogTablesFuture(ctx, deps.Output)
 		case ast.ShowCatalogStatus:
 			return execShowCatalogStatusFuture(ctx, deps.Output)
+		case ast.ShowEnumerations:
+			return listEnumerationsFuture(ctx, deps.Output, e.format, deps.ConnectionManager, deps.EnumerationReader, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, s.InModule)
+		case ast.ShowConstants:
+			return listConstantsFuture(ctx, deps.Output, e.format, deps.ConnectionManager, deps.ConstantReader, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, s.InModule)
+		case ast.ShowConstantValues:
+			return listConstantValuesFuture(ctx, deps.Output, e.format, deps.ConnectionManager, deps.ConstantReader, deps.SettingsReader, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, s.InModule)
 		case ast.ShowFragments:
 			return listFragmentsFuture(ctx, deps.Output, e.fragments)
 		default:
@@ -99,10 +105,13 @@ func (e *Executor) buildHandlerDeps() *HandlerDeps {
 		Quiet:        e.quiet,
 		Backend:      e.backend,
 
-		ConnectionManager: e.backend,
-		ModuleLister:      e.backend,
-		MetadataReader:    e.backend,
-		FolderManager:     e.backend,
-		DomainModels:      extractDomainModelsRepo(e.backend),
+		ConnectionManager:  e.backend,
+		ModuleLister:       e.backend,
+		FolderManager:      e.backend,
+		MetadataReader:     e.backend,
+		EnumerationReader:  e.backend,
+		ConstantReader:     e.backend,
+		SettingsReader:     e.backend,
+		DomainModels:       extractDomainModelsRepo(e.backend),
 	}
 }

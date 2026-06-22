@@ -115,6 +115,244 @@ func listFragmentsFuture(ctx context.Context, output io.Writer, fragments map[st
 	return nil
 }
 
+// listEnumerationsFuture is the ExecContext-free version of listEnumerations.
+func listEnumerationsFuture(
+	ctx context.Context,
+	output io.Writer,
+	format OutputFormat,
+	cm backend.ConnectionManager,
+	er backend.EnumerationReader,
+	ml backend.ModuleLister,
+	mr backend.MetadataReader,
+	fm backend.FolderManager,
+	inModule string,
+) error {
+	if cm == nil || !cm.IsConnected() {
+		return mdlerrors.NewNotConnected()
+	}
+
+	enums, err := er.ListEnumerations()
+	if err != nil {
+		return mdlerrors.NewBackend("list enumerations", err)
+	}
+
+	h, err := NewContainerHierarchyFromRoles(ml, mr, fm)
+	if err != nil {
+		return mdlerrors.NewBackend("build hierarchy", err)
+	}
+
+	type row struct {
+		qualifiedName string
+		module        string
+		name          string
+		folderPath    string
+		values        int
+	}
+	var rows []row
+
+	for _, enum := range enums {
+		modID := h.FindModuleID(enum.ContainerID)
+		modName := h.GetModuleName(modID)
+		if inModule == "" || modName == inModule {
+			qualifiedName := modName + "." + enum.Name
+			folderPath := h.BuildFolderPath(enum.ContainerID)
+			rows = append(rows, row{qualifiedName, modName, enum.Name, folderPath, len(enum.Values)})
+		}
+	}
+
+	sort.Slice(rows, func(i, j int) bool {
+		return strings.ToLower(rows[i].qualifiedName) < strings.ToLower(rows[j].qualifiedName)
+	})
+
+	result := &TableResult{
+		Columns: []string{"Qualified Name", "Module", "Name", "Folder", "Values"},
+		Summary: fmt.Sprintf("(%d enumerations)", len(rows)),
+	}
+	for _, r := range rows {
+		result.Rows = append(result.Rows, []any{r.qualifiedName, r.module, r.name, r.folderPath, r.values})
+	}
+	return writeResultTo(output, format, result)
+}
+
+// listConstantsFuture is the ExecContext-free version of listConstants.
+func listConstantsFuture(
+	ctx context.Context,
+	output io.Writer,
+	format OutputFormat,
+	cm backend.ConnectionManager,
+	cr backend.ConstantReader,
+	ml backend.ModuleLister,
+	mr backend.MetadataReader,
+	fm backend.FolderManager,
+	inModule string,
+) error {
+	if cm == nil || !cm.IsConnected() {
+		return mdlerrors.NewNotConnected()
+	}
+
+	constants, err := cr.ListConstants()
+	if err != nil {
+		return mdlerrors.NewBackend("list constants", err)
+	}
+
+	h, err := NewContainerHierarchyFromRoles(ml, mr, fm)
+	if err != nil {
+		return mdlerrors.NewBackend("build hierarchy", err)
+	}
+
+	type row struct {
+		qualifiedName string
+		module        string
+		name          string
+		folderPath    string
+		typeStr       string
+		defaultStr    string
+		exposed       string
+	}
+	var rows []row
+
+	for _, c := range constants {
+		modID := h.FindModuleID(c.ContainerID)
+		modName := h.GetModuleName(modID)
+		if inModule != "" && !strings.EqualFold(modName, inModule) {
+			continue
+		}
+		qualifiedName := modName + "." + c.Name
+		folderPath := h.BuildFolderPath(c.ContainerID)
+		typeStr := formatConstantType(c.Type)
+		defaultStr := c.DefaultValue
+		if len(defaultStr) > 40 {
+			defaultStr = defaultStr[:37] + "..."
+		}
+		exposed := "No"
+		if c.ExposedToClient {
+			exposed = "Yes"
+		}
+		rows = append(rows, row{qualifiedName, modName, c.Name, folderPath, typeStr, defaultStr, exposed})
+	}
+
+	if len(rows) == 0 && format != FormatJSON {
+		fmt.Fprintln(output, "No constants found.")
+		return nil
+	}
+
+	sort.Slice(rows, func(i, j int) bool {
+		return strings.ToLower(rows[i].qualifiedName) < strings.ToLower(rows[j].qualifiedName)
+	})
+
+	result := &TableResult{
+		Columns: []string{"Qualified Name", "Module", "Name", "Folder", "Type", "Default", "Exposed"},
+		Summary: fmt.Sprintf("(%d constants)", len(rows)),
+	}
+	for _, r := range rows {
+		result.Rows = append(result.Rows, []any{r.qualifiedName, r.module, r.name, r.folderPath, r.typeStr, r.defaultStr, r.exposed})
+	}
+	return writeResultTo(output, format, result)
+}
+
+// listConstantValuesFuture is the ExecContext-free version of listConstantValues.
+func listConstantValuesFuture(
+	ctx context.Context,
+	output io.Writer,
+	format OutputFormat,
+	cm backend.ConnectionManager,
+	cr backend.ConstantReader,
+	sr backend.SettingsReader,
+	ml backend.ModuleLister,
+	mr backend.MetadataReader,
+	fm backend.FolderManager,
+	inModule string,
+) error {
+	if cm == nil || !cm.IsConnected() {
+		return mdlerrors.NewNotConnected()
+	}
+
+	constants, err := cr.ListConstants()
+	if err != nil {
+		return mdlerrors.NewBackend("list constants", err)
+	}
+
+	ps, err := sr.GetProjectSettings()
+	if err != nil {
+		return mdlerrors.NewBackend("read project settings", err)
+	}
+
+	h, err := NewContainerHierarchyFromRoles(ml, mr, fm)
+	if err != nil {
+		return mdlerrors.NewBackend("build hierarchy", err)
+	}
+
+	type constInfo struct {
+		qualifiedName string
+		defaultValue  string
+		typeStr       string
+	}
+	var consts []constInfo
+	for _, c := range constants {
+		modID := h.FindModuleID(c.ContainerID)
+		modName := h.GetModuleName(modID)
+		if inModule != "" && !strings.EqualFold(modName, inModule) {
+			continue
+		}
+		consts = append(consts, constInfo{
+			qualifiedName: modName + "." + c.Name,
+			defaultValue:  c.DefaultValue,
+			typeStr:       formatConstantType(c.Type),
+		})
+	}
+
+	if len(consts) == 0 && format != FormatJSON {
+		fmt.Fprintln(output, "No constants found.")
+		return nil
+	}
+
+	sort.Slice(consts, func(i, j int) bool {
+		return strings.ToLower(consts[i].qualifiedName) < strings.ToLower(consts[j].qualifiedName)
+	})
+
+	configValues := make(map[string]map[string]string)
+	var configNames []string
+	if ps.Configuration != nil {
+		for _, cfg := range ps.Configuration.Configurations {
+			configNames = append(configNames, cfg.Name)
+			m := make(map[string]string)
+			for _, cv := range cfg.ConstantValues {
+				m[cv.ConstantId] = cv.Value
+			}
+			configValues[cfg.Name] = m
+		}
+	}
+
+	type row struct {
+		constant      string
+		configuration string
+		value         string
+	}
+	var rows []row
+
+	for _, c := range consts {
+		rows = append(rows, row{c.qualifiedName, "(default)", c.defaultValue})
+		for _, cfgName := range configNames {
+			if val, ok := configValues[cfgName][c.qualifiedName]; ok {
+				rows = append(rows, row{c.qualifiedName, cfgName, val})
+			}
+		}
+	}
+
+	result := &TableResult{
+		Columns: []string{"Constant", "Configuration", "Value"},
+		Summary: fmt.Sprintf("(%d rows)", len(rows)),
+	}
+	for _, r := range rows {
+		val := r.value
+		if len(val) > 60 {
+			val = val[:57] + "..."
+		}
+		result.Rows = append(result.Rows, []any{r.constant, r.configuration, val})
+	}
+	return writeResultTo(output, format, result)
+}
+
 // listModulesFuture is the ExecContext-free version of listModules.
 func listModulesFuture(
 	ctx context.Context,
