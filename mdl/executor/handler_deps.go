@@ -525,6 +525,319 @@ func (e *Executor) registerFutureOverlays() {
 		ectx := phase3d2bNewExecContext(ctx, deps)
 		return alterLanguage(ectx, stmt.(*ast.AlterLanguageStmt))
 	})
+
+	// ────────────────────────────────────────────────────
+	// Phase 3d-2e: remaining handler registrations
+	// ────────────────────────────────────────────────────
+
+	// Enumeration CRUD
+	r.RegisterFuture("CreateEnumeration", func(ctx context.Context, stmt ast.Statement) error {
+		return execCreateEnumerationFuture(ctx, stmt, deps)
+	})
+	r.RegisterFuture("AlterEnumeration", func(ctx context.Context, stmt ast.Statement) error {
+		return execAlterEnumerationFuture(ctx, deps)
+	})
+	r.RegisterFuture("DropEnumeration", func(ctx context.Context, stmt ast.Statement) error {
+		return execDropEnumerationFuture(ctx, stmt, deps)
+	})
+
+	// Constant CRUD
+	r.RegisterFuture("CreateConstant", func(ctx context.Context, stmt ast.Statement) error {
+		return execCreateConstantFuture(ctx, stmt, deps)
+	})
+	r.RegisterFuture("DropConstant", func(ctx context.Context, stmt ast.Statement) error {
+		return execDropConstantFuture(ctx, stmt, deps)
+	})
+
+	// Module settings
+	r.RegisterFuture("AlterModuleJarDep", func(ctx context.Context, stmt ast.Statement) error {
+		return execAlterModuleJarDepFuture(ctx, stmt, deps)
+	})
+
+	// Database connection
+	r.RegisterFuture("CreateDatabaseConnection", func(ctx context.Context, stmt ast.Statement) error {
+		return execCreateDatabaseConnectionFuture(ctx, stmt, deps)
+	})
+
+	// Java/JavaScript action CRUD
+	r.RegisterFuture("CreateJavaAction", func(ctx context.Context, stmt ast.Statement) error {
+		return execCreateJavaActionFuture(ctx, stmt, deps)
+	})
+	r.RegisterFuture("DropJavaAction", func(ctx context.Context, stmt ast.Statement) error {
+		return execDropJavaActionFuture(ctx, stmt, deps)
+	})
+	r.RegisterFuture("CreateJavaScriptAction", func(ctx context.Context, stmt ast.Statement) error {
+		return execCreateJavaScriptActionFuture(ctx, stmt, deps)
+	})
+
+	// Folder/rename/move
+	r.RegisterFuture("DropFolder", func(ctx context.Context, stmt ast.Statement) error {
+		return execDropFolderFuture(ctx, stmt, deps)
+	})
+	r.RegisterFuture("MoveFolder", func(ctx context.Context, stmt ast.Statement) error {
+		return execMoveFolderFuture(ctx, stmt, deps)
+	})
+	r.RegisterFuture("Move", func(ctx context.Context, stmt ast.Statement) error {
+		return execMoveFuture(ctx, stmt, deps)
+	})
+	r.RegisterFuture("Rename", func(ctx context.Context, stmt ast.Statement) error {
+		return execRenameFuture(ctx, stmt, deps)
+	})
+
+	// Navigation
+	r.RegisterFuture("AlterNavigation", func(ctx context.Context, stmt ast.Statement) error {
+		return execAlterNavigationFuture(ctx, stmt, deps)
+	})
+
+	// Image collection CRUD
+	r.RegisterFuture("CreateImageCollection", func(ctx context.Context, stmt ast.Statement) error {
+		return execCreateImageCollectionFuture(ctx, stmt, deps)
+	})
+	r.RegisterFuture("DropImageCollection", func(ctx context.Context, stmt ast.Statement) error {
+		return execDropImageCollectionFuture(ctx, stmt, deps)
+	})
+	r.RegisterFuture("AlterImageCollection", func(ctx context.Context, stmt ast.Statement) error {
+		return execAlterImageCollectionFuture(ctx, stmt, deps)
+	})
+
+	// Settings
+	r.RegisterFuture("AlterSettings", func(ctx context.Context, stmt ast.Statement) error {
+		return execAlterSettingsFuture(ctx, stmt, deps)
+	})
+
+	// Translate
+	r.RegisterFuture("Translate", func(ctx context.Context, stmt ast.Statement) error {
+		return execTranslateFuture(ctx, stmt, deps)
+	})
+	r.RegisterFuture("TranslateMicroflow", func(ctx context.Context, stmt ast.Statement) error {
+		return execTranslateMicroflowFuture(ctx, deps)
+	})
+
+	// Configuration CRUD
+	r.RegisterFuture("CreateConfiguration", func(ctx context.Context, stmt ast.Statement) error {
+		return execCreateConfigurationFuture(ctx, stmt, deps)
+	})
+	r.RegisterFuture("DropConfiguration", func(ctx context.Context, stmt ast.Statement) error {
+		return execDropConfigurationFuture(ctx, stmt, deps)
+	})
+
+	// Business event service CRUD
+	r.RegisterFuture("CreateBusinessEventService", func(ctx context.Context, stmt ast.Statement) error {
+		return execCreateBusinessEventServiceFuture(ctx, stmt, deps)
+	})
+	r.RegisterFuture("DropBusinessEventService", func(ctx context.Context, stmt ast.Statement) error {
+		return execDropBusinessEventServiceFuture(ctx, stmt, deps)
+	})
+
+	// OData client CRUD
+	r.RegisterFuture("CreateODataClient", func(ctx context.Context, stmt ast.Statement) error {
+		return execCreateODataClientFuture(ctx, stmt, deps)
+	})
+	r.RegisterFuture("AlterODataClient", func(ctx context.Context, stmt ast.Statement) error {
+		return execAlterODataClientFuture(ctx, stmt, deps)
+	})
+	r.RegisterFuture("DropODataClient", func(ctx context.Context, stmt ast.Statement) error {
+		return execDropODataClientFuture(ctx, stmt, deps)
+	})
+
+	// OData service CRUD
+	r.RegisterFuture("CreateODataService", func(ctx context.Context, stmt ast.Statement) error {
+		return execCreateODataServiceFuture(ctx, stmt, deps)
+	})
+	r.RegisterFuture("AlterODataService", func(ctx context.Context, stmt ast.Statement) error {
+		return execAlterODataServiceFuture(ctx, stmt, deps)
+	})
+	r.RegisterFuture("DropODataService", func(ctx context.Context, stmt ast.Statement) error {
+		return execDropODataServiceFuture(ctx, stmt, deps)
+	})
+
+	// JSON structure CRUD
+	r.RegisterFuture("CreateJsonStructure", func(ctx context.Context, stmt ast.Statement) error {
+		return execCreateJsonStructureFuture(ctx, stmt, deps)
+	})
+	r.RegisterFuture("DropJsonStructure", func(ctx context.Context, stmt ast.Statement) error {
+		return execDropJsonStructureFuture(ctx, stmt, deps)
+	})
+
+	// Import/Export mapping CRUD
+	r.RegisterFuture("CreateImportMapping", func(ctx context.Context, stmt ast.Statement) error {
+		return execCreateImportMappingFuture(ctx, stmt, deps)
+	})
+	r.RegisterFuture("DropImportMapping", func(ctx context.Context, stmt ast.Statement) error {
+		return execDropImportMappingFuture(ctx, stmt, deps)
+	})
+	r.RegisterFuture("CreateExportMapping", func(ctx context.Context, stmt ast.Statement) error {
+		return execCreateExportMappingFuture(ctx, stmt, deps)
+	})
+	r.RegisterFuture("DropExportMapping", func(ctx context.Context, stmt ast.Statement) error {
+		return execDropExportMappingFuture(ctx, stmt, deps)
+	})
+
+	// REST client CRUD
+	r.RegisterFuture("CreateRestClient", func(ctx context.Context, stmt ast.Statement) error {
+		return execCreateRestClientFuture(ctx, stmt, deps)
+	})
+	r.RegisterFuture("DropRestClient", func(ctx context.Context, stmt ast.Statement) error {
+		return execDropRestClientFuture(ctx, stmt, deps)
+	})
+
+	// Contract from OpenAPI
+	r.RegisterFuture("DescribeContractFromOpenAPI", func(ctx context.Context, stmt ast.Statement) error {
+		return execDescribeContractFromOpenAPIFuture(ctx, stmt, deps)
+	})
+
+	// Published REST service CRUD
+	r.RegisterFuture("CreatePublishedRestService", func(ctx context.Context, stmt ast.Statement) error {
+		return execCreatePublishedRestServiceFuture(ctx, stmt, deps)
+	})
+	r.RegisterFuture("DropPublishedRestService", func(ctx context.Context, stmt ast.Statement) error {
+		return execDropPublishedRestServiceFuture(ctx, stmt, deps)
+	})
+	r.RegisterFuture("AlterPublishedRestService", func(ctx context.Context, stmt ast.Statement) error {
+		return execAlterPublishedRestServiceFuture(ctx, stmt, deps)
+	})
+
+	// External entities
+	r.RegisterFuture("CreateExternalEntity", func(ctx context.Context, stmt ast.Statement) error {
+		return execCreateExternalEntityFuture(ctx, stmt, deps)
+	})
+	r.RegisterFuture("CreateExternalEntities", func(ctx context.Context, stmt ast.Statement) error {
+		return execCreateExternalEntitiesFuture(ctx, stmt, deps)
+	})
+
+	// Data transformer CRUD
+	r.RegisterFuture("CreateDataTransformer", func(ctx context.Context, stmt ast.Statement) error {
+		return execCreateDataTransformerFuture(ctx, stmt, deps)
+	})
+	r.RegisterFuture("DropDataTransformer", func(ctx context.Context, stmt ast.Statement) error {
+		return execDropDataTransformerFuture(ctx, stmt, deps)
+	})
+
+	// Widget commands
+	r.RegisterFuture("ShowWidgets", func(ctx context.Context, stmt ast.Statement) error {
+		return execShowWidgetsFuture(ctx, stmt, deps)
+	})
+	r.RegisterFuture("ShowInstalledWidgets", func(ctx context.Context, stmt ast.Statement) error {
+		return execShowInstalledWidgetsFuture(ctx, stmt, deps)
+	})
+	r.RegisterFuture("UpdateWidgets", func(ctx context.Context, stmt ast.Statement) error {
+		return execUpdateWidgetsFuture(ctx, stmt, deps)
+	})
+
+	// Catalog/query
+	r.RegisterFuture("Select", func(ctx context.Context, stmt ast.Statement) error {
+		return execSelectFuture(ctx, stmt, deps)
+	})
+	r.RegisterFuture("DescribeTranslations", func(ctx context.Context, stmt ast.Statement) error {
+		return execDescribeTranslationsFuture(ctx, stmt, deps)
+	})
+	r.RegisterFuture("DescribeCatalogTable", func(ctx context.Context, stmt ast.Statement) error {
+		return execDescribeCatalogTableFuture(ctx, deps)
+	})
+
+	// Features
+	r.RegisterFuture("ShowFeatures", func(ctx context.Context, stmt ast.Statement) error {
+		return execShowFeaturesFuture(ctx, stmt, deps)
+	})
+
+	// Styling
+	r.RegisterFuture("ShowDesignProperties", func(ctx context.Context, stmt ast.Statement) error {
+		return execShowDesignPropertiesFuture(ctx, stmt, deps)
+	})
+	r.RegisterFuture("DescribeStyling", func(ctx context.Context, stmt ast.Statement) error {
+		return execDescribeStylingFuture(ctx, stmt, deps)
+	})
+	r.RegisterFuture("AlterStyling", func(ctx context.Context, stmt ast.Statement) error {
+		return execAlterStylingFuture(ctx, stmt, deps)
+	})
+
+	// Theme
+	r.RegisterFuture("ShowThemeVariables", func(ctx context.Context, stmt ast.Statement) error {
+		return execShowThemeVariablesFuture(ctx, stmt, deps)
+	})
+
+	// Search
+	r.RegisterFuture("Search", func(ctx context.Context, stmt ast.Statement) error {
+		return execSearchFuture(ctx, stmt, deps)
+	})
+
+	// Refresh catalog
+	r.RegisterFuture("RefreshCatalog", func(ctx context.Context, stmt ast.Statement) error {
+		return execRefreshCatalogFuture(ctx, stmt, deps)
+	})
+
+	// Lint
+	r.RegisterFuture("Lint", func(ctx context.Context, stmt ast.Statement) error {
+		return execLintFuture(ctx, stmt, deps)
+	})
+
+	// Fragment commands
+	r.RegisterFuture("DefineFragment", func(ctx context.Context, stmt ast.Statement) error {
+		return execDefineFragmentFuture(ctx, stmt, deps)
+	})
+	r.RegisterFuture("DescribeFragmentFrom", func(ctx context.Context, stmt ast.Statement) error {
+		return execDescribeFragmentFromFuture(ctx, stmt, deps)
+	})
+
+	// SQL commands
+	r.RegisterFuture("SQLConnect", func(ctx context.Context, stmt ast.Statement) error {
+		return execSQLConnectFuture(ctx, stmt, deps)
+	})
+	r.RegisterFuture("SQLDisconnect", func(ctx context.Context, stmt ast.Statement) error {
+		return execSQLDisconnectFuture(ctx, stmt, deps)
+	})
+	r.RegisterFuture("SQLConnections", func(ctx context.Context, stmt ast.Statement) error {
+		return execSQLConnectionsFuture(ctx, deps)
+	})
+	r.RegisterFuture("SQLQuery", func(ctx context.Context, stmt ast.Statement) error {
+		return execSQLQueryFuture(ctx, stmt, deps)
+	})
+	r.RegisterFuture("SQLShowTables", func(ctx context.Context, stmt ast.Statement) error {
+		return execSQLShowTablesFuture(ctx, stmt, deps)
+	})
+	r.RegisterFuture("SQLShowViews", func(ctx context.Context, stmt ast.Statement) error {
+		return execSQLShowViewsFuture(ctx, stmt, deps)
+	})
+	r.RegisterFuture("SQLShowFunctions", func(ctx context.Context, stmt ast.Statement) error {
+		return execSQLShowFunctionsFuture(ctx, stmt, deps)
+	})
+	r.RegisterFuture("SQLDescribeTable", func(ctx context.Context, stmt ast.Statement) error {
+		return execSQLDescribeTableFuture(ctx, stmt, deps)
+	})
+	r.RegisterFuture("SQLGenerateConnector", func(ctx context.Context, stmt ast.Statement) error {
+		return execSQLGenerateConnectorFuture(ctx, stmt, deps)
+	})
+
+	// Import
+	r.RegisterFuture("Import", func(ctx context.Context, stmt ast.Statement) error {
+		return execImportFuture(ctx, stmt, deps)
+	})
+
+	// Agent editor CRUD
+	r.RegisterFuture("CreateModel", func(ctx context.Context, stmt ast.Statement) error {
+		return execCreateModelFuture(ctx, stmt, deps)
+	})
+	r.RegisterFuture("DropModel", func(ctx context.Context, stmt ast.Statement) error {
+		return execDropModelFuture(ctx, stmt, deps)
+	})
+	r.RegisterFuture("CreateConsumedMCPService", func(ctx context.Context, stmt ast.Statement) error {
+		return execCreateConsumedMCPServiceFuture(ctx, stmt, deps)
+	})
+	r.RegisterFuture("DropConsumedMCPService", func(ctx context.Context, stmt ast.Statement) error {
+		return execDropConsumedMCPServiceFuture(ctx, stmt, deps)
+	})
+	r.RegisterFuture("CreateKnowledgeBase", func(ctx context.Context, stmt ast.Statement) error {
+		return execCreateKnowledgeBaseFuture(ctx, stmt, deps)
+	})
+	r.RegisterFuture("DropKnowledgeBase", func(ctx context.Context, stmt ast.Statement) error {
+		return execDropKnowledgeBaseFuture(ctx, stmt, deps)
+	})
+	r.RegisterFuture("CreateAgent", func(ctx context.Context, stmt ast.Statement) error {
+		return execCreateAgentFuture(ctx, stmt, deps)
+	})
+	r.RegisterFuture("DropAgent", func(ctx context.Context, stmt ast.Statement) error {
+		return execDropAgentFuture(ctx, stmt, deps)
+	})
 }
 
 // buildHandlerDeps populates a HandlerDeps from the current Executor state.
