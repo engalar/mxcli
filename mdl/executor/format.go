@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"strings"
 )
 
@@ -29,20 +30,29 @@ type TableResult struct {
 
 // writeResult renders a TableResult to ctx.Output in the current format.
 func writeResult(ctx *ExecContext, r *TableResult) error {
-	if ctx.Format == FormatJSON {
-		return writeResultJSON(ctx, r)
+	return writeResultTo(ctx.Output, ctx.Format, r)
+}
+
+// writeResultTo renders a TableResult to the given writer in the given format.
+func writeResultTo(output io.Writer, format OutputFormat, r *TableResult) error {
+	if format == FormatJSON {
+		return writeResultJSONTo(output, r)
 	}
-	writeResultTable(ctx, r)
+	writeResultTableTo(output, r)
 	return nil
 }
 
 // writeResultTable renders a TableResult as a pipe-delimited markdown table.
 func writeResultTable(ctx *ExecContext, r *TableResult) {
+	writeResultTableTo(ctx.Output, r)
+}
+
+// writeResultTableTo renders a TableResult as a pipe-delimited markdown table.
+func writeResultTableTo(output io.Writer, r *TableResult) {
 	if len(r.Columns) == 0 {
 		return
 	}
 
-	// Calculate column widths from headers and data.
 	widths := make([]int, len(r.Columns))
 	for i, col := range r.Columns {
 		widths[i] = len(col)
@@ -59,41 +69,42 @@ func writeResultTable(ctx *ExecContext, r *TableResult) {
 		}
 	}
 
-	// Print header.
-	fmt.Fprint(ctx.Output, "|")
+	fmt.Fprint(output, "|")
 	for i, col := range r.Columns {
-		fmt.Fprintf(ctx.Output, " %-*s |", widths[i], col)
+		fmt.Fprintf(output, " %-*s |", widths[i], col)
 	}
-	fmt.Fprintln(ctx.Output)
+	fmt.Fprintln(output)
 
-	// Print separator.
-	fmt.Fprint(ctx.Output, "|")
+	fmt.Fprint(output, "|")
 	for _, w := range widths {
-		fmt.Fprintf(ctx.Output, "-%s-|", strings.Repeat("-", w))
+		fmt.Fprintf(output, "-%s-|", strings.Repeat("-", w))
 	}
-	fmt.Fprintln(ctx.Output)
+	fmt.Fprintln(output)
 
-	// Print rows.
 	for _, row := range r.Rows {
-		fmt.Fprint(ctx.Output, "|")
+		fmt.Fprint(output, "|")
 		for i := range r.Columns {
 			var s string
 			if i < len(row) {
 				s = formatCellValue(row[i])
 			}
-			fmt.Fprintf(ctx.Output, " %-*s |", widths[i], s)
+			fmt.Fprintf(output, " %-*s |", widths[i], s)
 		}
-		fmt.Fprintln(ctx.Output)
+		fmt.Fprintln(output)
 	}
 
-	// Print summary.
 	if r.Summary != "" {
-		fmt.Fprintf(ctx.Output, "\n%s\n", r.Summary)
+		fmt.Fprintf(output, "\n%s\n", r.Summary)
 	}
 }
 
 // writeResultJSON renders a TableResult as a JSON array of objects.
 func writeResultJSON(ctx *ExecContext, r *TableResult) error {
+	return writeResultJSONTo(ctx.Output, r)
+}
+
+// writeResultJSONTo renders a TableResult as a JSON array of objects.
+func writeResultJSONTo(output io.Writer, r *TableResult) error {
 	objects := make([]map[string]any, 0, len(r.Rows))
 	for _, row := range r.Rows {
 		obj := make(map[string]any, len(r.Columns))
@@ -105,7 +116,7 @@ func writeResultJSON(ctx *ExecContext, r *TableResult) error {
 		objects = append(objects, obj)
 	}
 
-	enc := json.NewEncoder(ctx.Output)
+	enc := json.NewEncoder(output)
 	enc.SetIndent("", "  ")
 	return enc.Encode(objects)
 }

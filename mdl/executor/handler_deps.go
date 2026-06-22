@@ -7,6 +7,7 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	"github.com/mendixlabs/mxcli/mdl/backend"
 	"github.com/mendixlabs/mxcli/mdl/diaglog"
+	"github.com/mendixlabs/mxcli/mdl/repos"
 )
 
 // HandlerDeps carries the execution dependencies that were previously
@@ -41,6 +42,9 @@ type HandlerDeps struct {
 	MapperWriter         backend.MappingWriter
 	NavigationReader     backend.NavigationReader
 	MetadataReader       backend.MetadataReader
+
+	// DomainModels repo for entity counting (Stage 3 repos).
+	DomainModels repos.DomainModelRepository
 }
 
 // registerFutureOverlays registers new-style handlers (StmtHandlerFunc) for
@@ -53,8 +57,6 @@ func (e *Executor) registerFutureOverlays() {
 		return
 	}
 	r := e.registry
-	_ = r
-	_ = deps
 
 	// Session handlers migrated from *ExecContext:
 	// e.format is captured by reference (e is *Executor pointer) — reflects SET format changes.
@@ -63,6 +65,25 @@ func (e *Executor) registerFutureOverlays() {
 	})
 	r.RegisterFuture("Exit", func(ctx context.Context, stmt ast.Statement) error {
 		return execExitFuture(ctx)
+	})
+
+	// SHOW handlers migrated from *ExecContext:
+	r.RegisterFuture("Show", func(ctx context.Context, stmt ast.Statement) error {
+		s := stmt.(*ast.ShowStmt)
+		switch s.ObjectType {
+		case ast.ShowModules:
+			return listModulesFuture(ctx, deps.Output, e.format, deps.ConnectionManager, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, deps.DomainModels)
+		case ast.ShowVersion:
+			return listVersionFuture(ctx, deps.Output, deps.ConnectionManager)
+		case ast.ShowCatalogTables:
+			return execShowCatalogTablesFuture(ctx, deps.Output)
+		case ast.ShowCatalogStatus:
+			return execShowCatalogStatusFuture(ctx, deps.Output)
+		case ast.ShowFragments:
+			return listFragmentsFuture(ctx, deps.Output, e.fragments)
+		default:
+			return nil // fall through to old handler
+		}
 	})
 }
 
@@ -77,5 +98,11 @@ func (e *Executor) buildHandlerDeps() *HandlerDeps {
 		Logger:       e.logger,
 		Quiet:        e.quiet,
 		Backend:      e.backend,
+
+		ConnectionManager: e.backend,
+		ModuleLister:      e.backend,
+		MetadataReader:    e.backend,
+		FolderManager:     e.backend,
+		DomainModels:      extractDomainModelsRepo(e.backend),
 	}
 }
