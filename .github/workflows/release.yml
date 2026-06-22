@@ -34,14 +34,22 @@ jobs:
 
       - name: Build mxcli binaries
         run: |
-          echo "=== plain go build ==="
-          CGO_ENABLED=0 go build -o /dev/null ./cmd/mxcli 2>&1
-          echo "=== git describe ==="
-          git describe --tags --always --dirty
-          echo "=== VERSION ==="
-          echo "VERSION=$(git describe --tags --always --dirty 2>/dev/null || echo dev)"
-          echo "=== make release-mxcli ==="
-          make release-mxcli VERSION="$(git describe --tags --always --dirty 2>/dev/null || echo dev)" 2>&1
+          set -e
+          make sync-all
+          mkdir -p bin
+          VERSION="${{ github.ref_name }}"
+          COMMIT_SHA="$(git rev-parse HEAD)"
+          BUILD_TIME="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+          LDFLAGS="-s -w -X main.Version=${VERSION} -X main.BuildTime=${BUILD_TIME} -X main.CommitSHA=${COMMIT_SHA}"
+          echo "VERSION=${VERSION} COMMIT_SHA=${COMMIT_SHA}"
+          echo "LDFLAGS=${LDFLAGS}"
+          for TARGET in "linux/amd64" "linux/arm64" "darwin/amd64" "darwin/arm64" "windows/amd64" "windows/arm64"; do
+            OS="${TARGET%/*}"
+            ARCH="${TARGET#*/}"
+            EXT=""; [ "${OS}" = "windows" ] && EXT=".exe"
+            echo "Building ${OS}/${ARCH}..."
+            CGO_ENABLED=0 GOOS="${OS}" GOARCH="${ARCH}" go build -ldflags "${LDFLAGS}" -trimpath -o "bin/mxcli-${OS}-${ARCH}${EXT}" ./cmd/mxcli 2>&1
+          done
 
       - name: Generate SHA256 checksums
         run: |
