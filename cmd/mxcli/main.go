@@ -52,6 +52,21 @@ func main() {
 }
 
 func run() int {
+	// --internal-update mode: spawned by upgrade/rollback to replace the binary
+	// after the parent process exits. Must be handled before Cobra parsing.
+	if len(os.Args) > 1 && os.Args[1] == "--internal-update" {
+		pid, newBin, target, ok := parseInternalUpdateArgs(os.Args[2:])
+		if !ok {
+			fmt.Fprintln(os.Stderr, "mxcli: invalid --internal-update args")
+			return 1
+		}
+		if err := runInternalUpdate(pid, newBin, target, &RealPIDWaiter{}, 30*time.Second); err != nil {
+			fmt.Fprintf(os.Stderr, "mxcli: update failed: %v\n", err)
+			return 1
+		}
+		return 0
+	}
+
 	// Intercept --serve <socket-path> BEFORE cobra parses flags.
 	if sockPath := extractServeSocket(os.Args[1:]); sockPath != "" {
 		idleTimeout := extractIdleTimeout(os.Args[1:])
@@ -403,6 +418,8 @@ func init() {
 	rootCmd.AddCommand(importCmd)
 	rootCmd.AddCommand(gitCmd)
 	rootCmd.AddCommand(completionCmd)
+	rootCmd.AddCommand(upgradeCmd)
+	rootCmd.AddCommand(rollbackCmd)
 	rootCmd.AddCommand(buildCmd())
 	rootCmd.AddCommand(runCmd())
 	rootCmd.AddCommand(reloadCmd())
