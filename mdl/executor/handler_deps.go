@@ -8,6 +8,7 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/backend"
 	"github.com/mendixlabs/mxcli/mdl/diaglog"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
+	"github.com/mendixlabs/mxcli/mdl/graphcatalog"
 	"github.com/mendixlabs/mxcli/mdl/repos"
 )
 
@@ -30,8 +31,10 @@ type HandlerDeps struct {
 	BackendFactory       BackendFactory
 	ConnectionManager    backend.ConnectionManager
 	ModuleLister         backend.ModuleLister
+	ModuleWriter         backend.ModuleWriter
 	FolderManager        backend.FolderManager
 	ModuleSettingsReader backend.ModuleSettingsReader
+	ModuleSettingsWriter backend.ModuleSettingsWriter
 	DomainModelReader    backend.DomainModelReader
 	MicroflowReader      backend.MicroflowReader
 	PageReader           backend.PageReader
@@ -41,9 +44,12 @@ type HandlerDeps struct {
 	SettingsReader       backend.SettingsReader
 	MapperReader         backend.MappingReader
 	MapperWriter         backend.MappingWriter
-	NavigationReader     backend.NavigationReader
-	ScheduledEventReader backend.ScheduledEventReader
-	MetadataReader       backend.MetadataReader
+	NavigationReader       backend.NavigationReader
+	NavigationWriter       backend.NavigationWriter
+	RenameManager          backend.RenameManager
+	JavaActionWriter       backend.JavaActionWriter
+	ScheduledEventReader   backend.ScheduledEventReader
+	MetadataReader         backend.MetadataReader
 
 	// DomainModels repo for entity counting (Stage 3 repos).
 	DomainModels repos.DomainModelRepository
@@ -65,6 +71,30 @@ type HandlerDeps struct {
 	// Describe handler deps (Phase 3d-1h).
 	ServiceLister backend.ServiceLister
 	ImageBackend  backend.ImageBackend
+
+	// ServiceWriter provides write operations for OData, REST, etc. (Phase 3d-5).
+	ServiceWriter backend.ServiceWriter
+
+	// DomainModelWriter provides entity/association write operations (Phase 3d-5).
+	DomainModelWriter backend.DomainModelWriter
+
+	// MprPath is the path to the project .mpr file (Phase 3d-5).
+	MprPath string
+
+	// Graph is the in-memory project graph for data-flow analysis (Phase 3d-5f).
+	Graph *graphcatalog.ProjectGraph
+
+	// Perf collects timing statistics when non-nil (Phase 3d-5f).
+	Perf *PerfTimer
+
+	// Output format (defaults to table).
+	Format OutputFormat
+
+	// Widget builder and page mutation (Phase 3d-5c/e).
+	WidgetBuilder              backend.WidgetBuilder
+	PageModelAccess            backend.PageModelAccess
+	PageMutationOperator       backend.PageMutationOperator
+	SecurityEntityAccessManager backend.SecurityEntityAccessManager
 }
 
 // registerFutureOverlays registers new-style handlers (StmtHandlerFunc) for
@@ -197,6 +227,14 @@ func (e *Executor) registerFutureOverlays() {
 			return listLanguagesFuture(ctx, deps.Output, e.format, deps.SettingsReader)
 		case ast.ShowSupportedLanguages:
 			return listSupportedLanguagesFuture(ctx, deps.Output, e.format)
+		case ast.ShowODataClients:
+			return listODataClientsFn(ctx, deps, e.format, s.InModule)
+		case ast.ShowODataServices:
+			return listODataServicesFn(ctx, deps, e.format, s.InModule)
+		case ast.ShowExternalEntities:
+			return listExternalEntitiesFn(ctx, deps, e.format, s.InModule)
+		case ast.ShowExternalActions:
+			return listExternalActionsFn(ctx, deps, e.format, s.InModule)
 		case ast.ShowStructure:
 			return execShowStructureGenFuture(ctx, deps.Output, e.format, s, deps)
 		default:
@@ -305,6 +343,18 @@ func (e *Executor) registerFutureOverlays() {
 			return writeDescribeJSONFuture(deps.Output, e.format, name, entry.label, func(output io.Writer) error {
 				return describeFragmentFuture(ctx, output, e.fragments, s.Name)
 			})
+		case ast.DescribeODataClient:
+			return writeDescribeJSONFuture(deps.Output, e.format, name, entry.label, func(output io.Writer) error {
+				return describeODataClientFn(ctx, deps, s.Name)
+			})
+		case ast.DescribeODataService:
+			return writeDescribeJSONFuture(deps.Output, e.format, name, entry.label, func(output io.Writer) error {
+				return describeODataServiceFn(ctx, deps, s.Name)
+			})
+		case ast.DescribeExternalEntity:
+			return writeDescribeJSONFuture(deps.Output, e.format, name, entry.label, func(output io.Writer) error {
+				return describeExternalEntityFn(ctx, deps, s.Name)
+			})
 		default:
 			// Not yet migrated — fall through to old handler.
 			ectx := ctx.(*ExecContext)
@@ -319,12 +369,10 @@ func (e *Executor) registerFutureOverlays() {
 	// ────────────────────────────────────────────────────
 
 	r.RegisterFuture("CreateModule", func(ctx context.Context, stmt ast.Statement) error {
-		ectx := phase3d2bNewExecContext(ctx, deps)
-		return execCreateModule(ectx, stmt.(*ast.CreateModuleStmt))
+		return execCreateModuleFn(ctx, stmt.(*ast.CreateModuleStmt), deps)
 	})
 	r.RegisterFuture("DropModule", func(ctx context.Context, stmt ast.Statement) error {
-		ectx := phase3d2bNewExecContext(ctx, deps)
-		return execDropModule(ectx, stmt.(*ast.DropModuleStmt))
+		return execDropModuleFn(ctx, stmt.(*ast.DropModuleStmt), deps)
 	})
 
 	r.RegisterFuture("CreateEntity", func(ctx context.Context, stmt ast.Statement) error {
@@ -332,8 +380,7 @@ func (e *Executor) registerFutureOverlays() {
 		return execCreateEntity(ectx, stmt.(*ast.CreateEntityStmt))
 	})
 	r.RegisterFuture("AlterEntity", func(ctx context.Context, stmt ast.Statement) error {
-		ectx := phase3d2bNewExecContext(ctx, deps)
-		return execAlterEntity(ectx, stmt.(*ast.AlterEntityStmt))
+		return execAlterEntityGenFn(ctx, stmt.(*ast.AlterEntityStmt), deps)
 	})
 	r.RegisterFuture("DropEntity", func(ctx context.Context, stmt ast.Statement) error {
 		ectx := phase3d2bNewExecContext(ctx, deps)
@@ -345,16 +392,13 @@ func (e *Executor) registerFutureOverlays() {
 	})
 
 	r.RegisterFuture("CreateAssociation", func(ctx context.Context, stmt ast.Statement) error {
-		ectx := phase3d2bNewExecContext(ctx, deps)
-		return execCreateAssociation(ectx, stmt.(*ast.CreateAssociationStmt))
+		return execCreateAssociationFn(ctx, stmt.(*ast.CreateAssociationStmt), deps)
 	})
 	r.RegisterFuture("AlterAssociation", func(ctx context.Context, stmt ast.Statement) error {
-		ectx := phase3d2bNewExecContext(ctx, deps)
-		return execAlterAssociation(ectx, stmt.(*ast.AlterAssociationStmt))
+		return execAlterAssociationFn(ctx, stmt.(*ast.AlterAssociationStmt), deps)
 	})
 	r.RegisterFuture("DropAssociation", func(ctx context.Context, stmt ast.Statement) error {
-		ectx := phase3d2bNewExecContext(ctx, deps)
-		return execDropAssociation(ectx, stmt.(*ast.DropAssociationStmt))
+		return execDropAssociationFn(ctx, stmt.(*ast.DropAssociationStmt), deps)
 	})
 
 	// ────────────────────────────────────────────────────
@@ -383,16 +427,14 @@ func (e *Executor) registerFutureOverlays() {
 
 	// Page handlers
 	r.RegisterFuture("CreatePageStmtV3", func(ctx context.Context, stmt ast.Statement) error {
-		ectx := phase3d2bNewExecContext(ctx, deps)
-		return execCreatePageV3(ectx, stmt.(*ast.CreatePageStmtV3))
+		return execCreatePageV3Fn(ctx, stmt.(*ast.CreatePageStmtV3), deps)
 	})
 	r.RegisterFuture("DropPage", func(ctx context.Context, stmt ast.Statement) error {
 		ectx := phase3d2bNewExecContext(ctx, deps)
 		return execDropPage(ectx, stmt.(*ast.DropPageStmt))
 	})
 	r.RegisterFuture("CreateSnippetStmtV3", func(ctx context.Context, stmt ast.Statement) error {
-		ectx := phase3d2bNewExecContext(ctx, deps)
-		return execCreateSnippetV3(ectx, stmt.(*ast.CreateSnippetStmtV3))
+		return execCreateSnippetV3Fn(ctx, stmt.(*ast.CreateSnippetStmtV3), deps)
 	})
 	r.RegisterFuture("DropSnippet", func(ctx context.Context, stmt ast.Statement) error {
 		ectx := phase3d2bNewExecContext(ctx, deps)
@@ -407,8 +449,7 @@ func (e *Executor) registerFutureOverlays() {
 
 	// ALTER PAGE handler
 	r.RegisterFuture("AlterPage", func(ctx context.Context, stmt ast.Statement) error {
-		ectx := phase3d2bNewExecContext(ctx, deps)
-		return execAlterPage(ectx, stmt.(*ast.AlterPageStmt))
+		return execAlterPageFn(ctx, stmt.(*ast.AlterPageStmt), deps)
 	})
 
 	// Workflow handlers
@@ -840,6 +881,59 @@ func (e *Executor) registerFutureOverlays() {
 	})
 }
 
+// execContextToDeps bridges old-style *ExecContext to *HandlerDeps for
+// Phase 3d-5 migration callers that still pass *ExecContext.
+func execContextToDeps(ectx *ExecContext) *HandlerDeps {
+	return &HandlerDeps{
+		Output:       ectx.Output,
+		StatusOutput: ectx.StatusOutput,
+		Logger:       ectx.Logger,
+		Quiet:        ectx.Quiet,
+		Backend:      ectx.Backend,
+
+		ConnectionManager:    ectx.ConnectionManager,
+		ModuleLister:         ectx.ModuleLister,
+		ModuleWriter:         ectx.ModuleWriter,
+		FolderManager:        ectx.FolderManager,
+		MetadataReader:       ectx.MetadataReader,
+		EnumerationReader:    ectx.EnumerationReader,
+		ConstantReader:       ectx.ConstantReader,
+		SettingsReader:       ectx.SettingsReader,
+		NavigationReader:     ectx.NavigationReader,
+		ScheduledEventReader: ectx.ScheduledEventReader,
+		DomainModelReader:    ectx.DomainModelReader,
+		ModuleSettingsReader: ectx.ModuleSettingsReader,
+		ModuleSettingsWriter: ectx.ModuleSettingsWriter,
+		NavigationWriter:     ectx.NavigationWriter,
+		RenameManager:        ectx.RenameManager,
+		JavaActionWriter:     ectx.JavaActionWriter,
+
+		DomainModels:      ectx.DomainModels,
+		MicroflowRepo:     ectx.Microflows,
+		NanoflowRepo:      ectx.Nanoflows,
+		PageRepo:          ectx.Pages,
+		LayoutRepo:        ectx.Layouts,
+		SnippetRepo:       ectx.Snippets,
+		JavaActionRepo:    ectx.JavaActions,
+		JavaScriptActionRepo: ectx.JavaScriptActions,
+		WorkflowRepo:      ectx.Workflows,
+		Security:          ectx.Security,
+		ServiceLister:     ectx.ServiceLister,
+		ServiceWriter:     ectx.ServiceWriter,
+		DomainModelWriter: ectx.DomainModelWriter,
+		PageReader:        ectx.PageReader,
+		PageWriter:        ectx.PageWriter,
+		WidgetBuilder:     ectx.WidgetBuilder,
+		PageModelAccess:   ectx.PageModelAccess,
+		PageMutationOperator:    ectx.PageMutationOperator,
+		SecurityEntityAccessManager: ectx.SecurityEntityAccessManager,
+		Format:            ectx.Format,
+		MprPath:           ectx.MprPath,
+		Graph:             ectx.Graph,
+		Perf:              ectx.Perf,
+	}
+}
+
 // buildHandlerDeps populates a HandlerDeps from the current Executor state.
 func (e *Executor) buildHandlerDeps() *HandlerDeps {
 	if e.backend == nil {
@@ -854,6 +948,7 @@ func (e *Executor) buildHandlerDeps() *HandlerDeps {
 
 		ConnectionManager:    e.backend,
 		ModuleLister:         e.backend,
+		ModuleWriter:         e.backend,
 		FolderManager:        e.backend,
 		MetadataReader:       e.backend,
 		EnumerationReader:    e.backend,
@@ -873,7 +968,24 @@ func (e *Executor) buildHandlerDeps() *HandlerDeps {
 		WorkflowRepo:         extractWorkflowsRepo(e.backend),
 		BusinessEventBackend: e.backend,
 		Security:             extractSecurityRepo(e.backend),
+		ModuleSettingsReader: e.backend,
+		ModuleSettingsWriter: e.backend,
+		NavigationWriter:     e.backend,
+		RenameManager:        e.backend,
+		JavaActionWriter:     e.backend,
 		ServiceLister:        e.backend,
-		ImageBackend:         e.backend,
+		ServiceWriter:        e.backend,
+		DomainModelWriter:    e.backend,
+		PageReader:                e.backend,
+		PageWriter:                e.backend,
+		WidgetBuilder:             e.backend,
+		PageModelAccess:           e.backend,
+		PageMutationOperator:      e.backend,
+		SecurityEntityAccessManager: e.backend,
+		Format:                   e.format,
+		MprPath:                   e.mprPath,
+		Graph:                     nil, // Populated lazily; see Analyzer.
+		Perf:                      nil, // Populated lazily; see Analyzer.
+		ImageBackend:              e.backend,
 	}
 }

@@ -2938,6 +2938,10 @@ func phase3d2bNewExecContext(ctx context.Context, deps *HandlerDeps) *ExecContex
 			Snippets:          deps.SnippetRepo,
 		},
 	}
+	// Preserve the existing executor cache (critical for mock tests with pre-built hierarchy).
+	if oldCtx, ok := ctx.(*ExecContext); ok {
+		ectx.Cache = oldCtx.Cache
+	}
 	ectx.initRoles()
 	return ectx
 }
@@ -2971,8 +2975,7 @@ func execDropConstantFuture(ctx context.Context, stmt ast.Statement, deps *Handl
 }
 
 func execAlterModuleJarDepFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
-	return execAlterModuleJarDep(ectx, stmt.(*ast.AlterModuleJarDepStmt))
+	return execAlterModuleJarDepFn(ctx, stmt.(*ast.AlterModuleJarDepStmt), deps)
 }
 
 func execCreateDatabaseConnectionFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
@@ -3011,13 +3014,11 @@ func execMoveFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) 
 }
 
 func execRenameFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
-	return execRename(ectx, stmt.(*ast.RenameStmt))
+	return execRenameFn(ctx, stmt.(*ast.RenameStmt), deps)
 }
 
 func execAlterNavigationFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
-	return execAlterNavigation(ectx, stmt.(*ast.AlterNavigationStmt))
+	return execAlterNavigationFn(ctx, stmt.(*ast.AlterNavigationStmt), deps)
 }
 
 func execCreateImageCollectionFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
@@ -3070,33 +3071,27 @@ func execDropBusinessEventServiceFuture(ctx context.Context, stmt ast.Statement,
 }
 
 func execCreateODataClientFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
-	return createODataClient(ectx, stmt.(*ast.CreateODataClientStmt))
+	return createODataClientFn(ctx, deps, stmt.(*ast.CreateODataClientStmt))
 }
 
 func execAlterODataClientFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
-	return alterODataClient(ectx, stmt.(*ast.AlterODataClientStmt))
+	return alterODataClientFn(ctx, deps, stmt.(*ast.AlterODataClientStmt))
 }
 
 func execDropODataClientFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
-	return dropODataClient(ectx, stmt.(*ast.DropODataClientStmt))
+	return dropODataClientFn(ctx, deps, stmt.(*ast.DropODataClientStmt))
 }
 
 func execCreateODataServiceFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
-	return createODataService(ectx, stmt.(*ast.CreateODataServiceStmt))
+	return createODataServiceFn(ctx, deps, stmt.(*ast.CreateODataServiceStmt))
 }
 
 func execAlterODataServiceFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
-	return alterODataService(ectx, stmt.(*ast.AlterODataServiceStmt))
+	return alterODataServiceFn(ctx, deps, stmt.(*ast.AlterODataServiceStmt))
 }
 
 func execDropODataServiceFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
-	return dropODataService(ectx, stmt.(*ast.DropODataServiceStmt))
+	return dropODataServiceFn(ctx, deps, stmt.(*ast.DropODataServiceStmt))
 }
 
 func execCreateJsonStructureFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
@@ -3160,8 +3155,7 @@ func execAlterPublishedRestServiceFuture(ctx context.Context, stmt ast.Statement
 }
 
 func execCreateExternalEntityFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
-	return execCreateExternalEntity(ectx, stmt.(*ast.CreateExternalEntityStmt))
+	return execCreateExternalEntityFn(ctx, deps, stmt.(*ast.CreateExternalEntityStmt))
 }
 
 func execCreateExternalEntitiesFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {

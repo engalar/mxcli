@@ -3,6 +3,7 @@
 package executor
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"strings"
@@ -15,61 +16,8 @@ import (
 // execAlterNavigation handles CREATE [OR REPLACE] NAVIGATION <profile> command.
 // It fully replaces the profile's home pages, login page, not-found page, and menu tree.
 func execAlterNavigation(ctx *ExecContext, s *ast.AlterNavigationStmt) error {
-	if !ctx.ConnectedForWrite() {
-		return mdlerrors.NewNotConnectedWrite()
-	}
-
-	nav, err := ctx.NavigationReader.GetNavigation()
-	if err != nil {
-		return mdlerrors.NewBackend("get navigation", err)
-	}
-
-	// Verify the profile exists
-	profileFound := false
-	for _, p := range nav.Profiles {
-		if strings.EqualFold(p.Name, s.ProfileName) {
-			profileFound = true
-			break
-		}
-	}
-	if !profileFound {
-		return mdlerrors.NewNotFoundMsg("navigation profile", s.ProfileName,
-			fmt.Sprintf("navigation profile not found: %s (available: %s)", s.ProfileName, profileNames(nav)))
-	}
-
-	// Convert AST types to writer spec
-	spec := types.NavigationProfileSpec{
-		HasMenu: s.HasMenuBlock,
-	}
-
-	for _, hp := range s.HomePages {
-		hpSpec := types.NavHomePageSpec{
-			IsPage: hp.IsPage,
-			Target: hp.Target.String(),
-		}
-		if hp.ForRole != nil {
-			hpSpec.ForRole = hp.ForRole.String()
-		}
-		spec.HomePages = append(spec.HomePages, hpSpec)
-	}
-
-	if s.LoginPage != nil {
-		spec.LoginPage = s.LoginPage.String()
-	}
-	if s.NotFoundPage != nil {
-		spec.NotFoundPage = s.NotFoundPage.String()
-	}
-
-	for _, mi := range s.MenuItems {
-		spec.MenuItems = append(spec.MenuItems, convertMenuItemDef(mi))
-	}
-
-	if err := ctx.NavigationWriter.UpdateNavigationProfile(nav.ID, s.ProfileName, spec); err != nil {
-		return mdlerrors.NewBackend("update navigation profile", err)
-	}
-
-	fmt.Fprintf(ctx.Output, "Navigation profile '%s' updated.\n", s.ProfileName)
-	return nil
+	deps := execContextToDeps(ctx)
+	return execAlterNavigationFn(ctx, s, deps)
 }
 
 // convertMenuItemDef converts an AST NavMenuItemDef to a writer NavMenuItemSpec.
@@ -101,214 +49,29 @@ func profileNames(nav *types.NavigationDocument) string {
 // listNavigation handles SHOW NAVIGATION command.
 // Displays an overview of all navigation profiles with their home pages and menu item counts.
 func listNavigation(ctx *ExecContext) error {
-	nav, err := ctx.NavigationReader.GetNavigation()
-	if err != nil {
-		return mdlerrors.NewBackend("get navigation", err)
-	}
-
-	if len(nav.Profiles) == 0 {
-		fmt.Fprintln(ctx.Output, "No navigation profiles found.")
-		return nil
-	}
-
-	type row struct {
-		name      string
-		kind      string
-		homePage  string
-		loginPage string
-		menuItems int
-		roleHomes int
-	}
-	var rows []row
-
-	for _, p := range nav.Profiles {
-		homePage := ""
-		if p.HomePage != nil {
-			if p.HomePage.Page != "" {
-				homePage = p.HomePage.Page
-			} else if p.HomePage.Microflow != "" {
-				homePage = "MF:" + p.HomePage.Microflow
-			}
-		}
-
-		loginPage := p.LoginPage
-		if loginPage == "" {
-			loginPage = "-"
-		}
-
-		menuCount := countMenuItems(p.MenuItems)
-
-		kind := p.Kind
-		if p.IsNative {
-			kind += " (native)"
-		}
-
-		rows = append(rows, row{p.Name, kind, homePage, loginPage, menuCount, len(p.RoleBasedHomePages)})
-	}
-
-	result := &TableResult{
-		Columns: []string{"Profile", "Kind", "HomePage", "LoginPage", "MenuItems", "RoleHomes"},
-		Summary: fmt.Sprintf("(%d navigation profiles)", len(rows)),
-	}
-	for _, r := range rows {
-		result.Rows = append(result.Rows, []any{r.name, r.kind, r.homePage, r.loginPage, r.menuItems, r.roleHomes})
-	}
-	return writeResult(ctx, result)
+	deps := execContextToDeps(ctx)
+	return listNavigationFn(ctx, deps.Output, deps)
 }
 
 // listNavigationMenu handles SHOW NAVIGATION MENU [profile] command.
 // Displays the menu tree for a specific profile, or all profiles if none specified.
 func listNavigationMenu(ctx *ExecContext, profileName *ast.QualifiedName) error {
-	nav, err := ctx.NavigationReader.GetNavigation()
-	if err != nil {
-		return mdlerrors.NewBackend("get navigation", err)
-	}
-
-	for _, p := range nav.Profiles {
-		if profileName != nil && !strings.EqualFold(p.Name, profileName.Name) {
-			continue
-		}
-
-		fmt.Fprintf(ctx.Output, "-- Navigation Menu: %s (%s)\n", p.Name, p.Kind)
-		if len(p.MenuItems) == 0 {
-			fmt.Fprintln(ctx.Output, "  (no menu items)")
-		} else {
-			printMenuTree(ctx.Output, p.MenuItems, 0)
-		}
-		fmt.Fprintln(ctx.Output)
-	}
-
-	return nil
+	deps := execContextToDeps(ctx)
+	return listNavigationMenuFn(ctx, deps.Output, deps, profileName)
 }
 
 // listNavigationHomes handles SHOW NAVIGATION HOMES command.
 // Displays all home page configurations including role-based overrides.
 func listNavigationHomes(ctx *ExecContext) error {
-	nav, err := ctx.NavigationReader.GetNavigation()
-	if err != nil {
-		return mdlerrors.NewBackend("get navigation", err)
-	}
-
-	for _, p := range nav.Profiles {
-		fmt.Fprintf(ctx.Output, "-- Profile: %s (%s)\n", p.Name, p.Kind)
-
-		// Default home page
-		if p.HomePage != nil {
-			if p.HomePage.Page != "" {
-				fmt.Fprintf(ctx.Output, "  Default Home: page %s\n", p.HomePage.Page)
-			} else if p.HomePage.Microflow != "" {
-				fmt.Fprintf(ctx.Output, "  Default Home: microflow %s\n", p.HomePage.Microflow)
-			}
-		} else {
-			fmt.Fprintln(ctx.Output, "  Default Home: (none)")
-		}
-
-		// Role-based home pages
-		if len(p.RoleBasedHomePages) > 0 {
-			fmt.Fprintln(ctx.Output, "  Role-Based Homes:")
-			for _, rh := range p.RoleBasedHomePages {
-				target := ""
-				if rh.Page != "" {
-					target = "page " + rh.Page
-				} else if rh.Microflow != "" {
-					target = "microflow " + rh.Microflow
-				}
-				fmt.Fprintf(ctx.Output, "    %s -> %s\n", rh.UserRole, target)
-			}
-		}
-
-		fmt.Fprintln(ctx.Output)
-	}
-
-	return nil
+	deps := execContextToDeps(ctx)
+	return listNavigationHomesFn(ctx, deps.Output, deps)
 }
 
 // describeNavigation handles DESCRIBE NAVIGATION [profile] command.
 // Outputs a complete MDL-style description of a navigation profile.
 func describeNavigation(ctx *ExecContext, name ast.QualifiedName) error {
-	nav, err := ctx.NavigationReader.GetNavigation()
-	if err != nil {
-		return mdlerrors.NewBackend("get navigation", err)
-	}
-
-	// If no profile name, describe all profiles
-	if name.Name == "" {
-		for _, p := range nav.Profiles {
-			outputNavigationProfile(ctx, p)
-		}
-		return nil
-	}
-
-	// Find specific profile
-	for _, p := range nav.Profiles {
-		if strings.EqualFold(p.Name, name.Name) {
-			outputNavigationProfile(ctx, p)
-			return nil
-		}
-	}
-
-	return mdlerrors.NewNotFound("navigation profile", name.Name)
-}
-
-// outputNavigationProfile outputs a single profile in round-trippable CREATE OR REPLACE NAVIGATION format.
-func outputNavigationProfile(ctx *ExecContext, p *types.NavigationProfile) {
-	fmt.Fprintf(ctx.Output, "-- navigation PROFILE: %s\n", p.Name)
-	fmt.Fprintf(ctx.Output, "--   Kind: %s\n", p.Kind)
-	if p.IsNative {
-		fmt.Fprintf(ctx.Output, "--   Native: Yes\n")
-	}
-
-	fmt.Fprintf(ctx.Output, "create or replace navigation %s\n", p.Name)
-
-	// Home page
-	if p.HomePage != nil {
-		if p.HomePage.Page != "" {
-			fmt.Fprintf(ctx.Output, "  home page %s\n", p.HomePage.Page)
-		} else if p.HomePage.Microflow != "" {
-			fmt.Fprintf(ctx.Output, "  home microflow %s\n", p.HomePage.Microflow)
-		}
-	}
-
-	// Role-based home pages
-	for _, rh := range p.RoleBasedHomePages {
-		if rh.Page != "" {
-			fmt.Fprintf(ctx.Output, "  home page %s for %s\n", rh.Page, rh.UserRole)
-		} else if rh.Microflow != "" {
-			fmt.Fprintf(ctx.Output, "  home microflow %s for %s\n", rh.Microflow, rh.UserRole)
-		}
-	}
-
-	// Login page
-	if p.LoginPage != "" {
-		fmt.Fprintf(ctx.Output, "  login page %s\n", p.LoginPage)
-	}
-
-	// Not-found page
-	if p.NotFoundPage != "" {
-		fmt.Fprintf(ctx.Output, "  not found page %s\n", p.NotFoundPage)
-	}
-
-	// Menu items
-	if len(p.MenuItems) > 0 {
-		fmt.Fprintln(ctx.Output, "  menu (")
-		printMenuMDL(ctx.Output, p.MenuItems, 2)
-		fmt.Fprintln(ctx.Output, "  )")
-	}
-
-	// Offline entities (as comments since CREATE NAVIGATION doesn't handle sync yet)
-	if len(p.OfflineEntities) > 0 {
-		fmt.Fprintln(ctx.Output, "  -- Offline Entities (not yet modifiable):")
-		for _, oe := range p.OfflineEntities {
-			constraint := ""
-			if oe.Constraint != "" {
-				constraint = fmt.Sprintf(" where '%s'", oe.Constraint)
-			}
-			fmt.Fprintf(ctx.Output, "  -- SYNC %s MODE %s%s;\n", oe.Entity, oe.SyncMode, constraint)
-		}
-	}
-
-	fmt.Fprintln(ctx.Output, ";")
-	fmt.Fprintln(ctx.Output)
+	deps := execContextToDeps(ctx)
+	return describeNavigationFn(ctx, deps.Output, deps, name)
 }
 
 // countMenuItems counts the total number of menu items recursively.
@@ -361,3 +124,259 @@ func printMenuMDL(w io.Writer, items []*types.NavMenuItem, depth int) {
 		}
 	}
 }
+
+// ────────────────────────────────────────────────────────────
+// Phase 3d-5g: Fn (HandlerDeps) versions of navigation functions
+// ────────────────────────────────────────────────────────────
+
+func execAlterNavigationFn(ctx context.Context, s *ast.AlterNavigationStmt, deps *HandlerDeps) error {
+	if !deps.ConnectionManager.IsConnected() {
+		return mdlerrors.NewNotConnectedWrite()
+	}
+
+	nav, err := deps.NavigationReader.GetNavigation()
+	if err != nil {
+		return mdlerrors.NewBackend("get navigation", err)
+	}
+
+	profileFound := false
+	for _, p := range nav.Profiles {
+		if strings.EqualFold(p.Name, s.ProfileName) {
+			profileFound = true
+			break
+		}
+	}
+	if !profileFound {
+		return mdlerrors.NewNotFoundMsg("navigation profile", s.ProfileName,
+			fmt.Sprintf("navigation profile not found: %s (available: %s)", s.ProfileName, profileNames(nav)))
+	}
+
+	spec := types.NavigationProfileSpec{
+		HasMenu: s.HasMenuBlock,
+	}
+
+	for _, hp := range s.HomePages {
+		hpSpec := types.NavHomePageSpec{
+			IsPage: hp.IsPage,
+			Target: hp.Target.String(),
+		}
+		if hp.ForRole != nil {
+			hpSpec.ForRole = hp.ForRole.String()
+		}
+		spec.HomePages = append(spec.HomePages, hpSpec)
+	}
+
+	if s.LoginPage != nil {
+		spec.LoginPage = s.LoginPage.String()
+	}
+	if s.NotFoundPage != nil {
+		spec.NotFoundPage = s.NotFoundPage.String()
+	}
+
+	for _, mi := range s.MenuItems {
+		spec.MenuItems = append(spec.MenuItems, convertMenuItemDef(mi))
+	}
+
+	if err := deps.NavigationWriter.UpdateNavigationProfile(nav.ID, s.ProfileName, spec); err != nil {
+		return mdlerrors.NewBackend("update navigation profile", err)
+	}
+
+	fmt.Fprintf(deps.Output, "Navigation profile '%s' updated.\n", s.ProfileName)
+	return nil
+}
+
+func listNavigationFn(ctx context.Context, output io.Writer, deps *HandlerDeps) error {
+	nav, err := deps.NavigationReader.GetNavigation()
+	if err != nil {
+		return mdlerrors.NewBackend("get navigation", err)
+	}
+
+	if len(nav.Profiles) == 0 {
+		fmt.Fprintln(output, "No navigation profiles found.")
+		return nil
+	}
+
+	type row struct {
+		name      string
+		kind      string
+		homePage  string
+		loginPage string
+		menuItems int
+		roleHomes int
+	}
+	var rows []row
+
+	for _, p := range nav.Profiles {
+		homePage := ""
+		if p.HomePage != nil {
+			if p.HomePage.Page != "" {
+				homePage = p.HomePage.Page
+			} else if p.HomePage.Microflow != "" {
+				homePage = "MF:" + p.HomePage.Microflow
+			}
+		}
+
+		loginPage := p.LoginPage
+		if loginPage == "" {
+			loginPage = "-"
+		}
+
+		menuCount := countMenuItems(p.MenuItems)
+
+		kind := p.Kind
+		if p.IsNative {
+			kind += " (native)"
+		}
+
+		rows = append(rows, row{p.Name, kind, homePage, loginPage, menuCount, len(p.RoleBasedHomePages)})
+	}
+
+	result := &TableResult{
+		Columns: []string{"Profile", "Kind", "HomePage", "LoginPage", "MenuItems", "RoleHomes"},
+		Summary: fmt.Sprintf("(%d navigation profiles)", len(rows)),
+	}
+	for _, r := range rows {
+		result.Rows = append(result.Rows, []any{r.name, r.kind, r.homePage, r.loginPage, r.menuItems, r.roleHomes})
+	}
+	return writeResultTo(output, deps.Format, result)
+}
+
+func listNavigationMenuFn(ctx context.Context, output io.Writer, deps *HandlerDeps, profileName *ast.QualifiedName) error {
+	nav, err := deps.NavigationReader.GetNavigation()
+	if err != nil {
+		return mdlerrors.NewBackend("get navigation", err)
+	}
+
+	for _, p := range nav.Profiles {
+		if profileName != nil && !strings.EqualFold(p.Name, profileName.Name) {
+			continue
+		}
+
+		fmt.Fprintf(output, "-- Navigation Menu: %s (%s)\n", p.Name, p.Kind)
+		if len(p.MenuItems) == 0 {
+			fmt.Fprintln(output, "  (no menu items)")
+		} else {
+			printMenuTree(output, p.MenuItems, 0)
+		}
+		fmt.Fprintln(output)
+	}
+
+	return nil
+}
+
+func listNavigationHomesFn(ctx context.Context, output io.Writer, deps *HandlerDeps) error {
+	nav, err := deps.NavigationReader.GetNavigation()
+	if err != nil {
+		return mdlerrors.NewBackend("get navigation", err)
+	}
+
+	for _, p := range nav.Profiles {
+		fmt.Fprintf(output, "-- Profile: %s (%s)\n", p.Name, p.Kind)
+
+		if p.HomePage != nil {
+			if p.HomePage.Page != "" {
+				fmt.Fprintf(output, "  Default Home: page %s\n", p.HomePage.Page)
+			} else if p.HomePage.Microflow != "" {
+				fmt.Fprintf(output, "  Default Home: microflow %s\n", p.HomePage.Microflow)
+			}
+		} else {
+			fmt.Fprintln(output, "  Default Home: (none)")
+		}
+
+		if len(p.RoleBasedHomePages) > 0 {
+			fmt.Fprintln(output, "  Role-Based Homes:")
+			for _, rh := range p.RoleBasedHomePages {
+				target := ""
+				if rh.Page != "" {
+					target = "page " + rh.Page
+				} else if rh.Microflow != "" {
+					target = "microflow " + rh.Microflow
+				}
+				fmt.Fprintf(output, "    %s -> %s\n", rh.UserRole, target)
+			}
+		}
+
+		fmt.Fprintln(output)
+	}
+
+	return nil
+}
+
+func describeNavigationFn(ctx context.Context, output io.Writer, deps *HandlerDeps, name ast.QualifiedName) error {
+	nav, err := deps.NavigationReader.GetNavigation()
+	if err != nil {
+		return mdlerrors.NewBackend("get navigation", err)
+	}
+
+	if name.Name == "" {
+		for _, p := range nav.Profiles {
+			outputNavigationProfileFn(output, p)
+		}
+		return nil
+	}
+
+	for _, p := range nav.Profiles {
+		if strings.EqualFold(p.Name, name.Name) {
+			outputNavigationProfileFn(output, p)
+			return nil
+		}
+	}
+
+	return mdlerrors.NewNotFound("navigation profile", name.Name)
+}
+
+func outputNavigationProfileFn(output io.Writer, p *types.NavigationProfile) {
+	fmt.Fprintf(output, "-- navigation PROFILE: %s\n", p.Name)
+	fmt.Fprintf(output, "--   Kind: %s\n", p.Kind)
+	if p.IsNative {
+		fmt.Fprintf(output, "--   Native: Yes\n")
+	}
+
+	fmt.Fprintf(output, "create or replace navigation %s\n", p.Name)
+
+	if p.HomePage != nil {
+		if p.HomePage.Page != "" {
+			fmt.Fprintf(output, "  home page %s\n", p.HomePage.Page)
+		} else if p.HomePage.Microflow != "" {
+			fmt.Fprintf(output, "  home microflow %s\n", p.HomePage.Microflow)
+		}
+	}
+
+	for _, rh := range p.RoleBasedHomePages {
+		if rh.Page != "" {
+			fmt.Fprintf(output, "  home page %s for %s\n", rh.Page, rh.UserRole)
+		} else if rh.Microflow != "" {
+			fmt.Fprintf(output, "  home microflow %s for %s\n", rh.Microflow, rh.UserRole)
+		}
+	}
+
+	if p.LoginPage != "" {
+		fmt.Fprintf(output, "  login page %s\n", p.LoginPage)
+	}
+
+	if p.NotFoundPage != "" {
+		fmt.Fprintf(output, "  not found page %s\n", p.NotFoundPage)
+	}
+
+	if len(p.MenuItems) > 0 {
+		fmt.Fprintln(output, "  menu (")
+		printMenuMDL(output, p.MenuItems, 2)
+		fmt.Fprintln(output, "  )")
+	}
+
+	if len(p.OfflineEntities) > 0 {
+		fmt.Fprintln(output, "  -- Offline Entities (not yet modifiable):")
+		for _, oe := range p.OfflineEntities {
+			constraint := ""
+			if oe.Constraint != "" {
+				constraint = fmt.Sprintf(" where '%s'", oe.Constraint)
+			}
+			fmt.Fprintf(output, "  -- SYNC %s MODE %s%s;\n", oe.Entity, oe.SyncMode, constraint)
+		}
+	}
+
+	fmt.Fprintln(output, ";")
+	fmt.Fprintln(output)
+}
+
+
