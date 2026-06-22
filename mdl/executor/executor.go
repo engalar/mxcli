@@ -260,6 +260,7 @@ func (e *Executor) SetBackend(b backend.ConnectionBackend) {
 	if e.cache == nil {
 		e.cache = &executorCache{}
 	}
+	e.registerFutureOverlays()
 }
 
 // SetQuiet enables or disables quiet mode (suppresses connection/status messages).

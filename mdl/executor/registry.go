@@ -93,8 +93,14 @@ func (r *Registry) Lookup(stmt ast.Statement) StmtHandler {
 }
 
 // Dispatch finds and executes the handler for stmt.
+// Prefers new-style StmtHandlerFunc (no ExecContext dependency) when available.
 func (r *Registry) Dispatch(ctx *ExecContext, stmt ast.Statement) error {
 	ctx.initRoles()
+	// New-style handler registered via RegisterFuture — receives ctx as context.Context.
+	if fn, ok := r.futureFuncs[stmt.TypeName()]; ok {
+		return fn(ctx, stmt)
+	}
+	// Old-style handler with *ExecContext.
 	h := r.Lookup(stmt)
 	if h == nil {
 		return mdlerrors.NewUnsupported(fmt.Sprintf("unhandled statement type %s", stmt.TypeName()))
