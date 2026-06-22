@@ -40,9 +40,17 @@ func (fb *flowBuilderGen) addCreateObjectActionGen(s *ast.CreateObjectStmt) elem
 	assignFreshID(action)
 	action.SetErrorHandlingType(fb.ehTypeGen(s.ErrorHandling))
 	action.SetOutputVariableName(s.Variable)
-	// CommitTypeNo serialises as "No" in BSON; explicit set so the
-	// gen encoder doesn't omit the field on empty default.
-	action.SetCommit("No")
+
+	commitVal := "No"
+	if s.WithCommit {
+		if s.WithoutEvents {
+			commitVal = "YesWithoutEvents"
+		} else {
+			commitVal = "Yes"
+		}
+	}
+	action.SetCommit(commitVal)
+	action.SetRefreshInClient(s.RefreshInClient)
 
 	entityQN := ""
 	if s.EntityType.Module != "" && s.EntityType.Name != "" {
@@ -76,7 +84,16 @@ func (fb *flowBuilderGen) addChangeObjectActionGen(s *ast.ChangeObjectStmt) elem
 	assignFreshID(action)
 	action.SetErrorHandlingType(fb.ehTypeGen(nil))
 	action.SetChangeVariableName(s.Variable)
-	action.SetCommit("No")
+
+	commitVal := "No"
+	if s.WithCommit {
+		if s.WithoutEvents {
+			commitVal = "YesWithoutEvents"
+		} else {
+			commitVal = "Yes"
+		}
+	}
+	action.SetCommit(commitVal)
 	action.SetRefreshInClient(s.RefreshInClient || len(s.Changes) == 0)
 
 	entityQN := ""

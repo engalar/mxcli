@@ -231,11 +231,14 @@ type ChangeItem struct {
 
 // CreateObjectStmt represents: $Var = CREATE Entity (assignments) [ON ERROR ...]
 type CreateObjectStmt struct {
-	Variable      string               // Variable name (without $ prefix)
-	EntityType    QualifiedName        // Entity type
-	Changes       []ChangeItem         // SET assignments
-	ErrorHandling *ErrorHandlingClause // Optional ON ERROR clause
-	Annotations   *ActivityAnnotations // Optional @position, @caption, @color, @annotation
+	Variable        string               // Variable name (without $ prefix)
+	EntityType      QualifiedName        // Entity type
+	Changes         []ChangeItem         // SET assignments
+	WithCommit      bool                 // true = "with commit"
+	WithoutEvents   bool                 // true = "without events"
+	RefreshInClient bool                 // true = "refresh"
+	ErrorHandling   *ErrorHandlingClause // Optional ON ERROR clause
+	Annotations     *ActivityAnnotations // Optional @position, @caption, @color, @annotation
 }
 
 func (s *CreateObjectStmt) isMicroflowStatement() {}
@@ -244,7 +247,10 @@ func (s *CreateObjectStmt) isMicroflowStatement() {}
 type ChangeObjectStmt struct {
 	Variable        string               // Variable name
 	Changes         []ChangeItem         // SET assignments
+	WithCommit      bool                 // true = "with commit"
+	WithoutEvents   bool                 // true = "without events"
 	RefreshInClient bool                 // Whether to refresh in client
+	ErrorHandling   *ErrorHandlingClause // Optional ON ERROR clause
 	Annotations     *ActivityAnnotations // Optional @position, @caption, @color, @annotation
 }
 
@@ -261,11 +267,12 @@ type MfCommitStmt struct {
 
 func (s *MfCommitStmt) isMicroflowStatement() {}
 
-// DeleteObjectStmt represents: DELETE $Var [ON ERROR ...]
+// DeleteObjectStmt represents: DELETE $Var [REFRESH] [ON ERROR ...]
 type DeleteObjectStmt struct {
-	Variable      string               // Variable to delete
-	ErrorHandling *ErrorHandlingClause // Optional ON ERROR clause
-	Annotations   *ActivityAnnotations // Optional @position, @caption, @color, @annotation
+	Variable        string               // Variable to delete
+	RefreshInClient bool                 // true = "refresh"
+	ErrorHandling   *ErrorHandlingClause // Optional ON ERROR clause
+	Annotations     *ActivityAnnotations // Optional @position, @caption, @color, @annotation
 }
 
 func (s *DeleteObjectStmt) isMicroflowStatement() {}

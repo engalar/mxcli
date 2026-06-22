@@ -238,13 +238,17 @@ simpleAssignStatement
     ;
 
 // $NewProduct = CREATE MfTest.Product (Name = $Name, Code = $Code);
+// Optional commit clauses: WITH COMMIT, WITH COMMIT WITHOUT EVENTS, WITH COMMIT REFRESH, WITH COMMIT WITHOUT EVENTS REFRESH
 createObjectStatement
-    : (VARIABLE EQUALS)? CREATE nonListDataType (LPAREN memberAssignmentList? RPAREN)? onErrorClause?
+    : (VARIABLE EQUALS)? CREATE nonListDataType (LPAREN memberAssignmentList? RPAREN)?
+      (WITH COMMIT (WITHOUT EVENTS)? REFRESH?)? onErrorClause?
     ;
 
 // CHANGE $Product (Name = $NewName, ModifiedDate = [%CurrentDateTime%]);
+// Optional commit clauses: WITH COMMIT, WITH COMMIT WITHOUT EVENTS, WITH COMMIT REFRESH, WITH COMMIT WITHOUT EVENTS REFRESH
 changeObjectStatement
-    : CHANGE VARIABLE (LPAREN memberAssignmentList? RPAREN)? REFRESH?
+    : CHANGE VARIABLE (LPAREN memberAssignmentList? RPAREN)?
+      (WITH COMMIT (WITHOUT EVENTS)? REFRESH?)? onErrorClause?
     ;
 
 // Shared by SET, LOOP, aggregate expressions, and validation feedback targets.
@@ -252,13 +256,13 @@ attributePath
     : VARIABLE ((SLASH | DOT) qualifiedName)+
     ;
 
-// COMMIT $Product; or COMMIT $Product WITH EVENTS; or COMMIT $Product REFRESH;
+// COMMIT $Product; or COMMIT $Product WITH EVENTS; or COMMIT $Product WITH EVENTS REFRESH;
 commitStatement
-    : COMMIT VARIABLE (WITH EVENTS)? REFRESH? onErrorClause?
+    : COMMIT VARIABLE (WITH EVENTS REFRESH?)? onErrorClause?
     ;
 
 deleteObjectStatement
-    : DELETE VARIABLE onErrorClause?
+    : DELETE VARIABLE REFRESH? onErrorClause?
     ;
 
 // ROLLBACK $Product; or ROLLBACK $Product REFRESH;

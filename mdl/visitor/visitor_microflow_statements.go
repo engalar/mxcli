@@ -990,6 +990,17 @@ func buildCreateObjectStatement(ctx parser.ICreateObjectStatementContext) *ast.C
 		stmt.Changes = buildMemberAssignmentList(memberList)
 	}
 
+	// Parse commit clause: (WITH COMMIT (WITHOUT EVENTS)? REFRESH?)?
+	if createCtx.COMMIT() != nil {
+		stmt.WithCommit = true
+		if createCtx.WITHOUT() != nil {
+			stmt.WithoutEvents = true
+		}
+	}
+	if createCtx.REFRESH() != nil {
+		stmt.RefreshInClient = true
+	}
+
 	// Check for ON ERROR clause
 	if errClause := createCtx.OnErrorClause(); errClause != nil {
 		stmt.ErrorHandling = buildOnErrorClause(errClause)
@@ -1018,7 +1029,22 @@ func buildChangeObjectStatement(ctx parser.IChangeObjectStatementContext) *ast.C
 	if memberList := changeCtx.MemberAssignmentList(); memberList != nil {
 		stmt.Changes = buildMemberAssignmentList(memberList)
 	}
-	stmt.RefreshInClient = changeCtx.REFRESH() != nil
+
+	// Parse commit clause: (WITH COMMIT (WITHOUT EVENTS)? REFRESH?)? onErrorClause?
+	if changeCtx.COMMIT() != nil {
+		stmt.WithCommit = true
+		if changeCtx.WITHOUT() != nil {
+			stmt.WithoutEvents = true
+		}
+	}
+	if changeCtx.REFRESH() != nil {
+		stmt.RefreshInClient = true
+	}
+
+	// Check for ON ERROR clause
+	if errClause := changeCtx.OnErrorClause(); errClause != nil {
+		stmt.ErrorHandling = buildOnErrorClause(errClause)
+	}
 
 	return stmt
 }
@@ -1069,6 +1095,9 @@ func buildDeleteObjectStatement(ctx parser.IDeleteObjectStatementContext) *ast.D
 	if v := delCtx.VARIABLE(); v != nil {
 		stmt.Variable = strings.TrimPrefix(v.GetText(), "$")
 	}
+
+	// Check for REFRESH keyword
+	stmt.RefreshInClient = delCtx.REFRESH() != nil
 
 	// Check for ON ERROR clause
 	if errClause := delCtx.OnErrorClause(); errClause != nil {
