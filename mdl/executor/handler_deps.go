@@ -41,6 +41,7 @@ type HandlerDeps struct {
 	MapperReader         backend.MappingReader
 	MapperWriter         backend.MappingWriter
 	NavigationReader     backend.NavigationReader
+	ScheduledEventReader backend.ScheduledEventReader
 	MetadataReader       backend.MetadataReader
 
 	// DomainModels repo for entity counting (Stage 3 repos).
@@ -151,6 +152,20 @@ func (e *Executor) registerFutureOverlays() {
 			return listAccessOnNanoflowFuture(ctx, deps.Output, e.format, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, deps.NanoflowRepo, s.Name)
 		case ast.ShowSecurityMatrix:
 			return listSecurityMatrixFuture(ctx, deps.Output, e.format, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, deps.Security, deps.DomainModels, deps.MicroflowRepo, deps.PageRepo, s.InModule)
+		case ast.ShowNavigation:
+			return listNavigationFuture(ctx, deps.Output, deps.NavigationReader)
+		case ast.ShowNavigationMenu:
+			return listNavigationMenuFuture(ctx, deps.Output, deps.NavigationReader, s.Name)
+		case ast.ShowNavigationHomes:
+			return listNavigationHomesFuture(ctx, deps.Output, deps.NavigationReader)
+		case ast.ShowSettings:
+			return listSettingsFuture(ctx, deps.Output, e.format, deps.SettingsReader)
+		case ast.ShowLanguages:
+			return listLanguagesFuture(ctx, deps.Output, e.format, deps.SettingsReader)
+		case ast.ShowSupportedLanguages:
+			return listSupportedLanguagesFuture(ctx, deps.Output, e.format)
+		case ast.ShowStructure:
+			return execShowStructureGenFuture(ctx, deps.Output, e.format, s, deps)
 		default:
 			return nil // fall through to old handler
 		}
@@ -175,8 +190,10 @@ func (e *Executor) buildHandlerDeps() *HandlerDeps {
 		MetadataReader:     e.backend,
 		EnumerationReader:  e.backend,
 		ConstantReader:     e.backend,
-		SettingsReader:     e.backend,
-		DomainModelReader:  e.backend,
+		SettingsReader:       e.backend,
+		NavigationReader:     e.backend,
+		ScheduledEventReader: e.backend,
+		DomainModelReader:    e.backend,
 		DomainModels:       extractDomainModelsRepo(e.backend),
 		MicroflowRepo:        extractMicroflowsRepo(e.backend),
 		NanoflowRepo:         extractNanoflowsRepo(e.backend),

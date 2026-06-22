@@ -2493,3 +2493,280 @@ func listSecurityMatrixJSONFuture(
 
 	return writeResultTo(output, format, tr)
 }
+
+// ────────────────────────────────────────────────────────────
+// Phase 3d-1g: navigation/settings/structure show handlers
+// ────────────────────────────────────────────────────────────
+
+// listNavigationFuture is the ExecContext-free version of listNavigation.
+func listNavigationFuture(ctx context.Context, output io.Writer, nr backend.NavigationReader) error {
+	nav, err := nr.GetNavigation()
+	if err != nil {
+		return mdlerrors.NewBackend("get navigation", err)
+	}
+
+	if len(nav.Profiles) == 0 {
+		fmt.Fprintln(output, "No navigation profiles found.")
+		return nil
+	}
+
+	type row struct {
+		name      string
+		kind      string
+		homePage  string
+		loginPage string
+		menuItems int
+		roleHomes int
+	}
+	var rows []row
+
+	for _, p := range nav.Profiles {
+		homePage := ""
+		if p.HomePage != nil {
+			if p.HomePage.Page != "" {
+				homePage = p.HomePage.Page
+			} else if p.HomePage.Microflow != "" {
+				homePage = "MF:" + p.HomePage.Microflow
+			}
+		}
+
+		loginPage := p.LoginPage
+		if loginPage == "" {
+			loginPage = "-"
+		}
+
+		menuCount := countMenuItems(p.MenuItems)
+
+		kind := p.Kind
+		if p.IsNative {
+			kind += " (native)"
+		}
+
+		rows = append(rows, row{p.Name, kind, homePage, loginPage, menuCount, len(p.RoleBasedHomePages)})
+	}
+
+	result := &TableResult{
+		Columns: []string{"Profile", "Kind", "HomePage", "LoginPage", "MenuItems", "RoleHomes"},
+		Summary: fmt.Sprintf("(%d navigation profiles)", len(rows)),
+	}
+	for _, r := range rows {
+		result.Rows = append(result.Rows, []any{r.name, r.kind, r.homePage, r.loginPage, r.menuItems, r.roleHomes})
+	}
+	return writeResultTo(output, FormatTable, result)
+}
+
+// listNavigationMenuFuture is the ExecContext-free version of listNavigationMenu.
+func listNavigationMenuFuture(ctx context.Context, output io.Writer, nr backend.NavigationReader, profileName *ast.QualifiedName) error {
+	nav, err := nr.GetNavigation()
+	if err != nil {
+		return mdlerrors.NewBackend("get navigation", err)
+	}
+
+	for _, p := range nav.Profiles {
+		if profileName != nil && !strings.EqualFold(p.Name, profileName.Name) {
+			continue
+		}
+
+		fmt.Fprintf(output, "-- Navigation Menu: %s (%s)\n", p.Name, p.Kind)
+		if len(p.MenuItems) == 0 {
+			fmt.Fprintln(output, "  (no menu items)")
+		} else {
+			printMenuTree(output, p.MenuItems, 0)
+		}
+		fmt.Fprintln(output)
+	}
+
+	return nil
+}
+
+// listNavigationHomesFuture is the ExecContext-free version of listNavigationHomes.
+func listNavigationHomesFuture(ctx context.Context, output io.Writer, nr backend.NavigationReader) error {
+	nav, err := nr.GetNavigation()
+	if err != nil {
+		return mdlerrors.NewBackend("get navigation", err)
+	}
+
+	for _, p := range nav.Profiles {
+		fmt.Fprintf(output, "-- Profile: %s (%s)\n", p.Name, p.Kind)
+
+		if p.HomePage != nil {
+			if p.HomePage.Page != "" {
+				fmt.Fprintf(output, "  Default Home: page %s\n", p.HomePage.Page)
+			} else if p.HomePage.Microflow != "" {
+				fmt.Fprintf(output, "  Default Home: microflow %s\n", p.HomePage.Microflow)
+			}
+		} else {
+			fmt.Fprintln(output, "  Default Home: (none)")
+		}
+
+		if len(p.RoleBasedHomePages) > 0 {
+			fmt.Fprintln(output, "  Role-Based Homes:")
+			for _, rh := range p.RoleBasedHomePages {
+				target := ""
+				if rh.Page != "" {
+					target = "page " + rh.Page
+				} else if rh.Microflow != "" {
+					target = "microflow " + rh.Microflow
+				}
+				fmt.Fprintf(output, "    %s -> %s\n", rh.UserRole, target)
+			}
+		}
+
+		fmt.Fprintln(output)
+	}
+
+	return nil
+}
+
+// listSettingsFuture is the ExecContext-free version of listSettings.
+func listSettingsFuture(ctx context.Context, output io.Writer, format OutputFormat, sr backend.SettingsReader) error {
+	ps, err := sr.GetProjectSettings()
+	if err != nil {
+		return mdlerrors.NewBackend("read project settings", err)
+	}
+
+	tr := &TableResult{
+		Columns: []string{"Section", "Key Values"},
+	}
+
+	if ps.Model != nil {
+		ms := ps.Model
+		values := []string{}
+		if ms.AfterStartupMicroflow != "" {
+			values = append(values, "AfterStartup: "+ms.AfterStartupMicroflow)
+		}
+		values = append(values, "Hash: "+ms.HashAlgorithm)
+		values = append(values, "Java: "+ms.JavaVersion)
+		tr.Rows = append(tr.Rows, []any{"Model Settings", strings.Join(values, ", ")})
+	}
+
+	if ps.Configuration != nil {
+		for _, cfg := range ps.Configuration.Configurations {
+			values := []string{}
+			values = append(values, cfg.DatabaseType)
+			values = append(values, cfg.DatabaseUrl)
+			values = append(values, "db="+cfg.DatabaseName)
+			values = append(values, fmt.Sprintf("http=%d", cfg.HttpPortNumber))
+			if len(cfg.ConstantValues) > 0 {
+				values = append(values, fmt.Sprintf("%d constants", len(cfg.ConstantValues)))
+			}
+			tr.Rows = append(tr.Rows, []any{
+				fmt.Sprintf("Configuration '%s'", cfg.Name),
+				strings.Join(values, ", "),
+			})
+		}
+	}
+
+	if ps.Language != nil {
+		tr.Rows = append(tr.Rows, []any{"Language Settings", "Default: " + ps.Language.DefaultLanguageCode})
+	}
+
+	if ps.Workflows != nil {
+		ws := ps.Workflows
+		values := []string{}
+		if ws.UserEntity != "" {
+			values = append(values, "UserEntity: "+ws.UserEntity)
+		}
+		if ws.DefaultTaskParallelism > 0 {
+			values = append(values, fmt.Sprintf("TaskParallelism: %d", ws.DefaultTaskParallelism))
+		}
+		tr.Rows = append(tr.Rows, []any{"Workflow Settings", strings.Join(values, ", ")})
+	}
+
+	if ps.Convention != nil {
+		tr.Rows = append(tr.Rows, []any{"Convention Settings", "AssocStorage: " + ps.Convention.DefaultAssociationStorage})
+	}
+
+	if ps.WebUI != nil {
+		tr.Rows = append(tr.Rows, []any{"Web UI Settings", "OptimizedClient: " + ps.WebUI.UseOptimizedClient})
+	}
+
+	return writeResultTo(output, format, tr)
+}
+
+// listLanguagesFuture is the ExecContext-free version of listLanguages.
+func listLanguagesFuture(ctx context.Context, output io.Writer, format OutputFormat, sr backend.SettingsReader) error {
+	ps, err := sr.GetProjectSettings()
+	if err != nil {
+		return mdlerrors.NewBackend("read project settings", err)
+	}
+	if ps == nil || ps.Language == nil || len(ps.Language.Languages) == 0 {
+		fmt.Fprintln(output, "No project languages configured.")
+		return nil
+	}
+
+	defaultCode := ps.Language.DefaultLanguageCode
+	tr := &TableResult{
+		Columns: []string{"Code", "Language", "Default", "CheckCompleteness"},
+		Summary: fmt.Sprintf("(%d languages)", len(ps.Language.Languages)),
+	}
+	for _, l := range ps.Language.Languages {
+		name := supportedLanguages[l.Code]
+		if name == "" {
+			name = "(unknown)"
+		}
+		def := ""
+		if l.Code == defaultCode {
+			def = "yes"
+		}
+		cc := ""
+		if l.CheckCompleteness {
+			cc = "yes"
+		}
+		tr.Rows = append(tr.Rows, []any{l.Code, name, def, cc})
+	}
+	return writeResultTo(output, format, tr)
+}
+
+// listSupportedLanguagesFuture is the ExecContext-free version of listSupportedLanguages.
+func listSupportedLanguagesFuture(ctx context.Context, output io.Writer, format OutputFormat) error {
+	tr := &TableResult{
+		Columns: []string{"Code", "Language"},
+		Summary: fmt.Sprintf("(%d supported languages)", len(supportedLanguages)),
+	}
+	codes := make([]string, 0, len(supportedLanguages))
+	for code := range supportedLanguages {
+		codes = append(codes, code)
+	}
+	sort.Strings(codes)
+	for _, code := range codes {
+		tr.Rows = append(tr.Rows, []any{code, supportedLanguages[code]})
+	}
+	return writeResultTo(output, format, tr)
+}
+
+// execShowStructureGenFuture is the ExecContext-free version of execShowStructureGen.
+// Uses a bridge pattern: constructs a temporary ExecContext from HandlerDeps to
+// delegate to the existing sub-functions (which are too numerous to migrate in one pass).
+func execShowStructureGenFuture(ctx context.Context, output io.Writer, format OutputFormat, s *ast.ShowStmt, deps *HandlerDeps) error {
+	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
+		return mdlerrors.NewNotConnected()
+	}
+
+	tmpCtx := &ExecContext{
+		Context: ctx,
+		ExecIO:  ExecIO{Output: output, Format: format},
+
+		ConnectionManager:    deps.ConnectionManager,
+		ModuleLister:         deps.ModuleLister,
+		MetadataReader:       deps.MetadataReader,
+		FolderManager:        deps.FolderManager,
+		EnumerationReader:    deps.EnumerationReader,
+		ConstantReader:       deps.ConstantReader,
+		ScheduledEventReader: deps.ScheduledEventReader,
+		Backend:              deps.Backend,
+
+		ExecRepos: ExecRepos{
+			Microflows:        deps.MicroflowRepo,
+			Nanoflows:         deps.NanoflowRepo,
+			DomainModels:      deps.DomainModels,
+			Workflows:         deps.WorkflowRepo,
+			Pages:             deps.PageRepo,
+			Snippets:          deps.SnippetRepo,
+			JavaActions:       deps.JavaActionRepo,
+			Layouts:           deps.LayoutRepo,
+		},
+	}
+
+	return execShowStructureGen(tmpCtx, s)
+}
