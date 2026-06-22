@@ -109,7 +109,7 @@ func buildProjectTree(projectPath string) ([]*TreeNode, error) {
 	}
 	defer mreader.Close()
 
-	h, err := executor.NewContainerHierarchyFromBackend(b)
+	h, err := executor.NewContainerHierarchyFromRoles(b, b, b)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build hierarchy: %w", err)
 	}

@@ -251,7 +251,7 @@ func execCreateExportMapping(ctx *ExecContext, s *ast.CreateExportMappingStmt) e
 
 // buildExportMappingElementModel converts an AST element definition to a model element.
 // It clones properties from the matching JSON structure element and adds mapping bindings.
-func buildExportMappingElementModel(moduleName string, def *ast.ExportMappingElementDef, parentEntity, parentPath string, jsElems map[string]*types.JsonElement, b backend.FullBackend, isRoot bool) *model.ExportMappingElement {
+func buildExportMappingElementModel(moduleName string, def *ast.ExportMappingElementDef, parentEntity, parentPath string, jsElems map[string]*types.JsonElement, b backend.DomainModelBackend, isRoot bool) *model.ExportMappingElement {
 	elem := &model.ExportMappingElement{
 		BaseElement: model.BaseElement{
 			ID: model.ID(types.GenerateID()),

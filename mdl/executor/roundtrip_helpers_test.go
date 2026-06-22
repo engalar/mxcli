@@ -231,7 +231,7 @@ func setupTestEnv(t *testing.T) *testEnv {
 
 	output := &bytes.Buffer{}
 	exec := New(output)
-	exec.SetBackendFactory(func() backend.FullBackend { return mprbackend.New() })
+	exec.SetBackendFactory(func() backend.ConnectionBackend { return mprbackend.New() })
 
 	// Connect to project
 	connectStmt := &ast.ConnectStmt{
@@ -647,7 +647,7 @@ func setupRoundtripEnv(t *testing.T) *testEnv {
 
 	output := &bytes.Buffer{}
 	exec := New(output)
-	exec.SetBackendFactory(func() backend.FullBackend { return mprbackend.New() })
+	exec.SetBackendFactory(func() backend.ConnectionBackend { return mprbackend.New() })
 
 	connectStmt := &ast.ConnectStmt{
 		Path: projectPath,
@@ -752,7 +752,7 @@ func setupRoundtripEnvFromPath(t *testing.T, mprPath string) *testEnv {
 	t.Helper()
 	output := &bytes.Buffer{}
 	exec := New(output)
-	exec.SetBackendFactory(func() backend.FullBackend { return mprbackend.New() })
+	exec.SetBackendFactory(func() backend.ConnectionBackend { return mprbackend.New() })
 	if err := exec.Execute(&ast.ConnectStmt{Path: mprPath}); err != nil {
 		t.Fatalf("setupRoundtripEnvFromPath: connect to %s: %v", mprPath, err)
 	}

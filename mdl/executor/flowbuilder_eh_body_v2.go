@@ -70,7 +70,6 @@ func (fb *flowBuilderGen) addErrorHandlerFlowGen(sourceActivityID element.ID, so
 		varTypes:          fb.varTypes,
 		declaredVars:      fb.declaredVars,
 		measurer:          fb.measurer,
-		backend:           fb.backend,
 		moduleLister:      fb.moduleLister,
 		domainModelReader: fb.domainModelReader,
 		microflowsRepo:    fb.microflowsRepo,

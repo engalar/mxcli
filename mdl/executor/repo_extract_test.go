@@ -23,7 +23,7 @@ func TestExtractMicroflowsRepo_MockBackend_ReturnsNil(t *testing.T) {
 	// MockBackend has no Microflows() method, so extract should return nil
 	// and handlers must fall back to ctx.Backend.
 	mb := &mock.MockBackend{}
-	var b backend.FullBackend = mb
+	var b backend.ConnectionBackend = mb
 	if got := extractMicroflowsRepo(b); got != nil {
 		t.Errorf("extractMicroflowsRepo(MockBackend) = %v, want nil (mock has no Microflows())", got)
 	}
@@ -32,7 +32,7 @@ func TestExtractMicroflowsRepo_MockBackend_ReturnsNil(t *testing.T) {
 func TestExtractMicroflowsRepo_MprBackend_Disconnected_ReturnsNil(t *testing.T) {
 	// Unconnected MprBackend has nil msdkWriter — Microflows() returns nil.
 	mb := mprbackend.New()
-	var b backend.FullBackend = mb
+	var b backend.ConnectionBackend = mb
 	if got := extractMicroflowsRepo(b); got != nil {
 		t.Errorf("extractMicroflowsRepo(unconnected MprBackend) = %v, want nil", got)
 	}
@@ -46,7 +46,7 @@ func TestExtractNanoflowsRepo_NilBackend(t *testing.T) {
 
 func TestExtractNanoflowsRepo_MockBackend_ReturnsNil(t *testing.T) {
 	mb := &mock.MockBackend{}
-	var b backend.FullBackend = mb
+	var b backend.ConnectionBackend = mb
 	if got := extractNanoflowsRepo(b); got != nil {
 		t.Errorf("extractNanoflowsRepo(MockBackend) = %v, want nil", got)
 	}
@@ -54,7 +54,7 @@ func TestExtractNanoflowsRepo_MockBackend_ReturnsNil(t *testing.T) {
 
 func TestExtractNanoflowsRepo_MprBackend_Disconnected_ReturnsNil(t *testing.T) {
 	mb := mprbackend.New()
-	var b backend.FullBackend = mb
+	var b backend.ConnectionBackend = mb
 	if got := extractNanoflowsRepo(b); got != nil {
 		t.Errorf("extractNanoflowsRepo(unconnected MprBackend) = %v, want nil", got)
 	}

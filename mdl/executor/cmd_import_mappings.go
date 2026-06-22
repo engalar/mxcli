@@ -260,7 +260,7 @@ func execCreateImportMapping(ctx *ExecContext, s *ast.CreateImportMappingStmt) e
 // It clones properties from the matching JSON structure element (ExposedName, JsonPath,
 // MaxOccurs, ElementType, etc.) and adds mapping-specific bindings (Entity, Attribute,
 // Association, ObjectHandling).
-func buildImportMappingElementModel(moduleName string, def *ast.ImportMappingElementDef, parentEntity, parentPath string, b backend.FullBackend, jsElems map[string]*types.JsonElement, isRoot bool) *model.ImportMappingElement {
+func buildImportMappingElementModel(moduleName string, def *ast.ImportMappingElementDef, parentEntity, parentPath string, b backend.DomainModelBackend, jsElems map[string]*types.JsonElement, isRoot bool) *model.ImportMappingElement {
 	elem := &model.ImportMappingElement{
 		BaseElement: model.BaseElement{
 			ID: model.ID(types.GenerateID()),

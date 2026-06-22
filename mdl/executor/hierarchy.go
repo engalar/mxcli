@@ -48,14 +48,14 @@ type ContainerHierarchy struct {
 }
 
 // NewContainerHierarchy creates a new hierarchy from any source that provides
-// modules, units, and folders (e.g. *mpr.Reader or backend.FullBackend).
+// modules, units, and folders.
 func NewContainerHierarchy(src hierarchySource) (*ContainerHierarchy, error) {
 	return newContainerHierarchyImpl(src)
 }
 
-// NewContainerHierarchyFromBackend creates a new hierarchy from a Backend interface.
-func NewContainerHierarchyFromBackend(b backend.FullBackend) (*ContainerHierarchy, error) {
-	return newContainerHierarchyImpl(b)
+// NewContainerHierarchyFromRoles creates a hierarchy from role-specific backend interfaces.
+func NewContainerHierarchyFromRoles(ml backend.ModuleLister, mur backend.MetadataReader, fm backend.FolderManager) (*ContainerHierarchy, error) {
+	return newContainerHierarchyImpl(hierarchyRolesSource{ml: ml, mur: mur, fm: fm})
 }
 
 func newContainerHierarchyImpl(src hierarchySource) (*ContainerHierarchy, error) {

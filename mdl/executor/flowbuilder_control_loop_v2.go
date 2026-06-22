@@ -117,7 +117,6 @@ func (fb *flowBuilderGen) emitLoopedActivityGen(body []ast.MicroflowStatement, s
 		varTypes:          cloneStringMap(fb.varTypes),
 		declaredVars:      cloneStringMap(fb.declaredVars),
 		measurer:          fb.measurer,
-		backend:           fb.backend,
 		moduleLister:      fb.moduleLister,
 		domainModelReader: fb.domainModelReader,
 		microflowsRepo:    fb.microflowsRepo,

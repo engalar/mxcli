@@ -113,9 +113,6 @@ type flowBuilderGen struct {
 	nextFlowCase     string
 	nextFlowAnchor   *ast.FlowAnchors
 
-	// Deprecated: use moduleLister/domainModelReader instead.
-	// Kept for backward compat with test files.
-	backend            backend.FullBackend
 	moduleLister       backend.ModuleLister
 	domainModelReader  backend.DomainModelReader
 	microflowsRepo     repos.MicroflowRepository

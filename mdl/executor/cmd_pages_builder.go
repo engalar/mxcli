@@ -171,7 +171,11 @@ func (pb *pageBuilder) getHierarchy() (*ContainerHierarchy, error) {
 	if pb.execCache != nil && pb.execCache.hierarchy != nil {
 		return pb.execCache.hierarchy, nil
 	}
-	h, err := NewContainerHierarchyFromBackend(pb.backend)
+	h, err := NewContainerHierarchyFromRoles(
+		pb.moduleListerOrBackend(),
+		pb.backend, // MetadataReader
+		pb.folderMgrOrBackend(),
+	)
 	if err != nil {
 		return nil, err
 	}

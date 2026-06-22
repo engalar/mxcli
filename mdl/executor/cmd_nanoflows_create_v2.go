@@ -220,7 +220,6 @@ func execCreateNanoflowGen(ctx *ExecContext, s *ast.CreateNanoflowStmt) error {
 			varTypes:          map[string]string{},
 			declaredVars:      map[string]string{},
 			measurer:          &layoutMeasurer{varTypes: map[string]string{}},
-			backend:           ctx.Backend,
 			moduleLister:      ctx.ModuleLister,
 			domainModelReader: ctx.DomainModelReader,
 			microflowsRepo:    ctx.Microflows,
