@@ -3205,18 +3205,15 @@ func execShowFeaturesFuture(ctx context.Context, stmt ast.Statement, deps *Handl
 }
 
 func execShowDesignPropertiesFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
-	return execShowDesignProperties(ectx, stmt.(*ast.ShowDesignPropertiesStmt))
+	return execShowDesignPropertiesFn(ctx, stmt.(*ast.ShowDesignPropertiesStmt), deps)
 }
 
 func execDescribeStylingFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
-	return execDescribeStyling(ectx, stmt.(*ast.DescribeStylingStmt))
+	return execDescribeStylingFn(ctx, stmt.(*ast.DescribeStylingStmt), deps)
 }
 
 func execAlterStylingFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
-	return execAlterStyling(ectx, stmt.(*ast.AlterStylingStmt))
+	return execAlterStylingFn(ctx, stmt.(*ast.AlterStylingStmt), deps)
 }
 
 func execShowThemeVariablesFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
