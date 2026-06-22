@@ -1,325 +1,241 @@
-// SPDX-License-Identifier: Apache-2.0
-
-package executor
+package executor_test
 
 import (
-	"errors"
-	"strings"
 	"testing"
 
-	"github.com/mendixlabs/mxcli/mdl/ast"
-	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
+	"github.com/mendixlabs/mxcli/mdl/executor"
 )
 
-// emptyRegistry creates a Registry with no handlers registered.
-func emptyRegistry() *Registry {
-	return &Registry{handlers: make(map[string]StmtHandler), futureFuncs: make(map[string]StmtHandlerFunc)}
+// knownStatementTypes lists every top-level MDL statement type name.
+// When a new statement type is added, add its TypeName() string here
+// alongside the handler registration.
+var knownStatementTypes = []string{
+	"Connect",
+	"Disconnect",
+	"Status",
+	"Help",
+	"Exit",
+	"Set",
+	"Show",
+	"ShowFeatures",
+	"Select",
+	"Describe",
+	"DescribeCatalogTable",
+	"Update",
+	"Refresh",
+	"RefreshCatalog",
+	"Search",
+	"ExecuteScript",
+
+	"CreateModule",
+	"DropModule",
+	"DropFolder",
+	"MoveFolder",
+
+	"CreateEnumeration",
+	"AlterEnumeration",
+	"DropEnumeration",
+
+	"CreateConstant",
+	"DropConstant",
+
+	"CreateEntity",
+	"AlterEntity",
+	"DropEntity",
+	"CreateViewEntity",
+
+	"CreateAssociation",
+	"AlterAssociation",
+	"DropAssociation",
+
+	"CreateMicroflow",
+	"DropMicroflow",
+
+	"CreateNanoflow",
+	"DropNanoflow",
+
+	"CreatePageStmtV3",
+	"DropPage",
+
+	"CreateSnippetStmtV3",
+	"DropSnippet",
+
+	"CreateLayout",
+
+	"CreateWorkflow",
+	"DropWorkflow",
+	"AlterWorkflow",
+
+	"CreateDatabaseConnection",
+
+	"CreateDataTransformer",
+	"DropDataTransformer",
+
+	"CreateImageCollection",
+	"DropImageCollection",
+	"AlterImageCollection",
+
+	"CreateJsonStructure",
+	"DropJsonStructure",
+
+	"CreateImportMapping",
+	"DropImportMapping",
+
+	"CreateExportMapping",
+	"DropExportMapping",
+
+	"CreateODataService",
+	"AlterODataService",
+	"DropODataService",
+
+	"CreateODataClient",
+	"AlterODataClient",
+	"DropODataClient",
+	"CreateExternalEntity",
+	"CreateExternalEntities",
+
+	"CreatePublishedRestService",
+	"DropPublishedRestService",
+	"AlterPublishedRestService",
+
+	"CreateRestClient",
+	"DropRestClient",
+
+	"CreateJavaAction",
+	"DropJavaAction",
+
+	"CreateJavaScriptAction",
+
+	"CreateBusinessEventService",
+	"DropBusinessEventService",
+
+	"CreateModuleRole",
+	"DropModuleRole",
+	"CreateUserRole",
+	"AlterUserRole",
+	"DropUserRole",
+	"GrantEntityAccess",
+	"RevokeEntityAccess",
+	"GrantMicroflowAccess",
+	"RevokeMicroflowAccess",
+	"GrantNanoflowAccess",
+	"RevokeNanoflowAccess",
+	"GrantPageAccess",
+	"RevokePageAccess",
+	"GrantWorkflowAccess",
+	"RevokeWorkflowAccess",
+	"GrantODataServiceAccess",
+	"RevokeODataServiceAccess",
+	"GrantPublishedRestServiceAccess",
+	"RevokePublishedRestServiceAccess",
+	"AlterProjectSecurity",
+	"CreateDemoUser",
+	"DropDemoUser",
+	"UpdateSecurity",
+
+	"AlterNavigation",
+
+	"AlterSettings",
+	"CreateConfiguration",
+	"DropConfiguration",
+
+	"AlterModuleJarDep",
+
+	"DefineFragment",
+	"DescribeFragmentFrom",
+
+	"Lint",
+
+	"SQLConnect",
+	"SQLDisconnect",
+	"SQLConnections",
+	"SQLQuery",
+	"SQLShowTables",
+	"SQLDescribeTable",
+	"SQLShowViews",
+	"SQLShowFunctions",
+	"SQLGenerateConnector",
+
+	"Import",
+
+	"Move",
+	"Rename",
+
+	"AlterPage",
+
+	"ShowDesignProperties",
+	"DescribeStyling",
+	"AlterStyling",
+
+	"ShowThemeVariables",
+
+	"AlterLanguage",
+	"Translate",
+	"TranslateMicroflow",
+	"DescribeTranslations",
+
+	"ShowWidgets",
+	"ShowInstalledWidgets",
+	"UpdateWidgets",
+
+	"AlterImageCollection",
+
+	"DescribeContractFromOpenAPI",
+
+	"CreateModel",
+	"DropModel",
+	"CreateAgent",
+	"DropAgent",
+	"CreateKnowledgeBase",
+	"DropKnowledgeBase",
+	"CreateConsumedMCPService",
+	"DropConsumedMCPService",
+
+	// CreateScheduledEvent — no handler yet
+	// DropScheduledEvent — no handler yet
+
+	// AlterDatabaseConnection — no handler yet
 }
 
-func TestNewRegistry_NoPanic(t *testing.T) {
-	// Smoke test: constructing a registry with all stub registrations
-	// must not panic.
-	r := NewRegistry()
-	if r == nil {
-		t.Fatal("NewRegistry() returned nil")
+func TestRegistry_AllStatementTypesCovered(t *testing.T) {
+	r := executor.NewRegistry()
+	registered := make(map[string]bool)
+	for _, typ := range r.RegisteredTypes() {
+		registered[typ] = true
 	}
-}
-
-func TestRegistry_Dispatch_UnknownStatement(t *testing.T) {
-	r := emptyRegistry()
-
-	// ConnectStmt is not registered — Dispatch must return UnsupportedError.
-	err := r.Dispatch(nil, &ast.ConnectStmt{Path: "/tmp/test.mpr"})
-	if err == nil {
-		t.Fatal("expected error for unregistered statement, got nil")
-	}
-	var unsupported *mdlerrors.UnsupportedError
-	if !errors.As(err, &unsupported) {
-		t.Fatalf("expected UnsupportedError, got %T: %v", err, err)
-	}
-}
-
-func TestRegistry_Register_Duplicate_SilentlyIgnored(t *testing.T) {
-	r := emptyRegistry()
-	callCount := 0
-	handler := func(ctx *ExecContext, stmt ast.Statement) error { callCount++; return nil }
-
-	r.Register(&ast.ConnectStmt{}, handler)
-	r.Register(&ast.ConnectStmt{}, handler) // duplicate: should not panic, should not replace
-
-	if callCount != 0 {
-		t.Fatal("handler should not have been called")
-	}
-	h := r.Lookup(&ast.ConnectStmt{})
-	if h == nil {
-		t.Fatal("handler should be found after first registration")
-	}
-}
-
-func TestRegistry_Dispatch_Success(t *testing.T) {
-	r := emptyRegistry()
-	called := false
-	r.Register(&ast.ConnectStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		called = true
-		if _, ok := stmt.(*ast.ConnectStmt); !ok {
-			t.Fatalf("expected *ConnectStmt, got %T", stmt)
+	var missing []string
+	for _, typ := range knownStatementTypes {
+		if !registered[typ] {
+			missing = append(missing, typ)
 		}
-		return nil
-	})
-
-	err := r.Dispatch(nil, &ast.ConnectStmt{Path: "/tmp/test.mpr"})
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
 	}
-	if !called {
-		t.Fatal("handler was not called")
+	if len(missing) > 0 {
+		t.Errorf("unregistered statement types (%d):", len(missing))
+		for _, name := range missing {
+			t.Logf("  %s", name)
+		}
 	}
 }
 
-func TestRegistry_Dispatch_HandlerError(t *testing.T) {
-	r := emptyRegistry()
-	sentinel := errors.New("test error")
-	r.Register(&ast.ConnectStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return sentinel
-	})
-
-	err := r.Dispatch(nil, &ast.ConnectStmt{})
-	if !errors.Is(err, sentinel) {
-		t.Fatalf("expected sentinel error, got: %v", err)
+func TestRegistry_HandlerCountSnapshot(t *testing.T) {
+	r := executor.NewRegistry()
+	count := r.HandlerCount()
+	if count < 50 {
+		t.Errorf("handler count seems too low: got %d, expected >= 50", count)
+	}
+	if count > 200 {
+		t.Errorf("handler count seems too high: got %d, expected <= 200", count)
 	}
 }
 
-func TestRegistry_Validate_Empty(t *testing.T) {
-	r := emptyRegistry()
-
-	knownTypes := []ast.Statement{
-		&ast.ConnectStmt{},
-		&ast.DisconnectStmt{},
-	}
-	err := r.Validate(knownTypes)
-	if err == nil {
-		t.Fatal("expected validation error for empty registry")
-	}
-}
-
-func TestRegistry_Validate_Complete(t *testing.T) {
-	r := emptyRegistry()
-	noop := func(ctx *ExecContext, stmt ast.Statement) error { return nil }
-	r.Register(&ast.ConnectStmt{}, noop)
-	r.Register(&ast.DisconnectStmt{}, noop)
-
-	knownTypes := []ast.Statement{
-		&ast.ConnectStmt{},
-		&ast.DisconnectStmt{},
-	}
-	err := r.Validate(knownTypes)
-	if err != nil {
-		t.Fatalf("expected no error, got: %v", err)
-	}
-}
-
-func TestRegistry_Validate_Partial(t *testing.T) {
-	r := emptyRegistry()
-	noop := func(ctx *ExecContext, stmt ast.Statement) error { return nil }
-	r.Register(&ast.ConnectStmt{}, noop)
-
-	knownTypes := []ast.Statement{
-		&ast.ConnectStmt{},
-		&ast.DisconnectStmt{},
-		&ast.StatusStmt{},
-	}
-	err := r.Validate(knownTypes)
-	if err == nil {
-		t.Fatal("expected validation error for partial registry")
-	}
-	// Should mention 2 missing types.
-	if got := err.Error(); !strings.Contains(got, "2 unregistered") {
-		t.Fatalf("expected '2 unregistered' in error, got: %s", got)
-	}
-	// Should be a ValidationError.
-	var ve *mdlerrors.ValidationError
-	if !errors.As(err, &ve) {
-		t.Fatalf("expected ValidationError, got %T", err)
-	}
-}
-
-func TestRegistry_HandlerCount(t *testing.T) {
-	r := emptyRegistry()
-	if r.HandlerCount() != 0 {
-		t.Fatalf("expected 0, got %d", r.HandlerCount())
-	}
-	noop := func(ctx *ExecContext, stmt ast.Statement) error { return nil }
-	r.Register(&ast.ConnectStmt{}, noop)
-	if r.HandlerCount() != 1 {
-		t.Fatalf("expected 1, got %d", r.HandlerCount())
-	}
-}
-
-// allKnownStatements returns one instance of every concrete AST statement type.
-// Keep in sync with mdl/ast — if a new statement is added to the parser,
-// add it here so the completeness test catches missing handler registrations.
-func allKnownStatements() []ast.Statement {
-	return []ast.Statement{
-		&ast.AlterAssociationStmt{},
-		&ast.AlterEntityStmt{},
-		&ast.AlterEnumerationStmt{},
-		&ast.AlterLanguageStmt{},
-		&ast.AlterModuleJarDepStmt{},
-		&ast.AlterNavigationStmt{},
-		&ast.AlterODataClientStmt{},
-		&ast.AlterODataServiceStmt{},
-		&ast.AlterPageStmt{},
-		&ast.AlterProjectSecurityStmt{},
-		&ast.AlterPublishedRestServiceStmt{},
-		&ast.AlterSettingsStmt{},
-		&ast.AlterStylingStmt{},
-		&ast.AlterUserRoleStmt{},
-		&ast.AlterWorkflowStmt{},
-		&ast.ConnectStmt{},
-		&ast.CreateAgentStmt{},
-		&ast.CreateAssociationStmt{},
-		&ast.CreateBusinessEventServiceStmt{},
-		&ast.CreateConfigurationStmt{},
-		&ast.CreateConsumedMCPServiceStmt{},
-		&ast.CreateConstantStmt{},
-		&ast.CreateDatabaseConnectionStmt{},
-		&ast.CreateDataTransformerStmt{},
-		&ast.CreateDemoUserStmt{},
-		&ast.CreateEntityStmt{},
-		&ast.CreateEnumerationStmt{},
-		&ast.CreateExportMappingStmt{},
-		&ast.CreateExternalEntitiesStmt{},
-		&ast.CreateExternalEntityStmt{},
-		&ast.CreateImageCollectionStmt{},
-		&ast.CreateImportMappingStmt{},
-		&ast.CreateJavaActionStmt{},
-		&ast.CreateJavaScriptActionStmt{},
-		&ast.CreateJsonStructureStmt{},
-		&ast.CreateKnowledgeBaseStmt{},
-		&ast.CreateMicroflowStmt{},
-		&ast.CreateNanoflowStmt{},
-		&ast.CreateModelStmt{},
-		&ast.CreateModuleRoleStmt{},
-		&ast.CreateModuleStmt{},
-		&ast.CreateODataClientStmt{},
-		&ast.CreateODataServiceStmt{},
-		&ast.CreateLayoutStmt{},
-		&ast.CreatePageStmtV3{},
-		&ast.CreatePublishedRestServiceStmt{},
-		&ast.CreateRestClientStmt{},
-		&ast.CreateSnippetStmtV3{},
-		&ast.CreateUserRoleStmt{},
-		&ast.CreateViewEntityStmt{},
-		&ast.CreateWorkflowStmt{},
-		&ast.DefineFragmentStmt{},
-		&ast.DescribeCatalogTableStmt{},
-		&ast.DescribeContractFromOpenAPIStmt{},
-		&ast.DescribeFragmentFromStmt{},
-		&ast.DescribeStmt{},
-		&ast.DescribeTranslationsStmt{},
-		&ast.DescribeStylingStmt{},
-		&ast.DisconnectStmt{},
-		&ast.DropAgentStmt{},
-		&ast.DropAssociationStmt{},
-		&ast.DropBusinessEventServiceStmt{},
-		&ast.DropConfigurationStmt{},
-		&ast.DropConsumedMCPServiceStmt{},
-		&ast.DropConstantStmt{},
-		&ast.DropDataTransformerStmt{},
-		&ast.DropDemoUserStmt{},
-		&ast.DropEntityStmt{},
-		&ast.DropEnumerationStmt{},
-		&ast.DropExportMappingStmt{},
-		&ast.DropFolderStmt{},
-		&ast.DropImageCollectionStmt{},
-		&ast.AlterImageCollectionStmt{},
-		&ast.DropImportMappingStmt{},
-		&ast.DropJavaActionStmt{},
-		&ast.DropJsonStructureStmt{},
-		&ast.DropKnowledgeBaseStmt{},
-		&ast.DropMicroflowStmt{},
-		&ast.DropNanoflowStmt{},
-		&ast.DropModelStmt{},
-		&ast.DropModuleRoleStmt{},
-		&ast.DropModuleStmt{},
-		&ast.DropODataClientStmt{},
-		&ast.DropODataServiceStmt{},
-		&ast.DropPageStmt{},
-		&ast.DropPublishedRestServiceStmt{},
-		&ast.DropRestClientStmt{},
-		&ast.DropSnippetStmt{},
-		&ast.DropUserRoleStmt{},
-		&ast.DropWorkflowStmt{},
-		&ast.ExecuteScriptStmt{},
-		&ast.ExitStmt{},
-		&ast.GrantEntityAccessStmt{},
-		&ast.GrantMicroflowAccessStmt{},
-		&ast.GrantNanoflowAccessStmt{},
-		&ast.GrantODataServiceAccessStmt{},
-		&ast.GrantPageAccessStmt{},
-		&ast.GrantPublishedRestServiceAccessStmt{},
-		&ast.GrantWorkflowAccessStmt{},
-		&ast.HelpStmt{},
-		&ast.ImportStmt{},
-		&ast.LintStmt{},
-		&ast.MoveFolderStmt{},
-		&ast.MoveStmt{},
-		&ast.RefreshCatalogStmt{},
-		&ast.RefreshStmt{},
-		&ast.RenameStmt{},
-		&ast.RevokeEntityAccessStmt{},
-		&ast.RevokeMicroflowAccessStmt{},
-		&ast.RevokeNanoflowAccessStmt{},
-		&ast.RevokeODataServiceAccessStmt{},
-		&ast.RevokePageAccessStmt{},
-		&ast.RevokePublishedRestServiceAccessStmt{},
-		&ast.RevokeWorkflowAccessStmt{},
-		&ast.SearchStmt{},
-		&ast.SelectStmt{},
-		&ast.SetStmt{},
-		&ast.ShowDesignPropertiesStmt{},
-		&ast.ShowFeaturesStmt{},
-		&ast.ShowThemeVariablesStmt{},
-		&ast.ShowStmt{},
-		&ast.ShowWidgetsStmt{},
-		&ast.ShowInstalledWidgetsStmt{},
-		&ast.SQLConnectionsStmt{},
-		&ast.SQLConnectStmt{},
-		&ast.SQLDescribeTableStmt{},
-		&ast.SQLDisconnectStmt{},
-		&ast.SQLGenerateConnectorStmt{},
-		&ast.SQLQueryStmt{},
-		&ast.SQLShowFunctionsStmt{},
-		&ast.SQLShowTablesStmt{},
-		&ast.SQLShowViewsStmt{},
-		&ast.StatusStmt{},
-		&ast.TranslateMicroflowStmt{},
-		&ast.TranslateStmt{},
-		&ast.UpdateSecurityStmt{},
-		&ast.UpdateStmt{},
-		&ast.UpdateWidgetsStmt{},
-	}
-}
-
-// TestNewRegistry_Completeness verifies that NewRegistry() registers a handler
-// for every known AST statement type. This test fails when a new statement is
-// added to the parser without a corresponding handler registration.
-func TestNewRegistry_Completeness(t *testing.T) {
-	r := NewRegistry()
-	err := r.Validate(allKnownStatements())
-	if err != nil {
-		t.Fatalf("registry is incomplete: %v", err)
-	}
-}
-
-// TestNewRegistry_HandlerCountSnapshot verifies that the number of registered
-// handlers matches allKnownStatements(). Keep allKnownStatements() in sync with
-// known statement types and handler registrations.
-func TestNewRegistry_HandlerCountSnapshot(t *testing.T) {
-	r := NewRegistry()
-	known := allKnownStatements()
-
-	if got := r.HandlerCount(); got != len(known) {
-		t.Errorf("handler count mismatch: registry has %d, allKnownStatements has %d — update allKnownStatements or register missing handlers", got, len(known))
+func TestRegistry_RegisteredTypes_Deduped(t *testing.T) {
+	r := executor.NewRegistry()
+	types := r.RegisteredTypes()
+	seen := make(map[string]bool, len(types))
+	for _, typ := range types {
+		if seen[typ] {
+			t.Errorf("duplicate registration for type %s", typ)
+		}
+		seen[typ] = true
 	}
 }

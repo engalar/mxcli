@@ -120,3 +120,18 @@ func (r *Registry) Validate(knownTypes []ast.Statement) error {
 func (r *Registry) HandlerCount() int {
 	return len(r.handlers)
 }
+
+// RegisteredTypes returns all registered type names for testing.
+func (r *Registry) RegisteredTypes() []string {
+	types := make([]string, 0, len(r.handlers))
+	for t := range r.handlers {
+		types = append(types, t)
+	}
+	return types
+}
+
+// HasHandler returns true if a handler is registered for the given type.
+func (r *Registry) HasHandler(stmt ast.Statement) bool {
+	_, ok := r.handlers[stmt.TypeName()]
+	return ok
+}
