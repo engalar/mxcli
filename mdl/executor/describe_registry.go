@@ -3,12 +3,13 @@
 package executor
 
 import (
+	"context"
+
 	"github.com/mendixlabs/mxcli/mdl/ast"
 )
 
 // DescribeHandler is the function signature for DESCRIBE statement handlers.
-// The handler is called inside writeDescribeJSON; it writes JSON fields via ctx.Output.
-type DescribeHandler func(ctx *ExecContext, s *ast.DescribeStmt) error
+type DescribeHandler func(ctx context.Context, s *ast.DescribeStmt, deps *HandlerDeps) error
 
 type describeEntry struct {
 	handler DescribeHandler
@@ -18,176 +19,242 @@ type describeEntry struct {
 // describeHandlers maps each DescribeObjectType to its handler and human label.
 var describeHandlers = map[ast.DescribeObjectType]describeEntry{
 	ast.DescribeEnumeration: {
-		handler: func(ctx *ExecContext, s *ast.DescribeStmt) error { return describeEnumeration(ctx, s.Name) },
-		label:   "enumeration",
+		handler: func(ctx context.Context, s *ast.DescribeStmt, deps *HandlerDeps) error {
+			return describeEnumeration(phase3d2bNewExecContext(ctx, deps), s.Name)
+		},
+		label: "enumeration",
 	},
 	ast.DescribeEntity: {
-		handler: func(ctx *ExecContext, s *ast.DescribeStmt) error { return describeEntityGen(ctx, s.Name) },
-		label:   "entity",
+		handler: func(ctx context.Context, s *ast.DescribeStmt, deps *HandlerDeps) error {
+			return describeEntityGen(phase3d2bNewExecContext(ctx, deps), s.Name)
+		},
+		label: "entity",
 	},
 	ast.DescribeAssociation: {
-		handler: func(ctx *ExecContext, s *ast.DescribeStmt) error { return describeAssociation(ctx, s.Name) },
-		label:   "association",
+		handler: func(ctx context.Context, s *ast.DescribeStmt, deps *HandlerDeps) error {
+			return describeAssociation(phase3d2bNewExecContext(ctx, deps), s.Name)
+		},
+		label: "association",
 	},
 	ast.DescribeMicroflow: {
-		handler: func(ctx *ExecContext, s *ast.DescribeStmt) error { return describeMicroflowGen(ctx, s.Name) },
-		label:   "microflow",
+		handler: func(ctx context.Context, s *ast.DescribeStmt, deps *HandlerDeps) error {
+			return describeMicroflowGen(phase3d2bNewExecContext(ctx, deps), s.Name)
+		},
+		label: "microflow",
 	},
 	ast.DescribeNanoflow: {
-		handler: func(ctx *ExecContext, s *ast.DescribeStmt) error { return describeNanoflowGen(ctx, s.Name) },
-		label:   "nanoflow",
+		handler: func(ctx context.Context, s *ast.DescribeStmt, deps *HandlerDeps) error {
+			return describeNanoflowGen(phase3d2bNewExecContext(ctx, deps), s.Name)
+		},
+		label: "nanoflow",
 	},
 	ast.DescribeModule: {
-		handler: func(ctx *ExecContext, s *ast.DescribeStmt) error {
-			return describeModule(ctx, s.Name.Module, s.WithAll)
+		handler: func(ctx context.Context, s *ast.DescribeStmt, deps *HandlerDeps) error {
+			return describeModule(phase3d2bNewExecContext(ctx, deps), s.Name.Module, s.WithAll)
 		},
 		label: "module",
 	},
 	ast.DescribePage: {
-		handler: func(ctx *ExecContext, s *ast.DescribeStmt) error { return describePage(ctx, s.Name) },
-		label:   "page",
+		handler: func(ctx context.Context, s *ast.DescribeStmt, deps *HandlerDeps) error {
+			return describePage(phase3d2bNewExecContext(ctx, deps), s.Name)
+		},
+		label: "page",
 	},
 	ast.DescribeSnippet: {
-		handler: func(ctx *ExecContext, s *ast.DescribeStmt) error { return describeSnippet(ctx, s.Name) },
-		label:   "snippet",
+		handler: func(ctx context.Context, s *ast.DescribeStmt, deps *HandlerDeps) error {
+			return describeSnippet(phase3d2bNewExecContext(ctx, deps), s.Name)
+		},
+		label: "snippet",
 	},
 	ast.DescribeLayout: {
-		handler: func(ctx *ExecContext, s *ast.DescribeStmt) error { return describeLayout(ctx, s.Name) },
-		label:   "layout",
+		handler: func(ctx context.Context, s *ast.DescribeStmt, deps *HandlerDeps) error {
+			return describeLayout(phase3d2bNewExecContext(ctx, deps), s.Name)
+		},
+		label: "layout",
 	},
 	ast.DescribeConstant: {
-		handler: func(ctx *ExecContext, s *ast.DescribeStmt) error { return describeConstant(ctx, s.Name) },
-		label:   "constant",
+		handler: func(ctx context.Context, s *ast.DescribeStmt, deps *HandlerDeps) error {
+			return describeConstant(phase3d2bNewExecContext(ctx, deps), s.Name)
+		},
+		label: "constant",
 	},
 	ast.DescribeJavaAction: {
-		handler: func(ctx *ExecContext, s *ast.DescribeStmt) error { return describeJavaActionGen(ctx, s.Name) },
-		label:   "javaaction",
+		handler: func(ctx context.Context, s *ast.DescribeStmt, deps *HandlerDeps) error {
+			return describeJavaActionGen(phase3d2bNewExecContext(ctx, deps), s.Name)
+		},
+		label: "javaaction",
 	},
 	ast.DescribeJavaScriptAction: {
-		handler: func(ctx *ExecContext, s *ast.DescribeStmt) error { return describeJavaScriptActionGen(ctx, s.Name) },
-		label:   "javascriptaction",
+		handler: func(ctx context.Context, s *ast.DescribeStmt, deps *HandlerDeps) error {
+			return describeJavaScriptActionGen(phase3d2bNewExecContext(ctx, deps), s.Name)
+		},
+		label: "javascriptaction",
 	},
 	ast.DescribeModuleRole: {
-		handler: func(ctx *ExecContext, s *ast.DescribeStmt) error { return describeModuleRoleGen(ctx, s.Name) },
-		label:   "modulerole",
+		handler: func(ctx context.Context, s *ast.DescribeStmt, deps *HandlerDeps) error {
+			return describeModuleRoleGen(phase3d2bNewExecContext(ctx, deps), s.Name)
+		},
+		label: "modulerole",
 	},
 	ast.DescribeUserRole: {
-		handler: func(ctx *ExecContext, s *ast.DescribeStmt) error { return describeUserRoleGen(ctx, s.Name) },
-		label:   "userrole",
+		handler: func(ctx context.Context, s *ast.DescribeStmt, deps *HandlerDeps) error {
+			return describeUserRoleGen(phase3d2bNewExecContext(ctx, deps), s.Name)
+		},
+		label: "userrole",
 	},
 	ast.DescribeDemoUser: {
-		handler: func(ctx *ExecContext, s *ast.DescribeStmt) error { return describeDemoUserGen(ctx, s.Name.Name) },
-		label:   "demouser",
+		handler: func(ctx context.Context, s *ast.DescribeStmt, deps *HandlerDeps) error {
+			return describeDemoUserGen(phase3d2bNewExecContext(ctx, deps), s.Name.Name)
+		},
+		label: "demouser",
 	},
 	ast.DescribeODataClient: {
-		handler: func(ctx *ExecContext, s *ast.DescribeStmt) error { return describeODataClient(ctx, s.Name) },
-		label:   "odataclient",
+		handler: func(ctx context.Context, s *ast.DescribeStmt, deps *HandlerDeps) error {
+			return describeODataClient(phase3d2bNewExecContext(ctx, deps), s.Name)
+		},
+		label: "odataclient",
 	},
 	ast.DescribeODataService: {
-		handler: func(ctx *ExecContext, s *ast.DescribeStmt) error { return describeODataService(ctx, s.Name) },
-		label:   "odataservice",
+		handler: func(ctx context.Context, s *ast.DescribeStmt, deps *HandlerDeps) error {
+			return describeODataService(phase3d2bNewExecContext(ctx, deps), s.Name)
+		},
+		label: "odataservice",
 	},
 	ast.DescribeExternalEntity: {
-		handler: func(ctx *ExecContext, s *ast.DescribeStmt) error { return describeExternalEntity(ctx, s.Name) },
-		label:   "externalentity",
+		handler: func(ctx context.Context, s *ast.DescribeStmt, deps *HandlerDeps) error {
+			return describeExternalEntity(phase3d2bNewExecContext(ctx, deps), s.Name)
+		},
+		label: "externalentity",
 	},
 	ast.DescribeNavigation: {
-		handler: func(ctx *ExecContext, s *ast.DescribeStmt) error { return describeNavigation(ctx, s.Name) },
-		label:   "navigation",
+		handler: func(ctx context.Context, s *ast.DescribeStmt, deps *HandlerDeps) error {
+			return describeNavigation(phase3d2bNewExecContext(ctx, deps), s.Name)
+		},
+		label: "navigation",
 	},
 	ast.DescribeWorkflow: {
-		handler: func(ctx *ExecContext, s *ast.DescribeStmt) error { return describeWorkflowGen(ctx, s.Name) },
-		label:   "workflow",
+		handler: func(ctx context.Context, s *ast.DescribeStmt, deps *HandlerDeps) error {
+			return describeWorkflowGen(phase3d2bNewExecContext(ctx, deps), s.Name)
+		},
+		label: "workflow",
 	},
 	ast.DescribeBusinessEventService: {
-		handler: func(ctx *ExecContext, s *ast.DescribeStmt) error { return describeBusinessEventService(ctx, s.Name) },
-		label:   "businesseventservice",
+		handler: func(ctx context.Context, s *ast.DescribeStmt, deps *HandlerDeps) error {
+			return describeBusinessEventService(phase3d2bNewExecContext(ctx, deps), s.Name)
+		},
+		label: "businesseventservice",
 	},
 	ast.DescribeDatabaseConnection: {
-		handler: func(ctx *ExecContext, s *ast.DescribeStmt) error { return describeDatabaseConnection(ctx, s.Name) },
-		label:   "databaseconnection",
+		handler: func(ctx context.Context, s *ast.DescribeStmt, deps *HandlerDeps) error {
+			return describeDatabaseConnection(phase3d2bNewExecContext(ctx, deps), s.Name)
+		},
+		label: "databaseconnection",
 	},
 	ast.DescribeSettings: {
-		handler: func(ctx *ExecContext, _ *ast.DescribeStmt) error { return describeSettings(ctx) },
-		label:   "settings",
+		handler: func(ctx context.Context, _ *ast.DescribeStmt, deps *HandlerDeps) error {
+			return describeSettings(phase3d2bNewExecContext(ctx, deps))
+		},
+		label: "settings",
 	},
 	ast.DescribeFragment: {
-		handler: func(ctx *ExecContext, s *ast.DescribeStmt) error { return describeFragment(ctx, s.Name) },
-		label:   "fragment",
+		handler: func(ctx context.Context, s *ast.DescribeStmt, deps *HandlerDeps) error {
+			return describeFragment(phase3d2bNewExecContext(ctx, deps), s.Name)
+		},
+		label: "fragment",
 	},
 	ast.DescribeImageCollection: {
-		handler: func(ctx *ExecContext, s *ast.DescribeStmt) error { return describeImageCollection(ctx, s.Name) },
-		label:   "imagecollection",
+		handler: func(ctx context.Context, s *ast.DescribeStmt, deps *HandlerDeps) error {
+			return describeImageCollection(phase3d2bNewExecContext(ctx, deps), s.Name)
+		},
+		label: "imagecollection",
 	},
 	ast.DescribeModel: {
-		handler: func(ctx *ExecContext, s *ast.DescribeStmt) error { return describeAgentEditorModel(ctx, s.Name) },
-		label:   "model",
+		handler: func(ctx context.Context, s *ast.DescribeStmt, deps *HandlerDeps) error {
+			return describeAgentEditorModel(phase3d2bNewExecContext(ctx, deps), s.Name)
+		},
+		label: "model",
 	},
 	ast.DescribeAgent: {
-		handler: func(ctx *ExecContext, s *ast.DescribeStmt) error { return describeAgentEditorAgent(ctx, s.Name) },
-		label:   "agent",
+		handler: func(ctx context.Context, s *ast.DescribeStmt, deps *HandlerDeps) error {
+			return describeAgentEditorAgent(phase3d2bNewExecContext(ctx, deps), s.Name)
+		},
+		label: "agent",
 	},
 	ast.DescribeKnowledgeBase: {
-		handler: func(ctx *ExecContext, s *ast.DescribeStmt) error {
-			return describeAgentEditorKnowledgeBase(ctx, s.Name)
+		handler: func(ctx context.Context, s *ast.DescribeStmt, deps *HandlerDeps) error {
+			return describeAgentEditorKnowledgeBase(phase3d2bNewExecContext(ctx, deps), s.Name)
 		},
 		label: "knowledgebase",
 	},
 	ast.DescribeConsumedMCPService: {
-		handler: func(ctx *ExecContext, s *ast.DescribeStmt) error {
-			return describeAgentEditorConsumedMCPService(ctx, s.Name)
+		handler: func(ctx context.Context, s *ast.DescribeStmt, deps *HandlerDeps) error {
+			return describeAgentEditorConsumedMCPService(phase3d2bNewExecContext(ctx, deps), s.Name)
 		},
 		label: "consumedmcpservice",
 	},
 	ast.DescribeRestClient: {
-		handler: func(ctx *ExecContext, s *ast.DescribeStmt) error { return describeRestClient(ctx, s.Name) },
-		label:   "restclient",
+		handler: func(ctx context.Context, s *ast.DescribeStmt, deps *HandlerDeps) error {
+			return describeRestClient(phase3d2bNewExecContext(ctx, deps), s.Name)
+		},
+		label: "restclient",
 	},
 	ast.DescribePublishedRestService: {
-		handler: func(ctx *ExecContext, s *ast.DescribeStmt) error { return describePublishedRestService(ctx, s.Name) },
-		label:   "publishedrestservice",
+		handler: func(ctx context.Context, s *ast.DescribeStmt, deps *HandlerDeps) error {
+			return describePublishedRestService(phase3d2bNewExecContext(ctx, deps), s.Name)
+		},
+		label: "publishedrestservice",
 	},
 	ast.DescribeDataTransformer: {
-		handler: func(ctx *ExecContext, s *ast.DescribeStmt) error { return describeDataTransformer(ctx, s.Name) },
-		label:   "datatransformer",
+		handler: func(ctx context.Context, s *ast.DescribeStmt, deps *HandlerDeps) error {
+			return describeDataTransformer(phase3d2bNewExecContext(ctx, deps), s.Name)
+		},
+		label: "datatransformer",
 	},
 	ast.DescribeContractEntity: {
-		handler: func(ctx *ExecContext, s *ast.DescribeStmt) error {
-			return describeContractEntity(ctx, s.Name, s.Format)
+		handler: func(ctx context.Context, s *ast.DescribeStmt, deps *HandlerDeps) error {
+			return describeContractEntity(phase3d2bNewExecContext(ctx, deps), s.Name, s.Format)
 		},
 		label: "contractentity",
 	},
 	ast.DescribeContractAction: {
-		handler: func(ctx *ExecContext, s *ast.DescribeStmt) error {
-			return describeContractAction(ctx, s.Name, s.Format)
+		handler: func(ctx context.Context, s *ast.DescribeStmt, deps *HandlerDeps) error {
+			return describeContractAction(phase3d2bNewExecContext(ctx, deps), s.Name, s.Format)
 		},
 		label: "contractaction",
 	},
 	ast.DescribeContractMessage: {
-		handler: func(ctx *ExecContext, s *ast.DescribeStmt) error { return describeContractMessage(ctx, s.Name) },
-		label:   "contractmessage",
+		handler: func(ctx context.Context, s *ast.DescribeStmt, deps *HandlerDeps) error {
+			return describeContractMessage(phase3d2bNewExecContext(ctx, deps), s.Name)
+		},
+		label: "contractmessage",
 	},
 	ast.DescribeJsonStructure: {
-		handler: func(ctx *ExecContext, s *ast.DescribeStmt) error { return describeJsonStructure(ctx, s.Name) },
-		label:   "jsonstructure",
+		handler: func(ctx context.Context, s *ast.DescribeStmt, deps *HandlerDeps) error {
+			return describeJsonStructure(phase3d2bNewExecContext(ctx, deps), s.Name)
+		},
+		label: "jsonstructure",
 	},
 	ast.DescribeImportMapping: {
-		handler: func(ctx *ExecContext, s *ast.DescribeStmt) error { return describeImportMapping(ctx, s.Name) },
-		label:   "importmapping",
+		handler: func(ctx context.Context, s *ast.DescribeStmt, deps *HandlerDeps) error {
+			return describeImportMapping(phase3d2bNewExecContext(ctx, deps), s.Name)
+		},
+		label: "importmapping",
 	},
 	ast.DescribeExportMapping: {
-		handler: func(ctx *ExecContext, s *ast.DescribeStmt) error { return describeExportMapping(ctx, s.Name) },
-		label:   "exportmapping",
+		handler: func(ctx context.Context, s *ast.DescribeStmt, deps *HandlerDeps) error {
+			return describeExportMapping(phase3d2bNewExecContext(ctx, deps), s.Name)
+		},
+		label: "exportmapping",
 	},
 	ast.DescribeJarDependency: {
-		handler: func(ctx *ExecContext, s *ast.DescribeStmt) error {
-			return execDescribeJarDependency(ctx, s.Name.String(), s.Qualifier)
+		handler: func(ctx context.Context, s *ast.DescribeStmt, deps *HandlerDeps) error {
+			return execDescribeJarDependency(phase3d2bNewExecContext(ctx, deps), s.Name.String(), s.Qualifier)
 		},
 		label: "jardependency",
 	},
 	ast.DescribeWidget: {
-		handler: func(ctx *ExecContext, s *ast.DescribeStmt) error {
-			return describeWidget(ctx, s.Name)
+		handler: func(ctx context.Context, s *ast.DescribeStmt, deps *HandlerDeps) error {
+			return describeWidget(phase3d2bNewExecContext(ctx, deps), s.Name)
 		},
 		label: "widget",
 	},

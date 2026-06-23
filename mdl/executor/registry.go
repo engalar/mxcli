@@ -11,125 +11,35 @@ import (
 )
 
 // StmtHandler executes a single statement type.
-type StmtHandler func(ctx *ExecContext, stmt ast.Statement) error
-
-// StmtHandlerFunc is the new-style handler signature for handlers that
-// have been migrated away from *ExecContext.
-type StmtHandlerFunc func(ctx context.Context, stmt ast.Statement) error
+type StmtHandler func(ctx context.Context, stmt ast.Statement) error
 
 // Registry maps AST statement type names to their handler functions.
 type Registry struct {
-	handlers    map[string]StmtHandler
-	futureFuncs map[string]StmtHandlerFunc
+	handlers map[string]StmtHandler
 }
 
 // NewRegistry creates a Registry with all statement handlers registered.
 func NewRegistry() *Registry {
 	r := &Registry{
-		handlers:    make(map[string]StmtHandler),
-		futureFuncs: make(map[string]StmtHandlerFunc),
+		handlers: make(map[string]StmtHandler),
 	}
-	registerConnectionHandlers(r)
-	registerModuleHandlers(r)
-	registerEnumerationHandlers(r)
-	registerConstantHandlers(r)
-	registerDatabaseConnectionHandlers(r)
-	registerEntityHandlers(r)
-	registerAssociationHandlers(r)
-	registerMicroflowAndNanoflowHandlers(r)
-	registerPageHandlers(r)
-	registerSecurityHandlers(r)
-	registerNavigationHandlers(r)
-	registerImageHandlers(r)
-	registerWorkflowHandlers(r)
-	registerBusinessEventHandlers(r)
-	registerSettingsHandlers(r)
-	registerODataHandlers(r)
-	registerJSONStructureHandlers(r)
-	registerMappingHandlers(r)
-	registerRESTHandlers(r)
-	registerDataTransformerHandlers(r)
-	registerQueryHandlers(r)
-	registerStylingHandlers(r)
-	registerThemeCommandHandlers(r)
-	registerRepositoryHandlers(r)
-	registerSessionHandlers(r)
-	registerLintHandlers(r)
-	registerAlterPageHandlers(r)
-	registerFragmentHandlers(r)
-	registerSQLHandlers(r)
-	registerImportHandlers(r)
-	registerAgentEditorHandlers(r)
 	return r
 }
 
-// Register maps a statement type to its handler using reflect.TypeOf for
-// backward-compatible key generation.
-func (r *Registry) Register(stmt ast.Statement, handler StmtHandler) {
-	key := stmt.TypeName()
-	if _, exists := r.handlers[key]; !exists {
-		r.handlers[key] = handler
-	}
+// RegisterFuture maps a type name to a handler. Overwrites any existing
+// registration so that SetBackend() can replace minimal handlers with
+// fully-configured ones.
+func (r *Registry) RegisterFuture(typeName string, handler StmtHandler) {
+	r.handlers[typeName] = handler
 }
 
-// RegisterByName maps a type name to its handler.
-func (r *Registry) RegisterByName(typeName string, handler StmtHandler) {
-	if _, exists := r.handlers[typeName]; !exists {
-		r.handlers[typeName] = handler
-	}
-}
-
-// RegisterFuture maps a type name to a new-style handler (no *ExecContext).
-// Used during the transition from *ExecContext to context.Context.
-func (r *Registry) RegisterFuture(typeName string, handler StmtHandlerFunc) {
-	if _, exists := r.futureFuncs[typeName]; !exists {
-		r.futureFuncs[typeName] = handler
-	}
-}
-
-// Lookup returns the handler for the given statement, or nil if none is registered.
-func (r *Registry) Lookup(stmt ast.Statement) StmtHandler {
-	return r.handlers[stmt.TypeName()]
-}
-
-// Dispatch finds and executes the handler for stmt.
-// Prefers new-style StmtHandlerFunc (no ExecContext dependency) when available.
-func (r *Registry) Dispatch(ctx *ExecContext, stmt ast.Statement) error {
-	ctx.initRoles()
-	// New-style handler registered via RegisterFuture — receives ctx as context.Context.
-	if fn, ok := r.futureFuncs[stmt.TypeName()]; ok {
-		return fn(ctx, stmt)
-	}
-	// Old-style handler with *ExecContext.
-	h := r.Lookup(stmt)
-	if h == nil {
+// Dispatch executes the handler for stmt.
+func (r *Registry) Dispatch(ctx context.Context, stmt ast.Statement) error {
+	h, ok := r.handlers[stmt.TypeName()]
+	if !ok {
 		return mdlerrors.NewUnsupported(fmt.Sprintf("unhandled statement type %s", stmt.TypeName()))
 	}
 	return h(ctx, stmt)
-}
-
-// DispatchFuture dispatches a statement to its new-style handler only.
-// Returns unsupported error when no future handler is registered (no fallback).
-// Used by executeInner after all handlers were migrated to RegisterFuture.
-func (r *Registry) DispatchFuture(ctx context.Context, stmt ast.Statement) error {
-	if fn, ok := r.futureFuncs[stmt.TypeName()]; ok {
-		return fn(ctx, stmt)
-	}
-	return mdlerrors.NewUnsupported(fmt.Sprintf("unhandled statement type %s", stmt.TypeName()))
-}
-
-// Validate checks that every known AST statement type has a registered handler.
-func (r *Registry) Validate(knownTypes []ast.Statement) error {
-	var missing []string
-	for _, s := range knownTypes {
-		if _, ok := r.handlers[s.TypeName()]; !ok {
-			missing = append(missing, s.TypeName())
-		}
-	}
-	if len(missing) > 0 {
-		return mdlerrors.NewValidationf("registry: %d unregistered statement type(s): %v", len(missing), missing)
-	}
-	return nil
 }
 
 // HandlerCount returns the number of registered handlers.
@@ -144,16 +54,4 @@ func (r *Registry) RegisteredTypes() []string {
 		types = append(types, t)
 	}
 	return types
-}
-
-// HasHandler returns true if a handler is registered for the given type.
-func (r *Registry) HasHandler(stmt ast.Statement) bool {
-	_, ok := r.handlers[stmt.TypeName()]
-	return ok
-}
-
-// HasFutureHandler returns true if a RegisterFuture handler is registered.
-func (r *Registry) HasFutureHandler(stmt ast.Statement) bool {
-	_, ok := r.futureFuncs[stmt.TypeName()]
-	return ok
 }

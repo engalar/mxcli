@@ -9,19 +9,12 @@ import (
 )
 
 // executeInner dispatches a statement to its registered handler.
-// Prefers RegisterFuture (StmtHandlerFunc, no ExecContext). Falls back
-// to deprecated StmtHandler Dispatch (with ExecContext) when no future
-// handler is registered (tests that don't call SetBackend).
 func (e *Executor) executeInner(ctx context.Context, stmt ast.Statement) error {
-	if e.registry.HasFutureHandler(stmt) {
-		return e.registry.DispatchFuture(ctx, stmt)
-	}
-	ectx := e.newExecContext(ctx)
-	return e.registry.Dispatch(ectx, stmt)
+	return e.registry.Dispatch(ctx, stmt)
 }
 
 // newExecContext builds an ExecContext from the current Executor state.
-// Deprecated: only used by autocomplete.go, BuildGraph(), and CLI callers.
+// Populates ALL fields, including role-specific backend interfaces.
 func (e *Executor) newExecContext(ctx context.Context) *ExecContext {
 	if e.cache == nil {
 		e.cache = &executorCache{}
@@ -34,8 +27,17 @@ func (e *Executor) newExecContext(ctx context.Context) *ExecContext {
 		Backend: e.backend,
 		Logger:  e.logger,
 		ExecIO: ExecIO{Output: e.output, StatusOutput: e.statusOutput, Format: e.format, Quiet: e.quiet},
-		ExecSession: ExecSession{Fragments: e.fragments, Cache: e.cache},
-		ExecConnection: ExecConnection{MprPath: e.mprPath, Graph: e.graphCatalog, BackendFactory: e.backendFactory},
+		ExecSession: ExecSession{
+			Cache:      e.cache,
+			Session:    &e.cache.sessionTracker,
+			Fragments:  e.fragments,
+			ScriptDepth: 0,
+		},
+		ExecConnection: ExecConnection{
+			MprPath:        e.mprPath,
+			BackendFactory: e.backendFactory,
+			Graph:          e.graphCatalog,
+		},
 		ExecRepos: ExecRepos{
 			Microflows:        extractMicroflowsRepo(e.backend),
 			Nanoflows:         extractNanoflowsRepo(e.backend),

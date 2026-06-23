@@ -237,13 +237,63 @@ type perfStmt struct {
 // do not pollute stdout when the caller redirects stdout to a file.
 func New(output io.Writer) *Executor {
 	guard := newOutputGuard(output, maxOutputLines)
-	return &Executor{
+	e := &Executor{
 		output:       guard,
 		statusOutput: os.Stderr,
 		guard:        guard,
 		fragments:    make(map[string]*ast.DefineFragmentStmt),
 		registry:     NewRegistry(),
 	}
+	e.registerNonBackendHandlers()
+	return e
+}
+
+// registerNonBackendHandlers registers handlers that work without a backend.
+// Called from New(). The remaining handlers are registered by registerFutureOverlays
+// (called from SetBackend), which overrides these minimal registrations.
+func (e *Executor) registerNonBackendHandlers() {
+	r := e.registry
+	r.RegisterFuture("Connect", func(ctx context.Context, stmt ast.Statement) error {
+		return execConnectFuture(ctx, stmt.(*ast.ConnectStmt), e)
+	})
+	r.RegisterFuture("Disconnect", func(ctx context.Context, stmt ast.Statement) error {
+		return execDisconnectFuture(ctx, e)
+	})
+	r.RegisterFuture("Exit", func(ctx context.Context, stmt ast.Statement) error {
+		return execExitFuture(ctx)
+	})
+	r.RegisterFuture("Help", func(ctx context.Context, stmt ast.Statement) error {
+		return execHelpFuture(ctx, stmt.(*ast.HelpStmt), e.output, e.format)
+	})
+	// Fragment handlers — only need Output and e.fragments, no backend.
+	r.RegisterFuture("DefineFragment", func(ctx context.Context, stmt ast.Statement) error {
+		deps := &HandlerDeps{Output: e.output, Fragments: e.fragments}
+		return execDefineFragmentFn(ctx, stmt.(*ast.DefineFragmentStmt), deps)
+	})
+	// Show and Describe need to be registered so non-backend subtypes
+	// (e.g. ShowFragments, DescribeFragment) work before connect.
+	// They delegate to the full execShow/execDescribe which handle
+	// individual subtypes; backend-dependent subtypes will return
+	// "not connected" errors at runtime.
+	r.RegisterFuture("Show", func(ctx context.Context, stmt ast.Statement) error {
+		s := stmt.(*ast.ShowStmt)
+		if s.ObjectType == ast.ShowFragments {
+			listFragmentsFuture(ctx, e.output, e.fragments)
+			return nil
+		}
+		return mdlerrors.NewNotConnected()
+	})
+	r.RegisterFuture("Describe", func(ctx context.Context, stmt ast.Statement) error {
+		s := stmt.(*ast.DescribeStmt)
+		if entry, ok := describeHandlers[s.ObjectType]; ok {
+			name := s.Name.String()
+			deps := &HandlerDeps{Output: e.output, Format: e.format, Fragments: e.fragments}
+			return writeDescribeJSON(ctx, name, entry.label, deps, func() error {
+				return entry.handler(ctx, s, deps)
+			})
+		}
+		return mdlerrors.NewNotConnected()
+	})
 }
 
 // SetBackendFactory sets the factory function used to create backend instances on Connect.

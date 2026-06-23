@@ -13,21 +13,15 @@ import (
 	sqllib "github.com/mendixlabs/mxcli/sql"
 )
 
-// HandlerDeps carries the execution dependencies that were previously
-// scattered across ExecContext fields. Each handler captures only the
-// deps it needs via closure at registration time.
-//
-// Transition: Handlers that use ExecContext fields are migrated to
-// StmtHandlerFunc one at a time. Migrated handlers capture deps from
-// a HandlerDeps that was populated from the Executor at startup.
-// Once all handlers are migrated, HandlerDeps and ExecContext are removed.
+// HandlerDeps carries all dependencies that were previously scattered across
+// ExecContext fields. This is the single dependency container used by every
+// statement handler and helper function.
 type HandlerDeps struct {
 	Output       io.Writer
 	StatusOutput io.Writer
 	Logger       *diaglog.Logger
 	Quiet        bool
 
-	// Deprecated: use specific role interfaces below.
 	Backend              backend.FullBackend
 	BackendFactory       BackendFactory
 	ConnectionManager    backend.ConnectionManager
@@ -37,26 +31,47 @@ type HandlerDeps struct {
 	ModuleSettingsReader backend.ModuleSettingsReader
 	ModuleSettingsWriter backend.ModuleSettingsWriter
 	DomainModelReader    backend.DomainModelReader
+	DomainModelWriter    backend.DomainModelWriter
 	MicroflowReader      backend.MicroflowReader
+	MicroflowWriter      backend.MicroflowWriter
+	WorkflowReader       backend.WorkflowReader
+	WorkflowWriter       backend.WorkflowWriter
 	PageReader           backend.PageReader
 	PageWriter           backend.PageWriter
+	JavaActionReader     backend.JavaActionReader
+	JavaActionWriter     backend.JavaActionWriter
+	JavaScriptActionWriter backend.JavaScriptActionWriter
 	EnumerationReader    backend.EnumerationReader
+	EnumerationWriter    backend.EnumerationWriter
 	ConstantReader       backend.ConstantReader
+	ConstantWriter       backend.ConstantWriter
 	SettingsReader       backend.SettingsReader
+	SettingsWriter       backend.SettingsWriter
 	MapperReader         backend.MappingReader
 	MapperWriter         backend.MappingWriter
-	NavigationReader       backend.NavigationReader
-	NavigationWriter       backend.NavigationWriter
-	RenameManager          backend.RenameManager
-	JavaActionWriter       backend.JavaActionWriter
-	MicroflowWriter        backend.MicroflowWriter
+	UnitReader           backend.UnitReader
+	UnitWriter           backend.UnitWriter
+	NavigationReader     backend.NavigationReader
+	NavigationWriter     backend.NavigationWriter
+	ImageCollectionWriter backend.ImageCollectionWriter
 	ScheduledEventReader   backend.ScheduledEventReader
+	ServiceLister          backend.ServiceLister
+	ServiceWriter          backend.ServiceWriter
 	MetadataReader         backend.MetadataReader
+	RenameManager          backend.RenameManager
+	SecurityProjectManager      backend.SecurityProjectManager
+	SecurityModuleManager       backend.SecurityModuleManager
+	SecurityEntityAccessManager backend.SecurityEntityAccessManager
+	PageModelAccess             backend.PageModelAccess
+	PageMutationOperator        backend.PageMutationOperator
+	WorkflowMutationOperator    backend.WorkflowMutationOperator
+	WidgetBuilder               backend.WidgetBuilder
+	ScriptTransactionManager    backend.ScriptTransactionManager
+	AgentEditorOperator         backend.AgentEditorOperator
+	ImageBackend                backend.ImageBackend
+	BusinessEventBackend        backend.BusinessEventBackend
 
-	// DomainModels repo for entity counting (Stage 3 repos).
-	DomainModels repos.DomainModelRepository
-
-	// Stage 3 flow/page/action repos for show handlers.
+	DomainModels         repos.DomainModelRepository
 	MicroflowRepo        repos.MicroflowRepository
 	NanoflowRepo         repos.NanoflowRepository
 	PageRepo             repos.PageRepository
@@ -65,56 +80,27 @@ type HandlerDeps struct {
 	JavaActionRepo       repos.JavaActionRepository
 	JavaScriptActionRepo repos.JavaScriptActionRepository
 	WorkflowRepo         repos.WorkflowRepository
-	BusinessEventBackend backend.BusinessEventBackend
+	Security             repos.SecurityRepository
 
-	// Security repo for project/module security reads (Phase 3d-1f).
-	Security repos.SecurityRepository
-
-	// Describe handler deps (Phase 3d-1h).
-	ServiceLister backend.ServiceLister
-	ImageBackend  backend.ImageBackend
-
-	// ServiceWriter provides write operations for OData, REST, etc. (Phase 3d-5).
-	ServiceWriter backend.ServiceWriter
-
-	// ImageCollectionWriter provides image collection read/write operations (Phase 3d-5).
-	ImageCollectionWriter backend.ImageCollectionWriter
-
-	// DomainModelWriter provides entity/association write operations (Phase 3d-5).
-	DomainModelWriter backend.DomainModelWriter
-
-	// MprPath is the path to the project .mpr file (Phase 3d-5).
 	MprPath string
+	Graph   *graphcatalog.ProjectGraph
+	Perf    *PerfTimer
+	Format  OutputFormat
 
-	// Graph is the in-memory project graph for data-flow analysis (Phase 3d-5f).
-	Graph *graphcatalog.ProjectGraph
-
-	// Perf collects timing statistics when non-nil (Phase 3d-5f).
-	Perf *PerfTimer
-
-	// Output format (defaults to table).
-	Format OutputFormat
-
-	// Settings holds per-session mutable state set via SET (Phase 3d-5).
-	Settings map[string]any
-
-	// Fragments holds DEFINE FRAGMENT definitions for the session (Phase 3d-5).
+	Settings  map[string]any
 	Fragments map[string]*ast.DefineFragmentStmt
+	SqlMgr    *sqllib.Manager
+	Cache     *executorCache
+	Session   *sessionTracker
+	ThemeRegistry *ThemeRegistry
 
-	// Widget builder and page mutation (Phase 3d-5c/e).
-	WidgetBuilder              backend.WidgetBuilder
-	PageModelAccess            backend.PageModelAccess
-	PageMutationOperator       backend.PageMutationOperator
-	SecurityEntityAccessManager backend.SecurityEntityAccessManager
-	SecurityModuleManager backend.SecurityModuleManager
-	SecurityProjectManager backend.SecurityProjectManager
-	AgentEditorOperator backend.AgentEditorOperator
-	SqlMgr *sqllib.Manager
-	Cache *executorCache
-	JavaActionReader backend.JavaActionReader
-	JavaScriptActionWriter backend.JavaScriptActionWriter
-	SettingsWriter backend.SettingsWriter
-	ScriptTransactionManager backend.ScriptTransactionManager
+	ScriptDepth                      int
+	DescribingMicroflowHasReturnValue bool
+
+	ExecuteFn        func(ast.Statement) error
+	ExecuteProgramFn func(*ast.Program) error
+	FinalizeFn       func() error
+	SyncGraph        func(*graphcatalog.ProjectGraph)
 }
 
 // registerFutureOverlays registers new-style handlers (StmtHandlerFunc) for
@@ -355,9 +341,8 @@ func (e *Executor) registerFutureOverlays() {
 				return describeJavaActionGenFuture(ctx, output, deps.JavaActionRepo, s.Name)
 			})
 		case ast.DescribeJavaScriptAction:
-			ectx := phase3d2bNewExecContext(ctx, deps)
-			return writeDescribeJSON(ectx, name, entry.label, func() error {
-				return entry.handler(ectx, s)
+			return writeDescribeJSON(ctx, name, entry.label, deps, func() error {
+				return entry.handler(ctx, s, deps)
 			})
 		case ast.DescribeModuleRole:
 			return writeDescribeJSONFuture(deps.Output, e.format, name, entry.label, func(output io.Writer) error {
@@ -396,10 +381,8 @@ func (e *Executor) registerFutureOverlays() {
 				return describeImportMappingFn(ctx, s.Name, deps)
 			})
 		default:
-			// Not yet migrated — fall through to old handler.
-			ectx := phase3d2bNewExecContext(ctx, deps)
-			return writeDescribeJSON(ectx, name, entry.label, func() error {
-				return entry.handler(ectx, s)
+			return writeDescribeJSON(ctx, name, entry.label, deps, func() error {
+				return entry.handler(ctx, s, deps)
 			})
 		}
 	})
@@ -893,8 +876,7 @@ func (e *Executor) registerFutureOverlays() {
 	})
 }
 
-// execContextToDeps bridges old-style *ExecContext to *HandlerDeps for
-// Phase 3d-5 migration callers that still pass *ExecContext.
+// execContextToDeps bridges old-style *ExecContext to *HandlerDeps.
 func execContextToDeps(ectx *ExecContext) *HandlerDeps {
 	return &HandlerDeps{
 		Output:       ectx.Output,
@@ -906,22 +888,49 @@ func execContextToDeps(ectx *ExecContext) *HandlerDeps {
 		ConnectionManager:    ectx.ConnectionManager,
 		ModuleLister:         ectx.ModuleLister,
 		ModuleWriter:         ectx.ModuleWriter,
-		FolderManager:        ectx.FolderManager,
-		MetadataReader:       ectx.MetadataReader,
-		EnumerationReader:    ectx.EnumerationReader,
-		ConstantReader:       ectx.ConstantReader,
-		SettingsReader:       ectx.SettingsReader,
-		MapperReader:          ectx.MappingReader,
-		MapperWriter:          ectx.MappingWriter,
-		NavigationReader:     ectx.NavigationReader,
-		ScheduledEventReader: ectx.ScheduledEventReader,
 		DomainModelReader:    ectx.DomainModelReader,
+		DomainModelWriter:    ectx.DomainModelWriter,
+		MicroflowReader:      ectx.MicroflowReader,
+		MicroflowWriter:      ectx.MicroflowWriter,
+		WorkflowReader:       ectx.WorkflowReader,
+		WorkflowWriter:       ectx.WorkflowWriter,
+		PageReader:           ectx.PageReader,
+		PageWriter:           ectx.PageWriter,
+		JavaActionReader:     ectx.JavaActionReader,
+		JavaActionWriter:     ectx.JavaActionWriter,
+		JavaScriptActionWriter: ectx.JavaScriptActionWriter,
+		EnumerationReader:    ectx.EnumerationReader,
+		EnumerationWriter:    ectx.EnumerationWriter,
+		ConstantReader:       ectx.ConstantReader,
+		ConstantWriter:       ectx.ConstantWriter,
+		SettingsReader:       ectx.SettingsReader,
+		SettingsWriter:       ectx.SettingsWriter,
+		MapperReader:         ectx.MappingReader,
+		MapperWriter:         ectx.MappingWriter,
+		UnitReader:           ectx.UnitReader,
+		UnitWriter:           ectx.UnitWriter,
+		NavigationReader:     ectx.NavigationReader,
+		NavigationWriter:     ectx.NavigationWriter,
+		ImageCollectionWriter: ectx.ImageCollectionWriter,
+		ScheduledEventReader: ectx.ScheduledEventReader,
+		ServiceLister:        ectx.ServiceLister,
+		ServiceWriter:        ectx.ServiceWriter,
+		MetadataReader:       ectx.MetadataReader,
+		FolderManager:        ectx.FolderManager,
 		ModuleSettingsReader: ectx.ModuleSettingsReader,
 		ModuleSettingsWriter: ectx.ModuleSettingsWriter,
-		NavigationWriter:     ectx.NavigationWriter,
 		RenameManager:        ectx.RenameManager,
-		JavaActionWriter:     ectx.JavaActionWriter,
-		MicroflowWriter:      ectx.MicroflowWriter,
+		SecurityProjectManager:      ectx.SecurityProjectManager,
+		SecurityModuleManager:       ectx.SecurityModuleManager,
+		SecurityEntityAccessManager: ectx.SecurityEntityAccessManager,
+		PageModelAccess:             ectx.PageModelAccess,
+		PageMutationOperator:        ectx.PageMutationOperator,
+		WorkflowMutationOperator:    ectx.WorkflowMutationOperator,
+		WidgetBuilder:               ectx.WidgetBuilder,
+		ScriptTransactionManager:    ectx.ScriptTransactionManager,
+		AgentEditorOperator:         ectx.AgentEditorOperator,
+		ImageBackend:                ectx.Backend,
+		BusinessEventBackend:        ectx.Backend,
 
 		DomainModels:      ectx.DomainModels,
 		MicroflowRepo:     ectx.Microflows,
@@ -933,38 +942,40 @@ func execContextToDeps(ectx *ExecContext) *HandlerDeps {
 		JavaScriptActionRepo: ectx.JavaScriptActions,
 		WorkflowRepo:      ectx.Workflows,
 		Security:          ectx.Security,
-		ServiceLister:     ectx.ServiceLister,
-		ServiceWriter:     ectx.ServiceWriter,
-		DomainModelWriter: ectx.DomainModelWriter,
-		PageReader:        ectx.PageReader,
-		PageWriter:        ectx.PageWriter,
-		WidgetBuilder:     ectx.WidgetBuilder,
-		PageModelAccess:   ectx.PageModelAccess,
-		PageMutationOperator:    ectx.PageMutationOperator,
-		SecurityEntityAccessManager: ectx.SecurityEntityAccessManager,
-		SecurityModuleManager:      ectx.SecurityModuleManager,
-		SecurityProjectManager:     ectx.SecurityProjectManager,
-		AgentEditorOperator:        ectx.AgentEditorOperator,
-		SqlMgr:                     ectx.SqlMgr,
-		Cache:                      ectx.Cache,
-		JavaActionReader:           ectx.JavaActionReader,
-		JavaScriptActionWriter:     ectx.JavaScriptActionWriter,
-		SettingsWriter:             ectx.SettingsWriter,
-		ScriptTransactionManager:   ectx.ScriptTransactionManager,
-		Fragments:                  ectx.Fragments,
-		ImageCollectionWriter:      ectx.ImageCollectionWriter,
-		Format:                     ectx.Format,
-		Settings:                   ectx.Settings,
-		MprPath:                    ectx.MprPath,
-		Graph:                      ectx.Graph,
-		Perf:                       ectx.Perf,
+
+		SqlMgr:    ectx.SqlMgr,
+		Cache:     ectx.Cache,
+		Session:   ectx.Session,
+		Fragments: ectx.Fragments,
+		Settings:  ectx.Settings,
+		Format:    ectx.Format,
+		MprPath:   ectx.MprPath,
+		Graph:     ectx.Graph,
+		Perf:      ectx.Perf,
+
+		ScriptDepth:                      ectx.ScriptDepth,
+		DescribingMicroflowHasReturnValue: ectx.DescribingMicroflowHasReturnValue,
+		ThemeRegistry:  ectx.ThemeRegistry,
+		ExecuteFn:      ectx.ExecuteFn,
+		ExecuteProgramFn: ectx.ExecuteProgramFn,
+		FinalizeFn:     ectx.FinalizeFn,
+		SyncGraph:      ectx.SyncGraph,
 	}
 }
 
 // buildHandlerDeps populates a HandlerDeps from the current Executor state.
 func (e *Executor) buildHandlerDeps() *HandlerDeps {
 	if e.backend == nil {
-		return nil
+		return &HandlerDeps{
+			Output:       e.output,
+			StatusOutput: e.statusOutput,
+			Logger:       e.logger,
+			Quiet:        e.quiet,
+			Fragments:    e.fragments,
+			Format:       e.format,
+			MprPath:      e.mprPath,
+			Settings:     nil,
+		}
 	}
 	return &HandlerDeps{
 		Output:       e.output,
@@ -976,16 +987,50 @@ func (e *Executor) buildHandlerDeps() *HandlerDeps {
 		ConnectionManager:    e.backend,
 		ModuleLister:         e.backend,
 		ModuleWriter:         e.backend,
-		FolderManager:        e.backend,
-		MetadataReader:       e.backend,
-		EnumerationReader:    e.backend,
-		ConstantReader:       e.backend,
-		SettingsReader:       e.backend,
-		MapperReader:          e.backend,
-		MapperWriter:          e.backend,
-		NavigationReader:     e.backend,
-		ScheduledEventReader: e.backend,
 		DomainModelReader:    e.backend,
+		DomainModelWriter:    e.backend,
+		MicroflowReader:      e.backend,
+		MicroflowWriter:      e.backend,
+		WorkflowReader:       e.backend,
+		WorkflowWriter:       e.backend,
+		PageReader:           e.backend,
+		PageWriter:           e.backend,
+		JavaActionReader:     e.backend,
+		JavaActionWriter:     e.backend,
+		JavaScriptActionWriter: e.backend,
+		EnumerationReader:    e.backend,
+		EnumerationWriter:    e.backend,
+		ConstantReader:       e.backend,
+		ConstantWriter:       e.backend,
+		SettingsReader:       e.backend,
+		SettingsWriter:       e.backend,
+		MapperReader:         e.backend,
+		MapperWriter:         e.backend,
+		UnitReader:           e.backend,
+		UnitWriter:           e.backend,
+		NavigationReader:     e.backend,
+		NavigationWriter:     e.backend,
+		ImageCollectionWriter: e.backend,
+		ScheduledEventReader: e.backend,
+		ServiceLister:        e.backend,
+		ServiceWriter:        e.backend,
+		MetadataReader:       e.backend,
+		FolderManager:        e.backend,
+		ModuleSettingsReader: e.backend,
+		ModuleSettingsWriter: e.backend,
+		RenameManager:        e.backend,
+		SecurityProjectManager:      e.backend,
+		SecurityModuleManager:       e.backend,
+		SecurityEntityAccessManager: e.backend,
+		PageModelAccess:             e.backend,
+		PageMutationOperator:        e.backend,
+		WorkflowMutationOperator:    e.backend,
+		WidgetBuilder:               e.backend,
+		ScriptTransactionManager:    e.backend,
+		AgentEditorOperator:         e.backend,
+		ImageBackend:                e.backend,
+		BusinessEventBackend:        e.backend,
+
 		DomainModels:         extractDomainModelsRepo(e.backend),
 		MicroflowRepo:        extractMicroflowsRepo(e.backend),
 		NanoflowRepo:         extractNanoflowsRepo(e.backend),
@@ -995,38 +1040,23 @@ func (e *Executor) buildHandlerDeps() *HandlerDeps {
 		JavaActionRepo:       extractJavaActionsRepo(e.backend),
 		JavaScriptActionRepo: extractJavaScriptActionsRepo(e.backend),
 		WorkflowRepo:         extractWorkflowsRepo(e.backend),
-		BusinessEventBackend: e.backend,
 		Security:             extractSecurityRepo(e.backend),
-		ModuleSettingsReader: e.backend,
-		ModuleSettingsWriter: e.backend,
-		NavigationWriter:     e.backend,
-		RenameManager:        e.backend,
-		JavaActionWriter:     e.backend,
-		MicroflowWriter:      e.backend,
-		ServiceLister:        e.backend,
-		ServiceWriter:        e.backend,
-		DomainModelWriter:    e.backend,
-		PageReader:                e.backend,
-		PageWriter:                e.backend,
-		WidgetBuilder:             e.backend,
-		PageModelAccess:           e.backend,
-		PageMutationOperator:      e.backend,
-		SecurityEntityAccessManager: e.backend,
-		SecurityModuleManager:      e.backend,
-		SecurityProjectManager:     e.backend,
-		AgentEditorOperator:        e.backend,
-		Cache:                      nil, // deprecated cache; set only in ExecContext path
-		JavaActionReader:           e.backend,
-		JavaScriptActionWriter:     e.backend,
-		SettingsWriter:             e.backend,
-		ScriptTransactionManager:   e.backend,
+
 		Fragments:                  e.fragments,
-		ImageCollectionWriter:      e.backend,
-		Format:                   e.format,
-		Settings:                  nil, // SET key/value stored by handlers; initialized on first SET
-		MprPath:                   e.mprPath,
-		Graph:                     nil, // Populated lazily; see Analyzer.
-		Perf:                      nil, // Populated lazily; see Analyzer.
-		ImageBackend:              e.backend,
+		Format:                     e.format,
+		Settings:                   nil,
+		MprPath:                    e.mprPath,
+		Graph:                      nil,
+		Perf:                       nil,
+		Cache: e.cache,
+		Session: func() *sessionTracker {
+			if e.cache != nil {
+				return &e.cache.sessionTracker
+			}
+			return &sessionTracker{}
+		}(),
+		ExecuteFn:                  e.Execute,
+		ExecuteProgramFn:           e.ExecuteProgram,
+		FinalizeFn:                 e.finalizeProgramExecution,
 	}
 }

@@ -4,6 +4,7 @@ package executor
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"strings"
 	"testing"
@@ -112,12 +113,10 @@ func TestWriteResultJSONEmpty(t *testing.T) {
 
 func TestWriteDescribeJSON(t *testing.T) {
 	var buf bytes.Buffer
-	ctx := &ExecContext{
-		ExecIO: ExecIO{Output: &buf, Format: FormatJSON},
-	}
+	deps := &HandlerDeps{Output: &buf, Format: FormatJSON}
 
-	err := writeDescribeJSON(ctx, "Sales.Customer", "entity", func() error {
-		_, err := ctx.Output.Write([]byte("create entity Sales.Customer;\n"))
+	err := writeDescribeJSON(context.Background(), "Sales.Customer", "entity", deps, func() error {
+		_, err := deps.Output.Write([]byte("create entity Sales.Customer;\n"))
 		return err
 	})
 	if err != nil {
@@ -142,12 +141,10 @@ func TestWriteDescribeJSON(t *testing.T) {
 
 func TestWriteDescribeJSONPassthrough(t *testing.T) {
 	var buf bytes.Buffer
-	ctx := &ExecContext{
-		ExecIO: ExecIO{Output: &buf, Format: FormatTable},
-	}
+	deps := &HandlerDeps{Output: &buf, Format: FormatTable}
 
-	err := writeDescribeJSON(ctx, "Sales.Customer", "entity", func() error {
-		_, err := ctx.Output.Write([]byte("create entity Sales.Customer;\n"))
+	err := writeDescribeJSON(context.Background(), "Sales.Customer", "entity", deps, func() error {
+		_, err := deps.Output.Write([]byte("create entity Sales.Customer;\n"))
 		return err
 	})
 	if err != nil {

@@ -2890,13 +2890,12 @@ func execExecuteScriptFuture(ctx context.Context, s *ast.ExecuteScriptStmt, deps
 
 // phase3d2bNewExecContext builds a temporary *ExecContext from HandlerDeps
 // for bridge functions that still call old *ExecContext handlers.
-// Populates role-specific backend fields from deps.Backend.
+// Populates ALL fields from deps so old handler functions have everything they need.
 func phase3d2bNewExecContext(ctx context.Context, deps *HandlerDeps) *ExecContext {
 	ectx := &ExecContext{
-		Context: ctx,
-		Backend: deps.Backend,
-		ExecIO:  ExecIO{Output: deps.Output},
-		ExecSession: ExecSession{Cache: deps.Cache},
+		Context:   ctx,
+		Backend:   deps.Backend,
+		Logger:    deps.Logger,
 		ExecRepos: ExecRepos{
 			DomainModels:      deps.DomainModels,
 			Microflows:        deps.MicroflowRepo,
@@ -2909,55 +2908,81 @@ func phase3d2bNewExecContext(ctx context.Context, deps *HandlerDeps) *ExecContex
 			Layouts:           deps.LayoutRepo,
 			Snippets:          deps.SnippetRepo,
 		},
+		ExecIO: ExecIO{
+			Output:       deps.Output,
+			StatusOutput: deps.StatusOutput,
+			Format:       deps.Format,
+			Quiet:        deps.Quiet,
+		},
+		ExecSession: ExecSession{
+			Cache:     deps.Cache,
+			Session:   deps.Session,
+			Fragments: deps.Fragments,
+			Settings:  deps.Settings,
+		},
+		ExecConnection: ExecConnection{
+			MprPath:        deps.MprPath,
+			BackendFactory: deps.BackendFactory,
+			Graph:          deps.Graph,
+			Perf:           deps.Perf,
+		},
+		ExecCallbacks: ExecCallbacks{
+			ExecuteFn:        deps.ExecuteFn,
+			ExecuteProgramFn: deps.ExecuteProgramFn,
+			FinalizeFn:       deps.FinalizeFn,
+			SyncGraph:        deps.SyncGraph,
+		},
 	}
-	// Populate role-specific backend fields from deps.Backend
-	// for old handler functions that still access ctx.XxxReader/Writer/Manager.
-	if deps.Backend != nil {
-		ectx.ModuleLister = deps.Backend
-		ectx.ModuleWriter = deps.Backend
-		ectx.DomainModelReader = deps.Backend
-		ectx.DomainModelWriter = deps.Backend
-		ectx.MicroflowReader = deps.Backend
-		ectx.MicroflowWriter = deps.Backend
-		ectx.WorkflowReader = deps.Backend
-		ectx.WorkflowWriter = deps.Backend
-		ectx.PageReader = deps.Backend
-		ectx.PageWriter = deps.Backend
-		ectx.JavaActionReader = deps.Backend
-		ectx.JavaActionWriter = deps.Backend
-		ectx.JavaScriptActionWriter = deps.Backend
-		ectx.EnumerationReader = deps.Backend
-		ectx.EnumerationWriter = deps.Backend
-		ectx.ConstantReader = deps.Backend
-		ectx.ConstantWriter = deps.Backend
-		ectx.SettingsReader = deps.Backend
-		ectx.SettingsWriter = deps.Backend
-		ectx.MappingReader = deps.Backend
-		ectx.MappingWriter = deps.Backend
-		ectx.UnitReader = deps.Backend
-		ectx.UnitWriter = deps.Backend
-		ectx.NavigationReader = deps.Backend
-		ectx.NavigationWriter = deps.Backend
-		ectx.ImageCollectionWriter = deps.Backend
-		ectx.ScheduledEventReader = deps.Backend
-		ectx.ServiceLister = deps.Backend
-		ectx.ServiceWriter = deps.Backend
-		ectx.MetadataReader = deps.Backend
+	// Populate role-specific backend fields from deps.
+	// Each field uses the deps value when non-nil, falling back to deps.Backend.
+	if deps.ConnectionManager != nil {
+		ectx.ConnectionManager = deps.ConnectionManager
+	} else if deps.Backend != nil {
 		ectx.ConnectionManager = deps.Backend
-		ectx.FolderManager = deps.Backend
-		ectx.ModuleSettingsReader = deps.Backend
-		ectx.ModuleSettingsWriter = deps.Backend
-		ectx.RenameManager = deps.Backend
-		ectx.SecurityProjectManager = deps.Backend
-		ectx.SecurityModuleManager = deps.Backend
-		ectx.SecurityEntityAccessManager = deps.Backend
-		ectx.PageModelAccess = deps.Backend
-		ectx.PageMutationOperator = deps.Backend
-		ectx.WorkflowMutationOperator = deps.Backend
-		ectx.WidgetBuilder = deps.Backend
-		ectx.ScriptTransactionManager = deps.Backend
-		ectx.AgentEditorOperator = deps.Backend
 	}
+	ectx.ModuleLister = deps.ModuleLister
+	ectx.ModuleWriter = deps.ModuleWriter
+	ectx.DomainModelReader = deps.DomainModelReader
+	ectx.DomainModelWriter = deps.DomainModelWriter
+	ectx.MicroflowReader = deps.MicroflowReader
+	ectx.MicroflowWriter = deps.MicroflowWriter
+	ectx.WorkflowReader = deps.WorkflowReader
+	ectx.WorkflowWriter = deps.WorkflowWriter
+	ectx.PageReader = deps.PageReader
+	ectx.PageWriter = deps.PageWriter
+	ectx.JavaActionReader = deps.JavaActionReader
+	ectx.JavaActionWriter = deps.JavaActionWriter
+	ectx.JavaScriptActionWriter = deps.JavaScriptActionWriter
+	ectx.EnumerationReader = deps.EnumerationReader
+	ectx.EnumerationWriter = deps.EnumerationWriter
+	ectx.ConstantReader = deps.ConstantReader
+	ectx.ConstantWriter = deps.ConstantWriter
+	ectx.SettingsReader = deps.SettingsReader
+	ectx.SettingsWriter = deps.SettingsWriter
+	ectx.MappingReader = deps.MapperReader
+	ectx.MappingWriter = deps.MapperWriter
+	ectx.UnitReader = deps.UnitReader
+	ectx.UnitWriter = deps.UnitWriter
+	ectx.NavigationReader = deps.NavigationReader
+	ectx.NavigationWriter = deps.NavigationWriter
+	ectx.ImageCollectionWriter = deps.ImageCollectionWriter
+	ectx.ScheduledEventReader = deps.ScheduledEventReader
+	ectx.ServiceLister = deps.ServiceLister
+	ectx.ServiceWriter = deps.ServiceWriter
+	ectx.MetadataReader = deps.MetadataReader
+	ectx.FolderManager = deps.FolderManager
+	ectx.ModuleSettingsReader = deps.ModuleSettingsReader
+	ectx.ModuleSettingsWriter = deps.ModuleSettingsWriter
+	ectx.RenameManager = deps.RenameManager
+	ectx.SecurityProjectManager = deps.SecurityProjectManager
+	ectx.SecurityModuleManager = deps.SecurityModuleManager
+	ectx.SecurityEntityAccessManager = deps.SecurityEntityAccessManager
+	ectx.PageModelAccess = deps.PageModelAccess
+	ectx.PageMutationOperator = deps.PageMutationOperator
+	ectx.WorkflowMutationOperator = deps.WorkflowMutationOperator
+	ectx.WidgetBuilder = deps.WidgetBuilder
+	ectx.ScriptTransactionManager = deps.ScriptTransactionManager
+	ectx.AgentEditorOperator = deps.AgentEditorOperator
 	return ectx
 }
 

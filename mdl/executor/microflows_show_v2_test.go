@@ -380,7 +380,7 @@ func TestDescribeMicroflowGen_BreakEvent(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = be.Disconnect() })
 	exec := New(io.Discard)
-	exec.backend = be
+	exec.SetBackend(be)
 
 	mdl := `create or modify microflow MyFirstModule.TestBreak () returns Nothing
 {
@@ -422,7 +422,7 @@ func TestDescribeMicroflowGen_ContinueEvent(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = be.Disconnect() })
 	exec := New(io.Discard)
-	exec.backend = be
+	exec.SetBackend(be)
 
 	mdl := `create or modify microflow MyFirstModule.TestContinue () returns Nothing
 {
@@ -531,7 +531,7 @@ func TestDescribeMicroflowGen_ListReturnAndLoop(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = be.Disconnect() })
 	ex := New(io.Discard)
-	ex.backend = be
+	ex.SetBackend(be)
 
 	// Create a microflow that exercises both the List return type and a
 	// foreach loop. Administration.Account exists in the fixture MPR.

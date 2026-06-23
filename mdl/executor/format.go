@@ -124,18 +124,19 @@ func writeResultJSONTo(output io.Writer, r *TableResult) error {
 // writeDescribeJSON wraps a describe handler's output in a JSON envelope.
 // In table/text mode it calls fn directly. In JSON mode it captures fn's output
 // and wraps it as {"name": ..., "type": ..., "mdl": ...}.
-func writeDescribeJSON(ctx *ExecContext, name, objectType string, fn func() error) error {
-	if ctx.Format != FormatJSON {
+func writeDescribeJSON(ctx context.Context, name, objectType string, deps *HandlerDeps, fn func() error) error {
+	if deps.Format != FormatJSON {
 		return fn()
 	}
 
-	// Capture the text output from fn.
+	// Capture fn's text output by temporarily swapping deps.Output.
 	var buf bytes.Buffer
-	origOutput := ctx.Output
-	ctx.Output = &buf
+	origOutput := deps.Output
+	deps.Output = &buf
 
 	err := fn()
-	ctx.Output = origOutput
+
+	deps.Output = origOutput
 	if err != nil {
 		return err
 	}
@@ -145,7 +146,7 @@ func writeDescribeJSON(ctx *ExecContext, name, objectType string, fn func() erro
 		"type": objectType,
 		"mdl":  buf.String(),
 	}
-	enc := json.NewEncoder(ctx.Output)
+	enc := json.NewEncoder(deps.Output)
 	enc.SetIndent("", "  ")
 	return enc.Encode(result)
 }
