@@ -159,11 +159,11 @@ drop constant CoTest.LaunchDate;
  */
 create or replace microflow CoTest.UseConstantRef ()
 returns nothing
-begin
+{
   declare $Endpoint string = @CoTest.ServiceEndpoint;
   declare $Retries integer = @CoTest.MaxRetries;
   declare $IsTaxable boolean = @CoTest.EnableDebugLogging;
-end;
+}
 /
 
 /**
@@ -172,10 +172,10 @@ end;
  */
 create or replace microflow CoTest.MixedConstantExpressions ()
 returns nothing
-begin
+{
   declare $limit decimal = @CoTest.TaxRate + 0.05;
   declare $Msg string = 'Endpoint: ' + @CoTest.ServiceEndpoint;
-end;
+}
 /
 
 -- ############################################################################

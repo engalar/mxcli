@@ -63,14 +63,14 @@ alter entity SysAttrTest.TempRecord set system members (changedBy);
 
 create microflow SysAttrTest.ACT_ValidateOrder ($Order: SysAttrTest.AuditedRecord)
 returns boolean
-begin
+{
   return true;
-end;
+}
 
 create microflow SysAttrTest.ACT_AfterCommitOrder ($Order: SysAttrTest.AuditedRecord)
-begin
+{
   return;
-end;
+}
 
 -- RAISE ERROR: only valid on BEFORE handlers (microflow returns Boolean, false = abort)
 alter entity SysAttrTest.AuditedRecord

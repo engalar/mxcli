@@ -14,7 +14,7 @@ create microflow InheritanceSplitExample.RouteInput (
   $Input: InheritanceSplitExample.BaseInput
 )
 returns boolean
-begin
+{
   split type $Input
   case InheritanceSplitExample.SpecializedInput
     cast $SpecializedInput;
@@ -22,5 +22,5 @@ begin
   else
     return false;
   end split;
-end;
+}
 /

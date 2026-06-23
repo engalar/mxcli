@@ -9,11 +9,11 @@ create microflow AddListExample.AddChosenItem (
   $UseFirst: Boolean
 )
 returns list of AddListExample.Item as $Items
-begin
+{
   $First = create AddListExample.Item (Name = 'first');
   $Second = create AddListExample.Item (Name = 'second');
   $Items = create list of AddListExample.Item;
   add if $UseFirst then $First else $Second to $Items;
   return $Items;
-end;
+}
 /

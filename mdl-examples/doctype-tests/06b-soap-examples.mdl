@@ -7,7 +7,7 @@ create entity SampleSOAP.OrderResponse (
 
 create microflow SampleSOAP.ACT_FetchItems ()
 returns SampleSOAP.OrderResponse as $Root
-begin
+{
   $Root = call web service SampleSOAP.OrderService
   operation FetchSampleItems
   send mapping SampleSOAP.OrderRequest
@@ -16,12 +16,12 @@ begin
   on error rollback;
 
   return $Root;
-end;
+}
 /
 
 create microflow SampleSOAP.ACT_FetchItemsDanglingRefs ()
 returns SampleSOAP.OrderResponse as $Root
-begin
+{
   -- Qualified-name dangling refs: service/mappings that don't exist in the project
   -- produce CE errors (dangling references) but are valid Mendix identifier strings.
   $Root = call web service 'SampleSOAP.DanglingService'
@@ -29,15 +29,15 @@ begin
   receive mapping 'SampleSOAP.DanglingReceiveMapping';
 
   return $Root;
-end;
+}
 /
 
 create microflow SampleSOAP.ACT_FetchItemsRaw ()
-begin
+{
   -- Raw base64 escape hatch: opaque Microflows$CallWebServiceAction BSON is
   -- preserved verbatim. The encoded payload here has no OutputVariable, so
   -- no `$Var = ` assignment is emitted; richer payloads can carry one.
   -- IDs are binary UUIDs (MPR v2 format) as they would appear in real projects.
   call web service raw 'wgAAAAUkSUQAEAAAAACqqqqqqqqqqqqqqqqqqqqqAiRUeXBlACAAAABNaWNyb2Zsb3dzJENhbGxXZWJTZXJ2aWNlQWN0aW9uAAVJbXBvcnRlZFNlcnZpY2UAEAAAAAC7u7u7u7u7u7u7u7u7u7u7Ak9wZXJhdGlvbk5hbWUAEQAAAEZldGNoU2FtcGxlSXRlbXMAAlRpbWVPdXRFeHByZXNzaW9uAAMAAAAzMAAIVXNlUmVxdWVzdFRpbWVPdXQAAQA=';
-end;
+}
 /

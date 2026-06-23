@@ -24,9 +24,9 @@
 -- Create prerequisites used in settings examples below.
 create module MyModule;
 create microflow MyModule.ASU_Startup() returns boolean
-begin
+{
   return true;
-end;
+}
 /
 
 /**

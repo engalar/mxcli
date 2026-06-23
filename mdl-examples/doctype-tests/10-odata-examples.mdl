@@ -212,14 +212,14 @@ authentication basic, session
  * Prerequisites: microflows and constants must exist before referencing them.
  */
 create microflow OdTest.ConfigureRequest() returns boolean
-begin
+{
   return true;
-end;
+}
 
 create microflow OdTest.HandleError() returns boolean
-begin
+{
   return true;
-end;
+}
 
 create constant OdTest.ProxyHostConst
 type string
@@ -382,11 +382,11 @@ revoke access on odata service OdTest.CustomerAPI from OdTest.user;
  * Level 9.1: Call an external action with parameters and result variable
  */
 create microflow OdTest.ACT_CallExternalAction() returns boolean
-begin
+{
     $Result = call external action OdTest.SalesforceAPI.GetAccounts(status = 'active', Region = $SelectedRegion);
     call external action OdTest.SalesforceAPI.NotifyUpdate(AccountId = $AccountId) on error continue;
     return true;
-end;
+}
 /
 
 /**

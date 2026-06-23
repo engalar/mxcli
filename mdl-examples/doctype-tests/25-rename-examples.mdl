@@ -41,8 +41,8 @@ rename java action RenameTest.NewHelper to AnotherName dry run;
 
 -- Rename workflow
 create workflow RenameTest.OldProcess
-begin
-end workflow;
+{
+}
 
 rename workflow RenameTest.OldProcess to NewProcess;
 

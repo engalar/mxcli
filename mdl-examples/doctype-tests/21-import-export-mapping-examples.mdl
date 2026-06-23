@@ -300,7 +300,7 @@ show export mappings in MapTest;
 
 create microflow MapTest.ACT_ImportPet ()
 returns boolean as $success
-begin
+{
   declare $success boolean = false;
   declare $json string = '{{\"id\": 1, \"name\": \"Fido\", \"status\": \"available\"}';
 
@@ -312,7 +312,7 @@ begin
   end if;
 
   return $success;
-end;
+}
 /
 
 -- ============================================================================
@@ -321,11 +321,11 @@ end;
 
 create microflow MapTest.ACT_ExportPet ($PetResponse: MapTest.PetResponse)
 returns string as $JsonOutput
-begin
+{
   $JsonOutput = export to mapping MapTest.EMM_Pet($PetResponse);
   log info node 'MapTest' 'Exported: ' + $JsonOutput;
   return $JsonOutput;
-end;
+}
 /
 
 -- ============================================================================
@@ -333,12 +333,12 @@ end;
 -- ============================================================================
 
 create microflow MapTest.ACT_RoundTrip ()
-begin
+{
   declare $json string = '{{\"id\": 42, \"name\": \"Rex\", \"status\": \"pending\"}';
   $Pet = import from mapping MapTest.IMM_SimplePet($json);
   $Output = export to mapping MapTest.EMM_Pet($Pet);
   log info node 'MapTest' 'Round-trip result: ' + $Output;
-end;
+}
 /
 
 -- ############################################################################

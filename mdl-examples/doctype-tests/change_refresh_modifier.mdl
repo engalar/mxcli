@@ -9,9 +9,9 @@ create microflow ChangeRefreshExample.RefreshChangedCustomer (
   $Customer: ChangeRefreshExample.Customer
 )
 returns boolean
-begin
+{
   change $Customer (Name = 'Jane') refresh;
   change $Customer refresh;
   return true;
-end;
+}
 /

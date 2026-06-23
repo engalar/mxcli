@@ -32,7 +32,7 @@ create microflow MathTest.IsPrime (
   $Number: integer
 ) returns boolean as $IsPrime
 folder 'Math'
-begin
+{
   -- Edge Case 1: Handle numbers <= 1
   if $Number <= 1 then
     log info node 'Math' 'Number is less than or equal to 1, not prime';
@@ -64,7 +64,7 @@ begin
   -- Note: RETURN inside a loop is not allowed in Mendix (CE0068),
   -- so we use a flag variable and BREAK instead.
   while $Divisor <= $MaxDivisor and $IsPrime
-  begin
+{
     -- Test if current divisor divides the number evenly
     if $Number mod $Divisor = 0 then
       log info node 'Math' 'Found divisor: {1}, not prime' with ({1} = toString($Divisor));
@@ -80,7 +80,7 @@ begin
   end if;
 
   return $IsPrime;
-end;
+}
 /
 
 /**
@@ -101,7 +101,7 @@ create microflow MathTest.Fibonacci (
   $N: integer
 ) returns long as $Result
 folder 'Math'
-begin
+{
   -- Validation: Check for negative input
   if $N < 0 then
     log error node 'Math' 'Fibonacci is not defined for negative numbers';
@@ -132,7 +132,7 @@ begin
   -- Main iteration loop: Calculate F(2) through F(N)
   -- Uses sliding window: shift values after each calculation
   while $Counter <= $N
-  begin
+{
     -- Calculate current Fibonacci number using recurrence relation
     set $Current = $Previous1 + $Previous2;
     log debug node 'Math' 'F({1}) = {2}' with ({1} = toString($Counter), {2} = toString($Current));
@@ -147,5 +147,5 @@ begin
   set $Result = $Current;
   log info node 'Math' 'Fibonacci({1}) = {2}' with ({1} = toString($N), {2} = toString($Result));
   return $Result;
-end;
+}
 /

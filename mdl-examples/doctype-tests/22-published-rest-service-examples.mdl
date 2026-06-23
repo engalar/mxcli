@@ -17,42 +17,42 @@ create module PrsTest;
 
 create microflow PrsTest.PRS_GetAllOrders ($httpResponse: System.HttpResponse)
 returns string as $Result
-begin
+{
   declare $Result string = '[]';
   return $Result;
-end;
+}
 /
 
 create microflow PrsTest.PRS_GetOrderById ($httpResponse: System.HttpResponse, $id: string)
 returns string as $Result
-begin
+{
   declare $Result string = '{}';
   return $Result;
-end;
+}
 /
 
 create microflow PrsTest.PRS_CreateOrder ($httpResponse: System.HttpResponse)
 returns string as $Result
-begin
+{
   declare $Result string = '{"status": "created"}';
   return $Result;
-end;
+}
 /
 
 create microflow PrsTest.PRS_DeleteOrder ($httpResponse: System.HttpResponse, $id: string)
 returns string as $Result
-begin
+{
   declare $Result string = '{"status": "deleted"}';
   return $Result;
-end;
+}
 /
 
 create microflow PrsTest.PRS_GetCustomers ($httpResponse: System.HttpResponse)
 returns string as $Result
-begin
+{
   declare $Result string = '[]';
   return $Result;
-end;
+}
 /
 
 -- ############################################################################

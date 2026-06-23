@@ -32,45 +32,45 @@ create persistent entity WFTest.OrderContext (
 );
 
 create microflow WFTest.ACT_Validate ($OrderContext: WFTest.OrderContext)
-begin
+{
   @position(200,200) return;
-end;
+}
 /
 
 create microflow WFTest.ACT_Process ($OrderContext: WFTest.OrderContext)
-begin
+{
   @position(200,200) return;
-end;
+}
 /
 
 create microflow WFTest.ACT_Escalate ($OrderContext: WFTest.OrderContext)
-begin
+{
   @position(200,200) return;
-end;
+}
 /
 
 create microflow WFTest.ACT_Notify ($OrderContext: WFTest.OrderContext)
-begin
+{
   @position(200,200) return;
-end;
+}
 /
 
 create microflow WFTest.ACT_Review ($OrderContext: WFTest.OrderContext)
-begin
+{
   @position(200,200) return;
-end;
+}
 /
 
 create microflow WFTest.ACT_Finalize ($OrderContext: WFTest.OrderContext)
-begin
+{
   @position(200,200) return;
-end;
+}
 /
 
 create microflow WFTest.ACT_BoundaryHandler ($OrderContext: WFTest.OrderContext)
-begin
+{
   @position(200,200) return;
-end;
+}
 /
 
 -- Targeting microflow: (System.Workflow, context) -> List of System.User
@@ -79,11 +79,11 @@ create microflow WFTest.ACT_TargetUsers (
   $context: WFTest.OrderContext
 )
 returns list of System.User as $users
-begin
+{
   @position(200,200)
   retrieve $users from System.User;
   @position(400,200) return $users;
-end;
+}
 /
 
 -- User task pages (System.WorkflowUserTask param)
@@ -134,9 +134,9 @@ create page WFTest.OverviewPage (
 create workflow WFTest.SubProcess
   parameter $WorkflowContext: WFTest.OrderContext
   display 'Sub Process'
-begin
+{
   call microflow WFTest.ACT_Finalize;
-end workflow;
+}
 /
 
 -- Initial workflow — simple starting point, all richness added via ALTER
@@ -145,7 +145,7 @@ create or replace workflow WFTest.OrderApproval
   parameter $WorkflowContext: WFTest.OrderContext
   display 'Order Approval'
   description 'Handles order approval process'
-begin
+{
   user task ReviewOrder 'Review the order'
     page WFTest.TaskPage
     targeting xpath '[Status = ''Draft'']'
@@ -169,7 +169,7 @@ begin
     path 2 { call microflow WFTest.ACT_Notify; }
     path 3 { }
   ;
-end workflow;
+}
 /
 
 -- SET workflow-level properties
@@ -310,7 +310,7 @@ alter workflow WFTest.OrderApproval
 create workflow WFTest.QuotedNamesWF
   parameter $WorkflowContext: WFTest.OrderContext
   display 'Quoted Names Demo'
-begin
+{
   -- User task with quoted identifier name (issue #403 regression)
   user task "ReviewStep" 'Review'
     page WFTest.TaskPage
@@ -319,7 +319,7 @@ begin
       'Reject' { jump to "ReviewStep"; }
   ;
 
-end workflow;
+}
 /
 
 -- ############################################################################
@@ -345,11 +345,11 @@ create microflow WFTarget.ACT_GetUsers (
   $Context: WFTarget.Request
 )
 returns list of System.User as $Users
-begin
+{
   @position(200,200)
   retrieve $Users from System.User;
   @position(400,200) return $Users;
-end;
+}
 /
 
 create microflow WFTarget.ACT_GetGroups (
@@ -357,11 +357,11 @@ create microflow WFTarget.ACT_GetGroups (
   $Context: WFTarget.Request
 )
 returns list of System.WorkflowGroup as $Groups
-begin
+{
   @position(200,200)
   retrieve $Groups from System.WorkflowGroup;
   @position(400,200) return $Groups;
-end;
+}
 /
 
 create page WFTarget.TaskPage (
@@ -380,7 +380,7 @@ create page WFTarget.TaskPage (
 
 create workflow WFTarget.TargetingDemo
   parameter $WorkflowContext: WFTarget.Request
-begin
+{
   -- TARGETING USERS MICROFLOW (explicit user targeting)
   user task ByUserMF 'User microflow targeting'
     page WFTarget.TaskPage
@@ -423,7 +423,7 @@ begin
     targeting groups microflow WFTarget.ACT_GetGroups
     outcomes 'Done' { };
 
-end workflow;
+}
 /
 
 
@@ -437,17 +437,17 @@ create persistent entity TestModule.DeliveryContext (
 );
 
 create microflow TestModule.ACT_Stub ($DeliveryContext: TestModule.DeliveryContext)
-begin
+{
   @position(200,200) return;
-end;
+}
 /
 
 create workflow TestModule.WF_DeliveryDelay
   parameter $WorkflowContext: TestModule.DeliveryContext
   display 'Delivery Delay'
-begin
+{
   call microflow TestModule.ACT_Stub;
-end workflow;
+}
 /
 
 create microflow TestModule.MF_WorkflowActions (
@@ -456,7 +456,7 @@ create microflow TestModule.MF_WorkflowActions (
   $UserTask: System.WorkflowUserTask
 )
 returns nothing
-begin
+{
   -- Get workflow data
   $Issue = get workflow data $workflow as TestModule.WF_DeliveryDelay;
 
@@ -491,4 +491,4 @@ begin
 
   -- Apply jump-to option
   apply jump to option $JumpOptions;
-end;
+}

@@ -121,10 +121,10 @@ owner default;
  */
 create microflow MfTest.M001_HelloWorld ()
 returns boolean as $success
-begin
+{
   declare $success boolean = true;
   return $success;
-end;
+}
 /
 
 /**
@@ -133,11 +133,11 @@ end;
  */
 create or replace microflow MfTest.M001_HelloWorld ()
 returns boolean as $success
-begin
+{
   declare $success boolean = true;
   log trace node 'TEST' 'List received '
   return $success;
-end;
+}
 /
 
 /**
@@ -146,10 +146,10 @@ end;
  */
 create or replace microflow MfTest.M001_HelloWorld_1 ()
 returns boolean as $success
-begin
+{
   call microflow MfTest.M001_HelloWorld();
   return true;
-end;
+}
 /
 
 /**
@@ -158,12 +158,12 @@ end;
  */
 create or replace microflow MfTest.M001_HelloWorld ()
 returns boolean as $success
-begin
+{
   log trace node 'TEST' '> before'
   declare $success boolean = true;
   log trace node 'TEST' '< After'
   return $success;
-end;
+}
 /
 
 /**
@@ -173,10 +173,10 @@ end;
 create microflow MfTest.M001_HelloWorld_2 ()
 returns boolean as $success
 folder 'microflows/basic'
-begin
+{
   declare $success boolean = true;
   return $success;
-end;
+}
 /
 
 /**
@@ -184,7 +184,7 @@ end;
  */
 create microflow MfTest.M002_BasicVariables ()
 returns integer as $Result
-begin
+{
   declare $Result integer = 0;
   declare $Counter integer = 0;
   declare $Multiplier integer = 5;
@@ -193,7 +193,7 @@ begin
   set $Result = $Counter * $Multiplier;
 
   return $Result;
-end;
+}
 /
 
 /**
@@ -204,10 +204,10 @@ create microflow MfTest.M003_StringOperations (
   $LastName: string
 )
 returns string as $FullName
-begin
+{
   declare $FullName string = $FirstName + ' ' + $LastName;
   return $FullName;
-end;
+}
 /
 
 /**
@@ -220,10 +220,10 @@ create microflow MfTest.M004_BooleanLogic (
   $IsValid: boolean
 )
 returns boolean as $CanProceed
-begin
+{
   declare $CanProceed boolean = $IsActive and $IsValid;
   return $CanProceed;
-end;
+}
 /
 
 /**
@@ -234,9 +234,9 @@ end;
 create microflow MfTest.M005_1_LogParameter (
   $ProductList: list of MfTest.Product
 )
-begin
+{
   log info node 'TEST' 'List received';
-end;
+}
 /
 
 /**
@@ -247,9 +247,9 @@ end;
 create microflow MfTest.M005_2_LogParameter (
   $ProductList: list of MfTest.Product  
 )
-begin
+{
   log info node 'TEST' 'List received ' + 'abc';
-end;
+}
 /
 
 /**
@@ -260,14 +260,14 @@ end;
 create microflow MfTest.M005_3_LogParameter (
   $ProductList: list of MfTest.Product
 )
-begin
+{
   log trace node 'TEST' 'List received ' + 'abc' + 'def';
   log debug node 'TEST' 'List received ' + 'abc' + 'def';
   log info node 'TEST' 'List received ' + 'abc' + 'def';
   log warning node 'TEST' 'List received ' + 'abc' + 'def';
   log error node 'TEST' 'List received ' + 'abc' + 'def';
   log critical node 'TEST' 'List received ' + 'abc' + 'def';
-end;
+}
 /
 
 -- ============================================================================
@@ -281,7 +281,7 @@ create microflow MfTest.M006_SimpleIf (
   $value: integer
 )
 returns string as $message
-begin
+{
   declare $message string = 'Unknown';
 
   if $value > 10 then
@@ -289,7 +289,7 @@ begin
   end if;
 
   return $message;
-end;
+}
 /
 
 /**
@@ -301,7 +301,7 @@ create microflow MfTest.M007_IfElse (
   $value: integer
 )
 returns string as $Category
-begin
+{
   declare $Category string = empty;
 
   if $value > 100 then
@@ -311,7 +311,7 @@ begin
   end if;
 
   return $Category;
-end;
+}
 /
 
 /**
@@ -326,7 +326,7 @@ create microflow MfTest.M008_NestedIf (
   $Score: integer
 )
 returns string as $Grade
-begin
+{
   declare $Grade string = 'F';
 
   if $Score >= 90 then
@@ -344,7 +344,7 @@ begin
   end if;
 
   return $Grade;
-end;
+}
 /
 
 -- ============================================================================
@@ -360,13 +360,13 @@ create microflow MfTest.M009_Logging (
   $OrderNumber: string
 )
 returns boolean as $success
-begin
+{
   declare $success boolean = true;
   log info node 'TEST' 'Starting order processing';
   log info node 'OrderService' 'Processing order: ' + $OrderNumber;
   log warning node 'TEST' 'This is a warning message';
   return $success;
-end;
+}
 /
 
 /**
@@ -385,7 +385,7 @@ create microflow MfTest.M009_2_LogWithTemplate (
   $TotalAmount: decimal
 )
 returns boolean as $success
-begin
+{
   declare $success boolean = true;
   declare $ItemCount integer = 5;
 
@@ -407,7 +407,7 @@ begin
   );
 
   return $success;
-end;
+}
 /
 
 /**
@@ -420,11 +420,11 @@ create microflow MfTest.M010_ArithmeticOperations (
   $count: integer
 )
 returns decimal as $average
-begin
+{
   declare $average decimal = 0;
   set $average = $Total div $count;
   return $average;
-end;
+}
 /
 
 /**
@@ -438,11 +438,11 @@ create microflow MfTest.M011_ComplexMath (
   $Time: integer
 )
 returns decimal as $Interest
-begin
+{
   declare $RateDecimal decimal = $Rate div 100;
   declare $Interest decimal = $Principal * $RateDecimal * $Time;
   return $Interest;
-end;
+}
 /
 
 -- MARK: Object Ops
@@ -461,7 +461,7 @@ create microflow MfTest.M012_CreateEntity (
   $Code: string
 )
 returns MfTest.Product as $NewProduct
-begin
+{
   $NewProduct = create MfTest.Product (
     Name = $Name,
     Code = $Code,
@@ -469,7 +469,7 @@ begin
     CreateDate = [%CurrentDateTime%]);
 
   return $NewProduct;
-end;
+}
 /
 
 /**
@@ -481,14 +481,14 @@ create microflow MfTest.M013_SaveEntity (
   $Product: MfTest.Product
 )
 returns boolean as $success
-begin
+{
   -- Commit without events
   commit $Product;
 
   log info node 'TEST' 'Entity saved';
   declare $success boolean = true;
   return $success;
-end;
+}
 /
 
 /**
@@ -500,13 +500,13 @@ create microflow MfTest.M014_SaveEntityWithEvents (
   $Product: MfTest.Product
 )
 returns boolean as $success
-begin
+{
   commit $Product with events;
 
   log info node 'Test' 'Entity saved with events';
   declare $success boolean = true;
   return $success;
-end;
+}
 /
 
 /**
@@ -519,7 +519,7 @@ create microflow MfTest.M015_UpdateEntity (
   $NewName: string
 )
 returns boolean as $success
-begin
+{
   change $Product (
     Name = $NewName,
     ModifiedDate = [%CurrentDateTime%]);
@@ -528,7 +528,7 @@ begin
 
   declare $success boolean = true;
   return $success;
-end;
+}
 /
 
 /**
@@ -539,7 +539,7 @@ create microflow MfTest.M015_2_CreateUpdateEntity (
   $Code: string
 )
 returns MfTest.Product as $NewProduct
-begin
+{
   $NewProduct = create MfTest.Product (
     Name = $Name,
     Code = $Code,
@@ -551,7 +551,7 @@ begin
     ModifiedDate = [%CurrentDateTime%]);
 
   return $NewProduct;
-end;
+}
 /
 
 -- MARK: XPath
@@ -569,10 +569,10 @@ create microflow MfTest.M016_XPathAttributeAccess (
   $Product: MfTest.Product
 )
 returns string as $ProductName
-begin
+{
   declare $ProductName string = $Product/Name;
   return $ProductName;
-end;
+}
 /
 
 /**
@@ -585,14 +585,14 @@ create microflow MfTest.M017_XPathSetAttribute (
   $NewPrice: decimal
 )
 returns boolean as $success
-begin
+{
   change $Product (Price = $NewPrice);
   change $Product (ModifiedDate = [%CurrentDateTime%]);
 
   commit $Product;
   declare $success boolean = true;
   return $success;
-end;
+}
 /
 
 /**
@@ -604,10 +604,10 @@ create microflow MfTest.M018_XPathAssociationNav (
   $Order: MfTest.Order
 )
 returns string as $CustomerName
-begin
+{
   declare $CustomerName string = $Order/MfTest.Order_Customer/MfTest.Customer/Name;
   return $CustomerName;
-end;
+}
 /
 
 /**
@@ -620,13 +620,13 @@ create microflow MfTest.M019_XPathQualifiedAssociation (
   $Customer: MfTest.Customer
 )
 returns boolean as $success
-begin
+{
   change $Order (MfTest.Order_Customer = $Customer);
   commit $Order;
 
   declare $success boolean = true;
   return $success;
-end;
+}
 /
 
 /**
@@ -638,11 +638,11 @@ create microflow MfTest.M020_XPathWithDiv (
   $Product: MfTest.Product
 )
 returns decimal as $DailyAverage
-begin
+{
   declare $MonthlyTotal decimal = $Product/MonthlyTotal;
   declare $DailyAverage decimal = $MonthlyTotal div 30;
   return $DailyAverage;
-end;
+}
 /
 -- MARK: loops
 
@@ -659,16 +659,16 @@ create microflow MfTest.M021_SimpleLoop (
   $ProductList: list of MfTest.Product
 )
 returns integer as $count
-begin
+{
   declare $count integer = 0;
 
   loop $Product in $ProductList
-  begin
+  };
     set $count = $count + 1;
   end loop;
 
   return $count;
-end;
+}
 /
 
 /**
@@ -680,17 +680,17 @@ create microflow MfTest.M021_2_LoopWithCaption (
   $ProductList: list of MfTest.Product
 )
 returns integer as $count
-begin
+{
   declare $count integer = 0;
 
   @caption 'Process products'
   loop $Product in $ProductList
-  begin
+  };
     set $count = $count + 1;
   end loop;
 
   return $count;
-end;
+}
 /
 
 /**
@@ -702,18 +702,18 @@ create microflow MfTest.M022_LoopWithChange (
   $ProductList: list of MfTest.Product
 )
 returns integer as $UpdatedCount
-begin
+{
   declare $UpdatedCount integer = 0;
 
   loop $Product in $ProductList
-  begin
+  };
     change $Product (IsActive = true);
     commit $Product;
     set $UpdatedCount = $UpdatedCount + 1;
   end loop;
 
   return $UpdatedCount;
-end;
+}
 /
 
 /**
@@ -725,11 +725,11 @@ create microflow MfTest.M023_LoopWithCondition (
   $ProductList: list of MfTest.Product
 )
 returns integer as $ActiveCount
-begin
+{
   declare $ActiveCount integer = 0;
 
   loop $Product in $ProductList
-  begin
+  };
     if $Product/IsActive then
       set $ActiveCount = $ActiveCount + 1;
       log info node 'Test' 'Found active product';
@@ -737,7 +737,7 @@ begin
   end loop;
 
   return $ActiveCount;
-end;
+}
 /
 
 /**
@@ -749,23 +749,23 @@ create microflow MfTest.M024_NestedLoops (
   $OrderList: list of MfTest.Order
 )
 returns integer as $TotalLineItems
-begin
+{
   declare $TotalLineItems integer = 0;
 
   loop $Order in $OrderList
-  begin
+  };
     log info node 'Test' 'Processing order';
     retrieve $CustomerList from MfTest.Customer
     where MfTest.Order_Customer = $Order;
     loop $Customer in $CustomerList
-    begin
+    };
       log info node 'Test' 'Processing Customer';
     end loop;
     set $TotalLineItems = $TotalLineItems + 1;
   end loop;
 
   return $TotalLineItems;
-end;
+}
 /
 
 /**
@@ -778,11 +778,11 @@ create microflow MfTest.M024_2_DeclareInLoop (
   $ProductList: list of MfTest.Product
 )
 returns decimal as $TotalDiscounted
-begin
+{
   declare $TotalDiscounted decimal = 0;
 
   loop $Product in $ProductList
-  begin
+  };
     declare $OriginalPrice decimal = $Product/Price;
     declare $Discount decimal = $OriginalPrice * 0.1;
     declare $DiscountedPrice decimal = $OriginalPrice - $Discount;
@@ -790,7 +790,7 @@ begin
   end loop;
 
   return $TotalDiscounted;
-end;
+}
 /
 
 /**
@@ -804,18 +804,18 @@ create microflow MfTest.M024_3_WhileLoop (
   $N: integer
 )
 returns integer as $sum
-begin
+{
   declare $Counter integer = 0;
   declare $sum integer = 0;
 
   while $Counter < $N
-  begin
+  };
     set $Counter = $Counter + 1;
     set $sum = $sum + $Counter;
   end while;
 
   return $sum;
-end;
+}
 /
 
 /**
@@ -829,7 +829,7 @@ create microflow MfTest.M024_4_WhileWithCondition (
   $Number: integer
 )
 returns boolean as $IsPrime
-begin
+{
   if $Number <= 1 then
     return false;
   end if;
@@ -838,7 +838,7 @@ begin
   declare $IsPrime boolean = true;
 
   while $Divisor * $Divisor <= $Number and $IsPrime
-  begin
+  };
     if $Number mod $Divisor = 0 then
       set $IsPrime = false;
     end if;
@@ -846,7 +846,7 @@ begin
   end while;
 
   return $IsPrime;
-end;
+}
 /
 
 -- ============================================================================
@@ -860,10 +860,10 @@ end;
  */
 create microflow MfTest.M025_SimpleRetrieve ()
 returns list of MfTest.Product as $ProductList
-begin
+{
   retrieve $ProductList from MfTest.Product;
   return $ProductList;
-end;
+}
 /
 
 /**
@@ -875,11 +875,11 @@ create microflow MfTest.M026_RetrieveWithWhere (
   $SearchCode: string
 )
 returns list of MfTest.Product as $ProductList
-begin
+{
   retrieve $ProductList from MfTest.Product
     where Code = $SearchCode;
   return $ProductList;
-end;
+}
 /
 
 /**
@@ -889,13 +889,13 @@ end;
  */
 create microflow MfTest.M027_RetrieveMultipleConditions ()
 returns list of MfTest.Product as $ProductList
-begin
+{
   retrieve $ProductList from MfTest.Product
     where IsActive = true
       and Price > 100;
 
   return $ProductList;
-end;
+}
 /
 
 /**
@@ -905,7 +905,7 @@ end;
  */
 create microflow MfTest.M027_2_RetrieveMultipleConditions ()
 returns list of MfTest.Product as $ProductList
-begin
+{
   retrieve $ProductList from MfTest.Product
     where (
       IsActive = true()
@@ -918,7 +918,7 @@ begin
     limit 10 offset 5 ;
 
   return $ProductList;
-end;
+}
 /
 
 /**
@@ -930,28 +930,28 @@ create microflow MfTest.M028_RetrieveSingleObject (
   $ProductCode: string
 )
 returns MfTest.Product as $Product
-begin
+{
   retrieve $Product from MfTest.Product
     where Code = $ProductCode
     limit 1;
   return $Product;
-end;
+}
 /
 
 create microflow MfTest.M028_DataForm_Getter_2 ()
 returns MfTest.Customer as $FirstCustomer
-begin
+{
   retrieve $CustomerList from MfTest.Customer
     where ( starts-with(Name, 'a') )
     limit 2 offset 3;
   set $FirstCustomer = head($CustomerList);
   return $FirstCustomer;
-end;
+}
 /
 
 create microflow MfTest.M028_DataForm_Getter_3 ()
 returns MfTest.Customer as $FirstCustomer
-begin
+{
   retrieve $CustomerList from MfTest.Customer
     where (starts-with(Name, 'a'))
     sort by MfTest.Customer.Name asc, MfTest.Customer.Email desc
@@ -959,12 +959,12 @@ begin
     offset 3 + 3;
   $FirstCustomer = head($CustomerList);
   return $FirstCustomer;
-end;
+}
 /
 
 create microflow MfTest.M028_DataForm_Getter_4 ()
 returns MfTest.Customer as $FirstCustomer
-begin
+{
   declare $Lim long = 3;
   declare $off long = 5;
   retrieve $CustomerList from MfTest.Customer
@@ -974,7 +974,7 @@ begin
     offset $off;
   $FirstCustomer = head($CustomerList);
   return $FirstCustomer;
-end;
+}
 /
 
 /**
@@ -985,11 +985,11 @@ end;
  */
 create microflow MfTest.M028_RetrieveWithDateTimeToken ()
 returns list of MfTest.Order as $OverdueOrders
-begin
+{
   retrieve $OverdueOrders from MfTest.Order
     where OrderDate < [%CurrentDateTime%];
   return $OverdueOrders;
-end;
+}
 /
 
 -- ============================================================================
@@ -1006,17 +1006,17 @@ create microflow MfTest.M029_RetrieveByAssociation (
   $Customer : MfTest.Customer
 )
 returns Void
-begin
+{
   -- Retrieve all orders for this customer via association
   retrieve $Orders from $Customer/MfTest.Order_Customer;
 
   loop $Order in $Orders
-  begin
+  };
     log info node 'Assoc' 'Order: ' + $Order/OrderNumber;
   end loop;
 
   return;
-end;
+}
 /
 
 /**
@@ -1030,14 +1030,14 @@ create microflow MfTest.M030_RetrieveNPEByAssociation (
   $ImportResult : MfTest.ImportResult
 )
 returns integer
-begin
+{
   -- Retrieve NPE list via association (database retrieve would return empty!)
   retrieve $Rows from $ImportResult/MfTest.ImportResult_ImportRow;
 
   declare $ValidCount integer = 0;
 
   loop $row in $Rows
-  begin
+  };
     if $row/IsValid then
       set $ValidCount = $ValidCount + 1;
     else
@@ -1046,7 +1046,7 @@ begin
   end loop;
 
   return $ValidCount;
-end;
+}
 /
 
 -- MARK: Real World
@@ -1064,7 +1064,7 @@ create microflow MfTest.M029_ProcessOrder (
   $OrderNumber: string
 )
 returns boolean as $success
-begin
+{
   declare $success boolean = false;
 
   -- Find the order
@@ -1088,7 +1088,7 @@ begin
   log info node 'OrderService' 'Order processed: ' + $OrderNumber;
   set $success = true;
   return $success;
-end;
+}
 /
 
 /**
@@ -1098,7 +1098,7 @@ end;
  */
 create microflow MfTest.M030_BatchProcessProducts ()
 returns integer as $ProcessedCount
-begin
+{
   declare $ProcessedCount integer = 0;
 
   -- Get all active products
@@ -1107,7 +1107,7 @@ begin
 
   -- Process each product
   loop $Product in $ProductList
-  begin
+  };
     -- Update last processed date
     change $Product (LastProcessedDate = [%CurrentDateTime%]);
     commit $Product;
@@ -1122,7 +1122,7 @@ begin
   end loop;
 
   return $ProcessedCount;
-end;
+}
 /
 
 /**
@@ -1134,7 +1134,7 @@ create microflow MfTest.M031_CalculateProductMetrics (
   $Product: MfTest.Product
 )
 returns boolean as $success
-begin
+{
   declare $success boolean = false;
   declare $DailyAverage decimal = 0;
   declare $MonthlyTotal decimal = $Product/MonthlyTotal;
@@ -1153,7 +1153,7 @@ begin
   log info node 'MetricsService' 'Metrics calculated for product';
   set $success = true;
   return $success;
-end;
+}
 /
 
 /**
@@ -1167,7 +1167,7 @@ create microflow MfTest.M032_CreateAndValidateOrder (
   $Quantity: integer
 )
 returns MfTest.Order as $NewOrder
-begin
+{
   --DECLARE $NewOrder AS MfTest.Order;
   --DECLARE $Customer AS MfTest.Customer;
   --DECLARE $Product AS MfTest.Product;
@@ -1215,7 +1215,7 @@ begin
 
   log info node 'OrderService' 'Order created successfully';
   return $NewOrder;
-end;
+}
 /
 
 /**
@@ -1225,7 +1225,7 @@ end;
  */
 create microflow MfTest.M033_GenerateProductReport ()
 returns boolean as $success
-begin
+{
   declare $success boolean = false;
   declare $TotalProducts integer = 0;
   declare $TotalValue decimal = 0;
@@ -1237,7 +1237,7 @@ begin
 
   -- Calculate metrics
   loop $Product in $ProductList
-  begin
+  };
     set $TotalProducts = $TotalProducts + 1;
     set $TotalValue = $TotalValue + $Product/Price;
   end loop;
@@ -1253,7 +1253,7 @@ begin
 
   set $success = true;
   return $success;
-end;
+}
 /
 
 -- ============================================================================
@@ -1269,12 +1269,12 @@ create microflow MfTest.M034_SafeListProcessing (
   $ProductList: list of MfTest.Product
 )
 returns integer as $count
-begin
+{
   declare $count integer = 0;
 
   if $ProductList != empty then
     loop $Product in $ProductList
-    begin
+    };
       set $count = $count + 1;
     end loop;
   else
@@ -1282,7 +1282,7 @@ begin
   end if;
 
   return $count;
-end;
+}
 /
 
 /**
@@ -1294,7 +1294,7 @@ create microflow MfTest.M035_MultipleReturnPaths (
   $value: integer
 )
 returns string as $Result
-begin
+{
   declare $Result string = 'default';
 
   if $value < 0 then
@@ -1309,7 +1309,7 @@ begin
 
   set $Result = 'positive';
   return $Result;
-end;
+}
 /
 
 /**
@@ -1322,7 +1322,7 @@ create microflow MfTest.M036_EmptyValueChecks (
   $ProductCode: string
 )
 returns boolean as $IsValid
-begin
+{
   declare $IsValid boolean = true;
 
   if $Product = empty then
@@ -1338,7 +1338,7 @@ begin
   end if;
 
   return $IsValid;
-end;
+}
 /
 
 /**
@@ -1352,7 +1352,7 @@ create microflow MfTest.M037_ComplexBooleanLogic (
   $HasStock: boolean
 )
 returns boolean as $CanProcess
-begin
+{
   declare $CanProcess boolean = false;
 
   -- Complex condition
@@ -1361,7 +1361,7 @@ begin
   end if;
 
   return $CanProcess;
-end;
+}
 /
 
 -- MARK: CALL JAVA
@@ -1371,12 +1371,12 @@ end;
  */
 create microflow MfTest.M038_1_TestCallWithResult()
   returns boolean as $success
-begin         
+{
   declare $success boolean = false;
   $Result = call microflow MfTest.M001_HelloWorld();
   set $success = true;
   return $success;
-end;
+}
 /
 
 /**
@@ -1384,12 +1384,12 @@ end;
  */
 create microflow MfTest.M038_2_TestCallWithParsAndResult()
   returns boolean as $success
-begin         
+{
   declare $success boolean = false;
   $Result = call microflow MfTest.M003_StringOperations (FirstName = 'Hello', LastName = 'World!');
   set $success = true;
   return $success;
-end;
+}
 /
 
 /** Converts a string to uppercase. */
@@ -1412,7 +1412,7 @@ $$;
  */
 create microflow MfTest.M038_CallJavaAction ()
 returns boolean as $success
-begin
+{
   declare $success boolean = false;
 
   log info node 'Test' 'Call Java Action';
@@ -1426,7 +1426,7 @@ begin
   set $success = true;
   log info node 'Test' 'Update complete';
   return $success;
-end;
+}
 /
 
 
@@ -1435,13 +1435,13 @@ end;
  */
 create microflow MfTest.M039_CallMicroflow()
 returns boolean as $success
-begin
+{
   declare $success boolean = false;
   $MfResult = call microflow MfTest.M038_CallJavaAction ();
   set $success = true;
   log info node 'Test' 'Update complete';
   return $success;
-end;
+}
 /
 
 -- MARK: LIST OPS
@@ -1459,10 +1459,10 @@ create microflow MfTest.M040_ListHead (
   $ProductList: list of MfTest.Product
 )
 returns MfTest.Product as $FirstProduct
-begin
+{
   $FirstProduct = head($ProductList);
   return $FirstProduct;
-end;
+}
 /
 
 /**
@@ -1474,10 +1474,10 @@ create microflow MfTest.M041_ListTail (
   $ProductList: list of MfTest.Product
 )
 returns list of MfTest.Product as $RemainingProducts
-begin
+{
   $RemainingProducts = tail($ProductList);
   return $RemainingProducts;
-end;
+}
 /
 
 /**
@@ -1490,10 +1490,10 @@ create microflow MfTest.M042_ListFind (
   $SearchCode: string
 )
 returns MfTest.Product as $FoundProduct
-begin
+{
   $FoundProduct = find($ProductList, $currentObject/Code = $SearchCode);
   return $FoundProduct;
-end;
+}
 /
 
 /**
@@ -1505,10 +1505,10 @@ create microflow MfTest.M043_ListFilter (
   $ProductList: list of MfTest.Product
 )
 returns list of MfTest.Product as $ActiveProducts
-begin
+{
   $ActiveProducts = filter($ProductList, $currentObject/IsActive = true);
   return $ActiveProducts;
-end;
+}
 /
 
 /**
@@ -1520,10 +1520,10 @@ create microflow MfTest.M044_ListSort (
   $ProductList: list of MfTest.Product
 )
 returns list of MfTest.Product as $SortedProducts
-begin
+{
   $SortedProducts = sort($ProductList, Name asc);
   return $SortedProducts;
-end;
+}
 /
 
 /**
@@ -1535,10 +1535,10 @@ create microflow MfTest.M045_ListSortMultiple (
   $ProductList: list of MfTest.Product
 )
 returns list of MfTest.Product as $SortedProducts
-begin
+{
   $SortedProducts = sort($ProductList, Price desc, Name asc);
   return $SortedProducts;
-end;
+}
 /
 
 /**
@@ -1551,10 +1551,10 @@ create microflow MfTest.M046_ListUnion (
   $ProductList2: list of MfTest.Product
 )
 returns list of MfTest.Product as $CombinedList
-begin
+{
   $CombinedList = union($ProductList1, $ProductList2);
   return $CombinedList;
-end;
+}
 /
 
 /**
@@ -1567,10 +1567,10 @@ create microflow MfTest.M047_ListIntersect (
   $ProductList2: list of MfTest.Product
 )
 returns list of MfTest.Product as $CommonProducts
-begin
+{
   $CommonProducts = intersect($ProductList1, $ProductList2);
   return $CommonProducts;
-end;
+}
 /
 
 /**
@@ -1583,10 +1583,10 @@ create microflow MfTest.M048_ListSubtract (
   $ProductList2: list of MfTest.Product
 )
 returns list of MfTest.Product as $DifferenceList
-begin
+{
   $DifferenceList = subtract($ProductList1, $ProductList2);
   return $DifferenceList;
-end;
+}
 /
 
 /**
@@ -1599,10 +1599,10 @@ create microflow MfTest.M049_ListContains (
   $Product: MfTest.Product
 )
 returns boolean as $IsInList
-begin
+{
   $IsInList = contains($ProductList, $Product);
   return $IsInList;
-end;
+}
 /
 
 /**
@@ -1615,10 +1615,10 @@ create microflow MfTest.M050_ListEquals (
   $ProductList2: list of MfTest.Product
 )
 returns boolean as $AreEqual
-begin
+{
   $AreEqual = equals($ProductList1, $ProductList2);
   return $AreEqual;
-end;
+}
 /
 
 -- MARK: AGGREGATES
@@ -1636,10 +1636,10 @@ create microflow MfTest.M051_AggregateCount (
   $ProductList: list of MfTest.Product
 )
 returns integer as $ProductCount
-begin
+{
   $ProductCount = count($ProductList);
   return $ProductCount;
-end;
+}
 /
 
 /**
@@ -1651,10 +1651,10 @@ create microflow MfTest.M052_AggregateSum (
   $ProductList: list of MfTest.Product
 )
 returns decimal as $TotalPrice
-begin
+{
   $TotalPrice = sum($ProductList.Price);
   return $TotalPrice;
-end;
+}
 /
 
 /**
@@ -1666,10 +1666,10 @@ create microflow MfTest.M053_AggregateAverage (
   $ProductList: list of MfTest.Product
 )
 returns decimal as $AveragePrice
-begin
+{
   $AveragePrice = average($ProductList.Price);
   return $AveragePrice;
-end;
+}
 /
 
 /**
@@ -1681,10 +1681,10 @@ create microflow MfTest.M054_AggregateMinimum (
   $ProductList: list of MfTest.Product
 )
 returns decimal as $MinPrice
-begin
+{
   $MinPrice = minimum($ProductList.Price);
   return $MinPrice;
-end;
+}
 /
 
 /**
@@ -1696,10 +1696,10 @@ create microflow MfTest.M055_AggregateMaximum (
   $ProductList: list of MfTest.Product
 )
 returns decimal as $MaxPrice
-begin
+{
   $MaxPrice = maximum($ProductList.Price);
   return $MaxPrice;
-end;
+}
 /
 
 /**
@@ -1712,10 +1712,10 @@ create microflow MfTest.M055b_AggregateExpression (
   $ProductList: list of MfTest.Product
 )
 returns decimal as $TotalTax
-begin
+{
   $TotalTax = sum($ProductList, $currentObject/Price * 0.21);
   return $TotalTax;
-end;
+}
 /
 
 /**
@@ -1727,7 +1727,7 @@ create microflow MfTest.M056_CombinedListOps (
   $ProductList: list of MfTest.Product
 )
 returns decimal as $AverageActivePrice
-begin
+{
   -- Filter to active products
   $ActiveProducts = filter($ProductList, $currentObject/IsActive = true);
 
@@ -1741,7 +1741,7 @@ begin
   log info node 'ListOps' 'Processed ' + toString($count) + ' active products';
 
   return $AverageActivePrice;
-end;
+}
 /
 
 /**
@@ -1751,10 +1751,10 @@ end;
  */
 create microflow MfTest.M057_CreateList ()
 returns list of MfTest.Product as $EmptyList
-begin
+{
   $EmptyList = create list of MfTest.Product;
   return $EmptyList;
-end;
+}
 /
 
 /**
@@ -1767,12 +1767,12 @@ create microflow MfTest.M058_ListAdd (
   $NewProduct: MfTest.Product
 )
 returns list of MfTest.Product as $UpdatedList
-begin
+{
   $UpdatedList = create list of MfTest.Product;
   add $ProductList to $UpdatedList;
   add $NewProduct to $UpdatedList;
   return $UpdatedList;
-end;
+}
 /
 
 /**
@@ -1786,12 +1786,12 @@ create microflow MfTest.M059_ListRemove (
   $ProductToRemove: MfTest.Product
 )
 returns list of MfTest.Product as $UpdatedList
-begin
+{
   $UpdatedList = create list of MfTest.Product;
   add $ProductList to $UpdatedList;
   remove $ProductToRemove from $UpdatedList;
   return $UpdatedList;
-end;
+}
 /
 
 -- ============================================================================
@@ -1810,7 +1810,7 @@ create microflow MfTest.M060_ValidateProduct (
   $Product: MfTest.Product
 )
 returns boolean as $IsValid
-begin
+{
   -- SET $IsValid = true;
   declare $IsValid boolean = true;
 
@@ -1825,7 +1825,7 @@ begin
   end if;
 
   return $IsValid;
-end;
+}
 /
 
 /**
@@ -1837,7 +1837,7 @@ create microflow MfTest.M061_ValidateProductPrice (
   $Product: MfTest.Product
 )
 returns boolean as $IsValid
-begin
+{
   declare $IsValid boolean = true;
 
   if $Product/Price < 0 then
@@ -1851,7 +1851,7 @@ begin
   end if;
 
   return $IsValid;
-end;
+}
 /
 
 -- MARK: ERROR HANDLING
@@ -1877,7 +1877,7 @@ create microflow MfTest.M062_ErrorContinue (
   $ProductCode: string
 )
 returns boolean as $success
-begin
+{
   declare $success boolean = false;
 
   -- Try to find and process the product
@@ -1893,7 +1893,7 @@ begin
 
   set $success = true;
   return $success;
-end;
+}
 /
 
 /**
@@ -1907,7 +1907,7 @@ create microflow MfTest.M063_ErrorRollback (
   $NewStatus: string
 )
 returns boolean as $success
-begin
+{
   declare $success boolean = false;
 
   -- Update order status - rollback all changes if commit fails
@@ -1916,7 +1916,7 @@ begin
 
   set $success = true;
   return $success;
-end;
+}
 /
 
 /**
@@ -1929,7 +1929,7 @@ create microflow MfTest.M064_ErrorCustomHandler (
   $ProductCode: string
 )
 returns MfTest.Product as $Result
-begin
+{
   -- Try to find the product
   retrieve $Product from MfTest.Product
     where Code = $ProductCode
@@ -1948,7 +1948,7 @@ begin
   else
     return $Product;
   end if;
-end;
+}
 /
 
 /**
@@ -1960,12 +1960,12 @@ create microflow MfTest.M065_ErrorInLoop (
   $ProductList: list of MfTest.Product
 )
 returns integer as $ProcessedCount
-begin
+{
   declare $ProcessedCount integer = 0;
   declare $ErrorCount integer = 0;
 
   loop $Product in $ProductList
-  begin
+  };
     -- Try to save each product, continue if one fails
     commit $Product on error rollback;
     set $ProcessedCount = $ProcessedCount + 1;
@@ -1973,7 +1973,7 @@ begin
 
   log info node 'BatchProcess' 'Processed: ' + toString($ProcessedCount) + ' products';
   return $ProcessedCount;
-end;
+}
 /
 
 /**
@@ -1985,7 +1985,7 @@ create microflow MfTest.M066_NestedErrorHandling (
   $Order: MfTest.Order
 )
 returns boolean as $success
-begin
+{
   declare $success boolean = false;
 
   -- Step 1: Validate order (continue on error)
@@ -2004,7 +2004,7 @@ begin
 
   set $success = true;
   return $success;
-end;
+}
 /
 
 /**
@@ -2017,7 +2017,7 @@ create microflow MfTest.M067_ErrorWithRaise (
   $Order: MfTest.Order
 )
 returns boolean as $success
-begin
+{
   declare $success boolean = false;
 
   -- Commit with error handler that raises an error
@@ -2029,7 +2029,7 @@ begin
   -- This only executes if commit succeeds
   set $success = true;
   return $success;
-end;
+}
 /
 
 -- MARK: REST CALLS
@@ -2073,7 +2073,7 @@ end;
  */
 create microflow MfTest.M067_RestGetWebpage ()
 returns string as $PageContent
-begin
+{
   -- Fetch a webpage using HTTP GET
   -- The URL is a string template with parameters using {1}, {2}, etc.
   $PageContent = rest call get 'http://news.ycombinator.com'
@@ -2082,7 +2082,7 @@ begin
     returns string;
 
   return $PageContent;
-end;
+}
 /
 
 /**
@@ -2095,7 +2095,7 @@ create microflow MfTest.M068_RestGetWithParams (
   $page: integer
 )
 returns string as $response
-begin
+{
   -- URL template with {1} and {2} placeholders
   $response = rest call get 'https://api.example.com/search?q={1}&page={2}' with (
     {1} = urlEncode($SearchTerm),
@@ -2106,7 +2106,7 @@ begin
     returns string;
 
   return $response;
-end;
+}
 /
 
 /**
@@ -2119,7 +2119,7 @@ create microflow MfTest.M069_RestPostJson (
   $Email: string
 )
 returns string as $response
-begin
+{
   -- POST with custom JSON body template
   $response = rest call post 'https://api.example.com/customers'
     header 'Content-Type' = 'application/json'
@@ -2133,7 +2133,7 @@ begin
     on error rollback;
 
   return $response;
-end;
+}
 /
 
 -- TODO: Examples with import/export mappings (not yet supported)
@@ -2155,7 +2155,7 @@ create microflow MfTest.M072_RestWithAuth (
   $password: string
 )
 returns string as $response
-begin
+{
   -- REST call with basic authentication
   $response = rest call get 'https://api.example.com/secure/data'
     header Accept = 'application/json'
@@ -2164,7 +2164,7 @@ begin
     returns string;
 
   return $response;
-end;
+}
 /
 
 /**
@@ -2176,7 +2176,7 @@ create microflow MfTest.M073_RestWithErrorHandling (
   $url: string
 )
 returns boolean as $success
-begin
+{
   declare $success boolean = false;
 
   -- REST call with custom error handler
@@ -2191,7 +2191,7 @@ begin
 
   set $success = true;
   return $success;
-end;
+}
 /
 
 /**
@@ -2204,7 +2204,7 @@ create microflow MfTest.M074_RestPutUpdate (
   $NewPrice: decimal
 )
 returns boolean as $success
-begin
+{
   declare $success boolean = false;
 
   $response = rest call put 'https://api.example.com/products/{1}' with (
@@ -2218,7 +2218,7 @@ begin
 
   set $success = true;
   return $success;
-end;
+}
 /
 
 /**
@@ -2230,7 +2230,7 @@ create microflow MfTest.M075_RestDelete (
   $ResourceId: string
 )
 returns boolean as $Deleted
-begin
+{
   declare $Deleted boolean = false;
 
   -- DELETE request - typically returns nothing
@@ -2244,7 +2244,7 @@ begin
 
   set $Deleted = true;
   return $Deleted;
-end;
+}
 /
 
 -- MARK: MOVE
@@ -2356,20 +2356,20 @@ create module MfTest2;
 -- Create microflows specifically for cross-module move demos
 create microflow MfTest.M076_CrossModuleDemo ()
 returns boolean as $success
-begin
+{
   declare $success boolean = true;
   log info node 'CrossModule' 'This microflow will be moved to MfTest2';
   return $success;
-end;
+}
 /
 
 create microflow MfTest.M077_CrossModuleFolderDemo ()
 returns boolean as $Done
-begin
+{
   declare $Done boolean = true;
   log info node 'CrossModule' 'This microflow will be moved to a folder in MfTest2';
   return $Done;
-end;
+}
 /
 
 -- Move microflow to another module (root)
@@ -2398,11 +2398,11 @@ show microflows in MfTest2;
  */
 create microflow MfTest.M092_GetDefaultCountry ()
 returns enum MfTest.Country as $DefaultCountry
-begin
+{
   declare $DefaultCountry enum MfTest.Country = empty;
   set $DefaultCountry = MfTest.Country.NL;
   return $DefaultCountry;
-end;
+}
 /
 
 /**
@@ -2414,7 +2414,7 @@ create microflow MfTest.M093_GetCountryLabel (
   $Country: enum MfTest.Country
 )
 returns string as $label
-begin
+{
   declare $label string = 'Unknown';
 
   if $Country = MfTest.Country.US then
@@ -2426,7 +2426,7 @@ begin
   end if;
 
   return $label;
-end;
+}
 /
 
 /**
@@ -2438,13 +2438,13 @@ create microflow MfTest.M094_IsEuropean (
   $Country: enumeration(MfTest.Country)
 )
 returns boolean as $IsEU
-begin
+{
   declare $IsEU boolean = false;
   if $Country = MfTest.Country.NL or $Country = MfTest.Country.DE or $Country = MfTest.Country.FR then
     set $IsEU = true;
   end if;
   return $IsEU;
-end;
+}
 /
 
 /**
@@ -2458,7 +2458,7 @@ create microflow MfTest.M095_RouteByCountry (
   $Country: enum MfTest.Country
 )
 returns string as $Region
-begin
+{
   declare $Region string = empty;
   case $Country
     when US then
@@ -2479,7 +2479,7 @@ begin
       set $Region = 'Unknown';
   end case;
   return $Region;
-end;
+}
 /
 
 -- MARK: ANNOTATIONS
@@ -2502,11 +2502,11 @@ end;
  * M078: Annotation attached to an activity.
  */
 create microflow MfTest.M078_AnnotationAttached ()
-begin
+{
   @annotation 'Log a welcome message to the console'
   log info node 'App' 'Hello from annotated microflow';
   return;
-end;
+}
 /
 
 /**
@@ -2514,43 +2514,43 @@ end;
  */
 create microflow MfTest.M079_MultipleAnnotations ()
 returns boolean as $Result
-begin
+{
   @annotation 'Step 1: Create the object'
   $Obj = create MfTest.Product (Name = 'Annotated Product', Price = 9.99);
   @annotation 'Step 2: Persist to database'
   commit $Obj;
   declare $Result boolean = true;
   return $Result;
-end;
+}
 /
 
 /**
  * M080: Free-floating annotation (not attached to any activity).
  */
 create microflow MfTest.M080_FreeAnnotation ()
-begin
+{
   log info node 'App' 'Working...';
   @annotation 'This is a free-floating note, not attached to any activity'
   return;
-end;
+}
 /
 
 /**
  * M081: Annotation with special characters (escaped single quotes).
  */
 create microflow MfTest.M081_AnnotationEscaping ()
-begin
+{
   @annotation 'Don''t forget to validate the user''s input'
   log info node 'App' 'Validated';
   return;
-end;
+}
 /
 
 create microflow MfTest.M082_ShowMessage_2 ()
-begin
+{
   show message 'Hello {1}' type Information objects ['World'];
   show message 'Goodbye {1}' type error objects ['User'];
-end;
+}
 /
 
 /**
@@ -2558,12 +2558,12 @@ end;
  * @position(x, y) controls where the activity appears on the canvas.
  */
 create microflow MfTest.M083_Position ()
-begin
+{
   @position(200, 200)
   $Obj = create MfTest.Product (Name = 'Positioned', Price = 1.00);
   @position(400, 200)
   commit $Obj;
-end;
+}
 /
 
 /**
@@ -2571,12 +2571,12 @@ end;
  * @caption overrides the auto-generated caption shown on the canvas.
  */
 create microflow MfTest.M084_Caption ()
-begin
+{
   @caption 'Create the product'
   $Obj = create MfTest.Product (Name = 'Captioned', Price = 5.00);
   @caption 'Save to database'
   commit $Obj;
-end;
+}
 /
 
 /**
@@ -2584,12 +2584,12 @@ end;
  * @color sets the activity background color (Blue, Green, Red, Yellow, Purple, Gray).
  */
 create microflow MfTest.M085_Color ()
-begin
+{
   @color Green
   log info node 'App' 'This activity has a green background';
   @color Red
   log error node 'App' 'This activity has a red background';
-end;
+}
 /
 
 /**
@@ -2597,7 +2597,7 @@ end;
  * Multiple @ annotations can be stacked before one activity.
  */
 create microflow MfTest.M086_CombinedAnnotations ()
-begin
+{
   @position(200, 200)
   @caption 'Create and persist product'
   @color Blue
@@ -2605,39 +2605,39 @@ begin
   $Obj = create MfTest.Product (Name = 'Full Annotations', Price = 42.00);
   @position(500, 200)
   commit $Obj;
-end;
+}
 /
 
 /**
  * M087: Annotations on CLOSE PAGE activity.
  */
 create microflow MfTest.M087_AnnotatedClosePage ()
-begin
+{
   @position(200, 200)
   @caption 'Done editing'
   @color Green
   close page;
-end;
+}
 /
 
 /**
  * M088: Annotations on SHOW HOME PAGE activity.
  */
 create microflow MfTest.M088_AnnotatedShowHomePage ()
-begin
+{
   @position(200, 200)
   @caption 'Go home'
   @color Blue
   @annotation 'Navigate the user back to the home page'
   show home page;
-end;
+}
 /
 
 /**
  * M089: Annotations on SHOW MESSAGE activity.
  */
 create microflow MfTest.M089_AnnotatedShowMessage ()
-begin
+{
   @position(200, 200)
   @caption 'Warn the user'
   @color Yellow
@@ -2645,7 +2645,7 @@ begin
   @position(400, 200)
   @color Red
   show message 'Operation failed: {1}' type error objects ['unknown error'];
-end;
+}
 /
 
 -- @version: 11.0+
@@ -2672,13 +2672,13 @@ create page MfTest.ProductDetail
 create microflow MfTest.M090_AnnotatedShowPage (
   $Product: MfTest.Product
 )
-begin
+{
   @position(200, 200)
   @caption 'Open product detail'
   @color Purple
   @annotation 'Shows the product edit page'
   show page MfTest.ProductDetail($Product = $Product);
-end;
+}
 /
 
 /**
@@ -2688,9 +2688,9 @@ end;
 create microflow MfTest.M090b_ShowPageWidgetStyle (
   $Product: MfTest.Product
 )
-begin
+{
   show page MfTest.ProductDetail(Product: $Product);
-end;
+}
 /
 
 -- @version: any
@@ -2701,7 +2701,7 @@ create microflow MfTest.M091_AnnotatedValidationFeedback (
   $Product: MfTest.Product
 )
 returns boolean as $IsValid
-begin
+{
   declare $IsValid boolean = true;
   if $Product/Name = empty then
     @position(400, 100)
@@ -2718,7 +2718,7 @@ begin
     set $IsValid = false;
   end if;
   return $IsValid;
-end;
+}
 /
 
 -- ============================================================================

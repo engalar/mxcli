@@ -761,7 +761,7 @@ create rest client RestTest.RC021_PaymentAPI (
  */
 create microflow RestTest.ACT_TestSimpleGet ()
 returns boolean as $success
-begin
+{
   declare $success boolean = false;
 
   send rest request RestTest.RC001_SimpleAPI.GetStatus;
@@ -769,7 +769,7 @@ begin
   set $success = true;
   log info node 'RestTest' 'ACT_TestSimpleGet: passed';
   return $success;
-end;
+}
 /
 
 -- ----------------------------------------------------------------------------
@@ -785,7 +785,7 @@ end;
  */
 create microflow RestTest.ACT_TestHeaders ()
 returns boolean as $success
-begin
+{
   declare $success boolean = false;
 
   $RootResult = send rest request RestTest.RC008_HeaderAPI.GetData;
@@ -801,7 +801,7 @@ begin
   end if;
 
   return $success;
-end;
+}
 /
 
 -- ############################################################################
@@ -821,7 +821,7 @@ end;
  */
 create microflow RestTest.ACT_TestJsonGet ()
 returns boolean as $success
-begin
+{
   declare $success boolean = false;
 
   $response = rest call get 'https://jsonplaceholder.typicode.com/posts'
@@ -838,7 +838,7 @@ begin
   end if;
 
   return $success;
-end;
+}
 /
 
 -- ----------------------------------------------------------------------------
@@ -852,7 +852,7 @@ end;
  */
 create microflow RestTest.ACT_TestPathParams ()
 returns boolean as $success
-begin
+{
   declare $success boolean = false;
 
   $response = rest call get 'https://jsonplaceholder.typicode.com/users/{1}' with (
@@ -871,7 +871,7 @@ begin
   end if;
 
   return $success;
-end;
+}
 /
 
 -- ----------------------------------------------------------------------------
@@ -883,7 +883,7 @@ end;
  */
 create microflow RestTest.ACT_TestPost ()
 returns boolean as $success
-begin
+{
   declare $success boolean = false;
 
   $response = rest call post 'https://httpbin.org/post'
@@ -902,7 +902,7 @@ begin
   end if;
 
   return $success;
-end;
+}
 /
 
 -- ----------------------------------------------------------------------------
@@ -914,7 +914,7 @@ end;
  */
 create microflow RestTest.ACT_TestQueryParams ()
 returns boolean as $success
-begin
+{
   declare $success boolean = false;
 
   $response = rest call get 'https://httpbin.org/anything/search?q={1}&page={2}' with (
@@ -934,7 +934,7 @@ begin
   end if;
 
   return $success;
-end;
+}
 /
 
 -- ----------------------------------------------------------------------------
@@ -946,7 +946,7 @@ end;
  */
 create microflow RestTest.ACT_TestPut ()
 returns boolean as $success
-begin
+{
   declare $success boolean = false;
 
   $response = rest call put 'https://httpbin.org/put'
@@ -965,7 +965,7 @@ begin
   end if;
 
   return $success;
-end;
+}
 /
 
 -- ----------------------------------------------------------------------------
@@ -977,7 +977,7 @@ end;
  */
 create microflow RestTest.ACT_TestDelete ()
 returns boolean as $success
-begin
+{
   declare $success boolean = false;
 
   rest call delete 'https://httpbin.org/delete'
@@ -989,7 +989,7 @@ begin
   set $success = true;
   log info node 'RestTest' 'ACT_TestDelete: DELETE succeeded';
   return $success;
-end;
+}
 /
 
 -- ----------------------------------------------------------------------------
@@ -1001,7 +1001,7 @@ end;
  */
 create microflow RestTest.ACT_TestBasicAuth ()
 returns boolean as $success
-begin
+{
   declare $success boolean = false;
 
   $response = rest call get 'https://httpbin.org/basic-auth/api_user/api_secret'
@@ -1019,7 +1019,7 @@ begin
   end if;
 
   return $success;
-end;
+}
 /
 
 -- ----------------------------------------------------------------------------
@@ -1031,7 +1031,7 @@ end;
  */
 create microflow RestTest.ACT_TestTimeout ()
 returns boolean as $success
-begin
+{
   declare $success boolean = false;
 
   rest call get 'https://httpbin.org/status/200'
@@ -1043,7 +1043,7 @@ begin
   set $success = true;
   log info node 'RestTest' 'ACT_TestTimeout: completed within timeout';
   return $success;
-end;
+}
 /
 
 -- ############################################################################
@@ -1060,7 +1060,7 @@ end;
  */
 create microflow RestTest.ACT_RunAllRestTests ()
 returns boolean as $AllPassed
-begin
+{
   declare $AllPassed boolean = true;
   declare $Passed integer = 0;
   declare $Failed integer = 0;
@@ -1100,7 +1100,7 @@ begin
   log info node 'RestTest' '=== REST tests complete: ' + toString($Passed) + ' passed, ' + toString($Failed) + ' failed ===';
 
   return $AllPassed;
-end;
+}
 /
 
 -- ############################################################################
@@ -1437,7 +1437,7 @@ create export mapping RestTest.EMM_Order
 
 create microflow RestTest.ACT_TestImportMapping ()
 returns boolean as $success
-begin
+{
   declare $success boolean = false;
 
   $Result = rest call get 'https://jsonplaceholder.typicode.com/posts/1'
@@ -1454,7 +1454,7 @@ begin
   end if;
 
   return $success;
-end;
+}
 /
 
 -- ============================================================================
@@ -1467,7 +1467,7 @@ end;
 
 create microflow RestTest.ACT_RestMappingSingleObject ()
 returns RestTest.PetResponse
-begin
+{
   $Pet = rest call get 'https://api.example.com/pets/1'
     header Accept = 'application/json'
     timeout 15
@@ -1475,7 +1475,7 @@ begin
     on error rollback;
 
   return $Pet;
-end;
+}
 /
 
 -- The `as list of Module.Entity` form is exercised by the dedicated
@@ -1499,7 +1499,7 @@ end;
 
 create microflow RestTest.ACT_ImportFromMapping ()
 returns boolean as $success
-begin
+{
   declare $success boolean = false;
   declare $JsonContent string = '{{\"id\": 1, \"name\": \"Fido\", \"status\": \"available\"}';
 
@@ -1511,7 +1511,7 @@ begin
   end if;
 
   return $success;
-end;
+}
 /
 
 -- ============================================================================
@@ -1522,11 +1522,11 @@ end;
 
 create microflow RestTest.ACT_ExportToMapping ($PetResponse: RestTest.PetResponse)
 returns string as $JsonOutput
-begin
+{
   $JsonOutput = export to mapping RestTest.EMM_Pet($PetResponse);
   log info node 'RestTest' 'Exported JSON: ' + $JsonOutput;
   return $JsonOutput;
-end;
+}
 /
 
 -- ============================================================================
@@ -1536,12 +1536,12 @@ end;
 -- Full pipeline: receive JSON, import to entities, process, export back to JSON.
 
 create microflow RestTest.ACT_ImportProcessExport ()
-begin
+{
   declare $JsonContent string = '{{\"id\": 1, \"name\": \"Fido\", \"status\": \"available\"}';
   $PetResponse = import from mapping RestTest.IMM_Pet($JsonContent);
   $PetResponseJson = export to mapping RestTest.EMM_Pet($PetResponse);
   log info node 'RestTest' 'Round-tripped: ' + $PetResponseJson;
-end;
+}
 /
 
 -- ############################################################################

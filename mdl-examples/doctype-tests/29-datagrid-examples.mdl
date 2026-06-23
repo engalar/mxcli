@@ -86,10 +86,10 @@ create page DgTest.Product_Edit (
 create microflow DgTest.DSO_GetActiveProducts ()
   returns list of DgTest.Product
   folder 'DataGrid'
-begin
+{
   retrieve $Products from DgTest.Product where [IsActive = true()] sort by Name asc;
   return $Products;
-end;
+}
 /
 
 -- Helper microflow for DG12 (row action)
@@ -97,10 +97,10 @@ create microflow DgTest.ACT_ActivateProduct (
   $Product: DgTest.Product
 )
   folder 'DataGrid'
-begin
+{
   change $Product (IsActive = true, Status = DgTest.Status.Active);
   commit $Product;
-end;
+}
 /
 
 -- ============================================================================

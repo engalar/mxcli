@@ -10,14 +10,14 @@ create entity NanoflowExamples.Product (
 );
 
 -- Minimal nanoflow (empty body)
-create nanoflow NanoflowExamples.NF_Empty () begin end;
+create nanoflow NanoflowExamples.NF_Empty () { }
 
 -- Nanoflow with parameters and return type
 create nanoflow NanoflowExamples.NF_ValidateProduct
     ($Product : NanoflowExamples.Product)
     returns Boolean
     folder 'Validation'
-begin
+{
     if $Product/Name = '' then
         validation feedback $Product/Name message 'Name is required';
         return false;
@@ -27,29 +27,29 @@ begin
         return false;
     end if;
     return true;
-end;
+}
 
 -- Nanoflow calling another nanoflow
 create nanoflow NanoflowExamples.NF_SaveProduct
     ($Product : NanoflowExamples.Product)
     folder 'Actions'
-begin
+{
     $IsValid = call nanoflow NanoflowExamples.NF_ValidateProduct(Product = $Product);
     if not($IsValid) then
         return;
     end if;
     change $Product (IsValid = true);
     log info 'Product validated and saved';
-end;
+}
 
 -- Nanoflow with multiple parameters
 create nanoflow NanoflowExamples.NF_FormatPrice
     ($Amount : Decimal, $Currency : String)
     returns String
     folder 'Helpers'
-begin
+{
     return $Currency + ' ' + toString($Amount);
-end;
+}
 
 -- Security
 grant execute on nanoflow NanoflowExamples.NF_ValidateProduct to NanoflowExamples.User;

@@ -106,12 +106,12 @@ $$;
  */
 create microflow JaTest.M001_GetTimestamp ()
 returns datetime as $MF1_Timestamp
-begin
+{
   -- Call Java action with no arguments
   $MF1_Timestamp = call java action JaTest.GetCurrentTimestamp();
 
   return $MF1_Timestamp;
-end;
+}
 /
 
 /**
@@ -122,11 +122,11 @@ end;
  */
 create microflow JaTest.M002_CheckMaintenanceMode ()
 returns boolean as $MF2_InMaintenance
-begin
+{
   $MF2_InMaintenance = call java action JaTest.IsMaintenanceMode();
 
   return $MF2_InMaintenance;
-end;
+}
 /
 
 /**
@@ -137,11 +137,11 @@ end;
  */
 create microflow JaTest.M003_GetAppVersion ()
 returns string as $MF3_Version
-begin
+{
   $MF3_Version = call java action JaTest.GetApplicationVersion();
 
   return $MF3_Version;
-end;
+}
 /
 
 
@@ -230,13 +230,13 @@ $$;
  */
 create microflow JaTest.M010_StringToUpper ($InputText: string)
 returns string as $MF10_Result
-begin
+{
   $MF10_Result = call java action JaTest.ToUpperCase(
     InputText = $InputText
   );
 
   return $MF10_Result;
-end;
+}
 /
 
 /**
@@ -254,7 +254,7 @@ create microflow JaTest.M011_ConcatenateStrings (
   $SecondPart: string
 )
 returns string as $MF11_Result
-begin
+{
   $MF11_Result = call java action JaTest.Concatenate(
     FirstPart = $FirstPart,
     SecondPart = $SecondPart,
@@ -262,7 +262,7 @@ begin
   );
 
   return $MF11_Result;
-end;
+}
 /
 
 /**
@@ -279,14 +279,14 @@ create microflow JaTest.M012_CalculatePercentage (
   $TotalValue: integer
 )
 returns decimal as $MF12_Percentage
-begin
+{
   $MF12_Percentage = call java action JaTest.CalculatePercentage(
     CurrentValue = $CurrentValue,
     TotalValue = $TotalValue
   );
 
   return $MF12_Percentage;
-end;
+}
 /
 
 /**
@@ -303,14 +303,14 @@ create microflow JaTest.M013_FormatDate (
   $IncludeTime: boolean
 )
 returns string as $MF13_Formatted
-begin
+{
   $MF13_Formatted = call java action JaTest.FormatDate(
     InputDate = $InputDate,
     IncludeTime = $IncludeTime
   );
 
   return $MF13_Formatted;
-end;
+}
 /
 
 /**
@@ -327,14 +327,14 @@ create microflow JaTest.M014_CalculateTax (
   $TaxRate: decimal
 )
 returns decimal as $MF14_TaxAmount
-begin
+{
   $MF14_TaxAmount = call java action JaTest.CalculateTax(
     Amount = $Amount,
     TaxRate = $TaxRate
   );
 
   return $MF14_TaxAmount;
-end;
+}
 /
 
 -- exit; -- Commented out to run full script
@@ -640,7 +640,7 @@ $$;
  */
 create microflow JaTest.M020_SendEmail ($Email: JaTest.EmailMessage)
 returns boolean as $MF20_Success
-begin
+{
   declare $MF20_Success boolean = false;
 
   -- Validate before sending
@@ -662,7 +662,7 @@ begin
   end if;
 
   return $MF20_Success;
-end;
+}
 /
 
 /**
@@ -681,7 +681,7 @@ create microflow JaTest.M021_LogMessage (
   $source: string
 )
 returns JaTest.LogEntry as $MF21_LogEntry
-begin
+{
   $MF21_LogEntry = call java action JaTest.CreateLogEntry(
     level = $level,
     Msg = $Msg,
@@ -689,7 +689,7 @@ begin
   );
 
   return $MF21_LogEntry;
-end;
+}
 /
 
 /**
@@ -706,14 +706,14 @@ create microflow JaTest.M022_AttachFileToEmail (
   $FileDoc: JaTest.FileInfo
 )
 returns boolean as $MF22_Success
-begin
+{
   $MF22_Success = call java action JaTest.AttachToEmail(
     Email = $Email,
     FileDoc = $FileDoc
   );
 
   return $MF22_Success;
-end;
+}
 /
 
 -- MARK: Level 4 - List Parameters
@@ -732,7 +732,7 @@ end;
  */
 create microflow JaTest.M030_BatchSendEmails ()
 returns JaTest.ProcessResult as $MF30_Result
-begin
+{
   -- Retrieve pending emails
   retrieve $MF30_PendingEmails from JaTest.EmailMessage
     where EmailStatus = 'Pending';
@@ -743,7 +743,7 @@ begin
   );
 
   return $MF30_Result;
-end;
+}
 /
 
 /**
@@ -757,14 +757,14 @@ end;
  */
 create microflow JaTest.M031_SearchLogs ($Keyword: string)
 returns list of JaTest.LogEntry as $MF31_Results
-begin
+{
   $MF31_Results = call java action JaTest.FindByKeyword(
     Keyword = $Keyword,
     MaxResults = 100
   );
 
   return $MF31_Results;
-end;
+}
 /
 
 /**
@@ -778,7 +778,7 @@ end;
  */
 create microflow JaTest.M032_FilterErrorLogs ()
 returns list of JaTest.LogEntry as $MF32_ErrorLogs
-begin
+{
   -- Get all logs
   retrieve $MF32_AllLogs from JaTest.LogEntry;
 
@@ -789,7 +789,7 @@ begin
   );
 
   return $MF32_ErrorLogs;
-end;
+}
 /
 
 -- MARK: Level 5 - OQL/SQL Templates
@@ -810,13 +810,13 @@ end;
  */
 create microflow JaTest.M040_ExecuteOQLUpdate ()
 returns long as $MF40_RowsAffected
-begin
+{
   $MF40_RowsAffected = call java action JaTest.ExecuteOQL(
     OqlStatement = 'UPDATE JaTest.EmailMessage SET EmailStatus = ''Archived'' WHERE SentDate < [%BeginOfCurrentDay%]'
   );
 
   return $MF40_RowsAffected;
-end;
+}
 /
 
 /**
@@ -829,14 +829,14 @@ end;
  */
 create microflow JaTest.M041_ExecuteSQLCleanup ($DaysOld: integer)
 returns long as $MF41_DeletedCount
-begin
+{
   -- Note: In real usage, parameterize properly to prevent SQL injection
   $MF41_DeletedCount = call java action JaTest.ExecuteSQL(
     SqlStatement = 'DELETE FROM log_entries WHERE log_timestamp < DATEADD(day, -30, GETDATE())'
   );
 
   return $MF41_DeletedCount;
-end;
+}
 /
 
 /**
@@ -849,13 +849,13 @@ end;
  */
 create microflow JaTest.M042_QueryRecentErrors ()
 returns list of JaTest.LogEntry as $MF42_Errors
-begin
+{
   $MF42_Errors = call java action JaTest.ExecuteOQLQuery(
     OqlStatement = 'SELECT * FROM JaTest.LogEntry WHERE LogLevel = ''ERROR'' ORDER BY LogTimestamp DESC'
   );
 
   return $MF42_Errors;
-end;
+}
 /
 
 -- MARK: Level 6 - Complex Patterns
@@ -871,7 +871,7 @@ end;
  */
 create microflow JaTest.M050_ProcessAndNotify ($Email: JaTest.EmailMessage)
 returns boolean as $MF50_Success
-begin
+{
   declare $MF50_Success boolean = false;
 
   -- Step 1: Validate email address
@@ -909,7 +909,7 @@ begin
   end if;
 
   return $MF50_Success;
-end;
+}
 /
 
 /**
@@ -919,7 +919,7 @@ end;
  */
 create microflow JaTest.M051_ProcessAllPending ()
 returns JaTest.ProcessResult as $MF51_Result
-begin
+{
   declare $MF51_SuccessCount integer = 0;
   declare $MF51_FailCount integer = 0;
   declare $MF51_AllSuccess boolean = false;
@@ -930,7 +930,7 @@ begin
 
   -- Process each email
   loop $MF51_CurrentEmail in $MF51_PendingEmails
-  begin
+{
     $MF51_SendResult = call java action JaTest.SendEmail(
       EmailMsg = $MF51_CurrentEmail
     );
@@ -957,7 +957,7 @@ begin
   );
 
   return $MF51_Result;
-end;
+}
 /
 
 /**
@@ -967,7 +967,7 @@ end;
  */
 create microflow JaTest.M052_SafeFileProcess ($FileDoc: JaTest.FileInfo)
 returns boolean as $MF52_Success
-begin
+{
   declare $MF52_Success boolean = false;
 
   -- Attempt to process file with error handling
@@ -993,7 +993,7 @@ begin
   end if;
 
   return $MF52_Success;
-end;
+}
 /
 
 /**
@@ -1006,7 +1006,7 @@ create microflow JaTest.M053_ConditionalProcess (
   $Priority: string
 )
 returns boolean as $MF53_Success
-begin
+{
   declare $MF53_Success boolean = false;
 
   if $Priority = 'HIGH' then
@@ -1030,7 +1030,7 @@ begin
   end if;
 
   return $MF53_Success;
-end;
+}
 /
 
 -- MARK: Level 7 - Advanced Patterns
@@ -1052,7 +1052,7 @@ end;
  */
 create microflow JaTest.M060_CallExternalAPI ($Endpoint: string)
 returns string as $MF60_Response
-begin
+{
   declare $MF60_ApiUrl string = 'https://jsonplaceholder.typicode.com/' + $Endpoint;
 
   $MF60_Response = call java action JaTest.CallAPI(
@@ -1063,7 +1063,7 @@ begin
   );
   log info node 'Test' 'CallApi complete: {1} -> {2} -> {3}' with ({1} = $Endpoint, {2} = $MF60_ApiUrl, {3} = $MF60_Response);  
   return $MF60_Response;
-end;
+}
 /
 
 /**
@@ -1077,7 +1077,7 @@ end;
  */
 create microflow JaTest.M061_HashPassword ($PlainText: string)
 returns string as $MF61_HashedText
-begin
+{
   -- Generate salt
   $MF61_SaltValue = call java action JaTest.GenerateSalt();
 
@@ -1088,7 +1088,7 @@ begin
   );
 
   return $MF61_HashedText;
-end;
+}
 /
 
 /**
@@ -1102,14 +1102,14 @@ end;
  */
 create microflow JaTest.M062_ReadFileAsText ($FileDoc: JaTest.FileInfo)
 returns string as $MF62_Contents
-begin
+{
   $MF62_Contents = call java action JaTest.ReadFileContents(
     FileDoc = $FileDoc,
     Encoding = 'UTF-8'
   );
 
   return $MF62_Contents;
-end;
+}
 /
 
 /**
@@ -1129,7 +1129,7 @@ create microflow JaTest.M063_QueueBackgroundTask (
   $TaskParams: string
 )
 returns string as $MF63_TaskId
-begin
+{
   $MF63_TaskId = call java action JaTest.QueueTask(
     TaskType = $TaskType,
     TaskParams = $TaskParams,
@@ -1137,7 +1137,7 @@ begin
   );
 
   return $MF63_TaskId;
-end;
+}
 /
 
 -- MARK: Test Wrappers
@@ -1149,57 +1149,57 @@ end;
 /** Test wrapper: M010 - String to upper */
 create microflow JaTest.Test_M010 ()
 returns string as $Result
-begin
+{
   $Result = call microflow JaTest.M010_StringToUpper(InputText = 'hello world');
   log info node 'JaTest' 'M010 result: ' + $Result;
   return $Result;
-end;
+}
 /
 
 /** Test wrapper: M011 - Concatenate strings */
 create microflow JaTest.Test_M011 ()
 returns string as $Result
-begin
+{
   $Result = call microflow JaTest.M011_ConcatenateStrings(FirstPart = 'Hello', SecondPart = 'World');
   log info node 'JaTest' 'M011 result: ' + $Result;
   return $Result;
-end;
+}
 /
 
 /** Test wrapper: M012 - Calculate percentage */
 create microflow JaTest.Test_M012 ()
 returns decimal as $Result
-begin
+{
   $Result = call microflow JaTest.M012_CalculatePercentage(CurrentValue = 75, TotalValue = 200);
   log info node 'JaTest' 'M012 result: ' + toString($Result);
   return $Result;
-end;
+}
 /
 
 /** Test wrapper: M013 - Format date */
 create microflow JaTest.Test_M013 ()
 returns string as $Result
-begin
+{
   $Result = call microflow JaTest.M013_FormatDate(InputDate = [%CurrentDateTime%], IncludeTime = true);
   log info node 'JaTest' 'M013 result: ' + $Result;
   return $Result;
-end;
+}
 /
 
 /** Test wrapper: M014 - Calculate tax */
 create microflow JaTest.Test_M014 ()
 returns decimal as $Result
-begin
+{
   $Result = call microflow JaTest.M014_CalculateTax(Amount = 100.00, TaxRate = 21.0);
   log info node 'JaTest' 'M014 result: ' + toString($Result);
   return $Result;
-end;
+}
 /
 
 /** Test wrapper: M020 - Send email */
 create microflow JaTest.Test_M020 ()
 returns boolean as $Result
-begin
+{
   $TestEmail = create JaTest.EmailMessage (
     Recipient = 'test@example.com',
     SubjectLine = 'Test Subject',
@@ -1210,13 +1210,13 @@ begin
   $Result = call microflow JaTest.M020_SendEmail(Email = $TestEmail);
   log info node 'JaTest' 'M020 result: ' + toString($Result);
   return $Result;
-end;
+}
 /
 
 /** Test wrapper: M021 - Log message (calls Java action directly to avoid Source keyword) */
 create microflow JaTest.Test_M021 ()
 returns boolean as $Result
-begin
+{
   declare $Result boolean = false;
   $LogEntry = call java action JaTest.CreateLogEntry(
     level = 'INFO',
@@ -1226,13 +1226,13 @@ begin
   log info node 'JaTest' 'M021 completed';
   set $Result = true;
   return $Result;
-end;
+}
 /
 
 /** Test wrapper: M022 - Attach file to email */
 create microflow JaTest.Test_M022 ()
 returns boolean as $Result
-begin
+{
   $TestEmail = create JaTest.EmailMessage (
     Recipient = 'test@example.com',
     SubjectLine = 'With Attachment',
@@ -1247,85 +1247,85 @@ begin
   $Result = call microflow JaTest.M022_AttachFileToEmail(Email = $TestEmail, FileDoc = $TestFile);
   log info node 'JaTest' 'M022 result: ' + toString($Result);
   return $Result;
-end;
+}
 /
 
 /** Test wrapper: M030 - Batch send emails */
 create microflow JaTest.Test_M030 ()
 returns boolean as $Result
-begin
+{
   declare $Result boolean = false;
   $ProcessResult = call microflow JaTest.M030_BatchSendEmails();
   log info node 'JaTest' 'M030 completed';
   set $Result = true;
   return $Result;
-end;
+}
 /
 
 /** Test wrapper: M031 - Search logs */
 create microflow JaTest.Test_M031 ()
 returns boolean as $Result
-begin
+{
   declare $Result boolean = false;
   $SearchResults = call microflow JaTest.M031_SearchLogs(Keyword = 'error');
   log info node 'JaTest' 'M031 completed';
   set $Result = true;
   return $Result;
-end;
+}
 /
 
 /** Test wrapper: M032 - Filter error logs */
 create microflow JaTest.Test_M032 ()
 returns boolean as $Result
-begin
+{
   declare $Result boolean = false;
   $ErrorLogs = call microflow JaTest.M032_FilterErrorLogs();
   log info node 'JaTest' 'M032 completed';
   set $Result = true;
   return $Result;
-end;
+}
 /
 
 /** Test wrapper: M040 - Execute OQL update */
 create microflow JaTest.Test_M040 ()
 returns boolean as $Result
-begin
+{
   declare $Result boolean = false;
   $Rows = call microflow JaTest.M040_ExecuteOQLUpdate();
   log info node 'JaTest' 'M040 rows affected: ' + toString($Rows);
   set $Result = true;
   return $Result;
-end;
+}
 /
 
 /** Test wrapper: M041 - Execute SQL cleanup */
 create microflow JaTest.Test_M041 ()
 returns boolean as $Result
-begin
+{
   declare $Result boolean = false;
   $Deleted = call microflow JaTest.M041_ExecuteSQLCleanup(DaysOld = 30);
   log info node 'JaTest' 'M041 deleted: ' + toString($Deleted);
   set $Result = true;
   return $Result;
-end;
+}
 /
 
 /** Test wrapper: M042 - Query recent errors */
 create microflow JaTest.Test_M042 ()
 returns boolean as $Result
-begin
+{
   declare $Result boolean = false;
   $Errors = call microflow JaTest.M042_QueryRecentErrors();
   log info node 'JaTest' 'M042 completed';
   set $Result = true;
   return $Result;
-end;
+}
 /
 
 /** Test wrapper: M050 - Process and notify */
 create microflow JaTest.Test_M050 ()
 returns boolean as $Result
-begin
+{
   $TestEmail = create JaTest.EmailMessage (
     Recipient = 'notify@example.com',
     SubjectLine = 'Notification',
@@ -1335,25 +1335,25 @@ begin
   $Result = call microflow JaTest.M050_ProcessAndNotify(Email = $TestEmail);
   log info node 'JaTest' 'M050 result: ' + toString($Result);
   return $Result;
-end;
+}
 /
 
 /** Test wrapper: M051 - Process all pending */
 create microflow JaTest.Test_M051 ()
 returns boolean as $Result
-begin
+{
   declare $Result boolean = false;
   $ProcessResult = call microflow JaTest.M051_ProcessAllPending();
   log info node 'JaTest' 'M051 completed';
   set $Result = true;
   return $Result;
-end;
+}
 /
 
 /** Test wrapper: M052 - Safe file process */
 create microflow JaTest.Test_M052 ()
 returns boolean as $Result
-begin
+{
   $TestFile = create JaTest.FileInfo (
     FileName = 'process-test.txt',
     MimeType = 'text/plain',
@@ -1362,13 +1362,13 @@ begin
   $Result = call microflow JaTest.M052_SafeFileProcess(FileDoc = $TestFile);
   log info node 'JaTest' 'M052 result: ' + toString($Result);
   return $Result;
-end;
+}
 /
 
 /** Test wrapper: M053 - Conditional process (HIGH priority) */
 create microflow JaTest.Test_M053 ()
 returns boolean as $Result
-begin
+{
   $TestEmail = create JaTest.EmailMessage (
     Recipient = 'urgent@example.com',
     SubjectLine = 'Urgent',
@@ -1378,37 +1378,37 @@ begin
   $Result = call microflow JaTest.M053_ConditionalProcess(Email = $TestEmail, Priority = 'HIGH');
   log info node 'JaTest' 'M053 result: ' + toString($Result);
   return $Result;
-end;
+}
 /
 
 /** Test wrapper: M060 - Call external API */
 create microflow JaTest.Test_M060 ()
 returns boolean as $Result
-begin
+{
   declare $Result boolean = false;
   $response = call microflow JaTest.M060_CallExternalAPI(Endpoint = 'test/health');
   log info node 'JaTest' 'M060 response: ' + $response;
   set $Result = true;
   return $Result;
-end;
+}
 /
 
 /** Test wrapper: M061 - Hash password */
 create microflow JaTest.Test_M061 ()
 returns boolean as $Result
-begin
+{
   declare $Result boolean = false;
   $Hash = call microflow JaTest.M061_HashPassword(PlainText = 'test-password-123');
   log info node 'JaTest' 'M061 hash: ' + $Hash;
   set $Result = true;
   return $Result;
-end;
+}
 /
 
 /** Test wrapper: M062 - Read file as text */
 create microflow JaTest.Test_M062 ()
 returns boolean as $Result
-begin
+{
   $TestFile = create JaTest.FileInfo (
     FileName = 'read-test.txt',
     MimeType = 'text/plain',
@@ -1419,19 +1419,19 @@ begin
   log info node 'JaTest' 'M062 contents: ' + $Contents;
   set $Result = true;
   return $Result;
-end;
+}
 /
 
 /** Test wrapper: M063 - Queue background task */
 create microflow JaTest.Test_M063 ()
 returns boolean as $Result
-begin
+{
   declare $Result boolean = false;
   $TaskId = call microflow JaTest.M063_QueueBackgroundTask(TaskType = 'cleanup', TaskParams = '{"daysOld": 30}');
   log info node 'JaTest' 'M063 task ID: ' + $TaskId;
   set $Result = true;
   return $Result;
-end;
+}
 /
 
 -- MARK: Test Page
@@ -1692,7 +1692,7 @@ $$;
 
 create microflow JaTest.Test_M070 ()
 returns boolean as $IsValid
-begin
+{
   $Email = create JaTest.EmailMessage (Recipient = 'test@example.com');
   $IsValid = call java action JaTest.GenericEntityValidator(
     EntityType = 'JaTest.EmailMessage',
@@ -1700,7 +1700,7 @@ begin
   );
 
   return $IsValid;
-end;
+}
 /
 
 -- ----------------------------------------------------------------------------
@@ -1711,7 +1711,7 @@ end;
 
 create microflow JaTest.Test_M071 ()
 returns boolean as $Result
-begin
+{
   $source = create JaTest.ProcessResult (IsSuccess = true, ResultMessage = 'Source', ProcessedCount = 10);
   $Target = create JaTest.ProcessResult (IsSuccess = false, ResultMessage = 'Target', ProcessedCount = 0);
 
@@ -1723,7 +1723,7 @@ begin
   );
 
   return $Result;
-end;
+}
 /
 
 -- ----------------------------------------------------------------------------
@@ -1732,14 +1732,14 @@ end;
 
 create microflow JaTest.Test_M072 ()
 returns string as $Formatted
-begin
+{
   $Formatted = call java action JaTest.FormatCurrency(
     Amount = 1234.56,
     CurrencyCode = 'USD'
   );
 
   return $Formatted;
-end;
+}
 /
 
 -- MARK: Summary

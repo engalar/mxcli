@@ -52,24 +52,24 @@ owner both;
 -- Microflows
 create microflow SecTest.ACT_Customer_Create ()
 returns boolean as $success
-begin
+{
   declare $success boolean = true;
   return $success;
-end;
+}
 
 create microflow SecTest.ACT_Customer_Delete ()
 returns boolean as $success
-begin
+{
   declare $success boolean = true;
   return $success;
-end;
+}
 
 create microflow SecTest.ACT_Order_Process ()
 returns boolean as $success
-begin
+{
   declare $success boolean = true;
   return $success;
-end;
+}
 
 -- Pages
 create page SecTest.Customer_Overview

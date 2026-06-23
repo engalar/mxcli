@@ -145,9 +145,9 @@ create page PgTest.P002_Dynamic_Text_Page
  */
 create microflow PgTest.Open_P002_Dynamic_Text_Page ()
 folder 'Basic'
-begin
+{
     show page PgTest.P002_Dynamic_Text_Page();
-end;
+}
 /
 
 /**
@@ -307,38 +307,38 @@ create page PgTest.P006_DataForm
  */
 create microflow PgTest.P006_CreateObject ()
 folder 'Forms'
-begin
+{
     $NewCustomer = create PgTest.Customer (Email = 'weqw@example.com', City = 'yourcity');
     show page PgTest.P006_DataForm($Customer = $NewCustomer);
-end;
+}
 /
 
 create microflow PgTest.P007_DataForm_Getter ()
 returns PgTest.Customer as $Customer
 folder 'Forms'
-begin
+{
   retrieve $Customer from PgTest.Customer limit 1;
   return $Customer;
-end;
+}
 /
 
 -- TODO: offset limit implementation
 create microflow PgTest.P007_DataForm_Getter_2 ()
 returns PgTest.Customer as $FirstCustomer
 folder 'Forms'
-begin
+{
   retrieve $CustomerList from PgTest.Customer
     where ( starts-with(Name, 'a') )
     limit 2 offset 3;
   set $FirstCustomer = head($CustomerList);
   return $FirstCustomer;
-end;
+}
 /
 
 create microflow PgTest.P007_DataForm_Getter_3 ()
 returns PgTest.Customer as $FirstCustomer
 folder 'Forms'
-begin
+{
   retrieve $CustomerList from PgTest.Customer
     where (starts-with(Name, 'a'))
     sort by PgTest.Customer.Name asc, PgTest.Customer.Email desc
@@ -346,13 +346,13 @@ begin
     offset 3 + 3;
   $FirstCustomer = head($CustomerList);
   return $FirstCustomer;
-end;
+}
 /
 
 create microflow PgTest.P007_DataForm_Getter_4 ()
 returns PgTest.Customer as $FirstCustomer
 folder 'Forms'
-begin
+{
   declare $Lim long = 3;
   declare $off long = 5;
   retrieve $CustomerList from PgTest.Customer
@@ -362,7 +362,7 @@ begin
     offset $off;
   $FirstCustomer = head($CustomerList);
   return $FirstCustomer;
-end;
+}
 /
 
 /**
@@ -371,10 +371,10 @@ end;
 create microflow PgTest.ProcessProducts ()
 returns boolean as $success
 folder 'MasterDetail'
-begin
+{
   declare $success boolean = true;
   return $success;
-end;
+}
 /
 
 create page PgTest.P007_DataForm_2
@@ -596,10 +596,10 @@ create page PgTest.P010_Product_Sorted_filtered_styled_2 (
 create microflow PgTest.P010_DSO_GetProducts ()
   returns list of PgTest.Product
 folder 'DataGrid'
-begin
+{
   retrieve $Products from PgTest.Product;
   return $Products;
-end;
+}
 /
 
 /**
@@ -1564,14 +1564,14 @@ create microflow PgTest.ACT_ProcessProduct (
 )
 returns boolean as $success
 folder 'MicroflowActions'
-begin
+{
   declare $success boolean = false;
   log info node 'ProductService' 'Processing product: ' + $Product/Name;
   change $Product (ModifiedDate = [%CurrentDateTime%]);
   commit $Product;
   set $success = true;
   return $success;
-end;
+}
 /
 
 /**
@@ -1583,10 +1583,10 @@ create microflow PgTest.ACT_DeleteProduct (
   $Product: PgTest.Product
 )
 folder 'MicroflowActions'
-begin
+{
   log info node 'ProductService' 'Deleting product: ' + $Product/Name;
   delete $Product;
-end;
+}
 /
 
 /**
@@ -1823,19 +1823,19 @@ create page PgTest.StyledPage
 create microflow PgTest.DSO_GetProducts ()
   returns list of PgTest.Product
 folder 'WidgetReferences'
-begin
+{
   retrieve $Products from PgTest.Product;
   return $Products;
-end;
+}
 
 /**
  * Helper microflow for Action: MICROFLOW reference validation.
  */
 create microflow PgTest.ACT_RefreshProducts ()
 folder 'WidgetReferences'
-begin
+{
   return;
-end;
+}
 
 /**
  * Target page for Action: SHOW_PAGE reference validation.
@@ -2343,10 +2343,10 @@ alter page PgTest.P033b_DataGrid_ColumnProperties {
 create microflow PgTest.DS_GetFirstCustomer ()
   returns PgTest.Customer  
 folder 'DataSources'
-begin
+{
   retrieve $Customer from PgTest.Customer limit 1;
   return $Customer;
-end;
+}
 /
 
 

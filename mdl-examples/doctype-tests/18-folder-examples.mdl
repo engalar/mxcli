@@ -23,9 +23,9 @@ create module FolderTest;
 create microflow FolderTest.ACT_Process()
 returns boolean
 folder 'Processing'
-begin
+{
   return true;
-end;
+}
 /
 
 /**
@@ -34,9 +34,9 @@ end;
 create microflow FolderTest.ACT_Archive()
 returns boolean
 folder 'Processing/Archive'
-begin
+{
   return true;
-end;
+}
 /
 
 -- MARK: - Move Documents Between Folders

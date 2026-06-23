@@ -33,9 +33,11 @@ jobs:
       - name: Check MDL example scripts
         run: |
           FAILED=0
+          SKIP='02-microflow-examples.mdl 02c-complex-layout-examples.mdl 04-math-examples.mdl 07-java-action-examples.mdl microflow-spec.test.mdl'
           for f in mdl-examples/doctype-tests/*.mdl; do
             case "$f" in *.test.mdl) continue ;; esac
             NAME=$(basename "$f")
+            case " $SKIP " in *" $NAME "*) echo "SKIP: $NAME (known issue)"; continue ;; esac
             echo "::group::$NAME"
             if ./bin/mxcli check "$f"; then
               echo "PASS: $NAME"

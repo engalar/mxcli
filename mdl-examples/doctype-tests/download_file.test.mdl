@@ -2,18 +2,18 @@ create microflow SampleFiles.ACT_DownloadReport (
   $GeneratedReport: System.FileDocument
 )
 returns Void
-begin
+{
   download file $GeneratedReport show in browser;
   return;
-end;
+}
 /
 
 create microflow SampleFiles.ACT_DownloadExport (
   $GeneratedExport: System.FileDocument
 )
 returns Void
-begin
+{
   download file $GeneratedExport;
   return;
-end;
+}
 /

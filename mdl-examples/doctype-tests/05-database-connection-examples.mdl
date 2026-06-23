@@ -126,8 +126,8 @@ type 'MSSQL'
 connection string @DbTest.F1Database_DBSource
 username @DbTest.F1Database_DBUsername
 password @DbTest.F1Database_DBPassword
-begin
-end;
+{
+}
 
 -- ============================================================================
 -- Level 1.2: Connection with Single Simple Query
@@ -142,7 +142,7 @@ type 'MSSQL'
 connection string @DbTest.F1Database_DBSource
 username @DbTest.F1Database_DBUsername
 password @DbTest.F1Database_DBPassword
-begin
+{
   query GetAllDrivers
     sql 'SELECT driverId, driverRef, forename, surname, nationality, dob FROM drivers ORDER BY surname'
     returns DbTest.Driver
@@ -154,7 +154,7 @@ begin
       nationality as Nationality,
       dob as DateOfBirth
     );
-end;
+}
 
 
 -- ############################################################################
@@ -174,7 +174,7 @@ type 'MSSQL'
 connection string @DbTest.F1Database_DBSource
 username @DbTest.F1Database_DBUsername
 password @DbTest.F1Database_DBPassword
-begin
+{
   query GetAllCircuits
     sql 'SELECT circuitId, circuitRef, name, location, country FROM circuits ORDER BY name'
     returns DbTest.Circuit
@@ -185,7 +185,7 @@ begin
       location as Location,
       country as Country
     );
-end;
+}
 
 -- ============================================================================
 -- Level 2.2: Multiple Queries in One Connection
@@ -199,7 +199,7 @@ type 'MSSQL'
 connection string @DbTest.F1Database_DBSource
 username @DbTest.F1Database_DBUsername
 password @DbTest.F1Database_DBPassword
-begin
+{
   query GetDrivers
     sql 'SELECT driverId, driverRef, forename, surname, nationality, dob FROM drivers ORDER BY surname'
     returns DbTest.Driver
@@ -221,7 +221,7 @@ begin
       name as ConstructorName,
       nationality as Nationality
     );
-end;
+}
 
 
 -- ############################################################################
@@ -241,7 +241,7 @@ type 'MSSQL'
 connection string @DbTest.F1Database_DBSource
 username @DbTest.F1Database_DBUsername
 password @DbTest.F1Database_DBPassword
-begin
+{
   query GetDriversByNationality
     sql 'SELECT driverId, driverRef, forename, surname, nationality, dob FROM drivers WHERE nationality = {nation} ORDER BY surname'
     parameter nation: string default 'British'
@@ -254,7 +254,7 @@ begin
       nationality as Nationality,
       dob as DateOfBirth
     );
-end;
+}
 
 -- ============================================================================
 -- Level 3.2: Multiple Parameters and Multiple Queries
@@ -269,7 +269,7 @@ type 'MSSQL'
 connection string @DbTest.F1Database_DBSource
 username @DbTest.F1Database_DBUsername
 password @DbTest.F1Database_DBPassword
-begin
+{
   query GetRacesByYear
     sql 'SELECT raceId, year, round, name, date FROM races WHERE year = {raceYear} ORDER BY round'
     parameter raceYear: integer default '2023'
@@ -293,7 +293,7 @@ begin
       location as Location,
       country as Country
     );
-end;
+}
 
 
 -- ############################################################################
@@ -318,7 +318,7 @@ type 'MSSQL'
 connection string @DbTest.F1Database_DBSource
 username @DbTest.F1Database_DBUsername
 password @DbTest.F1Database_DBPassword
-begin
+{
   query GetAllDrivers
     sql 'SELECT driverId, driverRef, forename, surname, nationality, dob FROM drivers ORDER BY surname'
     returns DbTest.Driver
@@ -414,7 +414,7 @@ begin
       name as RaceName,
       date as RaceDate
     );
-end;
+}
 
 
 -- ############################################################################
@@ -433,38 +433,38 @@ end;
 -- ----------------------------------------------------------------------------
 
 create microflow DbTest.GetAllDrivers()
-begin
+{
   $DriverList = execute database query DbTest.F1Database.GetAllDrivers;
-end;
+}
 
 -- ----------------------------------------------------------------------------
 -- Example 2: Dynamic SQL — overrides the query's SQL at runtime
 -- ----------------------------------------------------------------------------
 
 create microflow DbTest.GetDriversDynamic()
-begin
+{
   $DriverList = execute database query DbTest.F1Database.GetAllDrivers
     dynamic 'SELECT driverId, driverRef, forename, surname, nationality FROM drivers ORDER BY surname LIMIT 10';
-end;
+}
 
 -- ----------------------------------------------------------------------------
 -- Example 3: Parameterized query — passes values for query parameters
 -- ----------------------------------------------------------------------------
 
 create microflow DbTest.GetDriversByNationality(Nationality: string)
-begin
+{
   $DriverList = execute database query DbTest.F1Database.GetDriversByNationality
     (nation = $Nationality);
-end;
+}
 
 -- ----------------------------------------------------------------------------
 -- Example 4: Fire-and-forget (no output variable)
 -- ----------------------------------------------------------------------------
 
 create microflow DbTest.RefreshDriverCache()
-begin
+{
   execute database query DbTest.F1Database.GetAllDrivers;
-end;
+}
 
 -- Note: EXECUTE DATABASE QUERY only supports ON ERROR ROLLBACK (default).
 -- ON ERROR CONTINUE is not supported for this action type.

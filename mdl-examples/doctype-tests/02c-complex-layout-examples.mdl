@@ -146,7 +146,7 @@ create microflow CxLayout.CX_VAL_Factory (
   $Factory: CxLayout.Factory
 )
 returns boolean as $IsValid
-begin
+{
   declare $IsValid     boolean = true;
   declare $ErrorCount  integer = 0;
 
@@ -255,7 +255,7 @@ begin
   end if;
 
   return $IsValid;
-end;
+}
 /
 
 -- ============================================================================
@@ -285,7 +285,7 @@ create microflow CxLayout.CX_POST_SurveySubmission (
   $AnswerJson: string
 )
 returns string as $ResponseBody
-begin
+{
   declare $ResponseBody string = empty;
 
   -- Guard 1: required inputs present
@@ -353,7 +353,7 @@ begin
   log info node 'Survey' 'New submission created: ' + $TrackerId;
   set $ResponseBody = '{"status":"ok","code":201,"message":"Submission created"}';
   return $ResponseBody;
-end;
+}
 /
 
 -- ============================================================================
@@ -386,7 +386,7 @@ create microflow CxLayout.CX_ACT_HandleAuthCode (
   $AuthMethod:   enum CxLayout.AuthMethod
 )
 returns boolean as $Success
-begin
+{
   declare $Success boolean = false;
 
   -- Guard: authorization code required
@@ -499,7 +499,7 @@ begin
   end case;
 
   return $Success;
-end;
+}
 /
 
 -- ============================================================================
@@ -525,7 +525,7 @@ create microflow CxLayout.CX_VAL_EmailTemplate (
   $Template: CxLayout.EmailTemplate
 )
 returns boolean as $IsValid
-begin
+{
   declare $IsValid boolean = true;
 
   -- Field 1: From (required + must contain @)
@@ -598,7 +598,7 @@ begin
   end if;
 
   return $IsValid;
-end;
+}
 /
 
 -- ============================================================================
@@ -626,7 +626,7 @@ end;
  */
 create microflow CxLayout.CX_ACT_BatchProcessFactories ()
 returns integer as $ProcessedCount
-begin
+{
   declare $ProcessedCount integer = 0;
   declare $SkippedCount   integer = 0;
   declare $ErrorCount     integer = 0;
@@ -635,7 +635,7 @@ begin
     where IsActive = true;
 
   loop $Factory in $Factories
-  begin
+{
     case $Factory/Status
 
       when Active then
@@ -679,5 +679,5 @@ begin
     + ', errors: '  + toString($ErrorCount);
 
   return $ProcessedCount;
-end;
+}
 /

@@ -120,12 +120,12 @@ create association DfTest.Order_Customer
 create microflow DfTest.DSO_GetActiveOrders ()
   returns list of DfTest.Order
   folder 'Filters'
-begin
+{
   retrieve $Orders from DfTest.Order
     where [IsActive = true()]
     sort by OrderDate desc;
   return $Orders;
-end;
+}
 /
 
 -- @version: 11.0+
@@ -324,10 +324,10 @@ create page DfTest.DF04_FiltersWithCRUD (
 
 create microflow DfTest.ACT_ProcessOrder ($Order: DfTest.Order)
   folder 'Filters'
-begin
+{
   change $Order (Status = DfTest.OrderStatus.Active);
   commit $Order;
-end;
+}
 /
 
 /**

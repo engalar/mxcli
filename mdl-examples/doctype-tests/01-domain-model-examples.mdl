@@ -907,7 +907,7 @@ create microflow DmTest.GetCustomerTotalSpent (
   $CustomerId: string
 )
 returns decimal as $TotalSpent
-begin
+{
   declare $TotalSpent decimal = 0;
 
   retrieve $Stats from DmTest.CustomerOrderStats
@@ -919,7 +919,7 @@ begin
   end if;
 
   return $TotalSpent;
-end;
+}
 /
 
 -- @version: any
@@ -1488,17 +1488,17 @@ alter entity DmTest.VATRate
 
 create microflow DmTest.ACT_ValidateBankAccount ($BankAccount: DmTest.BankAccount)
 returns boolean
-begin
+{
   log info 'Validating bank account';
   return true;
-end;
+}
 /
 
 create microflow DmTest.ACT_InitBankAccountDefaults ($BankAccount: DmTest.BankAccount)
-begin
+{
   log info 'Initializing defaults';
   return;
-end;
+}
 /
 
 -- Add event handlers via ALTER ENTITY (pass entity object to microflow)
