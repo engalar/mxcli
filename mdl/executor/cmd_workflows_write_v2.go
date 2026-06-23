@@ -26,6 +26,7 @@
 package executor
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"strings"
@@ -54,6 +55,17 @@ func newWfBuildCtx(ctx *ExecContext) *wfBuildCtx {
 	wbc := &wfBuildCtx{}
 	if ctx != nil && ctx.Connected() {
 		if rpv := ctx.ConnectionManager.ProjectVersion(); rpv != nil {
+			wbc.version = version.Parse(rpv.ProductVersion)
+		}
+	}
+	return wbc
+}
+
+// newWfBuildCtxFn creates a wfBuildCtx from HandlerDeps.
+func newWfBuildCtxFn(deps *HandlerDeps) *wfBuildCtx {
+	wbc := &wfBuildCtx{}
+	if deps != nil && deps.ConnectionManager != nil && deps.ConnectionManager.IsConnected() {
+		if rpv := deps.ConnectionManager.ProjectVersion(); rpv != nil {
 			wbc.version = version.Parse(rpv.ProductVersion)
 		}
 	}
@@ -770,22 +782,27 @@ func buildParallelSplitGenActivity(wbc *wfBuildCtx, n *ast.WorkflowParallelSplit
 // deduplicateActivityNamesGen (defined below). autoBindWorkflowGen
 // fills CallMicroflow ParameterMappings via D4/D5 helpers.
 func execCreateWorkflowGen(ctx *ExecContext, s *ast.CreateWorkflowStmt) error {
-	if !ctx.ConnectedForWrite() {
+	return execCreateWorkflowGenFn(ctx, s, execContextToDeps(ctx))
+}
+
+// execCreateWorkflowGenFn is the HandlerDeps version of execCreateWorkflowGen.
+func execCreateWorkflowGenFn(ctx context.Context, s *ast.CreateWorkflowStmt, deps *HandlerDeps) error {
+	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
 
-	module, err := findOrCreateModule(ctx, s.Name.Module)
+	ectx := phase3d2bNewExecContext(ctx, deps)
+	module, err := findOrCreateModule(ectx, s.Name.Module)
 	if err != nil {
 		return err
 	}
 
-	h, err := getHierarchy(ctx)
+	h, err := getHierarchy(ectx)
 	if err != nil {
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}
 
-	// Existence check via gen cache helper.
-	pairs, err := listWorkflowsWithContainerGen(ctx)
+	pairs, err := listWorkflowsWithContainerGen(ectx)
 	if err != nil {
 		return mdlerrors.NewBackend("list workflows", err)
 	}
@@ -807,12 +824,10 @@ func execCreateWorkflowGen(ctx *ExecContext, s *ast.CreateWorkflowStmt) error {
 		}
 	}
 
-	// Construct the gen Workflow.
 	wf := genWf.NewWorkflow()
 	wf.SetName(s.Name.Name)
 	wf.SetDocumentation(s.Documentation)
 
-	// Parameter
 	if s.ParameterEntity.Module != "" {
 		param := genWf.NewParameter()
 		param.SetID(element.ID(generateWorkflowUUID()))
@@ -824,11 +839,8 @@ func execCreateWorkflowGen(ctx *ExecContext, s *ast.CreateWorkflowStmt) error {
 		wf.SetOverviewPageQualifiedName(s.OverviewPage.Module + "." + s.OverviewPage.Name)
 	}
 
-	// Display metadata. WorkflowName / WorkflowDescription are Texts$Text
-	// wrappers in the gen schema (per Phase A R1 dual-storage finding).
 	if s.DisplayName != "" {
 		wf.SetWorkflowName(newStringTemplateGen(s.DisplayName))
-		// Mirror Title for legacy decode round-trip.
 		wf.SetTitle(s.DisplayName)
 	}
 	if s.Description != "" {
@@ -839,12 +851,10 @@ func execCreateWorkflowGen(ctx *ExecContext, s *ast.CreateWorkflowStmt) error {
 	}
 	wf.SetDueDate(s.DueDate)
 
-	// Validate enum condition outcome values before building BSON.
 	if err := validateWorkflowActivities(s.Activities); err != nil {
 		return err
 	}
 
-	// Build flow with implicit Start + user activities + End.
 	startAct := genWf.NewStartWorkflowActivity()
 	startAct.SetID(element.ID(generateWorkflowUUID()))
 	startAct.SetCaption("Start")
@@ -855,9 +865,9 @@ func execCreateWorkflowGen(ctx *ExecContext, s *ast.CreateWorkflowStmt) error {
 	endAct.SetCaption("End")
 	endAct.SetName("End")
 
-	wbc := newWfBuildCtx(ctx)
+	wbc := newWfBuildCtxFn(deps)
 	userActivities := buildWorkflowActivitiesGen(wbc, s.Activities)
-	autoBindWorkflowGen(ctx, userActivities)
+	autoBindWorkflowGen(ectx, userActivities)
 	deduplicateActivityNamesGen(userActivities)
 
 	flow := genWf.NewFlow()
@@ -870,23 +880,27 @@ func execCreateWorkflowGen(ctx *ExecContext, s *ast.CreateWorkflowStmt) error {
 	wf.SetFlow(flow)
 
 	if existingID != "" {
-		// In-place update: preserve UnitID so references and BSON git-diff
-		// stay stable.
 		wf.SetID(element.ID(existingID))
-		if err := ctx.WorkflowWriter.UpdateWorkflowGen(wf); err != nil {
+		if err := deps.Backend.UpdateWorkflowGen(wf); err != nil {
 			return mdlerrors.NewBackend("update workflow", err)
 		}
 	} else {
-		// New unit: gen Create generates a fresh UnitID.
-		if err := ctx.WorkflowWriter.CreateWorkflowGen(string(module.ID), "Documents", wf); err != nil {
+		if err := deps.Backend.CreateWorkflowGen(string(module.ID), "Documents", wf); err != nil {
 			return mdlerrors.NewBackend("create workflow", err)
 		}
 	}
 
-	invalidateHierarchy(ctx)
-	invalidateWorkflowsCache(ctx)
-	fmt.Fprintf(ctx.Output, "Created workflow: %s.%s\n", s.Name.Module, s.Name.Name)
+	invalidateHierarchyFn(deps)
+	invalidateWorkflowsCacheFn(deps)
+	fmt.Fprintf(deps.Output, "Created workflow: %s.%s\n", s.Name.Module, s.Name.Name)
 	return nil
+}
+
+// invalidateWorkflowsCacheFn is the HandlerDeps version of invalidateWorkflowsCache.
+func invalidateWorkflowsCacheFn(deps *HandlerDeps) {
+	if deps.Cache != nil {
+		deps.Cache.workflowsWithContainerGen = nil
+	}
 }
 
 // autoBindWorkflowGen is the gen-typed twin of autoBindWorkflowParameters
@@ -1166,14 +1180,20 @@ func recurseConditionOutcomesDedupGen(outcomes []element.Element, nameCount map[
 // Lists via gen cache helper, deletes via FullBackend.DeleteWorkflow
 // (sdk-typed but ID-only — no migration needed).
 func execDropWorkflowGen(ctx *ExecContext, s *ast.DropWorkflowStmt) error {
-	if !ctx.ConnectedForWrite() {
+	return execDropWorkflowGenFn(ctx, s, execContextToDeps(ctx))
+}
+
+// execDropWorkflowGenFn is the HandlerDeps version of execDropWorkflowGen.
+func execDropWorkflowGenFn(ctx context.Context, s *ast.DropWorkflowStmt, deps *HandlerDeps) error {
+	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
-	h, err := getHierarchy(ctx)
+	h, err := NewContainerHierarchyFromRoles(deps.ModuleLister, deps.MetadataReader, deps.FolderManager)
 	if err != nil {
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}
-	pairs, err := listWorkflowsWithContainerGen(ctx)
+	ectx := phase3d2bNewExecContext(ctx, deps)
+	pairs, err := listWorkflowsWithContainerGen(ectx)
 	if err != nil {
 		return mdlerrors.NewBackend("list workflows", err)
 	}
@@ -1184,12 +1204,12 @@ func execDropWorkflowGen(ctx *ExecContext, s *ast.DropWorkflowStmt) error {
 		modID := h.FindModuleID(model.ID(p.ContainerID))
 		modName := h.GetModuleName(modID)
 		if modName == s.Name.Module && p.Elem.Name() == s.Name.Name {
-			if err := ctx.WorkflowWriter.DeleteWorkflow(model.ID(p.Elem.ID())); err != nil {
+			if err := deps.Backend.DeleteWorkflow(model.ID(p.Elem.ID())); err != nil {
 				return mdlerrors.NewBackend("delete workflow", err)
 			}
-			invalidateHierarchy(ctx)
-			invalidateWorkflowsCache(ctx)
-			fmt.Fprintf(ctx.Output, "Dropped workflow: %s.%s\n", s.Name.Module, s.Name.Name)
+			invalidateHierarchyFn(deps)
+			invalidateWorkflowsCacheFn(deps)
+			fmt.Fprintf(deps.Output, "Dropped workflow: %s.%s\n", s.Name.Module, s.Name.Name)
 			return nil
 		}
 	}

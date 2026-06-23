@@ -2826,43 +2826,20 @@ func execStatusFuture(ctx context.Context, output io.Writer, cm backend.Connecti
 // execSetFuture is the ExecContext-free version of execSet.
 // Format is updated via pointer so the caller's format changes persist.
 func execSetFuture(ctx context.Context, s *ast.SetStmt, output io.Writer, format *OutputFormat) error {
-	switch strings.ToLower(s.Key) {
-	case "format":
-		if v, ok := s.Value.(string); ok {
-			*format = OutputFormat(strings.ToLower(v))
-		}
-	}
-	fmt.Fprintf(output, "Set %s = %v\n", s.Key, s.Value)
-	return nil
+	deps := &HandlerDeps{Output: output, Format: *format}
+	err := execSetFn(ctx, s, deps)
+	*format = deps.Format
+	return err
 }
 
 // execUpdateFuture is the ExecContext-free version of execUpdate.
 func execUpdateFuture(ctx context.Context, deps *HandlerDeps, ex *Executor) error {
-	tmpCtx := &ExecContext{
-		Context:           ctx,
-		Backend:           deps.Backend,
-		ConnectionManager: deps.ConnectionManager,
-		ExecIO:            ExecIO{Output: deps.Output},
-		ExecConnection: ExecConnection{
-			BackendFactory: ex.backendFactory,
-			MprPath:        ex.mprPath,
-		},
-		ExecCallbacks: ExecCallbacks{
-			FinalizeFn: ex.finalizeProgramExecution,
-		},
-		Logger: deps.Logger,
-	}
-	if ex.cache != nil {
-		tmpCtx.Cache = ex.cache
-	}
-	err := execUpdate(tmpCtx)
-	ex.syncBack(tmpCtx)
-	return err
+	return execUpdateFn(ctx, deps, ex)
 }
 
 // execRefreshFuture is the ExecContext-free version of execRefresh.
 func execRefreshFuture(ctx context.Context, deps *HandlerDeps, ex *Executor) error {
-	return execUpdateFuture(ctx, deps, ex)
+	return execRefreshFn(ctx, deps, ex)
 }
 
 // execExecuteScriptFuture is the ExecContext-free version of execExecuteScript.
@@ -2958,33 +2935,27 @@ func execCreateDatabaseConnectionFuture(ctx context.Context, stmt ast.Statement,
 }
 
 func execCreateJavaActionFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
-	return execCreateJavaActionGen(ectx, stmt.(*ast.CreateJavaActionStmt))
+	return execCreateJavaActionGenFn(ctx, stmt.(*ast.CreateJavaActionStmt), deps)
 }
 
 func execDropJavaActionFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
-	return execDropJavaActionGen(ectx, stmt.(*ast.DropJavaActionStmt))
+	return execDropJavaActionGenFn(ctx, stmt.(*ast.DropJavaActionStmt), deps)
 }
 
 func execCreateJavaScriptActionFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
-	return execCreateJavaScriptAction(ectx, stmt.(*ast.CreateJavaScriptActionStmt))
+	return execCreateJavaScriptActionFn(ctx, stmt.(*ast.CreateJavaScriptActionStmt), deps)
 }
 
 func execDropFolderFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
-	return execDropFolder(ectx, stmt.(*ast.DropFolderStmt))
+	return execDropFolderFn(ctx, stmt.(*ast.DropFolderStmt), deps)
 }
 
 func execMoveFolderFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
-	return execMoveFolder(ectx, stmt.(*ast.MoveFolderStmt))
+	return execMoveFolderFn(ctx, stmt.(*ast.MoveFolderStmt), deps)
 }
 
 func execMoveFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
-	return execMove(ectx, stmt.(*ast.MoveStmt))
+	return execMoveFn(ctx, stmt.(*ast.MoveStmt), deps)
 }
 
 func execRenameFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
@@ -3076,23 +3047,19 @@ func execDropJsonStructureFuture(ctx context.Context, stmt ast.Statement, deps *
 }
 
 func execCreateImportMappingFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
-	return execCreateImportMapping(ectx, stmt.(*ast.CreateImportMappingStmt))
+	return execCreateImportMappingFn(ctx, stmt.(*ast.CreateImportMappingStmt), deps)
 }
 
 func execDropImportMappingFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
-	return execDropImportMapping(ectx, stmt.(*ast.DropImportMappingStmt))
+	return execDropImportMappingFn(ctx, stmt.(*ast.DropImportMappingStmt), deps)
 }
 
 func execCreateExportMappingFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
-	return execCreateExportMapping(ectx, stmt.(*ast.CreateExportMappingStmt))
+	return execCreateExportMappingFn(ctx, stmt.(*ast.CreateExportMappingStmt), deps)
 }
 
 func execDropExportMappingFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
-	return execDropExportMapping(ectx, stmt.(*ast.DropExportMappingStmt))
+	return execDropExportMappingFn(ctx, stmt.(*ast.DropExportMappingStmt), deps)
 }
 
 func execCreateRestClientFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
@@ -3132,13 +3099,11 @@ func execCreateExternalEntitiesFuture(ctx context.Context, stmt ast.Statement, d
 }
 
 func execCreateDataTransformerFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
-	return execCreateDataTransformer(ectx, stmt.(*ast.CreateDataTransformerStmt))
+	return execCreateDataTransformerFn(ctx, stmt.(*ast.CreateDataTransformerStmt), deps)
 }
 
 func execDropDataTransformerFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
-	return execDropDataTransformer(ectx, stmt.(*ast.DropDataTransformerStmt))
+	return execDropDataTransformerFn(ctx, stmt.(*ast.DropDataTransformerStmt), deps)
 }
 
 func execShowWidgetsFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
@@ -3185,8 +3150,7 @@ func execAlterStylingFuture(ctx context.Context, stmt ast.Statement, deps *Handl
 }
 
 func execShowThemeVariablesFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
-	return execShowThemeVariables(ectx, stmt.(*ast.ShowThemeVariablesStmt))
+	return execShowThemeVariablesFn(ctx, stmt.(*ast.ShowThemeVariablesStmt), deps)
 }
 
 func execSearchFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
@@ -3263,8 +3227,7 @@ func execSQLGenerateConnectorFuture(ctx context.Context, stmt ast.Statement, dep
 }
 
 func execImportFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
-	return execImport(ectx, stmt.(*ast.ImportStmt))
+	return execImportFn(ctx, stmt.(*ast.ImportStmt), deps)
 }
 
 func execCreateModelFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {

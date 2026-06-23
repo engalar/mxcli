@@ -15,6 +15,7 @@
 package executor
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
@@ -42,19 +43,24 @@ import (
 // is exercised on the same flow via the sdk track until Stage 3.2.3
 // reworks the dropped-tracker.
 func execDropNanoflowGen(ctx *ExecContext, s *ast.DropNanoflowStmt) error {
-	if !ctx.ConnectedForWrite() {
+	return execDropNanoflowGenFn(ctx, s, execContextToDeps(ctx))
+}
+
+// execDropNanoflowGenFn is the HandlerDeps version of execDropNanoflowGen.
+func execDropNanoflowGenFn(ctx context.Context, s *ast.DropNanoflowStmt, deps *HandlerDeps) error {
+	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
-	if ctx.Nanoflows == nil {
+	if deps.NanoflowRepo == nil {
 		return mdlerrors.NewBackend("nanoflows repo unavailable", nil)
 	}
 
-	h, err := getHierarchy(ctx)
+	h, err := NewContainerHierarchyFromRoles(deps.ModuleLister, deps.MetadataReader, deps.FolderManager)
 	if err != nil {
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}
 
-	all, err := ctx.Nanoflows.List("")
+	all, err := deps.NanoflowRepo.List("")
 	if err != nil {
 		return mdlerrors.NewBackend("list nanoflows", err)
 	}
@@ -63,30 +69,31 @@ func execDropNanoflowGen(ctx *ExecContext, s *ast.DropNanoflowStmt) error {
 		if nf == nil {
 			continue
 		}
-		modName := genFlowContainerModule(ctx, h, model.ID(nf.ID()))
+		ectx := phase3d2bNewExecContext(ctx, deps)
+		modName := genFlowContainerModule(ectx, h, model.ID(nf.ID()))
 		if modName != s.Name.Module || nf.Name() != s.Name.Name {
 			continue
 		}
 
 		qualifiedName := s.Name.Module + "." + s.Name.Name
 		containerID := model.ID("")
-		if cid, err := ctx.Microflows.GetContainerUUID(model.ID(nf.ID())); err == nil {
-			containerID = cid
+		if deps.MicroflowRepo != nil {
+			if cid, err := deps.MicroflowRepo.GetContainerUUID(model.ID(nf.ID())); err == nil {
+				containerID = cid
+			}
 		}
-		// Record the drop with empty allowed-roles — see file header
-		// for why qualified-name → model.ID round-trip is deferred.
-		rememberDroppedNanoflow(ctx, qualifiedName, model.ID(nf.ID()), containerID, nil)
+		rememberDroppedMicroflowFn(deps, qualifiedName, model.ID(nf.ID()), containerID, nil)
 
-		if err := ctx.Nanoflows.Delete(model.ID(nf.ID())); err != nil {
+		if err := deps.NanoflowRepo.Delete(model.ID(nf.ID())); err != nil {
 			return mdlerrors.NewBackend("delete nanoflow", err)
 		}
 
-		if ctx.Cache != nil && ctx.Cache.createdNanoflows != nil {
-			delete(ctx.Cache.createdNanoflows, qualifiedName)
+		if deps.Cache != nil && deps.Cache.createdNanoflows != nil {
+			delete(deps.Cache.createdNanoflows, qualifiedName)
 		}
-		invalidateHierarchy(ctx)
-		invalidateMicroflowsCache(ctx)
-		fmt.Fprintf(ctx.Output, "Dropped nanoflow: %s\n", qualifiedName)
+		invalidateHierarchyFn(deps)
+		invalidateMicroflowsCacheFn(deps)
+		fmt.Fprintf(deps.Output, "Dropped nanoflow: %s\n", qualifiedName)
 		return nil
 	}
 

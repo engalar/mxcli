@@ -3,6 +3,7 @@
 package executor
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -13,12 +14,18 @@ import (
 
 // listDataTransformers handles LIST DATA TRANSFORMERS [IN module].
 func listDataTransformers(ctx *ExecContext, moduleName string) error {
-	transformers, err := ctx.ServiceLister.ListDataTransformers()
+	deps := execContextToDeps(ctx)
+	return listDataTransformersFn(ctx, moduleName, deps)
+}
+
+// listDataTransformersFn is the HandlerDeps version of listDataTransformers.
+func listDataTransformersFn(ctx context.Context, moduleName string, deps *HandlerDeps) error {
+	transformers, err := deps.ServiceLister.ListDataTransformers()
 	if err != nil {
 		return mdlerrors.NewBackend("list data transformers", err)
 	}
 
-	h, err := getHierarchy(ctx)
+	h, err := NewContainerHierarchyFromRoles(deps.ModuleLister, deps.MetadataReader, deps.FolderManager)
 	if err != nil {
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}
@@ -42,7 +49,7 @@ func listDataTransformers(ctx *ExecContext, moduleName string) error {
 	}
 
 	if len(rows) == 0 {
-		fmt.Fprintln(ctx.Output, "No data transformers found.")
+		fmt.Fprintln(deps.Output, "No data transformers found.")
 		return nil
 	}
 
@@ -51,17 +58,23 @@ func listDataTransformers(ctx *ExecContext, moduleName string) error {
 		Rows:    rows,
 		Summary: fmt.Sprintf("(%d data transformers)", len(rows)),
 	}
-	return writeResult(ctx, result)
+	return writeResultTo(deps.Output, deps.Format, result)
 }
 
 // describeDataTransformer handles DESCRIBE DATA TRANSFORMER Module.Name.
 func describeDataTransformer(ctx *ExecContext, name ast.QualifiedName) error {
-	transformers, err := ctx.ServiceLister.ListDataTransformers()
+	deps := execContextToDeps(ctx)
+	return describeDataTransformerFn(ctx, name, deps)
+}
+
+// describeDataTransformerFn is the HandlerDeps version of describeDataTransformer.
+func describeDataTransformerFn(ctx context.Context, name ast.QualifiedName, deps *HandlerDeps) error {
+	transformers, err := deps.ServiceLister.ListDataTransformers()
 	if err != nil {
 		return mdlerrors.NewBackend("list data transformers", err)
 	}
 
-	h, err := getHierarchy(ctx)
+	h, err := NewContainerHierarchyFromRoles(deps.ModuleLister, deps.MetadataReader, deps.FolderManager)
 	if err != nil {
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}
@@ -73,12 +86,10 @@ func describeDataTransformer(ctx *ExecContext, name ast.QualifiedName) error {
 			continue
 		}
 
-		w := ctx.Output
+		w := deps.Output
 
-		// Emit re-executable MDL
 		fmt.Fprintf(w, "create data transformer %s.%s\n", modName, dt.Name)
 
-		// Source — collapse newlines into spaces for single-line string
 		sourceContent := strings.ReplaceAll(dt.SourceJSON, "\n", " ")
 		sourceContent = strings.ReplaceAll(sourceContent, "'", "''")
 		fmt.Fprintf(w, "source %s '%s'\n", dt.SourceType, sourceContent)
@@ -86,10 +97,8 @@ func describeDataTransformer(ctx *ExecContext, name ast.QualifiedName) error {
 
 		for _, step := range dt.Steps {
 			if strings.Contains(step.Expression, "\n") {
-				// Multi-line: use $$ quoting
 				fmt.Fprintf(w, "  %s $$\n%s\n  $$;\n", step.Technology, step.Expression)
 			} else {
-				// Single-line: use regular string
 				expr := strings.ReplaceAll(step.Expression, "'", "''")
 				fmt.Fprintf(w, "  %s '%s';\n", step.Technology, expr)
 			}
@@ -104,23 +113,28 @@ func describeDataTransformer(ctx *ExecContext, name ast.QualifiedName) error {
 
 // execCreateDataTransformer creates a new data transformer.
 func execCreateDataTransformer(ctx *ExecContext, s *ast.CreateDataTransformerStmt) error {
-	if !ctx.ConnectedForWrite() {
+	deps := execContextToDeps(ctx)
+	return execCreateDataTransformerFn(ctx, s, deps)
+}
+
+// execCreateDataTransformerFn is the HandlerDeps version of execCreateDataTransformer.
+func execCreateDataTransformerFn(ctx context.Context, s *ast.CreateDataTransformerStmt, deps *HandlerDeps) error {
+	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
 
-	if err := checkFeature(ctx, "integration", "data_transformer",
+	if err := checkFeatureFn(ctx, deps, "integration", "data_transformer",
 		"create data transformer",
 		"upgrade your project to 11.9+"); err != nil {
 		return err
 	}
 
-	// Check for existing transformer with the same name.
-	existing, existingID := findDataTransformer(ctx, s.Name.Module, s.Name.Name)
+	existing, existingID := findDataTransformerFn(deps, s.Name.Module, s.Name.Name)
 	if existing != nil && !s.CreateOrModify {
 		return mdlerrors.NewAlreadyExists("data transformer", s.Name.String())
 	}
 
-	module, err := findModule(ctx, s.Name.Module)
+	module, err := findModuleFn(deps.ModuleLister, s.Name.Module)
 	if err != nil {
 		return mdlerrors.NewNotFound("module", s.Name.Module)
 	}
@@ -141,22 +155,22 @@ func execCreateDataTransformer(ctx *ExecContext, s *ast.CreateDataTransformerStm
 
 	if existingID != "" {
 		dt.ID = existingID
-		if err := ctx.ServiceWriter.UpdateDataTransformer(dt); err != nil {
+		if err := deps.ServiceWriter.UpdateDataTransformer(dt); err != nil {
 			return mdlerrors.NewBackend("update data transformer", err)
 		}
-		if !ctx.Quiet {
-			fmt.Fprintf(ctx.Output, "Modified data transformer: %s.%s (%d steps)\n",
+		if !deps.Quiet {
+			fmt.Fprintf(deps.Output, "Modified data transformer: %s.%s (%d steps)\n",
 				s.Name.Module, s.Name.Name, len(dt.Steps))
 		}
 		return nil
 	}
 
-	if err := ctx.ServiceWriter.CreateDataTransformer(dt); err != nil {
+	if err := deps.ServiceWriter.CreateDataTransformer(dt); err != nil {
 		return mdlerrors.NewBackend("create data transformer", err)
 	}
 
-	if !ctx.Quiet {
-		fmt.Fprintf(ctx.Output, "Created data transformer: %s.%s (%d steps)\n",
+	if !deps.Quiet {
+		fmt.Fprintf(deps.Output, "Created data transformer: %s.%s (%d steps)\n",
 			s.Name.Module, s.Name.Name, len(dt.Steps))
 	}
 	return nil
@@ -164,11 +178,16 @@ func execCreateDataTransformer(ctx *ExecContext, s *ast.CreateDataTransformerStm
 
 // findDataTransformer looks up a data transformer by module and name, returning the struct and its ID.
 func findDataTransformer(ctx *ExecContext, moduleName, name string) (*model.DataTransformer, model.ID) {
-	transformers, err := ctx.ServiceLister.ListDataTransformers()
+	return findDataTransformerFn(execContextToDeps(ctx), moduleName, name)
+}
+
+// findDataTransformerFn is the HandlerDeps version of findDataTransformer.
+func findDataTransformerFn(deps *HandlerDeps, moduleName, name string) (*model.DataTransformer, model.ID) {
+	transformers, err := deps.ServiceLister.ListDataTransformers()
 	if err != nil {
 		return nil, ""
 	}
-	h, err := getHierarchy(ctx)
+	h, err := NewContainerHierarchyFromRoles(deps.ModuleLister, deps.MetadataReader, deps.FolderManager)
 	if err != nil {
 		return nil, ""
 	}
@@ -184,16 +203,22 @@ func findDataTransformer(ctx *ExecContext, moduleName, name string) (*model.Data
 
 // execDropDataTransformer deletes a data transformer.
 func execDropDataTransformer(ctx *ExecContext, s *ast.DropDataTransformerStmt) error {
-	if !ctx.ConnectedForWrite() {
+	deps := execContextToDeps(ctx)
+	return execDropDataTransformerFn(ctx, s, deps)
+}
+
+// execDropDataTransformerFn is the HandlerDeps version of execDropDataTransformer.
+func execDropDataTransformerFn(ctx context.Context, s *ast.DropDataTransformerStmt, deps *HandlerDeps) error {
+	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
 
-	transformers, err := ctx.ServiceLister.ListDataTransformers()
+	transformers, err := deps.ServiceLister.ListDataTransformers()
 	if err != nil {
 		return mdlerrors.NewBackend("list data transformers", err)
 	}
 
-	h, err := getHierarchy(ctx)
+	h, err := NewContainerHierarchyFromRoles(deps.ModuleLister, deps.MetadataReader, deps.FolderManager)
 	if err != nil {
 		return err
 	}
@@ -202,11 +227,11 @@ func execDropDataTransformer(ctx *ExecContext, s *ast.DropDataTransformerStmt) e
 		modID := h.FindModuleID(dt.ContainerID)
 		modName := h.GetModuleName(modID)
 		if modName == s.Name.Module && dt.Name == s.Name.Name {
-			if err := ctx.ServiceWriter.DeleteDataTransformer(dt.ID); err != nil {
+			if err := deps.ServiceWriter.DeleteDataTransformer(dt.ID); err != nil {
 				return mdlerrors.NewBackend("drop data transformer", err)
 			}
-			if !ctx.Quiet {
-				fmt.Fprintf(ctx.Output, "Dropped data transformer: %s.%s\n", s.Name.Module, s.Name.Name)
+			if !deps.Quiet {
+				fmt.Fprintf(deps.Output, "Dropped data transformer: %s.%s\n", s.Name.Module, s.Name.Name)
 			}
 			return nil
 		}
@@ -215,4 +240,3 @@ func execDropDataTransformer(ctx *ExecContext, s *ast.DropDataTransformerStmt) e
 	return mdlerrors.NewNotFound("data transformer", s.Name.Module+"."+s.Name.Name)
 }
 
-// Executor wrappers for unmigrated callers.

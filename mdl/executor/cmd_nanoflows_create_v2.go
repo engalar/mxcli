@@ -27,6 +27,7 @@
 package executor
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -43,27 +44,32 @@ import (
 // the cases it supports (header-only / empty-body); rejects compound
 // bodies with an actionable error pending Stage 3.2.3.
 func execCreateNanoflowGen(ctx *ExecContext, s *ast.CreateNanoflowStmt) error {
-	if !ctx.ConnectedForWrite() {
+	return execCreateNanoflowGenFn(ctx, s, execContextToDeps(ctx))
+}
+
+// execCreateNanoflowGenFn is the HandlerDeps version of execCreateNanoflowGen.
+func execCreateNanoflowGenFn(ctx context.Context, s *ast.CreateNanoflowStmt, deps *HandlerDeps) error {
+	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
-	if ctx.Nanoflows == nil {
+	if deps.NanoflowRepo == nil {
 		return mdlerrors.NewBackend("nanoflows repo unavailable", nil)
 	}
 
-	// ── Validation ───────────────────────────────────────────
 	if strings.TrimSpace(s.Name.Name) == "" {
 		return mdlerrors.NewValidation("nanoflow name must not be empty")
 	}
 
-	module, err := findOrCreateModule(ctx, s.Name.Module)
+	ectx := phase3d2bNewExecContext(ctx, deps)
+	module, err := findOrCreateModule(ectx, s.Name.Module)
 	if err != nil {
 		return err
 	}
 
 	containerID := module.ID
 	if s.Folder != "" {
-		h, _ := getHierarchy(ctx)
-		folderID, err := resolveFolder(ctx, module.ID, s.Folder, h)
+		h, _ := getHierarchy(ectx)
+		folderID, err := resolveFolder(ectx, module.ID, s.Folder, h)
 		if err != nil {
 			return mdlerrors.NewBackend("resolve folder "+s.Folder, err)
 		}
@@ -72,43 +78,36 @@ func execCreateNanoflowGen(ctx *ExecContext, s *ast.CreateNanoflowStmt) error {
 
 	qualifiedName := s.Name.Module + "." + s.Name.Name
 
-	// Nanoflow-specific body restrictions (no DB / Java / workflow / etc).
-	// Pure AST check — no SDK types involved.
 	if errMsg := validateNanoflow(qualifiedName, s.Body, s.ReturnType); errMsg != "" {
 		return fmt.Errorf("%s", errMsg)
 	}
 
-	// Stage 3.2.3 lifted the trivial-body restriction: compound
-	// bodies route through the shared flowBuilderGen / buildFlowGraphGen
-	// path below (see "Compound body emission" branch). The
-	// validateNanoflow guard above already rejects nanoflow-disallowed
-	// statement types before we reach this point.
-
-	// ── Existence + replace handling ──────────────────────────
 	var (
 		existing             *genMf.Nanoflow
 		existingContainerID  model.ID
 		existingAllowedRoles []string
 		preserveAllowedRoles bool
 	)
-	all, err := ctx.Nanoflows.List("")
+	all, err := deps.NanoflowRepo.List("")
 	if err != nil {
 		return mdlerrors.NewBackend("check existing nanoflows", err)
 	}
-	h, _ := getHierarchy(ctx)
+	h, _ := getHierarchy(ectx)
 	for _, nf := range all {
 		if nf == nil {
 			continue
 		}
-		modName := genFlowContainerModule(ctx, h, model.ID(nf.ID()))
+		modName := genFlowContainerModule(ectx, h, model.ID(nf.ID()))
 		if modName == s.Name.Module && nf.Name() == s.Name.Name {
 			if !s.CreateOrModify {
 				return mdlerrors.NewAlreadyExistsMsg("nanoflow", qualifiedName,
 					"nanoflow '"+qualifiedName+"' already exists (use create or modify to overwrite)")
 			}
 			existing = nf
-			if cid, err := ctx.Microflows.GetContainerUUID(model.ID(nf.ID())); err == nil && cid != "" {
-				existingContainerID = cid
+			if deps.MicroflowRepo != nil {
+				if cid, err := deps.MicroflowRepo.GetContainerUUID(model.ID(nf.ID())); err == nil && cid != "" {
+					existingContainerID = cid
+				}
 			}
 			existingAllowedRoles = append([]string{}, nf.AllowedModuleRolesQualifiedNames()...)
 			preserveAllowedRoles = true
@@ -116,30 +115,19 @@ func execCreateNanoflowGen(ctx *ExecContext, s *ast.CreateNanoflowStmt) error {
 		}
 	}
 
-	// Folder-omission preserves the existing container on replace.
 	if existing != nil && s.Folder == "" && existingContainerID != "" {
 		containerID = existingContainerID
 	}
 
-	// Build the gen Nanoflow.
 	nf := genMf.NewNanoflow()
 	if existing != nil {
-		// Reuse the existing element ID so refs and dirty bits don't
-		// shift across replace.
 		nf.SetID(existing.ID())
-	} else if dropped := consumeDroppedNanoflow(ctx, qualifiedName); dropped != nil {
+	} else if dropped := consumeDroppedNanoflow(ectx, qualifiedName); dropped != nil {
 		nf.SetID(element.ID(dropped.ID))
 		if s.Folder == "" && dropped.ContainerID != "" {
 			containerID = dropped.ContainerID
 		}
 		if len(dropped.AllowedRoles) > 0 {
-			// Convert sdk role IDs back to qualified names. The dropped
-			// info captured raw model.IDs; the gen path stores qualified
-			// names. We can't recover names from IDs here without a
-			// security-roles query — fall through to module defaults.
-			//
-			// This is a known gap that 3.2.3 / 3.2.6 will close when the
-			// drop-tracker switches to recording qualified names too.
 			preserveAllowedRoles = false
 		}
 	}
@@ -151,12 +139,9 @@ func execCreateNanoflowGen(ctx *ExecContext, s *ast.CreateNanoflowStmt) error {
 	if preserveAllowedRoles {
 		nf.SetAllowedModuleRolesQualifiedNames(existingAllowedRoles)
 	} else {
-		nf.SetAllowedModuleRolesQualifiedNames(defaultDocumentAccessRoleQNames(ctx, module))
+		nf.SetAllowedModuleRolesQualifiedNames(defaultDocumentAccessRoleQNames(ectx, module))
 	}
 
-	// Parameter elements — emitted into the ObjectCollection so the
-	// gen describer's walk over the collection finds them
-	// (MicroflowParameter / NanoflowParameter tags).
 	paramElements := make([]*genMf.MicroflowParameter, 0, len(s.Parameters))
 	for i, p := range s.Parameters {
 		param := genMf.NewMicroflowParameter()
@@ -164,28 +149,13 @@ func execCreateNanoflowGen(ctx *ExecContext, s *ast.CreateNanoflowStmt) error {
 		param.SetName(p.Name)
 		param.SetRelativeMiddlePoint(layoutPos(ParameterStartX+i*ParameterSpacingX, ParameterStartY))
 		param.SetSize(layoutSize(ParameterWidth, ParameterHeight))
-		// Studio Pro stores the type exclusively in VariableType (a
-		// DataTypes child element). The Type() string field is never set.
-		// Resolve TypeEnumeration vs TypeEntity ambiguity: a bare qualified
-		// name (e.g. HD.Ticket) is parsed as TypeEnumeration — check the
-		// backend to determine the true kind.
-		paramType := resolveAmbiguousDataType(ctx, ctx.ModuleLister, ctx.DomainModelReader, p.Type)
+		paramType := resolveAmbiguousDataType(ectx, deps.ModuleLister, deps.DomainModelReader, p.Type)
 		if dt := convertASTToGenDataType(paramType); dt != nil {
 			param.SetParameterType(dt)
 		}
 		paramElements = append(paramElements, param)
 	}
 
-	// Body emission — two paths:
-	//
-	//  - Trivial (empty / bare `return`): inline Start→End pair so the
-	//    output exactly matches the original Stage 3.2.5c shape that
-	//    fixtures + roundtrip tests assert against.
-	//
-	//  - Compound (any statement that's not a bare return): route
-	//    through flowBuilderGen.buildFlowGraphGen — Stage 3.2.3 shipped
-	//    the full flow-graph builder and made compound nanoflow bodies
-	//    feasible without legacy.
 	var oc *genMf.MicroflowObjectCollection
 	if isTrivialNanoflowBody(s.Body) {
 		oc = genMf.NewMicroflowObjectCollection()
@@ -205,11 +175,11 @@ func execCreateNanoflowGen(ctx *ExecContext, s *ast.CreateNanoflowStmt) error {
 		flow := newHorizontalFlowGen(start.ID(), end.ID())
 		nf.AddFlows(flow)
 	} else {
-		hierarchy, _ := getHierarchy(ctx)
-		restServices, _ := loadRestServices(ctx)
+		hierarchy, _ := getHierarchy(ectx)
+		restServices, _ := loadRestServices(ectx)
 
 		var mendixVer version.Version
-		if rpv := ctx.ConnectionManager.ProjectVersion(); rpv != nil {
+		if rpv := deps.ConnectionManager.ProjectVersion(); rpv != nil {
 			mendixVer = version.Parse(rpv.ProductVersion)
 		}
 		fb := &flowBuilderGen{
@@ -220,20 +190,16 @@ func execCreateNanoflowGen(ctx *ExecContext, s *ast.CreateNanoflowStmt) error {
 			varTypes:          map[string]string{},
 			declaredVars:      map[string]string{},
 			measurer:          &layoutMeasurer{varTypes: map[string]string{}},
-			moduleLister:      ctx.ModuleLister,
-			domainModelReader: ctx.DomainModelReader,
-			microflowsRepo:    ctx.Microflows,
-			nanoflowsRepo:     ctx.Nanoflows,
+			moduleLister:      deps.ModuleLister,
+			domainModelReader: deps.DomainModelReader,
+			microflowsRepo:    deps.MicroflowRepo,
+			nanoflowsRepo:     deps.NanoflowRepo,
 			hierarchy:         hierarchy,
 			restServices:      restServices,
-			isNanoflow:        true, // EH defaults to "Abort" instead of "Rollback"
+			isNanoflow:        true,
 			version:           mendixVer,
 		}
 
-		// Initialise variable types from parameters so body statements
-		// can resolve member access on entity-typed params. Uses
-		// paramEntityRef to handle the TypeEnumeration+EnumRef case
-		// (bare qualified names like "HD.Ticket" parsed by buildDataType).
 		for _, p := range s.Parameters {
 			if ref := paramEntityRef(p.Type); ref != nil {
 				entityQN := ref.Module + "." + ref.Name
@@ -247,31 +213,22 @@ func execCreateNanoflowGen(ctx *ExecContext, s *ast.CreateNanoflowStmt) error {
 			}
 		}
 
-		// Register named return variable before building the flow graph
-		// so body statements that assign or read it pass the declared-
-		// variable check. Mirrors cmd_microflows_create_v2.go:215-219.
 		if s.ReturnType != nil && s.ReturnType.Variable != "" {
 			fb.declaredVars[s.ReturnType.Variable] = "Unknown"
 		}
 
 		oc = fb.buildFlowGraphGen(s.Body, s.ReturnType)
 
-		// Surface validation errors collected during build.
 		if errs := fb.GetErrors(); len(errs) > 0 {
 			return mdlerrors.NewValidationf(
 				"nanoflow '%s' has validation errors:\n  - %s",
 				qualifiedName, strings.Join(errs, "\n  - "))
 		}
 
-		// Inject parameters alongside body activities (gen describer
-		// walks the collection looking for both kinds).
 		for _, param := range paramElements {
 			oc.AddObjects(param)
 		}
 
-		// Append all sequence flows + annotation flows onto the
-		// nanoflow's Flows array (top-level placement, not nested in
-		// the ObjectCollection — matches the microflow path).
 		for _, flow := range fb.flows {
 			nf.AddFlows(flow)
 		}
@@ -282,10 +239,6 @@ func execCreateNanoflowGen(ctx *ExecContext, s *ast.CreateNanoflowStmt) error {
 
 	nf.SetObjectCollection(oc)
 
-	// Return type — set both the shorthand string (ReturnType) and the
-	// nested DataType element (MicroflowReturnType) that mx check requires
-	// for entity/list-of-entity return-variable type resolution.
-	// Mirrors cmd_microflows_create_gen.go:156-166.
 	if s.ReturnType != nil {
 		if t := paramASTToShortType(s.ReturnType.Type); t != "" {
 			nf.SetReturnType(t)
@@ -298,31 +251,28 @@ func execCreateNanoflowGen(ctx *ExecContext, s *ast.CreateNanoflowStmt) error {
 		}
 	}
 
-	// ── Persist ──────────────────────────────────────────────
 	if existing != nil {
-		if err := ctx.Nanoflows.Update(nf); err != nil {
+		if err := deps.NanoflowRepo.Update(nf); err != nil {
 			return mdlerrors.NewBackend("update nanoflow", err)
 		}
-		fmt.Fprintf(ctx.Output, "Replaced nanoflow: %s\n", qualifiedName)
+		fmt.Fprintf(deps.Output, "Replaced nanoflow: %s\n", qualifiedName)
 	} else {
-		if err := ctx.Nanoflows.Create(string(containerID), "Documents", nf); err != nil {
+		if err := deps.NanoflowRepo.Create(string(containerID), "Documents", nf); err != nil {
 			return mdlerrors.NewBackend("create nanoflow", err)
 		}
-		fmt.Fprintf(ctx.Output, "Created nanoflow: %s\n", qualifiedName)
+		fmt.Fprintf(deps.Output, "Created nanoflow: %s\n", qualifiedName)
 	}
 
-	// Track for dispatch-layer tests + invalidate caches so subsequent
-	// reads see the new unit.
 	returnEntityName := ""
 	if s.ReturnType != nil {
 		if ref := paramEntityRef(s.ReturnType.Type); ref != nil && ref.Module != "" {
 			returnEntityName = ref.Module + "." + ref.Name
 		}
 	}
-	ctx.trackCreatedNanoflow(s.Name.Module, s.Name.Name, model.ID(nf.ID()), containerID, returnEntityName)
+	ectx.trackCreatedNanoflow(s.Name.Module, s.Name.Name, model.ID(nf.ID()), containerID, returnEntityName)
 
-	invalidateHierarchy(ctx)
-	invalidateMicroflowsCache(ctx)
+	invalidateHierarchyFn(deps)
+	invalidateMicroflowsCacheFn(deps)
 	return nil
 }
 
@@ -452,6 +402,22 @@ func paramASTToShortType(t ast.DataType) string {
 // modules with no auto-role configured.
 func defaultDocumentAccessRoleQNames(ctx *ExecContext, module *model.Module) []string {
 	ids := defaultDocumentAccessRoles(ctx, module)
+	if len(ids) == 0 {
+		return nil
+	}
+	out := make([]string, 0, len(ids))
+	for _, id := range ids {
+		if s := string(id); s != "" {
+			out = append(out, s)
+		}
+	}
+	return out
+}
+
+// defaultDocumentAccessRoleQNamesFn is the HandlerDeps version of defaultDocumentAccessRoleQNames.
+func defaultDocumentAccessRoleQNamesFn(deps *HandlerDeps, module *model.Module) []string {
+	ectx := &ExecContext{Backend: deps.Backend}
+	ids := defaultDocumentAccessRoles(ectx, module)
 	if len(ids) == 0 {
 		return nil
 	}

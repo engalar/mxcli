@@ -4,6 +4,7 @@
 package executor
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
@@ -20,16 +21,24 @@ import (
 // info is recorded with the same qualified-name shape so a subsequent
 // CREATE OR MODIFY can reuse the UnitID via consumeDroppedMicroflow.
 func execDropMicroflow(ctx *ExecContext, s *ast.DropMicroflowStmt) error {
-	if !ctx.ConnectedForWrite() {
+	return execDropMicroflowFn(ctx, s, execContextToDeps(ctx))
+}
+
+// execDropMicroflowFn is the HandlerDeps version of execDropMicroflow.
+func execDropMicroflowFn(ctx context.Context, s *ast.DropMicroflowStmt, deps *HandlerDeps) error {
+	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
 
-	h, err := getHierarchy(ctx)
+	h, err := NewContainerHierarchyFromRoles(deps.ModuleLister, deps.MetadataReader, deps.FolderManager)
 	if err != nil {
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}
 
-	mfs, err := listMicroflowsGen(ctx)
+	if deps.MicroflowRepo == nil {
+		return mdlerrors.NewBackend("microflows repo unavailable", nil)
+	}
+	mfs, err := deps.MicroflowRepo.ListAll()
 	if err != nil {
 		return mdlerrors.NewBackend("list microflows", err)
 	}
@@ -39,7 +48,7 @@ func execDropMicroflow(ctx *ExecContext, s *ast.DropMicroflowStmt) error {
 			continue
 		}
 		mfID := model.ID(mf.ID())
-		containerID, _ := ctx.Microflows.GetContainerUUID(mfID)
+		containerID, _ := deps.MicroflowRepo.GetContainerUUID(mfID)
 		modName := h.GetModuleName(h.FindModuleID(containerID))
 		if modName == s.Name.Module && mf.Name() == s.Name.Name {
 			qualifiedName := s.Name.Module + "." + s.Name.Name
@@ -48,24 +57,63 @@ func execDropMicroflow(ctx *ExecContext, s *ast.DropMicroflowStmt) error {
 			for _, qn := range roleQNs {
 				roles = append(roles, model.ID(qn))
 			}
-			// Remember the UnitID and ContainerID *before* deletion so a
-			// subsequent CREATE OR REPLACE/MODIFY for the same qualified
-			// name can reuse them. This keeps Studio Pro compatible by
-			// turning delete+insert into an in-place update — same
-			// UnitID, same folder, just new bytes.
-			rememberDroppedMicroflow(ctx, qualifiedName, mfID, containerID, roles)
-			if err := ctx.deleteMicroflowViaRepoOrBackend(mfID); err != nil {
+			rememberDroppedMicroflowFn(deps, qualifiedName, mfID, containerID, roles)
+			if err := deleteMicroflowViaRepoOrBackendFn(deps, mfID); err != nil {
 				return mdlerrors.NewBackend("delete microflow", err)
 			}
-			if ctx.Cache != nil && ctx.Cache.createdMicroflows != nil {
-				delete(ctx.Cache.createdMicroflows, qualifiedName)
+			if deps.Cache != nil && deps.Cache.createdMicroflows != nil {
+				delete(deps.Cache.createdMicroflows, qualifiedName)
 			}
-			invalidateHierarchy(ctx)
-			invalidateMicroflowsCache(ctx)
-			fmt.Fprintf(ctx.Output, "Dropped microflow: %s.%s\n", s.Name.Module, s.Name.Name)
+			invalidateHierarchyFn(deps)
+			invalidateMicroflowsCacheFn(deps)
+			fmt.Fprintf(deps.Output, "Dropped microflow: %s.%s\n", s.Name.Module, s.Name.Name)
 			return nil
 		}
 	}
 
 	return mdlerrors.NewNotFound("microflow", s.Name.Module+"."+s.Name.Name)
+}
+
+// rememberDroppedMicroflowFn is the HandlerDeps version of rememberDroppedMicroflow.
+func rememberDroppedMicroflowFn(deps *HandlerDeps, qualifiedName string, id, containerID model.ID, allowedRoles []model.ID) {
+	if deps == nil || qualifiedName == "" || id == "" {
+		return
+	}
+	if deps.Cache == nil {
+		deps.Cache = &executorCache{}
+	}
+	if deps.Cache.droppedMicroflows == nil {
+		deps.Cache.droppedMicroflows = make(map[string]*droppedUnitInfo)
+	}
+	rolesCopy := make([]model.ID, len(allowedRoles))
+	copy(rolesCopy, allowedRoles)
+	deps.Cache.droppedMicroflows[qualifiedName] = &droppedUnitInfo{
+		ID:           id,
+		ContainerID:  containerID,
+		AllowedRoles: rolesCopy,
+	}
+}
+
+// deleteMicroflowViaRepoOrBackendFn is the HandlerDeps version of deleteMicroflowViaRepoOrBackend.
+func deleteMicroflowViaRepoOrBackendFn(deps *HandlerDeps, id model.ID) error {
+	if deps.MicroflowRepo != nil {
+		return deps.MicroflowRepo.Delete(id)
+	}
+	return deps.MicroflowWriter.DeleteMicroflow(id)
+}
+
+// invalidateHierarchyFn is the HandlerDeps version of invalidateHierarchy.
+func invalidateHierarchyFn(deps *HandlerDeps) {
+	if deps.Cache != nil {
+		deps.Cache.hierarchy = nil
+	}
+}
+
+// invalidateMicroflowsCacheFn is the HandlerDeps version of invalidateMicroflowsCache.
+func invalidateMicroflowsCacheFn(deps *HandlerDeps) {
+	if deps.Cache != nil {
+		deps.Cache.microflowNames = nil
+		deps.Cache.microflowsWithContainerGen = nil
+		deps.Cache.nanoflowsWithContainerGen = nil
+	}
 }

@@ -61,6 +61,7 @@
 package executor
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -84,12 +85,18 @@ import (
 // units from listJavaActionsWithContainerGen. Mirrors listJavaActions in
 // output shape; only the type source changes.
 func listJavaActionsGen(ctx *ExecContext, moduleName string) error {
-	h, err := getHierarchy(ctx)
+	return listJavaActionsGenFn(ctx, moduleName, execContextToDeps(ctx))
+}
+
+// listJavaActionsGenFn is the HandlerDeps version of listJavaActionsGen.
+func listJavaActionsGenFn(ctx context.Context, moduleName string, deps *HandlerDeps) error {
+	h, err := NewContainerHierarchyFromRoles(deps.ModuleLister, deps.MetadataReader, deps.FolderManager)
 	if err != nil {
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}
 
-	pairs, err := listJavaActionsWithContainerGen(ctx)
+	ectx := phase3d2bNewExecContext(ctx, deps)
+	pairs, err := listJavaActionsWithContainerGen(ectx)
 	if err != nil {
 		return mdlerrors.NewBackend("list java actions", err)
 	}
@@ -125,7 +132,7 @@ func listJavaActionsGen(ctx *ExecContext, moduleName string) error {
 	for _, r := range rows {
 		result.Rows = append(result.Rows, []any{r.qualifiedName, r.module, r.name, r.folderPath})
 	}
-	return writeResult(ctx, result)
+	return writeResultTo(deps.Output, deps.Format, result)
 }
 
 // modelIDFromElementID converts element.ID to model.ID; both are
@@ -144,18 +151,22 @@ func modelIDFromElementID(id element.ID) model.ID {
 // data. Mirrors the legacy describeJavaAction output format byte-for-byte
 // where possible; differences are noted inline.
 func describeJavaActionGen(ctx *ExecContext, name ast.QualifiedName) error {
-	if ctx == nil || ctx.JavaActions == nil {
+	return describeJavaActionGenFn(ctx, name, execContextToDeps(ctx))
+}
+
+// describeJavaActionGenFn is the HandlerDeps version of describeJavaActionGen.
+func describeJavaActionGenFn(ctx context.Context, name ast.QualifiedName, deps *HandlerDeps) error {
+	if deps == nil || deps.JavaActionRepo == nil {
 		return mdlerrors.NewNotFound("java action", name.Module+"."+name.Name)
 	}
 	qn := name.Module + "." + name.Name
-	ja, err := ctx.JavaActions.FindByQualifiedName(qn)
+	ja, err := deps.JavaActionRepo.FindByQualifiedName(qn)
 	if err != nil || ja == nil {
 		return mdlerrors.NewNotFound("java action", qn)
 	}
 
 	var sb strings.Builder
 
-	// Documentation comment (JavaDoc style).
 	doc := strings.ReplaceAll(ja.Documentation(), "\r\n", "\n")
 	doc = strings.ReplaceAll(doc, "\r", "\n")
 	if doc != "" {
@@ -240,7 +251,6 @@ func describeJavaActionGen(ctx *ExecContext, name ast.QualifiedName) error {
 			sb.WriteString("' in '")
 			sb.WriteString(category)
 			sb.WriteString("'")
-			// Icon: prefer gen IconQualifiedName(), fall back to raw.
 			icon := ""
 			if typed, ok := mai.(*genJA.MicroflowActionInfo); ok {
 				icon = typed.IconQualifiedName()
@@ -255,7 +265,7 @@ func describeJavaActionGen(ctx *ExecContext, name ast.QualifiedName) error {
 		}
 	}
 
-	userCode, allImports, extraCode := readJavaActionSource(ctx.MprPath, name.Module, name.Name)
+	userCode, allImports, extraCode := readJavaActionSource(deps.MprPath, name.Module, name.Name)
 	if len(allImports) > 0 {
 		sb.WriteString("\nimports $$\n")
 		for _, imp := range allImports {
@@ -285,13 +295,13 @@ func describeJavaActionGen(ctx *ExecContext, name ast.QualifiedName) error {
 	}
 
 	sb.WriteString(";")
-	fmt.Fprintln(ctx.Output, sb.String())
+	fmt.Fprintln(deps.Output, sb.String())
 
 	if el := ja.ExportLevel(); el != "" && el != "Hidden" {
-		fmt.Fprintf(ctx.Output, "-- export level: %s\n", el)
+		fmt.Fprintf(deps.Output, "-- export level: %s\n", el)
 	}
 	if ja.Excluded() {
-		fmt.Fprintln(ctx.Output, "-- EXCLUDED: true")
+		fmt.Fprintln(deps.Output, "-- EXCLUDED: true")
 	}
 	return nil
 }
@@ -305,12 +315,18 @@ func describeJavaActionGen(ctx *ExecContext, name ast.QualifiedName) error {
 // qualified-name/module/name/folder columns; unset Platform renders as
 // "All" (legacy convention).
 func listJavaScriptActionsGen(ctx *ExecContext, moduleName string) error {
-	h, err := getHierarchy(ctx)
+	return listJavaScriptActionsGenFn(ctx, moduleName, execContextToDeps(ctx))
+}
+
+// listJavaScriptActionsGenFn is the HandlerDeps version of listJavaScriptActionsGen.
+func listJavaScriptActionsGenFn(ctx context.Context, moduleName string, deps *HandlerDeps) error {
+	h, err := NewContainerHierarchyFromRoles(deps.ModuleLister, deps.MetadataReader, deps.FolderManager)
 	if err != nil {
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}
 
-	pairs, err := listJavaScriptActionsWithContainerGen(ctx)
+	ectx := phase3d2bNewExecContext(ctx, deps)
+	pairs, err := listJavaScriptActionsWithContainerGen(ectx)
 	if err != nil {
 		return mdlerrors.NewBackend("list javascript actions", err)
 	}
@@ -351,7 +367,7 @@ func listJavaScriptActionsGen(ctx *ExecContext, moduleName string) error {
 	for _, r := range rows {
 		result.Rows = append(result.Rows, []any{r.qualifiedName, r.module, r.name, r.platform, r.folderPath})
 	}
-	return writeResult(ctx, result)
+	return writeResultTo(deps.Output, deps.Format, result)
 }
 
 // ─────────────────────────────────────────────────────────────────────
@@ -365,17 +381,22 @@ func listJavaScriptActionsGen(ctx *ExecContext, moduleName string) error {
 // in gen, or none in legacy fixtures), Platform renders as a `PLATFORM`
 // clause, and the source body comes from javascriptsource/<module>/actions.
 func describeJavaScriptActionGen(ctx *ExecContext, name ast.QualifiedName) error {
-	if ctx == nil || ctx.JavaScriptActions == nil {
+	return describeJavaScriptActionGenFn(ctx, name, execContextToDeps(ctx))
+}
+
+// describeJavaScriptActionGenFn is the HandlerDeps version of describeJavaScriptActionGen.
+func describeJavaScriptActionGenFn(ctx context.Context, name ast.QualifiedName, deps *HandlerDeps) error {
+	if deps == nil || deps.JavaScriptActionRepo == nil {
 		return mdlerrors.NewNotFound("javascript action", name.Module+"."+name.Name)
 	}
 	qn := name.Module + "." + name.Name
 
-	// Container-aware lookup yields both the element and its folder path.
-	pairs, err := listJavaScriptActionsWithContainerGen(ctx)
+	ectx := phase3d2bNewExecContext(ctx, deps)
+	pairs, err := listJavaScriptActionsWithContainerGen(ectx)
 	if err != nil {
 		return mdlerrors.NewBackend("list javascript actions", err)
 	}
-	h, err := getHierarchy(ctx)
+	h, err := NewContainerHierarchyFromRoles(deps.ModuleLister, deps.MetadataReader, deps.FolderManager)
 	if err != nil {
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}
@@ -399,7 +420,6 @@ func describeJavaScriptActionGen(ctx *ExecContext, name ast.QualifiedName) error
 
 	var sb strings.Builder
 
-	// Documentation.
 	doc := strings.ReplaceAll(jsa.Documentation(), "\r\n", "\n")
 	doc = strings.ReplaceAll(doc, "\r", "\n")
 	if doc != "" {
@@ -415,7 +435,6 @@ func describeJavaScriptActionGen(ctx *ExecContext, name ast.QualifiedName) error
 	sb.WriteString("create or modify javascript action ")
 	sb.WriteString(qn)
 
-	// Type parameters list (generics).
 	typeParams := jsa.ActionTypeParametersItems()
 	if len(typeParams) > 0 {
 		names := make([]string, 0, len(typeParams))
@@ -434,7 +453,6 @@ func describeJavaScriptActionGen(ctx *ExecContext, name ast.QualifiedName) error
 	}
 	sb.WriteString("(")
 
-	// Read params from legacy Parameters or newer ActionParameters BSON key.
 	params := jsa.ParametersItems()
 	if len(params) == 0 {
 		params = jsa.ActionParametersItems()
@@ -447,7 +465,6 @@ func describeJavaScriptActionGen(ctx *ExecContext, name ast.QualifiedName) error
 		if i > 0 {
 			sb.WriteString(", ")
 		}
-		// Prefer legacy ParameterType (BasicParameterType wrapper), fall back to ActionParameterType.
 		typeElem := pp.ActionParameterType()
 		if typeElem != nil {
 			if bpt, bptOK := typeElem.(*genCA.BasicParameterType); bptOK {
@@ -480,8 +497,6 @@ func describeJavaScriptActionGen(ctx *ExecContext, name ast.QualifiedName) error
 		sb.WriteString("'")
 	}
 
-	// EXPOSED AS clause — JS uses ModelerActionInfo (no MicroflowActionInfo
-	// alias in the gen JavaScriptAction surface).
 	if mai := jsa.ModelerActionInfo(); mai != nil {
 		caption := genJA.ReadBSONString(mai, "Caption")
 		category := genJA.ReadBSONString(mai, "Category")
@@ -494,15 +509,12 @@ func describeJavaScriptActionGen(ctx *ExecContext, name ast.QualifiedName) error
 		}
 	}
 
-	// Code body block: { imports $$ $$ extra $$ $$ code $$ $$ }
-	userCode, extraCode, sourcePath := readJavaScriptActionSource(ctx.MprPath, name.Module, name.Name)
-	importsStr := readJavaScriptActionImports(ctx.MprPath, name.Module, name.Name)
+	userCode, extraCode, sourcePath := readJavaScriptActionSource(deps.MprPath, name.Module, name.Name)
+	importsStr := readJavaScriptActionImports(deps.MprPath, name.Module, name.Name)
 
-	// Determine whether the source file exists on disk so we know whether
-	// to emit body sections even when their content is empty.
 	sourceExists := false
-	if ctx.MprPath != "" {
-		projectRoot := filepath.Dir(ctx.MprPath)
+	if deps.MprPath != "" {
+		projectRoot := filepath.Dir(deps.MprPath)
 		primary := filepath.Join(projectRoot, "javascriptsource", name.Module, "actions", name.Name+".js")
 		if _, err := os.Stat(primary); err == nil {
 			sourceExists = true
@@ -540,22 +552,22 @@ func describeJavaScriptActionGen(ctx *ExecContext, name ast.QualifiedName) error
 	sb.WriteString("\n}")
 
 	sb.WriteString(";")
-	fmt.Fprintln(ctx.Output, sb.String())
+	fmt.Fprintln(deps.Output, sb.String())
 
-	fmt.Fprintf(ctx.Output, "-- source: %s", sourcePath)
+	fmt.Fprintf(deps.Output, "-- source: %s", sourcePath)
 	if !sourceExists {
-		fmt.Fprintf(ctx.Output, " (NOT FOUND)")
+		fmt.Fprintf(deps.Output, " (NOT FOUND)")
 	}
-	fmt.Fprintln(ctx.Output)
+	fmt.Fprintln(deps.Output)
 
 	if el := jsa.ExportLevel(); el != "" && el != "Hidden" {
-		fmt.Fprintf(ctx.Output, "-- export level: %s\n", el)
+		fmt.Fprintf(deps.Output, "-- export level: %s\n", el)
 	}
 	if jsa.Excluded() {
-		fmt.Fprintln(ctx.Output, "-- EXCLUDED: true")
+		fmt.Fprintln(deps.Output, "-- EXCLUDED: true")
 	}
 	if rn := jsa.ActionDefaultReturnName(); rn != "" {
-		fmt.Fprintf(ctx.Output, "-- return NAME: '%s'\n", rn)
+		fmt.Fprintf(deps.Output, "-- return NAME: '%s'\n", rn)
 	}
 	return nil
 }

@@ -38,6 +38,7 @@
 package executor
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -53,27 +54,32 @@ import (
 // execCreateMicroflowGen handles CREATE MICROFLOW via the gen-typed
 // write path.
 func execCreateMicroflowGen(ctx *ExecContext, s *ast.CreateMicroflowStmt) error {
-	if !ctx.ConnectedForWrite() {
+	return execCreateMicroflowGenFn(ctx, s, execContextToDeps(ctx))
+}
+
+// execCreateMicroflowGenFn is the HandlerDeps version of execCreateMicroflowGen.
+func execCreateMicroflowGenFn(ctx context.Context, s *ast.CreateMicroflowStmt, deps *HandlerDeps) error {
+	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
-	if ctx.Microflows == nil {
+	if deps.MicroflowRepo == nil {
 		return mdlerrors.NewBackend("microflows repo unavailable", nil)
 	}
 
-	// ── Validation ───────────────────────────────────────────
 	if strings.TrimSpace(s.Name.Name) == "" {
 		return mdlerrors.NewValidation("microflow name must not be empty")
 	}
 
-	module, err := findOrCreateModule(ctx, s.Name.Module)
+	ectx := phase3d2bNewExecContext(ctx, deps)
+	module, err := findOrCreateModule(ectx, s.Name.Module)
 	if err != nil {
 		return err
 	}
 
 	containerID := module.ID
 	if s.Folder != "" {
-		h, _ := getHierarchy(ctx)
-		folderID, err := resolveFolder(ctx, module.ID, s.Folder, h)
+		h, _ := getHierarchy(ectx)
+		folderID, err := resolveFolder(ectx, module.ID, s.Folder, h)
 		if err != nil {
 			return mdlerrors.NewBackend("resolve folder "+s.Folder, err)
 		}
@@ -82,22 +88,17 @@ func execCreateMicroflowGen(ctx *ExecContext, s *ast.CreateMicroflowStmt) error 
 
 	qualifiedName := s.Name.Module + "." + s.Name.Name
 
-	// ── Existence + replace handling ──────────────────────────
-	// Uses listMicroflowsWithContainerGen (which caches the ListAll +
-	// GetContainerUUID pair) instead of raw ListAll + per-element
-	// genFlowContainerModule, so that consecutive statements in the same
-	// script reuse one batch fetch when the cache isn't invalidated.
 	var (
 		existing             *genMf.Microflow
 		existingContainerID  model.ID
 		existingAllowedRoles []string
 		preserveAllowedRoles bool
 	)
-	items, err := listMicroflowsWithContainerGen(ctx)
+	items, err := listMicroflowsWithContainerGen(ectx)
 	if err != nil {
 		return mdlerrors.NewBackend("check existing microflows", err)
 	}
-	h, _ := getHierarchy(ctx)
+	h, _ := getHierarchy(ectx)
 	for _, item := range items {
 		if item.MF == nil {
 			continue
@@ -121,25 +122,18 @@ func execCreateMicroflowGen(ctx *ExecContext, s *ast.CreateMicroflowStmt) error 
 		existingParamNames = microflowParamNamesFromOC(existing)
 	}
 
-	// Folder-omission preserves the existing container on replace.
 	if existing != nil && s.Folder == "" && existingContainerID != "" {
 		containerID = existingContainerID
 	}
 
-	// ── Build the gen Microflow ──────────────────────────────
 	mf := genMf.NewMicroflow()
 	if existing != nil {
-		// Reuse existing element ID so refs and dirty bits don't
-		// shift across replace.
 		mf.SetID(existing.ID())
-	} else if dropped := consumeDroppedMicroflow(ctx, qualifiedName); dropped != nil {
+	} else if dropped := consumeDroppedMicroflow(ectx, qualifiedName); dropped != nil {
 		mf.SetID(element.ID(dropped.ID))
 		if s.Folder == "" && dropped.ContainerID != "" {
 			containerID = dropped.ContainerID
 		}
-		// Allowed role preservation across drop+create — same gap
-		// as nanoflow path: gen stores qualified names, dropped
-		// info captured raw model.IDs. Fall through to defaults.
 		preserveAllowedRoles = false
 	}
 
@@ -151,12 +145,9 @@ func execCreateMicroflowGen(ctx *ExecContext, s *ast.CreateMicroflowStmt) error 
 	if preserveAllowedRoles {
 		mf.SetAllowedModuleRolesQualifiedNames(existingAllowedRoles)
 	} else {
-		mf.SetAllowedModuleRolesQualifiedNames(defaultDocumentAccessRoleQNames(ctx, module))
+		mf.SetAllowedModuleRolesQualifiedNames(defaultDocumentAccessRoleQNames(ectx, module))
 	}
 
-	// Return type — set both the shorthand string (ReturnType) and the
-	// nested DataType element (MicroflowReturnType) that mx check requires
-	// for caller return-variable type resolution.
 	if s.ReturnType != nil {
 		if t := paramASTToShortType(s.ReturnType.Type); t != "" {
 			mf.SetReturnType(t)
@@ -168,22 +159,17 @@ func execCreateMicroflowGen(ctx *ExecContext, s *ast.CreateMicroflowStmt) error 
 			mf.SetReturnVariableName(s.ReturnType.Variable)
 		}
 	} else {
-		// No explicit returns clause → void/Nothing.
-		// Without this, mx check sees an unknown return type and reports
-		// CE6686 on any workflow CallMicroflowActivity that has a
-		// VoidConditionOutcome (the return types don't match).
 		mf.SetReturnType("Nothing")
 		vt := genDt.NewVoidType()
 		assignFreshID(vt)
 		mf.SetMicroflowReturnType(vt)
 	}
 
-	// ── Build the flow graph ─────────────────────────────────
-	hierarchy, _ := getHierarchy(ctx)
-	restServices, _ := loadRestServices(ctx)
+	hierarchy, _ := getHierarchy(ectx)
+	restServices, _ := loadRestServices(ectx)
 
 	var mendixVer version.Version
-	if rpv := ctx.ConnectionManager.ProjectVersion(); rpv != nil {
+	if rpv := deps.ConnectionManager.ProjectVersion(); rpv != nil {
 		mendixVer = version.Parse(rpv.ProductVersion)
 	}
 	fb := &flowBuilderGen{
@@ -194,25 +180,15 @@ func execCreateMicroflowGen(ctx *ExecContext, s *ast.CreateMicroflowStmt) error 
 		varTypes:          map[string]string{},
 		declaredVars:      map[string]string{},
 		measurer:          &layoutMeasurer{varTypes: map[string]string{}},
-		moduleLister:      ctx.ModuleLister,
-		domainModelReader: ctx.DomainModelReader,
-		microflowsRepo:    ctx.Microflows,
-		nanoflowsRepo:     ctx.Nanoflows,
+		moduleLister:      deps.ModuleLister,
+		domainModelReader: deps.DomainModelReader,
+		microflowsRepo:    deps.MicroflowRepo,
+		nanoflowsRepo:     deps.NanoflowRepo,
 		hierarchy:         hierarchy,
 		restServices:      restServices,
 		version:           mendixVer,
 	}
 
-	// Initialise variable types from parameters so body statements
-	// can resolve member access on entity-typed params.
-	//
-	// Note: buildDataType stores bare qualified names (e.g. "HD.Ticket") as
-	// TypeEnumeration+EnumRef rather than TypeEntity+EntityRef because the
-	// grammar cannot distinguish entity types from enumeration types at parse
-	// time (see CLAUDE.md "TypeEnumeration vs TypeEntity Ambiguity"). We must
-	// therefore treat TypeEnumeration+EnumRef as an entity reference here so
-	// that downstream helpers like classifyValidationTarget build fully-
-	// qualified attribute names. Without this, Studio Pro raises CE0639.
 	for _, p := range s.Parameters {
 		if ref := paramEntityRef(p.Type); ref != nil {
 			entityQN := ref.Module + "." + ref.Name
@@ -226,19 +202,12 @@ func execCreateMicroflowGen(ctx *ExecContext, s *ast.CreateMicroflowStmt) error 
 		}
 	}
 
-	// Register named return variable (returns Type as $Var) so body
-	// statements that assign or read it pass the declared-variable check.
 	if s.ReturnType != nil && s.ReturnType.Variable != "" {
 		fb.declaredVars[s.ReturnType.Variable] = "Unknown"
 	}
 
-	// Build the flow graph (StartEvent + body activities + EndEvent
-	// + sequence flows). The collection ends up on the microflow's
-	// ObjectCollection; flows go onto the microflow's Flows array
-	// (top-level, not nested in the collection).
 	oc := fb.buildFlowGraphGen(s.Body, s.ReturnType)
 
-	// Surface collected validation errors.
 	if errs := fb.GetErrors(); len(errs) > 0 {
 		var sb strings.Builder
 		sb.WriteString(fmt.Sprintf("microflow '%s' has validation errors:\n", qualifiedName))
@@ -248,23 +217,13 @@ func execCreateMicroflowGen(ctx *ExecContext, s *ast.CreateMicroflowStmt) error 
 		return fmt.Errorf("%s", sb.String())
 	}
 
-	// Inject parameters into the ObjectCollection so they round-trip
-	// alongside the body activities (gen describer walks the collection
-	// looking for MicroflowParameter elements).
-	// Each parameter gets a staggered Y position so they don't overlap
-	// when opened in Studio Pro.
 	for i, p := range s.Parameters {
 		param := genMf.NewMicroflowParameter()
 		assignFreshID(param)
 		param.SetName(p.Name)
 		param.SetRelativeMiddlePoint(layoutPos(ParameterStartX+i*ParameterSpacingX, ParameterStartY))
 		param.SetSize(layoutSize(ParameterWidth, ParameterHeight))
-		// Studio Pro stores the type exclusively in VariableType (a
-		// DataTypes child element). The Type() string field is never set.
-		// Resolve TypeEnumeration vs TypeEntity ambiguity: a bare qualified
-		// name (e.g. HD.Ticket) is parsed as TypeEnumeration — check the
-		// backend to determine the true kind.
-		paramType := resolveAmbiguousDataType(ctx, ctx.ModuleLister, ctx.DomainModelReader, p.Type)
+		paramType := resolveAmbiguousDataType(ectx, deps.ModuleLister, deps.DomainModelReader, p.Type)
 		if dt := convertASTToGenDataType(paramType); dt != nil {
 			param.SetParameterType(dt)
 		}
@@ -273,7 +232,6 @@ func execCreateMicroflowGen(ctx *ExecContext, s *ast.CreateMicroflowStmt) error 
 
 	mf.SetObjectCollection(oc)
 
-	// Append all sequence flows onto the microflow's Flows array.
 	for _, flow := range fb.flows {
 		mf.AddFlows(flow)
 	}
@@ -281,7 +239,6 @@ func execCreateMicroflowGen(ctx *ExecContext, s *ast.CreateMicroflowStmt) error 
 		mf.AddFlows(af)
 	}
 
-	// 检测参数签名变更，警告可能受影响的调用方。
 	if existing != nil && len(existingParamNames) > 0 {
 		newParamSet := make(map[string]bool, len(s.Parameters))
 		for _, p := range s.Parameters {
@@ -293,44 +250,32 @@ func execCreateMicroflowGen(ctx *ExecContext, s *ast.CreateMicroflowStmt) error 
 				removed = append(removed, old)
 			}
 		}
-		warnBrokenCallerRefs(ctx, qualifiedName, removed)
+		warnBrokenCallerRefs(ectx, qualifiedName, removed)
 	}
 
-	// ── Persist ──────────────────────────────────────────────
 	if existing != nil {
-		if err := ctx.Microflows.Update(mf); err != nil {
+		if err := deps.MicroflowRepo.Update(mf); err != nil {
 			return mdlerrors.NewBackend("update microflow", err)
 		}
-		fmt.Fprintf(ctx.Output, "Replaced microflow: %s\n", qualifiedName)
+		fmt.Fprintf(deps.Output, "Replaced microflow: %s\n", qualifiedName)
 	} else {
-		if err := ctx.Microflows.Create(string(containerID), "Documents", mf); err != nil {
+		if err := deps.MicroflowRepo.Create(string(containerID), "Documents", mf); err != nil {
 			return mdlerrors.NewBackend("create microflow", err)
 		}
-		fmt.Fprintf(ctx.Output, "Created microflow: %s\n", qualifiedName)
+		fmt.Fprintf(deps.Output, "Created microflow: %s\n", qualifiedName)
 	}
 
-	// Track for downstream lookups + invalidate caches so subsequent
-	// reads see the new unit.
 	returnEntityName := ""
 	if s.ReturnType != nil {
-		// Use paramEntityRef to handle the TypeEnumeration vs TypeEntity
-		// ambiguity: buildDataType stores bare qualified names (e.g.
-		// "Test.Order") as TypeEnumeration+EnumRef rather than
-		// TypeEntity+EntityRef because the MDL grammar cannot distinguish
-		// entity types from enumeration types at parse time.
 		if ref := paramEntityRef(s.ReturnType.Type); ref != nil && ref.Module != "" {
 			returnEntityName = ref.Module + "." + ref.Name
 		}
 	}
-	ctx.trackCreatedMicroflow(s.Name.Module, s.Name.Name, model.ID(mf.ID()), containerID, returnEntityName)
+	ectx.trackCreatedMicroflow(s.Name.Module, s.Name.Name, model.ID(mf.ID()), containerID, returnEntityName)
 
-	invalidateHierarchy(ctx)
-	// Only invalidate microflow caches on CREATE (new name enters the
-	// project).  On MODIFY the name → ID mapping and container UUID are
-	// unchanged, so the cached list & container UUIDs remain valid and
-	// can serve subsequent statements without re-fetching.
+	invalidateHierarchyFn(deps)
 	if existing == nil {
-		invalidateMicroflowsCache(ctx)
+		invalidateMicroflowsCacheFn(deps)
 	}
 	return nil
 }

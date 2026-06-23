@@ -49,6 +49,7 @@ type HandlerDeps struct {
 	NavigationWriter       backend.NavigationWriter
 	RenameManager          backend.RenameManager
 	JavaActionWriter       backend.JavaActionWriter
+	MicroflowWriter        backend.MicroflowWriter
 	ScheduledEventReader   backend.ScheduledEventReader
 	MetadataReader         backend.MetadataReader
 
@@ -446,22 +447,18 @@ func (e *Executor) registerFutureOverlays() {
 
 	// Microflow handlers
 	r.RegisterFuture("CreateMicroflow", func(ctx context.Context, stmt ast.Statement) error {
-		ectx := phase3d2bNewExecContext(ctx, deps)
-		return execCreateMicroflowGen(ectx, stmt.(*ast.CreateMicroflowStmt))
+		return execCreateMicroflowGenFn(ctx, stmt.(*ast.CreateMicroflowStmt), deps)
 	})
 	r.RegisterFuture("DropMicroflow", func(ctx context.Context, stmt ast.Statement) error {
-		ectx := phase3d2bNewExecContext(ctx, deps)
-		return execDropMicroflow(ectx, stmt.(*ast.DropMicroflowStmt))
+		return execDropMicroflowFn(ctx, stmt.(*ast.DropMicroflowStmt), deps)
 	})
 
 	// Nanoflow handlers
 	r.RegisterFuture("CreateNanoflow", func(ctx context.Context, stmt ast.Statement) error {
-		ectx := phase3d2bNewExecContext(ctx, deps)
-		return execCreateNanoflowGen(ectx, stmt.(*ast.CreateNanoflowStmt))
+		return execCreateNanoflowGenFn(ctx, stmt.(*ast.CreateNanoflowStmt), deps)
 	})
 	r.RegisterFuture("DropNanoflow", func(ctx context.Context, stmt ast.Statement) error {
-		ectx := phase3d2bNewExecContext(ctx, deps)
-		return execDropNanoflowGen(ectx, stmt.(*ast.DropNanoflowStmt))
+		return execDropNanoflowGenFn(ctx, stmt.(*ast.DropNanoflowStmt), deps)
 	})
 
 	// Page handlers
@@ -492,12 +489,10 @@ func (e *Executor) registerFutureOverlays() {
 
 	// Workflow handlers
 	r.RegisterFuture("CreateWorkflow", func(ctx context.Context, stmt ast.Statement) error {
-		ectx := phase3d2bNewExecContext(ctx, deps)
-		return execCreateWorkflowGen(ectx, stmt.(*ast.CreateWorkflowStmt))
+		return execCreateWorkflowGenFn(ctx, stmt.(*ast.CreateWorkflowStmt), deps)
 	})
 	r.RegisterFuture("DropWorkflow", func(ctx context.Context, stmt ast.Statement) error {
-		ectx := phase3d2bNewExecContext(ctx, deps)
-		return execDropWorkflowGen(ectx, stmt.(*ast.DropWorkflowStmt))
+		return execDropWorkflowGenFn(ctx, stmt.(*ast.DropWorkflowStmt), deps)
 	})
 	r.RegisterFuture("AlterWorkflow", func(ctx context.Context, stmt ast.Statement) error {
 		ectx := phase3d2bNewExecContext(ctx, deps)
@@ -926,6 +921,7 @@ func execContextToDeps(ectx *ExecContext) *HandlerDeps {
 		NavigationWriter:     ectx.NavigationWriter,
 		RenameManager:        ectx.RenameManager,
 		JavaActionWriter:     ectx.JavaActionWriter,
+		MicroflowWriter:      ectx.MicroflowWriter,
 
 		DomainModels:      ectx.DomainModels,
 		MicroflowRepo:     ectx.Microflows,
@@ -1006,6 +1002,7 @@ func (e *Executor) buildHandlerDeps() *HandlerDeps {
 		NavigationWriter:     e.backend,
 		RenameManager:        e.backend,
 		JavaActionWriter:     e.backend,
+		MicroflowWriter:      e.backend,
 		ServiceLister:        e.backend,
 		ServiceWriter:        e.backend,
 		DomainModelWriter:    e.backend,

@@ -4,6 +4,7 @@
 package executor
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -48,64 +49,102 @@ func findFolderByPath(ctx *ExecContext, moduleID model.ID, folderPath string, fo
 	return targetFolderID, nil
 }
 
+// findFolderByPathFn is the HandlerDeps version of findFolderByPath.
+func findFolderByPathFn(_ *HandlerDeps, moduleID model.ID, folderPath string, folders []*types.FolderInfo) (model.ID, error) {
+	parts := strings.Split(folderPath, "/")
+	currentContainerID := moduleID
+
+	var targetFolderID model.ID
+	for i, part := range parts {
+		if part == "" {
+			continue
+		}
+		var found bool
+		for _, f := range folders {
+			if f.ContainerID == currentContainerID && f.Name == part {
+				currentContainerID = f.ID
+				if i == len(parts)-1 {
+					targetFolderID = f.ID
+				}
+				found = true
+				break
+			}
+		}
+		if !found {
+			return "", mdlerrors.NewNotFound("folder", folderPath)
+		}
+	}
+	if targetFolderID == "" {
+		return "", mdlerrors.NewNotFound("folder", folderPath)
+	}
+	return targetFolderID, nil
+}
+
 // execDropFolder handles DROP FOLDER 'path' IN Module statements.
 // The folder must be empty (no child documents or sub-folders).
 func execDropFolder(ctx *ExecContext, s *ast.DropFolderStmt) error {
-	if !ctx.ConnectedForWrite() {
+	return execDropFolderFn(ctx, s, execContextToDeps(ctx))
+}
+
+// execDropFolderFn is the HandlerDeps version of execDropFolder.
+func execDropFolderFn(ctx context.Context, s *ast.DropFolderStmt, deps *HandlerDeps) error {
+	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnected()
 	}
 
-	module, err := findModule(ctx, s.Module)
+	module, err := findModuleFn(deps.ModuleLister, s.Module)
 	if err != nil {
 		return mdlerrors.NewNotFound("module", s.Module)
 	}
 
-	folders, err := ctx.FolderManager.ListFolders()
+	folders, err := deps.FolderManager.ListFolders()
 	if err != nil {
 		return mdlerrors.NewBackend("list folders", err)
 	}
 
-	folderID, err := findFolderByPath(ctx, module.ID, s.FolderPath, folders)
+	folderID, err := findFolderByPathFn(deps, module.ID, s.FolderPath, folders)
 	if err != nil {
 		return fmt.Errorf("%w in %s", err, s.Module)
 	}
 
-	if err := ctx.FolderManager.DeleteFolder(folderID); err != nil {
+	if err := deps.FolderManager.DeleteFolder(folderID); err != nil {
 		return mdlerrors.NewBackend(fmt.Sprintf("delete folder '%s'", s.FolderPath), err)
 	}
 
-	invalidateHierarchy(ctx)
-	fmt.Fprintf(ctx.Output, "Dropped folder: '%s' in %s\n", s.FolderPath, s.Module)
+	invalidateHierarchyFn(deps)
+	fmt.Fprintf(deps.Output, "Dropped folder: '%s' in %s\n", s.FolderPath, s.Module)
 	return nil
 }
 
 // execMoveFolder handles MOVE FOLDER Module.FolderName TO ... statements.
 func execMoveFolder(ctx *ExecContext, s *ast.MoveFolderStmt) error {
-	if !ctx.ConnectedForWrite() {
+	return execMoveFolderFn(ctx, s, execContextToDeps(ctx))
+}
+
+// execMoveFolderFn is the HandlerDeps version of execMoveFolder.
+func execMoveFolderFn(ctx context.Context, s *ast.MoveFolderStmt, deps *HandlerDeps) error {
+	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnected()
 	}
 
-	// Find the source module
-	sourceModule, err := findModule(ctx, s.Name.Module)
+	sourceModule, err := findModuleFn(deps.ModuleLister, s.Name.Module)
 	if err != nil {
 		return mdlerrors.NewNotFound("source module", s.Name.Module)
 	}
 
-	// Find the source folder
-	folders, err := ctx.FolderManager.ListFolders()
+	folders, err := deps.FolderManager.ListFolders()
 	if err != nil {
 		return mdlerrors.NewBackend("list folders", err)
 	}
 
-	folderID, err := findFolderByPath(ctx, sourceModule.ID, s.Name.Name, folders)
+	folderID, err := findFolderByPathFn(deps, sourceModule.ID, s.Name.Name, folders)
 	if err != nil {
 		return fmt.Errorf("%w in %s", err, s.Name.Module)
 	}
 
-	// Determine target module
 	var targetModule *model.Module
 	if s.TargetModule != "" {
-		targetModule, err = findModule(ctx, s.TargetModule)
+		targetModule, err = findModuleFn(deps.ModuleLister, s.TargetModule)
 		if err != nil {
 			return mdlerrors.NewNotFound("target module", s.TargetModule)
 		}
@@ -113,10 +152,10 @@ func execMoveFolder(ctx *ExecContext, s *ast.MoveFolderStmt) error {
 		targetModule = sourceModule
 	}
 
-	// Resolve target container
 	var targetContainerID model.ID
 	if s.TargetFolder != "" {
-		targetContainerID, err = resolveFolder(ctx, targetModule.ID, s.TargetFolder, nil)
+		ectx := phase3d2bNewExecContext(ctx, deps)
+		targetContainerID, err = resolveFolder(ectx, targetModule.ID, s.TargetFolder, nil)
 		if err != nil {
 			return mdlerrors.NewBackend("resolve target folder", err)
 		}
@@ -124,17 +163,16 @@ func execMoveFolder(ctx *ExecContext, s *ast.MoveFolderStmt) error {
 		targetContainerID = targetModule.ID
 	}
 
-	// Move the folder
-	if err := ctx.FolderManager.MoveFolder(folderID, targetContainerID); err != nil {
+	if err := deps.FolderManager.MoveFolder(folderID, targetContainerID); err != nil {
 		return mdlerrors.NewBackend("move folder", err)
 	}
 
-	invalidateHierarchy(ctx)
+	invalidateHierarchyFn(deps)
 
 	target := targetModule.Name
 	if s.TargetFolder != "" {
 		target += "/" + s.TargetFolder
 	}
-	fmt.Fprintf(ctx.Output, "Moved folder %s to %s\n", s.Name.String(), target)
+	fmt.Fprintf(deps.Output, "Moved folder %s to %s\n", s.Name.String(), target)
 	return nil
 }

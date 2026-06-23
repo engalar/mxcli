@@ -3,6 +3,7 @@
 package executor
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -26,14 +27,20 @@ import (
 // container UUIDs from the cache helper rather than from a sdk-typed
 // ContainerID field that gen objects don't carry.
 func execDropJavaActionGen(ctx *ExecContext, s *ast.DropJavaActionStmt) error {
-	if !ctx.ConnectedForWrite() {
+	return execDropJavaActionGenFn(ctx, s, execContextToDeps(ctx))
+}
+
+// execDropJavaActionGenFn is the HandlerDeps version of execDropJavaActionGen.
+func execDropJavaActionGenFn(ctx context.Context, s *ast.DropJavaActionStmt, deps *HandlerDeps) error {
+	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
-	h, err := getHierarchy(ctx)
+	h, err := NewContainerHierarchyFromRoles(deps.ModuleLister, deps.MetadataReader, deps.FolderManager)
 	if err != nil {
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}
-	pairs, err := listJavaActionsWithContainerGen(ctx)
+	ectx := phase3d2bNewExecContext(ctx, deps)
+	pairs, err := listJavaActionsWithContainerGen(ectx)
 	if err != nil {
 		return mdlerrors.NewBackend("list java actions", err)
 	}
@@ -49,17 +56,24 @@ func execDropJavaActionGen(ctx *ExecContext, s *ast.DropJavaActionStmt) error {
 		// Phase D Delete is not yet wired through the gen repo (Phase
 		// D5 fills the writer); for now route through the legacy
 		// backend Delete which targets the same MPR Unit row by ID.
-		if err := ctx.JavaActionWriter.DeleteJavaAction(model.ID(p.Elem.ID())); err != nil {
+		if err := deps.JavaActionWriter.DeleteJavaAction(model.ID(p.Elem.ID())); err != nil {
 			return mdlerrors.NewBackend("delete java action", err)
 		}
-		if err := ctx.JavaActionWriter.DeleteJavaSourceFile(modName, p.Elem.Name()); err != nil {
+		if err := deps.JavaActionWriter.DeleteJavaSourceFile(modName, p.Elem.Name()); err != nil {
 			return mdlerrors.NewBackend("delete java source file", err)
 		}
-		invalidateJavaActionsCache(ctx)
-		fmt.Fprintf(ctx.Output, "Dropped java action: %s.%s\n", s.Name.Module, s.Name.Name)
+		invalidateJavaActionsCacheFn(deps)
+		fmt.Fprintf(deps.Output, "Dropped java action: %s.%s\n", s.Name.Module, s.Name.Name)
 		return nil
 	}
 	return mdlerrors.NewNotFound("java action", s.Name.Module+"."+s.Name.Name)
+}
+
+// invalidateJavaActionsCacheFn is the HandlerDeps version of invalidateJavaActionsCache.
+func invalidateJavaActionsCacheFn(deps *HandlerDeps) {
+	if deps.Cache != nil {
+		deps.Cache.javaActionsWithContainerGen = nil
+	}
 }
 
 // ─────────────────────────────────────────────────────────────────────
@@ -70,17 +84,21 @@ func execDropJavaActionGen(ctx *ExecContext, s *ast.DropJavaActionStmt) error {
 // Creates the BSON unit and JavaScript source file from scratch, mirroring
 // execCreateJavaActionGen — no Studio Pro pre-requisite.
 func execCreateJavaScriptAction(ctx *ExecContext, s *ast.CreateJavaScriptActionStmt) error {
-	if !ctx.ConnectedForWrite() {
+	return execCreateJavaScriptActionFn(ctx, s, execContextToDeps(ctx))
+}
+
+// execCreateJavaScriptActionFn is the HandlerDeps version of execCreateJavaScriptAction.
+func execCreateJavaScriptActionFn(ctx context.Context, s *ast.CreateJavaScriptActionStmt, deps *HandlerDeps) error {
+	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
 
-	h, err := getHierarchy(ctx)
+	h, err := NewContainerHierarchyFromRoles(deps.ModuleLister, deps.MetadataReader, deps.FolderManager)
 	if err != nil {
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}
 
-	// Find the module.
-	modules, err := ctx.ModuleLister.ListModules()
+	modules, err := deps.ModuleLister.ListModules()
 	if err != nil {
 		return mdlerrors.NewBackend("get modules", err)
 	}
@@ -99,8 +117,8 @@ func execCreateJavaScriptAction(ctx *ExecContext, s *ast.CreateJavaScriptActionS
 		return mdlerrors.NewNotFound("module", s.Name.Module)
 	}
 
-	// Existence check.
-	pairs, err := listJavaScriptActionsWithContainerGen(ctx)
+	ectx := phase3d2bNewExecContext(ctx, deps)
+	pairs, err := listJavaScriptActionsWithContainerGen(ectx)
 	if err != nil {
 		return mdlerrors.NewBackend("list javascript actions", err)
 	}
@@ -120,7 +138,6 @@ func execCreateJavaScriptAction(ctx *ExecContext, s *ast.CreateJavaScriptActionS
 		}
 	}
 
-	// Build the gen JavaScriptAction.
 	jsa := genJSA.NewJavaScriptAction()
 	if existingJSA != nil {
 		jsa.SetID(existingJSA.ID())
@@ -136,9 +153,6 @@ func execCreateJavaScriptAction(ctx *ExecContext, s *ast.CreateJavaScriptActionS
 		jsa.SetPlatform(s.Platform)
 	}
 
-	// Parameters — JS actions store the inner type directly (no BasicParameterType wrapper).
-	// When modifying, match existing parameters by name to preserve their element IDs
-	// so nanoflow call references don't break (CE1613).
 	existingParams := make(map[string]element.ID)
 	if existingJSA != nil {
 		for _, p := range existingJSA.ParametersItems() {
@@ -158,7 +172,6 @@ func execCreateJavaScriptAction(ctx *ExecContext, s *ast.CreateJavaScriptActionS
 		jsaParam.SetCategory("")
 		jsaParam.SetDescription("")
 		jsaParam.SetIsRequired(param.IsRequired)
-		// Use legacy BSON format: BasicParameterType wrapper + Parameters key
 		innerType := astDataTypeToJavaActionParamTypeGen(param.Type, nil)
 		bpt := genCA.NewBasicParameterType()
 		bpt.SetID(element.ID(types.GenerateID()))
@@ -167,25 +180,22 @@ func execCreateJavaScriptAction(ctx *ExecContext, s *ast.CreateJavaScriptActionS
 		jsa.AddParameters(jsaParam)
 	}
 
-	// Return type — mxbuild 11.6.6 reads the legacy JavaReturnType key.
 	if s.ReturnType.Kind != ast.TypeVoid {
 		rt := astDataTypeToJavaActionReturnTypeGen(s.ReturnType, nil)
 		jsa.SetActionReturnType(rt)
 		jsa.SetJavaReturnType(rt)
 	}
 
-	// Persist.
 	if existingJSA != nil {
-		if err := ctx.JavaScriptActionWriter.UpdateJavaScriptActionGen(jsa); err != nil {
+		if err := deps.JavaScriptActionWriter.UpdateJavaScriptActionGen(jsa); err != nil {
 			return mdlerrors.NewBackend("update javascript action", err)
 		}
 	} else {
-		if err := ctx.JavaScriptActionWriter.CreateJavaScriptActionGen(string(containerID), "Documents", jsa); err != nil {
+		if err := deps.JavaScriptActionWriter.CreateJavaScriptActionGen(string(containerID), "Documents", jsa); err != nil {
 			return mdlerrors.NewBackend("create javascript action", err)
 		}
 	}
 
-	// JavaScript source file with parameter names (lowercased per Studio Pro convention).
 	if s.UserCode != "" || s.Imports != "" || s.ExtraCode != "" {
 		paramNames := make([]string, len(s.Parameters))
 		for i, p := range s.Parameters {
@@ -195,21 +205,28 @@ func execCreateJavaScriptAction(ctx *ExecContext, s *ast.CreateJavaScriptActionS
 				paramNames[i] = strings.ToLower(p.Name[:1]) + p.Name[1:]
 			}
 		}
-		if err := writeJavaScriptActionSource(ctx.MprPath, moduleName, s.Name.Name,
+		if err := writeJavaScriptActionSource(deps.MprPath, moduleName, s.Name.Name,
 			s.Imports, s.ExtraCode, s.UserCode, paramNames); err != nil {
 			return mdlerrors.NewBackend("write javascript source file", err)
 		}
 	}
 
-	invalidateJavaScriptActionsCache(ctx)
-	invalidateHierarchy(ctx)
+	invalidateJavaScriptActionsCacheFn(deps)
+	invalidateHierarchyFn(deps)
 
 	if existingJSA != nil {
-		fmt.Fprintf(ctx.Output, "Modified javascript action: %s.%s\n", s.Name.Module, s.Name.Name)
+		fmt.Fprintf(deps.Output, "Modified javascript action: %s.%s\n", s.Name.Module, s.Name.Name)
 	} else {
-		fmt.Fprintf(ctx.Output, "Created javascript action: %s.%s\n", s.Name.Module, s.Name.Name)
+		fmt.Fprintf(deps.Output, "Created javascript action: %s.%s\n", s.Name.Module, s.Name.Name)
 	}
 	return nil
+}
+
+// invalidateJavaScriptActionsCacheFn is the HandlerDeps version of invalidateJavaScriptActionsCache.
+func invalidateJavaScriptActionsCacheFn(deps *HandlerDeps) {
+	if deps.Cache != nil {
+		deps.Cache.javaScriptActionsWithContainerGen = nil
+	}
 }
 
 // ─────────────────────────────────────────────────────────────────────
@@ -241,18 +258,21 @@ func execCreateJavaScriptAction(ctx *ExecContext, s *ast.CreateJavaScriptActionS
 // already dispatch on both flavours via javaActionParametersOf /
 // javaActionReturnTypeElement (no schema-gap mismatch on roundtrip).
 func execCreateJavaActionGen(ctx *ExecContext, s *ast.CreateJavaActionStmt) error {
-	if !ctx.ConnectedForWrite() {
+	return execCreateJavaActionGenFn(ctx, s, execContextToDeps(ctx))
+}
+
+// execCreateJavaActionGenFn is the HandlerDeps version of execCreateJavaActionGen.
+func execCreateJavaActionGenFn(ctx context.Context, s *ast.CreateJavaActionStmt, deps *HandlerDeps) error {
+	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
 
-	h, err := getHierarchy(ctx)
+	h, err := NewContainerHierarchyFromRoles(deps.ModuleLister, deps.MetadataReader, deps.FolderManager)
 	if err != nil {
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}
 
-	// Find the module (no auto-create — keeps parity with legacy
-	// execCreateJavaAction behaviour: missing module → NotFound).
-	modules, err := ctx.ModuleLister.ListModules()
+	modules, err := deps.ModuleLister.ListModules()
 	if err != nil {
 		return mdlerrors.NewBackend("get modules", err)
 	}
@@ -271,9 +291,8 @@ func execCreateJavaActionGen(ctx *ExecContext, s *ast.CreateJavaActionStmt) erro
 		return mdlerrors.NewNotFound("module", s.Name.Module)
 	}
 
-	// Existence check via the cache helper. The helper resolves each
-	// JavaAction's container UUID so we can match by module name.
-	pairs, err := listJavaActionsWithContainerGen(ctx)
+	ectx := phase3d2bNewExecContext(ctx, deps)
+	pairs, err := listJavaActionsWithContainerGen(ectx)
 	if err != nil {
 		return mdlerrors.NewBackend("list java actions", err)
 	}
@@ -293,11 +312,8 @@ func execCreateJavaActionGen(ctx *ExecContext, s *ast.CreateJavaActionStmt) erro
 		}
 	}
 
-	// Build the gen JavaAction.
 	ja := genJA.NewJavaAction()
 	if existingJA != nil {
-		// Reuse existing element ID so refs and dirty bits don't
-		// shift across replace.
 		ja.SetID(existingJA.ID())
 	} else {
 		ja.SetID(element.ID(types.GenerateID()))
@@ -305,12 +321,9 @@ func execCreateJavaActionGen(ctx *ExecContext, s *ast.CreateJavaActionStmt) erro
 	ja.SetName(s.Name.Name)
 	ja.SetDocumentation(s.Documentation)
 	ja.SetExportLevel("Public")
-	// Mendix Studio Pro always writes Excluded and ActionDefaultReturnName.
-	// Omitting them causes MprTool to crash when sorting the project tree.
 	ja.SetExcluded(false)
 	ja.SetActionDefaultReturnName("ReturnValueName")
 
-	// Build type parameter definitions using the old TypeParameters list (not ActionTypeParameters).
 	typeParamIDs := make(map[string]element.ID, len(s.TypeParameters))
 	for _, tpName := range s.TypeParameters {
 		tp := genJA.NewTypeParameter()
@@ -319,21 +332,13 @@ func execCreateJavaActionGen(ctx *ExecContext, s *ast.CreateJavaActionStmt) erro
 		ja.AddTypeParameters(tp)
 		typeParamIDs[tpName] = tp.ID()
 	}
-	// Always write TypeParameters: [2] even when empty — Mendix expects this field.
 	ja.ForceWriteTypeParameters()
 
-	// Set up type-param name lookup for bare-name parameter types
-	// (mirrors legacy isTypeParamRef helper).
 	typeParamNames := make(map[string]bool, len(s.TypeParameters))
 	for _, tpName := range s.TypeParameters {
 		typeParamNames[tpName] = true
 	}
 
-	// Convert parameters using the old Mendix-native format:
-	// Parameters (not ActionParameters), ParameterType with CodeActions$BasicParameterType
-	// wrapper (not ActionParameterType with bare type), version marker 2 on the list.
-	// This matches what Mendix Studio Pro writes and avoids an MprTool crash
-	// (InvalidCastException) when opening the project.
 	for _, param := range s.Parameters {
 		jaParam := genJA.NewJavaActionParameter()
 		jaParam.SetID(element.ID(types.GenerateID()))
@@ -356,7 +361,6 @@ func execCreateJavaActionGen(ctx *ExecContext, s *ast.CreateJavaActionStmt) erro
 		default:
 			innerType = astDataTypeToJavaActionParamTypeGen(param.Type, typeParamIDs)
 		}
-		// Wrap in CodeActions$BasicParameterType (Mendix native format).
 		bpt := genCA.NewBasicParameterType()
 		bpt.SetID(element.ID(types.GenerateID()))
 		bpt.SetType(innerType)
@@ -364,7 +368,6 @@ func execCreateJavaActionGen(ctx *ExecContext, s *ast.CreateJavaActionStmt) erro
 		ja.AddParameters(jaParam)
 	}
 
-	// Convert return type using the old JavaReturnType field (not ActionReturnType).
 	if isTypeParamRef(s.ReturnType, typeParamNames) {
 		tpName := getTypeParamRefName(s.ReturnType)
 		pet := genCA.NewParameterizedEntityType()
@@ -376,7 +379,6 @@ func execCreateJavaActionGen(ctx *ExecContext, s *ast.CreateJavaActionStmt) erro
 		ja.SetJavaReturnType(astDataTypeToJavaActionReturnTypeGen(s.ReturnType, typeParamIDs))
 	}
 
-	// MicroflowActionInfo when EXPOSED AS clause is present (use CodeActions$ type, old format).
 	if s.ExposedCaption != "" {
 		mai := genCA.NewMicroflowActionInfo()
 		mai.SetCaption(s.ExposedCaption)
@@ -384,28 +386,17 @@ func execCreateJavaActionGen(ctx *ExecContext, s *ast.CreateJavaActionStmt) erro
 		ja.SetMicroflowActionInfo(mai)
 	}
 
-	// Persist via the gen-aware backend siblings.
 	if existingJA != nil {
-		if err := ctx.JavaActionWriter.UpdateJavaActionGen(ja); err != nil {
+		if err := deps.JavaActionWriter.UpdateJavaActionGen(ja); err != nil {
 			return mdlerrors.NewBackend("update java action", err)
 		}
 	} else {
-		if err := ctx.JavaActionWriter.CreateJavaActionGen(string(containerID), "Documents", ja); err != nil {
+		if err := deps.JavaActionWriter.CreateJavaActionGen(string(containerID), "Documents", ja); err != nil {
 			return mdlerrors.NewBackend("create java action", err)
 		}
 	}
 
-	// Java source file. ctx.Backend.WriteJavaSourceFileGen currently
-	// returns "not implemented (Phase D6)"; tolerate that so the BSON
-	// unit is still created. D6 fills in the real generator and source
-	// files start materialising automatically.
-	//
-	// TODO(Stage 3.3.2.D6): drop the "not implemented" fallback once
-	// writeJavaSourceFileViaPathGen lands a real generator.
 	if s.JavaCode != "" || len(s.Imports) > 0 || s.ExtraCode != "" {
-		// Guard: code block must contain only the method body, not the
-		// executeAction signature. The skeleton already wraps the body
-		// in `public X executeAction() throws Exception { ... }`.
 		if strings.Contains(s.JavaCode, "executeAction") {
 			return mdlerrors.NewValidationf(
 				"code block must contain only the method body, not the method signature\n" +
@@ -420,24 +411,22 @@ func execCreateJavaActionGen(ctx *ExecContext, s *ast.CreateJavaActionStmt) erro
 				params = append(params, pp)
 			}
 		}
-		if werr := ctx.JavaActionWriter.WriteJavaSourceFileGen(moduleName, s.Name.Name, s.JavaCode, params, ja.ActionReturnType(), s.Imports, s.ExtraCode); werr != nil {
+		if werr := deps.JavaActionWriter.WriteJavaSourceFileGen(moduleName, s.Name.Name, s.JavaCode, params, ja.ActionReturnType(), s.Imports, s.ExtraCode); werr != nil {
 			if !strings.Contains(werr.Error(), "not implemented") {
 				return mdlerrors.NewBackend("write java source file", werr)
 			}
-			// Fall through: BSON unit still created; source file
-			// writer is Phase D6's responsibility.
 		} else if len(s.Imports) > 0 {
-			fmt.Fprintf(ctx.Output, "note: %d import(s) merged into %s.java\n", len(s.Imports), s.Name.Name)
+			fmt.Fprintf(deps.Output, "note: %d import(s) merged into %s.java\n", len(s.Imports), s.Name.Name)
 		}
 	}
 
-	invalidateJavaActionsCache(ctx)
-	invalidateHierarchy(ctx)
+	invalidateJavaActionsCacheFn(deps)
+	invalidateHierarchyFn(deps)
 
 	if existingJA != nil {
-		fmt.Fprintf(ctx.Output, "Modified java action: %s.%s\n", s.Name.Module, s.Name.Name)
+		fmt.Fprintf(deps.Output, "Modified java action: %s.%s\n", s.Name.Module, s.Name.Name)
 	} else {
-		fmt.Fprintf(ctx.Output, "Created java action: %s.%s\n", s.Name.Module, s.Name.Name)
+		fmt.Fprintf(deps.Output, "Created java action: %s.%s\n", s.Name.Module, s.Name.Name)
 	}
 	return nil
 }
