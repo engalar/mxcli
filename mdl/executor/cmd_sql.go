@@ -242,46 +242,19 @@ func getOrAutoConnect(ctx *ExecContext, alias string) (*sqllib.Connection, error
 	return getOrAutoConnectFn(execContextToDeps(ctx), alias)
 }
 
-func execSQLConnect(ctx *ExecContext, s *ast.SQLConnectStmt) error {
-	return execSQLConnectFn(ctx, s, execContextToDeps(ctx))
-}
 
 func autoConnect(ctx *ExecContext, alias string) error {
 	return autoConnectFn(execContextToDeps(ctx), alias)
 }
 
-func execSQLDisconnect(ctx *ExecContext, s *ast.SQLDisconnectStmt) error {
-	return execSQLDisconnectFn(ctx, s, execContextToDeps(ctx))
-}
 
-func execSQLConnections(ctx *ExecContext) error {
-	return execSQLConnectionsFn(ctx, execContextToDeps(ctx))
-}
 
-func execSQLQuery(ctx *ExecContext, s *ast.SQLQueryStmt) error {
-	return execSQLQueryFn(ctx, s, execContextToDeps(ctx))
-}
 
-func execSQLShowTables(ctx *ExecContext, s *ast.SQLShowTablesStmt) error {
-	return execSQLShowTablesFn(ctx, s, execContextToDeps(ctx))
-}
 
-func execSQLShowViews(ctx *ExecContext, s *ast.SQLShowViewsStmt) error {
-	return execSQLShowViewsFn(ctx, s, execContextToDeps(ctx))
-}
 
-func execSQLShowFunctions(ctx *ExecContext, s *ast.SQLShowFunctionsStmt) error {
-	return execSQLShowFunctionsFn(ctx, s, execContextToDeps(ctx))
-}
 
-func execSQLGenerateConnector(ctx *ExecContext, s *ast.SQLGenerateConnectorStmt) error {
-	return execSQLGenerateConnectorFn(ctx, s, execContextToDeps(ctx))
-}
 
 func executeGeneratedMDL(ctx *ExecContext, mdl string) error {
 	return executeGeneratedMDLFn(execContextToDeps(ctx), mdl)
 }
 
-func execSQLDescribeTable(ctx *ExecContext, s *ast.SQLDescribeTableStmt) error {
-	return execSQLDescribeTableFn(ctx, s, execContextToDeps(ctx))
-}

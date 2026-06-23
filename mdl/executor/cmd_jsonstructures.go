@@ -215,13 +215,7 @@ func describeJsonStructure(ctx *ExecContext, name ast.QualifiedName) error {
 	return describeJsonStructureFn(ctx, execContextToDeps(ctx), name)
 }
 
-func execCreateJsonStructure(ctx *ExecContext, s *ast.CreateJsonStructureStmt) error {
-	return execCreateJsonStructureFn(ctx, s, execContextToDeps(ctx))
-}
 
-func execDropJsonStructure(ctx *ExecContext, s *ast.DropJsonStructureStmt) error {
-	return execDropJsonStructureFn(ctx, s, execContextToDeps(ctx))
-}
 
 func findJsonStructure(ctx *ExecContext, moduleName, structName string) *types.JsonStructure {
 	return findJsonStructureFn(execContextToDeps(ctx), moduleName, structName)

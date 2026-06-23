@@ -781,9 +781,6 @@ func buildParallelSplitGenActivity(wbc *wfBuildCtx, n *ast.WorkflowParallelSplit
 // Studio Pro's convention. Activity name dedup happens via
 // deduplicateActivityNamesGen (defined below). autoBindWorkflowGen
 // fills CallMicroflow ParameterMappings via D4/D5 helpers.
-func execCreateWorkflowGen(ctx *ExecContext, s *ast.CreateWorkflowStmt) error {
-	return execCreateWorkflowGenFn(ctx, s, execContextToDeps(ctx))
-}
 
 // execCreateWorkflowGenFn is the HandlerDeps version of execCreateWorkflowGen.
 func execCreateWorkflowGenFn(ctx context.Context, s *ast.CreateWorkflowStmt, deps *HandlerDeps) error {
@@ -1179,9 +1176,6 @@ func recurseConditionOutcomesDedupGen(outcomes []element.Element, nameCount map[
 // execDropWorkflowGen mirrors execDropWorkflow (cmd_workflows_write.go:133).
 // Lists via gen cache helper, deletes via FullBackend.DeleteWorkflow
 // (sdk-typed but ID-only — no migration needed).
-func execDropWorkflowGen(ctx *ExecContext, s *ast.DropWorkflowStmt) error {
-	return execDropWorkflowGenFn(ctx, s, execContextToDeps(ctx))
-}
 
 // execDropWorkflowGenFn is the HandlerDeps version of execDropWorkflowGen.
 func execDropWorkflowGenFn(ctx context.Context, s *ast.DropWorkflowStmt, deps *HandlerDeps) error {

@@ -151,16 +151,7 @@ func execDropUserRoleGenFn(ctx context.Context, s *ast.DropUserRoleStmt, deps *H
 }
 
 // execCreateUserRoleGen handles CREATE USER ROLE. Delegates to Fn version.
-func execCreateUserRoleGen(ctx *ExecContext, s *ast.CreateUserRoleStmt) error {
-	return execCreateUserRoleGenFn(ctx, s, execContextToDeps(ctx))
-}
 
 // execAlterUserRoleGen handles ALTER USER ROLE. Delegates to Fn version.
-func execAlterUserRoleGen(ctx *ExecContext, s *ast.AlterUserRoleStmt) error {
-	return execAlterUserRoleGenFn(ctx, s, execContextToDeps(ctx))
-}
 
 // execDropUserRoleGen handles DROP USER ROLE. Delegates to Fn version.
-func execDropUserRoleGen(ctx *ExecContext, s *ast.DropUserRoleStmt) error {
-	return execDropUserRoleGenFn(ctx, s, execContextToDeps(ctx))
-}

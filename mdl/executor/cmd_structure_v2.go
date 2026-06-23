@@ -60,9 +60,6 @@ func execShowStructureGenFn(ctx context.Context, s *ast.ShowStmt, deps *HandlerD
 // Old ExecContext wrapper
 // ────────────────────────────────────────────────────────────
 
-func execShowStructureGen(ctx *ExecContext, s *ast.ShowStmt) error {
-	return execShowStructureGenFn(ctx, s, execContextToDeps(ctx))
-}
 
 // ────────────────────────────────────────────────────────────
 // Implementation (originally execShowStructureGen — renamed)

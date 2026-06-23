@@ -270,9 +270,6 @@ func execCreateExportMappingFn(ctx context.Context, s *ast.CreateExportMappingSt
 }
 
 // execCreateExportMapping creates a new export mapping.
-func execCreateExportMapping(ctx *ExecContext, s *ast.CreateExportMappingStmt) error {
-	return execCreateExportMappingFn(ctx, s, execContextToDeps(ctx))
-}
 
 // buildExportMappingElementModel converts an AST element definition to a model element.
 // It clones properties from the matching JSON structure element and adds mapping bindings.
@@ -432,6 +429,3 @@ func execDropExportMappingFn(ctx context.Context, s *ast.DropExportMappingStmt, 
 }
 
 // execDropExportMapping deletes an export mapping.
-func execDropExportMapping(ctx *ExecContext, s *ast.DropExportMappingStmt) error {
-	return execDropExportMappingFn(ctx, s, execContextToDeps(ctx))
-}

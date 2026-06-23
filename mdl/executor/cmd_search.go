@@ -73,9 +73,6 @@ func execShowCallersFn(ctx context.Context, s *ast.ShowStmt, deps *HandlerDeps) 
 }
 
 // execShowCallers handles SHOW CALLERS OF Module.Microflow [TRANSITIVE].
-func execShowCallers(ctx *ExecContext, s *ast.ShowStmt) error {
-	return execShowCallersFn(ctx, s, execContextToDeps(ctx))
-}
 
 // execShowCalleesFn handles SHOW CALLEES OF with HandlerDeps.
 func execShowCalleesFn(ctx context.Context, s *ast.ShowStmt, deps *HandlerDeps) error {
@@ -116,9 +113,6 @@ func execShowCalleesFn(ctx context.Context, s *ast.ShowStmt, deps *HandlerDeps) 
 }
 
 // execShowCallees handles SHOW CALLEES OF Module.Microflow [TRANSITIVE].
-func execShowCallees(ctx *ExecContext, s *ast.ShowStmt) error {
-	return execShowCalleesFn(ctx, s, execContextToDeps(ctx))
-}
 
 // execShowReferencesFn handles SHOW REFERENCES TO with HandlerDeps.
 func execShowReferencesFn(ctx context.Context, s *ast.ShowStmt, deps *HandlerDeps) error {
@@ -154,9 +148,6 @@ func execShowReferencesFn(ctx context.Context, s *ast.ShowStmt, deps *HandlerDep
 }
 
 // execShowReferences handles SHOW REFERENCES TO Module.Entity.
-func execShowReferences(ctx *ExecContext, s *ast.ShowStmt) error {
-	return execShowReferencesFn(ctx, s, execContextToDeps(ctx))
-}
 
 // execShowImpactFn handles SHOW IMPACT OF with HandlerDeps.
 func execShowImpactFn(ctx context.Context, s *ast.ShowStmt, deps *HandlerDeps) error {
@@ -209,6 +200,3 @@ func execShowImpactFn(ctx context.Context, s *ast.ShowStmt, deps *HandlerDeps) e
 }
 
 // execShowImpact handles SHOW IMPACT OF Module.Entity.
-func execShowImpact(ctx *ExecContext, s *ast.ShowStmt) error {
-	return execShowImpactFn(ctx, s, execContextToDeps(ctx))
-}

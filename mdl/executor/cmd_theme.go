@@ -13,9 +13,6 @@ import (
 
 // execShowThemeVariables 通过 mxgraph 查询主题变量。
 // 语法: SHOW THEME VARIABLES [LIKE pattern] [ATLAS DEFAULTS]
-func execShowThemeVariables(ctx *ExecContext, s *ast.ShowThemeVariablesStmt) error {
-	return execShowThemeVariablesFn(ctx, s, execContextToDeps(ctx))
-}
 
 // execShowThemeVariablesFn is the HandlerDeps version of execShowThemeVariables.
 func execShowThemeVariablesFn(ctx context.Context, s *ast.ShowThemeVariablesStmt, deps *HandlerDeps) error {

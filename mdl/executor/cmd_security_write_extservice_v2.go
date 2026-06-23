@@ -202,25 +202,13 @@ func execRevokePublishedRestServiceAccessGenFn(ctx context.Context, s *ast.Revok
 // ─────────────────────────────────────────────────────────────────
 
 // execGrantODataServiceAccessGen handles GRANT ACCESS ON ODATA SERVICE. Delegates to Fn.
-func execGrantODataServiceAccessGen(ctx *ExecContext, s *ast.GrantODataServiceAccessStmt) error {
-	return execGrantODataServiceAccessGenFn(ctx, s, execContextToDeps(ctx))
-}
 
 // execRevokeODataServiceAccessGen handles REVOKE ACCESS ON ODATA SERVICE. Delegates to Fn.
-func execRevokeODataServiceAccessGen(ctx *ExecContext, s *ast.RevokeODataServiceAccessStmt) error {
-	return execRevokeODataServiceAccessGenFn(ctx, s, execContextToDeps(ctx))
-}
 
 // ─────────────────────────────────────────────────────────────────
 // GRANT / REVOKE ACCESS ON PUBLISHED REST SERVICE
 // ─────────────────────────────────────────────────────────────────
 
 // execGrantPublishedRestServiceAccessGen handles GRANT ON PUBLISHED REST SERVICE. Delegates to Fn.
-func execGrantPublishedRestServiceAccessGen(ctx *ExecContext, s *ast.GrantPublishedRestServiceAccessStmt) error {
-	return execGrantPublishedRestServiceAccessGenFn(ctx, s, execContextToDeps(ctx))
-}
 
 // execRevokePublishedRestServiceAccessGen handles REVOKE ON PUBLISHED REST SERVICE. Delegates to Fn.
-func execRevokePublishedRestServiceAccessGen(ctx *ExecContext, s *ast.RevokePublishedRestServiceAccessStmt) error {
-	return execRevokePublishedRestServiceAccessGenFn(ctx, s, execContextToDeps(ctx))
-}

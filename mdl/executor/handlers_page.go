@@ -15,31 +15,31 @@ func registerPageHandlers(r *Registry) {
 		return execCreateSnippetV3(ctx, stmt.(*ast.CreateSnippetStmtV3))
 	})
 	r.Register(&ast.CreateLayoutStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return execCreateOrModifyLayout(ctx, stmt.(*ast.CreateLayoutStmt))
+		return execCreateOrModifyLayoutFn(ctx, stmt.(*ast.CreateLayoutStmt), execContextToDeps(ctx))
 	})
 	r.Register(&ast.DropSnippetStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
 		return execDropSnippet(ctx, stmt.(*ast.DropSnippetStmt))
 	})
 	r.Register(&ast.DropJavaActionStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return execDropJavaActionGen(ctx, stmt.(*ast.DropJavaActionStmt))
+		return execDropJavaActionGenFn(ctx, stmt.(*ast.DropJavaActionStmt), execContextToDeps(ctx))
 	})
 	r.Register(&ast.CreateJavaActionStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return execCreateJavaActionGen(ctx, stmt.(*ast.CreateJavaActionStmt))
+		return execCreateJavaActionGenFn(ctx, stmt.(*ast.CreateJavaActionStmt), execContextToDeps(ctx))
 	})
 	r.Register(&ast.CreateJavaScriptActionStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return execCreateJavaScriptAction(ctx, stmt.(*ast.CreateJavaScriptActionStmt))
+		return execCreateJavaScriptActionFn(ctx, stmt.(*ast.CreateJavaScriptActionStmt), execContextToDeps(ctx))
 	})
 	r.Register(&ast.DropFolderStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return execDropFolder(ctx, stmt.(*ast.DropFolderStmt))
+		return execDropFolderFn(ctx, stmt.(*ast.DropFolderStmt), execContextToDeps(ctx))
 	})
 	r.Register(&ast.MoveFolderStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return execMoveFolder(ctx, stmt.(*ast.MoveFolderStmt))
+		return execMoveFolderFn(ctx, stmt.(*ast.MoveFolderStmt), execContextToDeps(ctx))
 	})
 	r.Register(&ast.MoveStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return execMove(ctx, stmt.(*ast.MoveStmt))
+		return execMoveFn(ctx, stmt.(*ast.MoveStmt), execContextToDeps(ctx))
 	})
 	r.Register(&ast.RenameStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return execRename(ctx, stmt.(*ast.RenameStmt))
+		return execRenameFn(ctx, stmt.(*ast.RenameStmt), execContextToDeps(ctx))
 	})
 }
 

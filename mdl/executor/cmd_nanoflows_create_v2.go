@@ -43,9 +43,6 @@ import (
 // gen-typed write path. Behaviour parity with execCreateNanoflow for
 // the cases it supports (header-only / empty-body); rejects compound
 // bodies with an actionable error pending Stage 3.2.3.
-func execCreateNanoflowGen(ctx *ExecContext, s *ast.CreateNanoflowStmt) error {
-	return execCreateNanoflowGenFn(ctx, s, execContextToDeps(ctx))
-}
 
 // execCreateNanoflowGenFn is the HandlerDeps version of execCreateNanoflowGen.
 func execCreateNanoflowGenFn(ctx context.Context, s *ast.CreateNanoflowStmt, deps *HandlerDeps) error {

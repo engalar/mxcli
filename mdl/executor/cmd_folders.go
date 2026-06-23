@@ -82,9 +82,6 @@ func findFolderByPathFn(_ *HandlerDeps, moduleID model.ID, folderPath string, fo
 
 // execDropFolder handles DROP FOLDER 'path' IN Module statements.
 // The folder must be empty (no child documents or sub-folders).
-func execDropFolder(ctx *ExecContext, s *ast.DropFolderStmt) error {
-	return execDropFolderFn(ctx, s, execContextToDeps(ctx))
-}
 
 // execDropFolderFn is the HandlerDeps version of execDropFolder.
 func execDropFolderFn(ctx context.Context, s *ast.DropFolderStmt, deps *HandlerDeps) error {
@@ -117,9 +114,6 @@ func execDropFolderFn(ctx context.Context, s *ast.DropFolderStmt, deps *HandlerD
 }
 
 // execMoveFolder handles MOVE FOLDER Module.FolderName TO ... statements.
-func execMoveFolder(ctx *ExecContext, s *ast.MoveFolderStmt) error {
-	return execMoveFolderFn(ctx, s, execContextToDeps(ctx))
-}
 
 // execMoveFolderFn is the HandlerDeps version of execMoveFolder.
 func execMoveFolderFn(ctx context.Context, s *ast.MoveFolderStmt, deps *HandlerDeps) error {

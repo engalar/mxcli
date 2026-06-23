@@ -53,9 +53,6 @@ import (
 
 // execCreateMicroflowGen handles CREATE MICROFLOW via the gen-typed
 // write path.
-func execCreateMicroflowGen(ctx *ExecContext, s *ast.CreateMicroflowStmt) error {
-	return execCreateMicroflowGenFn(ctx, s, execContextToDeps(ctx))
-}
 
 // execCreateMicroflowGenFn is the HandlerDeps version of execCreateMicroflowGen.
 func execCreateMicroflowGenFn(ctx context.Context, s *ast.CreateMicroflowStmt, deps *HandlerDeps) error {

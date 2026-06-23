@@ -186,11 +186,5 @@ func execDropModuleRoleGenFn(ctx context.Context, s *ast.DropModuleRoleStmt, dep
 }
 
 // execCreateModuleRoleGen handles CREATE MODULE ROLE. Delegates to Fn version.
-func execCreateModuleRoleGen(ctx *ExecContext, s *ast.CreateModuleRoleStmt) error {
-	return execCreateModuleRoleGenFn(ctx, s, execContextToDeps(ctx))
-}
 
 // execDropModuleRoleGen handles DROP MODULE ROLE. Delegates to Fn version.
-func execDropModuleRoleGen(ctx *ExecContext, s *ast.DropModuleRoleStmt) error {
-	return execDropModuleRoleGenFn(ctx, s, execContextToDeps(ctx))
-}

@@ -16,48 +16,6 @@ import (
 	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 )
 
-// execRename handles RENAME statements for all document types.
-func execRename(ctx *ExecContext, s *ast.RenameStmt) error {
-	deps := execContextToDeps(ctx)
-	return execRenameFn(ctx, s, deps)
-}
-
-// execRenameEntity renames an entity and updates all BY_NAME references.
-func execRenameEntity(ctx *ExecContext, s *ast.RenameStmt) error {
-	deps := execContextToDeps(ctx)
-	return execRenameEntityFn(ctx, s, deps)
-}
-
-// execRenameModule renames a module and updates all BY_NAME references with the module prefix.
-func execRenameModule(ctx *ExecContext, s *ast.RenameStmt) error {
-	deps := execContextToDeps(ctx)
-	return execRenameModuleFn(ctx, s, deps)
-}
-
-// execRenameDocument handles RENAME MICROFLOW/NANOFLOW/PAGE/CONSTANT.
-// These are standalone documents where the Name field is in the document BSON itself.
-// The reference scanner handles updating all BY_NAME references, and then we update
-// the document's own Name field via a raw BSON rewrite.
-func execRenameDocument(ctx *ExecContext, s *ast.RenameStmt, docType string) error {
-	deps := execContextToDeps(ctx)
-	return execRenameDocumentFn(ctx, s, deps, docType)
-}
-
-func execRenameEnumeration(ctx *ExecContext, s *ast.RenameStmt) error {
-	deps := execContextToDeps(ctx)
-	return execRenameEnumerationFn(ctx, s, deps)
-}
-
-func execRenameAssociation(ctx *ExecContext, s *ast.RenameStmt) error {
-	deps := execContextToDeps(ctx)
-	return execRenameAssociationFn(ctx, s, deps)
-}
-
-func execRenameJavaAction(ctx *ExecContext, s *ast.RenameStmt) error {
-	deps := execContextToDeps(ctx)
-	return execRenameJavaActionFn(ctx, s, deps)
-}
-
 func printRenameReport(ctx *ExecContext, oldName, newName string, hits []types.RenameHit) {
 	printRenameReportFn(ctx.Output, oldName, newName, hits)
 }

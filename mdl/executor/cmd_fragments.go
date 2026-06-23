@@ -133,9 +133,6 @@ func fragmentsFromDeps(deps *HandlerDeps) map[string]*ast.DefineFragmentStmt {
 }
 
 // execDefineFragment stores a fragment definition in the executor's session state.
-func execDefineFragment(ctx *ExecContext, s *ast.DefineFragmentStmt) error {
-	return execDefineFragmentFn(ctx, s, execContextToDeps(ctx))
-}
 
 func listFragments(ctx *ExecContext) error {
 	return listFragmentsFn(ctx, execContextToDeps(ctx))

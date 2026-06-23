@@ -42,9 +42,6 @@ import (
 // does not yet model. The legacy path's role-preservation behaviour
 // is exercised on the same flow via the sdk track until Stage 3.2.3
 // reworks the dropped-tracker.
-func execDropNanoflowGen(ctx *ExecContext, s *ast.DropNanoflowStmt) error {
-	return execDropNanoflowGenFn(ctx, s, execContextToDeps(ctx))
-}
 
 // execDropNanoflowGenFn is the HandlerDeps version of execDropNanoflowGen.
 func execDropNanoflowGenFn(ctx context.Context, s *ast.DropNanoflowStmt, deps *HandlerDeps) error {

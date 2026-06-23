@@ -354,9 +354,6 @@ func listSnippetsWithContainerGenCtx(deps *HandlerDeps) ([]ContainerWithGen[*gen
 // Old ExecContext wrappers (delegate to Fn versions)
 // ────────────────────────────────────────────────────────────
 
-func execShowDesignProperties(ctx *ExecContext, s *ast.ShowDesignPropertiesStmt) error {
-	return execShowDesignPropertiesFn(ctx, s, execContextToDeps(ctx))
-}
 
 func printDesignProperties(ctx *ExecContext, registry *ThemeRegistry, dpKey string) {
 	printDesignPropertiesFn(ctx.Output, registry, dpKey)
@@ -366,13 +363,7 @@ func printOneProperty(ctx *ExecContext, p ThemeProperty) {
 	printOnePropertyFn(ctx.Output, p)
 }
 
-func execDescribeStyling(ctx *ExecContext, s *ast.DescribeStylingStmt) error {
-	return execDescribeStylingFn(ctx, s, execContextToDeps(ctx))
-}
 
-func execAlterStyling(ctx *ExecContext, s *ast.AlterStylingStmt) error {
-	return execAlterStylingFn(ctx, s, execContextToDeps(ctx))
-}
 
 func alterStylingOnPage(ctx *ExecContext, s *ast.AlterStylingStmt, h *ContainerHierarchy) error {
 	return alterStylingOnPageFn(ctx, s, h, execContextToDeps(ctx))

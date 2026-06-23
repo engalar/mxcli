@@ -6,43 +6,43 @@ import "github.com/mendixlabs/mxcli/mdl/ast"
 
 func registerSecurityHandlers(r *Registry) {
 	r.Register(&ast.CreateModuleRoleStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return execCreateModuleRoleGen(ctx, stmt.(*ast.CreateModuleRoleStmt))
+		return execCreateModuleRoleGenFn(ctx, stmt.(*ast.CreateModuleRoleStmt), execContextToDeps(ctx))
 	})
 	r.Register(&ast.DropModuleRoleStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return execDropModuleRoleGen(ctx, stmt.(*ast.DropModuleRoleStmt))
+		return execDropModuleRoleGenFn(ctx, stmt.(*ast.DropModuleRoleStmt), execContextToDeps(ctx))
 	})
 	r.Register(&ast.CreateUserRoleStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return execCreateUserRoleGen(ctx, stmt.(*ast.CreateUserRoleStmt))
+		return execCreateUserRoleGenFn(ctx, stmt.(*ast.CreateUserRoleStmt), execContextToDeps(ctx))
 	})
 	r.Register(&ast.AlterUserRoleStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return execAlterUserRoleGen(ctx, stmt.(*ast.AlterUserRoleStmt))
+		return execAlterUserRoleGenFn(ctx, stmt.(*ast.AlterUserRoleStmt), execContextToDeps(ctx))
 	})
 	r.Register(&ast.DropUserRoleStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return execDropUserRoleGen(ctx, stmt.(*ast.DropUserRoleStmt))
+		return execDropUserRoleGenFn(ctx, stmt.(*ast.DropUserRoleStmt), execContextToDeps(ctx))
 	})
 	r.Register(&ast.GrantEntityAccessStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return execGrantEntityAccessGen(ctx, stmt.(*ast.GrantEntityAccessStmt))
+		return execGrantEntityAccessGenFn(ctx, stmt.(*ast.GrantEntityAccessStmt), execContextToDeps(ctx))
 	})
 	r.Register(&ast.RevokeEntityAccessStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return execRevokeEntityAccessGen(ctx, stmt.(*ast.RevokeEntityAccessStmt))
+		return execRevokeEntityAccessGenFn(ctx, stmt.(*ast.RevokeEntityAccessStmt), execContextToDeps(ctx))
 	})
 	r.Register(&ast.GrantMicroflowAccessStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return execGrantMicroflowAccessGen(ctx, stmt.(*ast.GrantMicroflowAccessStmt))
+		return execGrantMicroflowAccessGenFn(ctx, stmt.(*ast.GrantMicroflowAccessStmt), execContextToDeps(ctx))
 	})
 	r.Register(&ast.RevokeMicroflowAccessStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return execRevokeMicroflowAccessGen(ctx, stmt.(*ast.RevokeMicroflowAccessStmt))
+		return execRevokeMicroflowAccessGenFn(ctx, stmt.(*ast.RevokeMicroflowAccessStmt), execContextToDeps(ctx))
 	})
 	r.Register(&ast.GrantNanoflowAccessStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return execGrantNanoflowAccessGen(ctx, stmt.(*ast.GrantNanoflowAccessStmt))
+		return execGrantNanoflowAccessGenFn(ctx, stmt.(*ast.GrantNanoflowAccessStmt), execContextToDeps(ctx))
 	})
 	r.Register(&ast.RevokeNanoflowAccessStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return execRevokeNanoflowAccessGen(ctx, stmt.(*ast.RevokeNanoflowAccessStmt))
+		return execRevokeNanoflowAccessGenFn(ctx, stmt.(*ast.RevokeNanoflowAccessStmt), execContextToDeps(ctx))
 	})
 	r.Register(&ast.GrantPageAccessStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return execGrantPageAccessGen(ctx, stmt.(*ast.GrantPageAccessStmt))
+		return execGrantPageAccessGenFn(ctx, stmt.(*ast.GrantPageAccessStmt), execContextToDeps(ctx))
 	})
 	r.Register(&ast.RevokePageAccessStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return execRevokePageAccessGen(ctx, stmt.(*ast.RevokePageAccessStmt))
+		return execRevokePageAccessGenFn(ctx, stmt.(*ast.RevokePageAccessStmt), execContextToDeps(ctx))
 	})
 	r.Register(&ast.GrantWorkflowAccessStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
 		return execGrantWorkflowAccess(ctx, stmt.(*ast.GrantWorkflowAccessStmt))
@@ -51,16 +51,16 @@ func registerSecurityHandlers(r *Registry) {
 		return execRevokeWorkflowAccess(ctx, stmt.(*ast.RevokeWorkflowAccessStmt))
 	})
 	r.Register(&ast.AlterProjectSecurityStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return execAlterProjectSecurityGen(ctx, stmt.(*ast.AlterProjectSecurityStmt))
+		return execAlterProjectSecurityGenFn(ctx, stmt.(*ast.AlterProjectSecurityStmt), execContextToDeps(ctx))
 	})
 	r.Register(&ast.CreateDemoUserStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return execCreateDemoUserGen(ctx, stmt.(*ast.CreateDemoUserStmt))
+		return execCreateDemoUserGenFn(ctx, stmt.(*ast.CreateDemoUserStmt), execContextToDeps(ctx))
 	})
 	r.Register(&ast.DropDemoUserStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return execDropDemoUserGen(ctx, stmt.(*ast.DropDemoUserStmt))
+		return execDropDemoUserGenFn(ctx, stmt.(*ast.DropDemoUserStmt), execContextToDeps(ctx))
 	})
 	r.Register(&ast.UpdateSecurityStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return execUpdateSecurityGen(ctx, stmt.(*ast.UpdateSecurityStmt))
+		return execUpdateSecurityGenFn(ctx, stmt.(*ast.UpdateSecurityStmt), execContextToDeps(ctx))
 	})
 }
 
@@ -72,12 +72,12 @@ func registerNavigationHandlers(r *Registry) {
 
 func registerImageHandlers(r *Registry) {
 	r.Register(&ast.CreateImageCollectionStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return execCreateImageCollection(ctx, stmt.(*ast.CreateImageCollectionStmt))
+		return execCreateImageCollectionFn(ctx, stmt.(*ast.CreateImageCollectionStmt), execContextToDeps(ctx))
 	})
 	r.Register(&ast.DropImageCollectionStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return execDropImageCollection(ctx, stmt.(*ast.DropImageCollectionStmt))
+		return execDropImageCollectionFn(ctx, stmt.(*ast.DropImageCollectionStmt), execContextToDeps(ctx))
 	})
 	r.Register(&ast.AlterImageCollectionStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return execAlterImageCollection(ctx, stmt.(*ast.AlterImageCollectionStmt))
+		return execAlterImageCollectionFn(ctx, stmt.(*ast.AlterImageCollectionStmt), execContextToDeps(ctx))
 	})
 }

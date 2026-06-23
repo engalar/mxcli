@@ -58,6 +58,3 @@ func execAlterProjectSecurityGenFn(ctx context.Context, s *ast.AlterProjectSecur
 }
 
 // execAlterProjectSecurityGen handles ALTER PROJECT SECURITY. Delegates to Fn version.
-func execAlterProjectSecurityGen(ctx *ExecContext, s *ast.AlterProjectSecurityStmt) error {
-	return execAlterProjectSecurityGenFn(ctx, s, execContextToDeps(ctx))
-}

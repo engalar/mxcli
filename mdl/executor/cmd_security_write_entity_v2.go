@@ -310,11 +310,5 @@ func execRevokeEntityAccessGenFn(ctx context.Context, s *ast.RevokeEntityAccessS
 }
 
 // execGrantEntityAccessGen handles GRANT roles ON MODULE.ENTITY. Delegates to Fn version.
-func execGrantEntityAccessGen(ctx *ExecContext, s *ast.GrantEntityAccessStmt) error {
-	return execGrantEntityAccessGenFn(ctx, s, execContextToDeps(ctx))
-}
 
 // execRevokeEntityAccessGen handles REVOKE roles ON MODULE.ENTITY. Delegates to Fn version.
-func execRevokeEntityAccessGen(ctx *ExecContext, s *ast.RevokeEntityAccessStmt) error {
-	return execRevokeEntityAccessGenFn(ctx, s, execContextToDeps(ctx))
-}

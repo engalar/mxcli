@@ -276,9 +276,6 @@ func execCreateImportMappingFn(ctx context.Context, s *ast.CreateImportMappingSt
 }
 
 // execCreateImportMapping creates a new import mapping.
-func execCreateImportMapping(ctx *ExecContext, s *ast.CreateImportMappingStmt) error {
-	return execCreateImportMappingFn(ctx, s, execContextToDeps(ctx))
-}
 
 // buildImportMappingElementModel converts an AST element definition to a model element.
 // It clones properties from the matching JSON structure element (ExposedName, JsonPath,
@@ -481,6 +478,3 @@ func execDropImportMappingFn(ctx context.Context, s *ast.DropImportMappingStmt, 
 }
 
 // execDropImportMapping deletes an import mapping.
-func execDropImportMapping(ctx *ExecContext, s *ast.DropImportMappingStmt) error {
-	return execDropImportMappingFn(ctx, s, execContextToDeps(ctx))
-}

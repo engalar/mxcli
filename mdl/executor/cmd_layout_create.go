@@ -86,9 +86,6 @@ func execCreateOrModifyLayoutImpl(ctx *ExecContext, s *ast.CreateLayoutStmt) err
 	return nil
 }
 
-func execCreateOrModifyLayout(ctx *ExecContext, s *ast.CreateLayoutStmt) error {
-	return execCreateOrModifyLayoutFn(ctx, s, execContextToDeps(ctx))
-}
 
 func buildLayoutContent(s *ast.CreateLayoutStmt) element.Element {
 	if strings.HasPrefix(strings.ToLower(s.LayoutType), "native") {

@@ -14,9 +14,6 @@ import (
 )
 
 // execMove handles MOVE PAGE/MICROFLOW/SNIPPET/NANOFLOW/ENTITY/ENUMERATION statements.
-func execMove(ctx *ExecContext, s *ast.MoveStmt) error {
-	return execMoveFn(ctx, s, execContextToDeps(ctx))
-}
 
 // execMoveFn is the HandlerDeps version of execMove.
 func execMoveFn(ctx context.Context, s *ast.MoveStmt, deps *HandlerDeps) error {

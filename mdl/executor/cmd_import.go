@@ -15,9 +15,6 @@ import (
 )
 
 // execImport handles IMPORT FROM <alias> QUERY '<sql>' INTO Module.Entity MAP (...) [LINK (...)] [BATCH n] [LIMIT n]
-func execImport(ctx *ExecContext, s *ast.ImportStmt) error {
-	return execImportFn(ctx, s, execContextToDeps(ctx))
-}
 
 // execImportFn is the HandlerDeps version of execImport.
 func execImportFn(ctx context.Context, s *ast.ImportStmt, deps *HandlerDeps) error {

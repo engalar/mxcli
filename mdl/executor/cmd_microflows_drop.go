@@ -20,9 +20,6 @@ import (
 // `mf.AllowedModuleRolesQualifiedNames()` (gen accessor). The dropped
 // info is recorded with the same qualified-name shape so a subsequent
 // CREATE OR MODIFY can reuse the UnitID via consumeDroppedMicroflow.
-func execDropMicroflow(ctx *ExecContext, s *ast.DropMicroflowStmt) error {
-	return execDropMicroflowFn(ctx, s, execContextToDeps(ctx))
-}
 
 // execDropMicroflowFn is the HandlerDeps version of execDropMicroflow.
 func execDropMicroflowFn(ctx context.Context, s *ast.DropMicroflowStmt, deps *HandlerDeps) error {

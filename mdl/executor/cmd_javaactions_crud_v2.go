@@ -26,9 +26,6 @@ import (
 // Mirrors execDropJavaAction (cmd_javaactions.go:249) but consumes
 // container UUIDs from the cache helper rather than from a sdk-typed
 // ContainerID field that gen objects don't carry.
-func execDropJavaActionGen(ctx *ExecContext, s *ast.DropJavaActionStmt) error {
-	return execDropJavaActionGenFn(ctx, s, execContextToDeps(ctx))
-}
 
 // execDropJavaActionGenFn is the HandlerDeps version of execDropJavaActionGen.
 func execDropJavaActionGenFn(ctx context.Context, s *ast.DropJavaActionStmt, deps *HandlerDeps) error {
@@ -83,9 +80,6 @@ func invalidateJavaActionsCacheFn(deps *HandlerDeps) {
 // execCreateJavaScriptAction handles CREATE [OR MODIFY] JAVASCRIPT ACTION.
 // Creates the BSON unit and JavaScript source file from scratch, mirroring
 // execCreateJavaActionGen — no Studio Pro pre-requisite.
-func execCreateJavaScriptAction(ctx *ExecContext, s *ast.CreateJavaScriptActionStmt) error {
-	return execCreateJavaScriptActionFn(ctx, s, execContextToDeps(ctx))
-}
 
 // execCreateJavaScriptActionFn is the HandlerDeps version of execCreateJavaScriptAction.
 func execCreateJavaScriptActionFn(ctx context.Context, s *ast.CreateJavaScriptActionStmt, deps *HandlerDeps) error {
@@ -257,9 +251,6 @@ func invalidateJavaScriptActionsCacheFn(deps *HandlerDeps) {
 // ActionParameters / ActionReturnType setters; downstream readers
 // already dispatch on both flavours via javaActionParametersOf /
 // javaActionReturnTypeElement (no schema-gap mismatch on roundtrip).
-func execCreateJavaActionGen(ctx *ExecContext, s *ast.CreateJavaActionStmt) error {
-	return execCreateJavaActionGenFn(ctx, s, execContextToDeps(ctx))
-}
 
 // execCreateJavaActionGenFn is the HandlerDeps version of execCreateJavaActionGen.
 func execCreateJavaActionGenFn(ctx context.Context, s *ast.CreateJavaActionStmt, deps *HandlerDeps) error {

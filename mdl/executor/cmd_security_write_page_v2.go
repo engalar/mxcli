@@ -168,14 +168,8 @@ func lookupCreatedPageIDFn(ctx context.Context, deps *HandlerDeps, qualifiedName
 }
 
 // execGrantPageAccessGen handles GRANT VIEW ON PAGE. Delegates to Fn version.
-func execGrantPageAccessGen(ctx *ExecContext, s *ast.GrantPageAccessStmt) error {
-	return execGrantPageAccessGenFn(ctx, s, execContextToDeps(ctx))
-}
 
 // execRevokePageAccessGen handles REVOKE VIEW ON PAGE. Delegates to Fn version.
-func execRevokePageAccessGen(ctx *ExecContext, s *ast.RevokePageAccessStmt) error {
-	return execRevokePageAccessGenFn(ctx, s, execContextToDeps(ctx))
-}
 
 // lookupCreatedPageID finds a session-created page by qualified name.
 func lookupCreatedPageID(ctx *ExecContext, qualifiedName string) (model.ID, error) {

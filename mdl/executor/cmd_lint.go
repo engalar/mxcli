@@ -124,9 +124,6 @@ func listLintRulesFn(ctx context.Context, deps *HandlerDeps) error {
 }
 
 // execLint executes a LINT statement. Delegates to Fn version.
-func execLint(ctx *ExecContext, s *ast.LintStmt) error {
-	return execLintFn(ctx, s, execContextToDeps(ctx))
-}
 
 // listLintRules displays available lint rules.
 func listLintRules(ctx *ExecContext) error {

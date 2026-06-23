@@ -6,15 +6,15 @@ import "github.com/mendixlabs/mxcli/mdl/ast"
 
 func registerMicroflowAndNanoflowHandlers(r *Registry) {
 	r.Register(&ast.CreateMicroflowStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return execCreateMicroflowGen(ctx, stmt.(*ast.CreateMicroflowStmt))
+		return execCreateMicroflowGenFn(ctx, stmt.(*ast.CreateMicroflowStmt), execContextToDeps(ctx))
 	})
 	r.Register(&ast.DropMicroflowStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return execDropMicroflow(ctx, stmt.(*ast.DropMicroflowStmt))
+		return execDropMicroflowFn(ctx, stmt.(*ast.DropMicroflowStmt), execContextToDeps(ctx))
 	})
 	r.Register(&ast.CreateNanoflowStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return execCreateNanoflowGen(ctx, stmt.(*ast.CreateNanoflowStmt))
+		return execCreateNanoflowGenFn(ctx, stmt.(*ast.CreateNanoflowStmt), execContextToDeps(ctx))
 	})
 	r.Register(&ast.DropNanoflowStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return execDropNanoflowGen(ctx, stmt.(*ast.DropNanoflowStmt))
+		return execDropNanoflowGenFn(ctx, stmt.(*ast.DropNanoflowStmt), execContextToDeps(ctx))
 	})
 }

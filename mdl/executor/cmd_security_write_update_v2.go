@@ -50,6 +50,3 @@ func execUpdateSecurityGenFn(ctx context.Context, s *ast.UpdateSecurityStmt, dep
 }
 
 // execUpdateSecurityGen handles UPDATE SECURITY. Delegates to Fn version.
-func execUpdateSecurityGen(ctx *ExecContext, s *ast.UpdateSecurityStmt) error {
-	return execUpdateSecurityGenFn(ctx, s, execContextToDeps(ctx))
-}

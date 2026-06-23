@@ -258,26 +258,8 @@ func execDropAgentFn(ctx context.Context, s *ast.DropAgentStmt, deps *HandlerDep
 	return nil
 }
 
-func execCreateConsumedMCPService(ctx *ExecContext, s *ast.CreateConsumedMCPServiceStmt) error {
-	return execCreateConsumedMCPServiceFn(ctx, s, execContextToDeps(ctx))
-}
 
-func execDropConsumedMCPService(ctx *ExecContext, s *ast.DropConsumedMCPServiceStmt) error {
-	return execDropConsumedMCPServiceFn(ctx, s, execContextToDeps(ctx))
-}
 
-func execCreateKnowledgeBase(ctx *ExecContext, s *ast.CreateKnowledgeBaseStmt) error {
-	return execCreateKnowledgeBaseFn(ctx, s, execContextToDeps(ctx))
-}
 
-func execDropKnowledgeBase(ctx *ExecContext, s *ast.DropKnowledgeBaseStmt) error {
-	return execDropKnowledgeBaseFn(ctx, s, execContextToDeps(ctx))
-}
 
-func execCreateAgent(ctx *ExecContext, s *ast.CreateAgentStmt) error {
-	return execCreateAgentFn(ctx, s, execContextToDeps(ctx))
-}
 
-func execDropAgent(ctx *ExecContext, s *ast.DropAgentStmt) error {
-	return execDropAgentFn(ctx, s, execContextToDeps(ctx))
-}

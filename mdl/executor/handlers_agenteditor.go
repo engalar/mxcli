@@ -12,21 +12,21 @@ func registerAgentEditorHandlers(r *Registry) {
 		return execDropAgentEditorModel(ctx, stmt.(*ast.DropModelStmt))
 	})
 	r.Register(&ast.CreateConsumedMCPServiceStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return execCreateConsumedMCPService(ctx, stmt.(*ast.CreateConsumedMCPServiceStmt))
+		return execCreateConsumedMCPServiceFn(ctx, stmt.(*ast.CreateConsumedMCPServiceStmt), execContextToDeps(ctx))
 	})
 	r.Register(&ast.DropConsumedMCPServiceStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return execDropConsumedMCPService(ctx, stmt.(*ast.DropConsumedMCPServiceStmt))
+		return execDropConsumedMCPServiceFn(ctx, stmt.(*ast.DropConsumedMCPServiceStmt), execContextToDeps(ctx))
 	})
 	r.Register(&ast.CreateKnowledgeBaseStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return execCreateKnowledgeBase(ctx, stmt.(*ast.CreateKnowledgeBaseStmt))
+		return execCreateKnowledgeBaseFn(ctx, stmt.(*ast.CreateKnowledgeBaseStmt), execContextToDeps(ctx))
 	})
 	r.Register(&ast.DropKnowledgeBaseStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return execDropKnowledgeBase(ctx, stmt.(*ast.DropKnowledgeBaseStmt))
+		return execDropKnowledgeBaseFn(ctx, stmt.(*ast.DropKnowledgeBaseStmt), execContextToDeps(ctx))
 	})
 	r.Register(&ast.CreateAgentStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return execCreateAgent(ctx, stmt.(*ast.CreateAgentStmt))
+		return execCreateAgentFn(ctx, stmt.(*ast.CreateAgentStmt), execContextToDeps(ctx))
 	})
 	r.Register(&ast.DropAgentStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return execDropAgent(ctx, stmt.(*ast.DropAgentStmt))
+		return execDropAgentFn(ctx, stmt.(*ast.DropAgentStmt), execContextToDeps(ctx))
 	})
 }

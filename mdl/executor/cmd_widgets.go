@@ -356,17 +356,11 @@ func ensureGraphForWidgets(ctx *ExecContext) *graphcatalog.ProjectGraph {
 	return ctx.Graph
 }
 
-func execShowWidgets(ctx *ExecContext, s *ast.ShowWidgetsStmt) error {
-	return execShowWidgetsFn(ctx, s, execContextToDeps(ctx))
-}
 
 func execShowWidgetsFromGraph(ctx *ExecContext, pg *graphcatalog.ProjectGraph, s *ast.ShowWidgetsStmt) error {
 	return execShowWidgetsFromGraphFn(ctx.Output, pg, s)
 }
 
-func execUpdateWidgets(ctx *ExecContext, s *ast.UpdateWidgetsStmt) error {
-	return execUpdateWidgetsFn(ctx, s, execContextToDeps(ctx))
-}
 
 func findMatchingWidgets(ctx *ExecContext, filters []ast.WidgetFilter, module string) ([]widgetRef, error) {
 	return findMatchingWidgetsFn(filters, module)
@@ -376,9 +370,6 @@ func updateWidgetsInContainer(ctx *ExecContext, containerID string, widgetRefs [
 	return updateWidgetsInContainerFn(execContextToDeps(ctx), containerID, widgetRefs, assignments, dryRun)
 }
 
-func execShowInstalledWidgets(ctx *ExecContext, s *ast.ShowInstalledWidgetsStmt) error {
-	return execShowInstalledWidgetsFn(ctx, s, execContextToDeps(ctx))
-}
 
 func showInstalledWidgetsFromGraph(ctx *ExecContext, pg *graphcatalog.ProjectGraph) error {
 	return showInstalledWidgetsFromGraphFn(ctx.Output, pg)

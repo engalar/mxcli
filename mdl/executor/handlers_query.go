@@ -9,13 +9,13 @@ func registerQueryHandlers(r *Registry) {
 		return execShow(ctx, stmt.(*ast.ShowStmt))
 	})
 	r.Register(&ast.ShowWidgetsStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return execShowWidgets(ctx, stmt.(*ast.ShowWidgetsStmt))
+		return execShowWidgetsFn(ctx, stmt.(*ast.ShowWidgetsStmt), execContextToDeps(ctx))
 	})
 	r.Register(&ast.ShowInstalledWidgetsStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return execShowInstalledWidgets(ctx, stmt.(*ast.ShowInstalledWidgetsStmt))
+		return execShowInstalledWidgetsFn(ctx, stmt.(*ast.ShowInstalledWidgetsStmt), execContextToDeps(ctx))
 	})
 	r.Register(&ast.UpdateWidgetsStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return execUpdateWidgets(ctx, stmt.(*ast.UpdateWidgetsStmt))
+		return execUpdateWidgetsFn(ctx, stmt.(*ast.UpdateWidgetsStmt), execContextToDeps(ctx))
 	})
 	r.Register(&ast.SelectStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
 		return execCatalogQuery(ctx, stmt.(*ast.SelectStmt).Query)
@@ -36,19 +36,19 @@ func registerQueryHandlers(r *Registry) {
 
 func registerStylingHandlers(r *Registry) {
 	r.Register(&ast.ShowDesignPropertiesStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return execShowDesignProperties(ctx, stmt.(*ast.ShowDesignPropertiesStmt))
+		return execShowDesignPropertiesFn(ctx, stmt.(*ast.ShowDesignPropertiesStmt), execContextToDeps(ctx))
 	})
 	r.Register(&ast.DescribeStylingStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return execDescribeStyling(ctx, stmt.(*ast.DescribeStylingStmt))
+		return execDescribeStylingFn(ctx, stmt.(*ast.DescribeStylingStmt), execContextToDeps(ctx))
 	})
 	r.Register(&ast.AlterStylingStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return execAlterStyling(ctx, stmt.(*ast.AlterStylingStmt))
+		return execAlterStylingFn(ctx, stmt.(*ast.AlterStylingStmt), execContextToDeps(ctx))
 	})
 }
 
 func registerThemeCommandHandlers(r *Registry) {
 	r.Register(&ast.ShowThemeVariablesStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return execShowThemeVariables(ctx, stmt.(*ast.ShowThemeVariablesStmt))
+		return execShowThemeVariablesFn(ctx, stmt.(*ast.ShowThemeVariablesStmt), execContextToDeps(ctx))
 	})
 }
 
@@ -87,13 +87,13 @@ func registerSessionHandlers(r *Registry) {
 
 func registerLintHandlers(r *Registry) {
 	r.Register(&ast.LintStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return execLint(ctx, stmt.(*ast.LintStmt))
+		return execLintFn(ctx, stmt.(*ast.LintStmt), execContextToDeps(ctx))
 	})
 }
 
 func registerFragmentHandlers(r *Registry) {
 	r.Register(&ast.DefineFragmentStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return execDefineFragment(ctx, stmt.(*ast.DefineFragmentStmt))
+		return execDefineFragmentFn(ctx, stmt.(*ast.DefineFragmentStmt), execContextToDeps(ctx))
 	})
 	r.Register(&ast.DescribeFragmentFromStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
 		return describeFragmentFrom(ctx, stmt.(*ast.DescribeFragmentFromStmt))
@@ -102,36 +102,36 @@ func registerFragmentHandlers(r *Registry) {
 
 func registerSQLHandlers(r *Registry) {
 	r.Register(&ast.SQLConnectStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return execSQLConnect(ctx, stmt.(*ast.SQLConnectStmt))
+		return execSQLConnectFn(ctx, stmt.(*ast.SQLConnectStmt), execContextToDeps(ctx))
 	})
 	r.Register(&ast.SQLDisconnectStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return execSQLDisconnect(ctx, stmt.(*ast.SQLDisconnectStmt))
+		return execSQLDisconnectFn(ctx, stmt.(*ast.SQLDisconnectStmt), execContextToDeps(ctx))
 	})
 	r.Register(&ast.SQLConnectionsStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return execSQLConnections(ctx)
+		return execSQLConnectionsFn(ctx, execContextToDeps(ctx))
 	})
 	r.Register(&ast.SQLQueryStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return execSQLQuery(ctx, stmt.(*ast.SQLQueryStmt))
+		return execSQLQueryFn(ctx, stmt.(*ast.SQLQueryStmt), execContextToDeps(ctx))
 	})
 	r.Register(&ast.SQLShowTablesStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return execSQLShowTables(ctx, stmt.(*ast.SQLShowTablesStmt))
+		return execSQLShowTablesFn(ctx, stmt.(*ast.SQLShowTablesStmt), execContextToDeps(ctx))
 	})
 	r.Register(&ast.SQLShowViewsStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return execSQLShowViews(ctx, stmt.(*ast.SQLShowViewsStmt))
+		return execSQLShowViewsFn(ctx, stmt.(*ast.SQLShowViewsStmt), execContextToDeps(ctx))
 	})
 	r.Register(&ast.SQLShowFunctionsStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return execSQLShowFunctions(ctx, stmt.(*ast.SQLShowFunctionsStmt))
+		return execSQLShowFunctionsFn(ctx, stmt.(*ast.SQLShowFunctionsStmt), execContextToDeps(ctx))
 	})
 	r.Register(&ast.SQLDescribeTableStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return execSQLDescribeTable(ctx, stmt.(*ast.SQLDescribeTableStmt))
+		return execSQLDescribeTableFn(ctx, stmt.(*ast.SQLDescribeTableStmt), execContextToDeps(ctx))
 	})
 	r.Register(&ast.SQLGenerateConnectorStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return execSQLGenerateConnector(ctx, stmt.(*ast.SQLGenerateConnectorStmt))
+		return execSQLGenerateConnectorFn(ctx, stmt.(*ast.SQLGenerateConnectorStmt), execContextToDeps(ctx))
 	})
 }
 
 func registerImportHandlers(r *Registry) {
 	r.Register(&ast.ImportStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return execImport(ctx, stmt.(*ast.ImportStmt))
+		return execImportFn(ctx, stmt.(*ast.ImportStmt), execContextToDeps(ctx))
 	})
 }

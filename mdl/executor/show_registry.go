@@ -32,10 +32,10 @@ var showHandlers = map[ast.ShowObjectType]ShowHandler{
 	ast.ShowVersion:           func(ctx *ExecContext, _ *ast.ShowStmt) error { return listVersion(ctx) },
 	ast.ShowCatalogTables:     func(ctx *ExecContext, _ *ast.ShowStmt) error { return execShowCatalogTables(ctx) },
 	ast.ShowCatalogStatus:     func(ctx *ExecContext, _ *ast.ShowStmt) error { return execShowCatalogStatus(ctx) },
-	ast.ShowCallers:           func(ctx *ExecContext, s *ast.ShowStmt) error { return execShowCallers(ctx, s) },
-	ast.ShowCallees:           func(ctx *ExecContext, s *ast.ShowStmt) error { return execShowCallees(ctx, s) },
-	ast.ShowReferences:        func(ctx *ExecContext, s *ast.ShowStmt) error { return execShowReferences(ctx, s) },
-	ast.ShowImpact:            func(ctx *ExecContext, s *ast.ShowStmt) error { return execShowImpact(ctx, s) },
+	ast.ShowCallers:           func(ctx *ExecContext, s *ast.ShowStmt) error { return execShowCallersFn(ctx, s, execContextToDeps(ctx)) },
+	ast.ShowCallees:           func(ctx *ExecContext, s *ast.ShowStmt) error { return execShowCalleesFn(ctx, s, execContextToDeps(ctx)) },
+	ast.ShowReferences:        func(ctx *ExecContext, s *ast.ShowStmt) error { return execShowReferencesFn(ctx, s, execContextToDeps(ctx)) },
+	ast.ShowImpact:            func(ctx *ExecContext, s *ast.ShowStmt) error { return execShowImpactFn(ctx, s, execContextToDeps(ctx)) },
 	ast.ShowContext:           func(ctx *ExecContext, s *ast.ShowStmt) error { return execShowContext(ctx, s) },
 	ast.ShowProjectSecurity:   func(ctx *ExecContext, _ *ast.ShowStmt) error { return listProjectSecurityGen(ctx) },
 	ast.ShowModuleRoles:       func(ctx *ExecContext, s *ast.ShowStmt) error { return listModuleRolesGen(ctx, s.InModule) },
@@ -54,7 +54,7 @@ var showHandlers = map[ast.ShowObjectType]ShowHandler{
 	ast.ShowNavigation:        func(ctx *ExecContext, _ *ast.ShowStmt) error { return listNavigation(ctx) },
 	ast.ShowNavigationMenu:    func(ctx *ExecContext, s *ast.ShowStmt) error { return listNavigationMenu(ctx, s.Name) },
 	ast.ShowNavigationHomes:   func(ctx *ExecContext, _ *ast.ShowStmt) error { return listNavigationHomes(ctx) },
-	ast.ShowStructure:         func(ctx *ExecContext, s *ast.ShowStmt) error { return execShowStructureGen(ctx, s) },
+	ast.ShowStructure:         func(ctx *ExecContext, s *ast.ShowStmt) error { return execShowStructureGenFn(ctx, s, execContextToDeps(ctx)) },
 	ast.ShowWorkflows:         func(ctx *ExecContext, s *ast.ShowStmt) error { return listWorkflowsGen(ctx, s.InModule) },
 	ast.ShowBusinessEventServices: func(ctx *ExecContext, s *ast.ShowStmt) error {
 		return listBusinessEventServices(ctx, s.InModule)

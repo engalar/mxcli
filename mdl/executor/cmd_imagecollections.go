@@ -370,13 +370,7 @@ func findModuleFn(ml backend.ModuleLister, name string) (*model.Module, error) {
 // Old ExecContext wrappers (delegate to Fn versions)
 // ────────────────────────────────────────────────────────────
 
-func execCreateImageCollection(ctx *ExecContext, s *ast.CreateImageCollectionStmt) error {
-	return execCreateImageCollectionFn(ctx, s, execContextToDeps(ctx))
-}
 
-func execDropImageCollection(ctx *ExecContext, s *ast.DropImageCollectionStmt) error {
-	return execDropImageCollectionFn(ctx, s, execContextToDeps(ctx))
-}
 
 func describeImageCollection(ctx *ExecContext, name ast.QualifiedName) error {
 	deps := execContextToDeps(ctx)
@@ -392,9 +386,6 @@ func findImageCollection(ctx *ExecContext, moduleName, collectionName string) *t
 	return findImageCollectionFn(execContextToDeps(ctx), moduleName, collectionName)
 }
 
-func execAlterImageCollection(ctx *ExecContext, s *ast.AlterImageCollectionStmt) error {
-	return execAlterImageCollectionFn(ctx, s, execContextToDeps(ctx))
-}
 
 // ────────────────────────────────────────────────────────────
 // Stateless helpers (no ctx/deps needed)

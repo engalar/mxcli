@@ -3108,13 +3108,11 @@ func execDropODataServiceFuture(ctx context.Context, stmt ast.Statement, deps *H
 }
 
 func execCreateJsonStructureFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
-	return execCreateJsonStructure(ectx, stmt.(*ast.CreateJsonStructureStmt))
+	return execCreateJsonStructureFn(ctx, stmt.(*ast.CreateJsonStructureStmt), deps)
 }
 
 func execDropJsonStructureFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
-	return execDropJsonStructure(ectx, stmt.(*ast.DropJsonStructureStmt))
+	return execDropJsonStructureFn(ctx, stmt.(*ast.DropJsonStructureStmt), deps)
 }
 
 func execCreateImportMappingFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
@@ -3239,13 +3237,11 @@ func execRefreshCatalogFuture(ctx context.Context, stmt ast.Statement, deps *Han
 }
 
 func execLintFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
-	return execLint(ectx, stmt.(*ast.LintStmt))
+	return execLintFn(ctx, stmt.(*ast.LintStmt), deps)
 }
 
 func execDefineFragmentFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
-	return execDefineFragment(ectx, stmt.(*ast.DefineFragmentStmt))
+	return execDefineFragmentFn(ctx, stmt.(*ast.DefineFragmentStmt), deps)
 }
 
 func execDescribeFragmentFromFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
@@ -3254,48 +3250,39 @@ func execDescribeFragmentFromFuture(ctx context.Context, stmt ast.Statement, dep
 }
 
 func execSQLConnectFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
-	return execSQLConnect(ectx, stmt.(*ast.SQLConnectStmt))
+	return execSQLConnectFn(ctx, stmt.(*ast.SQLConnectStmt), deps)
 }
 
 func execSQLDisconnectFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
-	return execSQLDisconnect(ectx, stmt.(*ast.SQLDisconnectStmt))
+	return execSQLDisconnectFn(ctx, stmt.(*ast.SQLDisconnectStmt), deps)
 }
 
 func execSQLConnectionsFuture(ctx context.Context, deps *HandlerDeps) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
-	return execSQLConnections(ectx)
+	return execSQLConnectionsFn(ctx, deps)
 }
 
 func execSQLQueryFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
-	return execSQLQuery(ectx, stmt.(*ast.SQLQueryStmt))
+	return execSQLQueryFn(ctx, stmt.(*ast.SQLQueryStmt), deps)
 }
 
 func execSQLShowTablesFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
-	return execSQLShowTables(ectx, stmt.(*ast.SQLShowTablesStmt))
+	return execSQLShowTablesFn(ctx, stmt.(*ast.SQLShowTablesStmt), deps)
 }
 
 func execSQLShowViewsFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
-	return execSQLShowViews(ectx, stmt.(*ast.SQLShowViewsStmt))
+	return execSQLShowViewsFn(ctx, stmt.(*ast.SQLShowViewsStmt), deps)
 }
 
 func execSQLShowFunctionsFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
-	return execSQLShowFunctions(ectx, stmt.(*ast.SQLShowFunctionsStmt))
+	return execSQLShowFunctionsFn(ctx, stmt.(*ast.SQLShowFunctionsStmt), deps)
 }
 
 func execSQLDescribeTableFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
-	return execSQLDescribeTable(ectx, stmt.(*ast.SQLDescribeTableStmt))
+	return execSQLDescribeTableFn(ctx, stmt.(*ast.SQLDescribeTableStmt), deps)
 }
 
 func execSQLGenerateConnectorFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
-	return execSQLGenerateConnector(ectx, stmt.(*ast.SQLGenerateConnectorStmt))
+	return execSQLGenerateConnectorFn(ctx, stmt.(*ast.SQLGenerateConnectorStmt), deps)
 }
 
 func execImportFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
@@ -3313,33 +3300,27 @@ func execDropModelFuture(ctx context.Context, stmt ast.Statement, deps *HandlerD
 }
 
 func execCreateConsumedMCPServiceFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
-	return execCreateConsumedMCPService(ectx, stmt.(*ast.CreateConsumedMCPServiceStmt))
+	return execCreateConsumedMCPServiceFn(ctx, stmt.(*ast.CreateConsumedMCPServiceStmt), deps)
 }
 
 func execDropConsumedMCPServiceFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
-	return execDropConsumedMCPService(ectx, stmt.(*ast.DropConsumedMCPServiceStmt))
+	return execDropConsumedMCPServiceFn(ctx, stmt.(*ast.DropConsumedMCPServiceStmt), deps)
 }
 
 func execCreateKnowledgeBaseFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
-	return execCreateKnowledgeBase(ectx, stmt.(*ast.CreateKnowledgeBaseStmt))
+	return execCreateKnowledgeBaseFn(ctx, stmt.(*ast.CreateKnowledgeBaseStmt), deps)
 }
 
 func execDropKnowledgeBaseFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
-	return execDropKnowledgeBase(ectx, stmt.(*ast.DropKnowledgeBaseStmt))
+	return execDropKnowledgeBaseFn(ctx, stmt.(*ast.DropKnowledgeBaseStmt), deps)
 }
 
 func execCreateAgentFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
-	return execCreateAgent(ectx, stmt.(*ast.CreateAgentStmt))
+	return execCreateAgentFn(ctx, stmt.(*ast.CreateAgentStmt), deps)
 }
 
 func execDropAgentFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
-	return execDropAgent(ectx, stmt.(*ast.DropAgentStmt))
+	return execDropAgentFn(ctx, stmt.(*ast.DropAgentStmt), deps)
 }
 
 // Missing Fn wrappers (bridges to old *ExecContext functions for handlers that

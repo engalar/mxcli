@@ -223,14 +223,8 @@ func passwordContainsSymbol(s string) bool {
 }
 
 // execCreateDemoUserGen handles CREATE [OR MODIFY] DEMO USER. Delegates to Fn version.
-func execCreateDemoUserGen(ctx *ExecContext, s *ast.CreateDemoUserStmt) error {
-	return execCreateDemoUserGenFn(ctx, s, execContextToDeps(ctx))
-}
 
 // execDropDemoUserGen handles DROP DEMO USER. Delegates to Fn version.
-func execDropDemoUserGen(ctx *ExecContext, s *ast.DropDemoUserStmt) error {
-	return execDropDemoUserGenFn(ctx, s, execContextToDeps(ctx))
-}
 
 // detectUserEntityGen finds the entity that generalizes System.User.
 func detectUserEntityGen(ctx *ExecContext) (string, error) {

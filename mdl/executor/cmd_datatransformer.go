@@ -111,12 +111,6 @@ func describeDataTransformerFn(ctx context.Context, name ast.QualifiedName, deps
 	return mdlerrors.NewNotFound("data transformer", name.Module+"."+name.Name)
 }
 
-// execCreateDataTransformer creates a new data transformer.
-func execCreateDataTransformer(ctx *ExecContext, s *ast.CreateDataTransformerStmt) error {
-	deps := execContextToDeps(ctx)
-	return execCreateDataTransformerFn(ctx, s, deps)
-}
-
 // execCreateDataTransformerFn is the HandlerDeps version of execCreateDataTransformer.
 func execCreateDataTransformerFn(ctx context.Context, s *ast.CreateDataTransformerStmt, deps *HandlerDeps) error {
 	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
@@ -199,12 +193,6 @@ func findDataTransformerFn(deps *HandlerDeps, moduleName, name string) (*model.D
 		}
 	}
 	return nil, ""
-}
-
-// execDropDataTransformer deletes a data transformer.
-func execDropDataTransformer(ctx *ExecContext, s *ast.DropDataTransformerStmt) error {
-	deps := execContextToDeps(ctx)
-	return execDropDataTransformerFn(ctx, s, deps)
 }
 
 // execDropDataTransformerFn is the HandlerDeps version of execDropDataTransformer.

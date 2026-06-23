@@ -432,21 +432,9 @@ func validateModuleRoleFn(deps *HandlerDeps, role ast.QualifiedName) (bool, erro
 // Old ExecContext wrappers (delegate to Fn versions)
 // ─────────────────────────────────────────────────────────────
 
-func execGrantMicroflowAccessGen(ctx *ExecContext, s *ast.GrantMicroflowAccessStmt) error {
-	return execGrantMicroflowAccessGenFn(ctx, s, execContextToDeps(ctx))
-}
 
-func execRevokeMicroflowAccessGen(ctx *ExecContext, s *ast.RevokeMicroflowAccessStmt) error {
-	return execRevokeMicroflowAccessGenFn(ctx, s, execContextToDeps(ctx))
-}
 
-func execGrantNanoflowAccessGen(ctx *ExecContext, s *ast.GrantNanoflowAccessStmt) error {
-	return execGrantNanoflowAccessGenFn(ctx, s, execContextToDeps(ctx))
-}
 
-func execRevokeNanoflowAccessGen(ctx *ExecContext, s *ast.RevokeNanoflowAccessStmt) error {
-	return execRevokeNanoflowAccessGenFn(ctx, s, execContextToDeps(ctx))
-}
 
 func cascadeRemoveRoleFromMicroflowsGen(ctx *ExecContext, moduleID model.ID, qualifiedRole string) error {
 	return cascadeRemoveRoleFromMicroflowsGenFn(ctx, execContextToDeps(ctx), moduleID, qualifiedRole)

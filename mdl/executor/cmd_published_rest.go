@@ -381,17 +381,8 @@ func findPublishedRestService(ctx *ExecContext, moduleName, name string) (*model
 	return findPublishedRestServiceFn(execContextToDeps(ctx), moduleName, name)
 }
 
-func execCreatePublishedRestService(ctx *ExecContext, s *ast.CreatePublishedRestServiceStmt) error {
-	return execCreatePublishedRestServiceFn(ctx, s, execContextToDeps(ctx))
-}
 
-func execDropPublishedRestService(ctx *ExecContext, s *ast.DropPublishedRestServiceStmt) error {
-	return execDropPublishedRestServiceFn(ctx, s, execContextToDeps(ctx))
-}
 
-func execAlterPublishedRestService(ctx *ExecContext, s *ast.AlterPublishedRestServiceStmt) error {
-	return execAlterPublishedRestServiceFn(ctx, s, execContextToDeps(ctx))
-}
 
 // ────────────────────────────────────────────────────────────
 // Stateless helpers (no ctx/deps needed)
