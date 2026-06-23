@@ -27,6 +27,7 @@ package executor
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -35,6 +36,7 @@ import (
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/mdl/repos"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
+	genSec "github.com/mendixlabs/mxcli/modelsdk/gen/security"
 )
 
 // ─────────────────────────────────────────────────────────────
@@ -379,17 +381,29 @@ func genFlowContainerModuleFn(repo containerIDResolver, h *ContainerHierarchy, f
 func validateModuleRoleFn(deps *HandlerDeps, role ast.QualifiedName) (bool, error) {
 	module, err := findModuleFn(deps.ModuleLister, role.Module)
 	if err != nil {
-		return false, err
+		var nfe *mdlerrors.NotFoundError
+		if errors.As(err, &nfe) {
+			fmt.Fprintf(deps.Output, "WARNING: module '%s' not found — grant skipped\n", role.Module)
+			return false, nil
+		}
+		return false, mdlerrors.NewBackend(fmt.Sprintf("read module for role %s.%s", role.Module, role.Name), err)
 	}
+
 	ms, err := deps.Security.GetModuleSecurity(module.ID)
 	if err != nil {
-		return false, err
+		return false, mdlerrors.NewBackend(fmt.Sprintf("read module security for %s", role.Module), err)
 	}
-	for _, mr := range ms.ModuleRolesItems() {
-		if mr.QualifiedName() == role.Module+"."+role.Name {
-			return true, nil
+
+	if ms != nil {
+		for _, item := range ms.ModuleRolesItems() {
+			if mr, ok := item.(*genSec.ModuleRole); ok && mr.Name() == role.Name {
+				return true, nil
+			}
 		}
 	}
+
+	fmt.Fprintf(deps.Output, "WARNING: module role '%s.%s' not found — grant skipped\n",
+		role.Module, role.Name)
 	return false, nil
 }
 

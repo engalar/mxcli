@@ -3142,18 +3142,15 @@ func execDropDataTransformerFuture(ctx context.Context, stmt ast.Statement, deps
 }
 
 func execShowWidgetsFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
-	return execShowWidgets(ectx, stmt.(*ast.ShowWidgetsStmt))
+	return execShowWidgetsFn(ctx, stmt.(*ast.ShowWidgetsStmt), deps)
 }
 
 func execShowInstalledWidgetsFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
-	return execShowInstalledWidgets(ectx, stmt.(*ast.ShowInstalledWidgetsStmt))
+	return execShowInstalledWidgetsFn(ctx, stmt.(*ast.ShowInstalledWidgetsStmt), deps)
 }
 
 func execUpdateWidgetsFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
-	return execUpdateWidgets(ectx, stmt.(*ast.UpdateWidgetsStmt))
+	return execUpdateWidgetsFn(ctx, stmt.(*ast.UpdateWidgetsStmt), deps)
 }
 
 func execSelectFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
