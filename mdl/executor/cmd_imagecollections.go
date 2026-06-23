@@ -122,7 +122,7 @@ func describeImageCollectionFn(ctx context.Context, output io.Writer, deps *Hand
 		return mdlerrors.NewNotFound("image collection", name.String())
 	}
 
-	h, err := NewContainerHierarchyFromRoles(deps.ModuleLister, deps.MetadataReader, deps.FolderManager)
+	h, err := GetOrBuildHierarchy(deps)
 	if err != nil {
 		return err
 	}
@@ -188,7 +188,7 @@ func listImageCollectionsFn(ctx context.Context, output io.Writer, format Output
 		return mdlerrors.NewBackend("list image collections", err)
 	}
 
-	h, err := NewContainerHierarchyFromRoles(deps.ModuleLister, deps.MetadataReader, deps.FolderManager)
+	h, err := GetOrBuildHierarchy(deps)
 	if err != nil {
 		return err
 	}
@@ -222,7 +222,7 @@ func findImageCollectionFn(deps *HandlerDeps, moduleName, collectionName string)
 		return nil
 	}
 
-	h, err := NewContainerHierarchyFromRoles(deps.ModuleLister, deps.MetadataReader, deps.FolderManager)
+	h, err := GetOrBuildHierarchy(deps)
 	if err != nil {
 		return nil
 	}

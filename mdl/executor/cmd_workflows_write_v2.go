@@ -1188,7 +1188,7 @@ func execDropWorkflowGenFn(ctx context.Context, s *ast.DropWorkflowStmt, deps *H
 	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
-	h, err := NewContainerHierarchyFromRoles(deps.ModuleLister, deps.MetadataReader, deps.FolderManager)
+	h, err := GetOrBuildHierarchy(deps)
 	if err != nil {
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}

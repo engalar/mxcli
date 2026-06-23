@@ -25,7 +25,7 @@ func listDataTransformersFn(ctx context.Context, moduleName string, deps *Handle
 		return mdlerrors.NewBackend("list data transformers", err)
 	}
 
-	h, err := NewContainerHierarchyFromRoles(deps.ModuleLister, deps.MetadataReader, deps.FolderManager)
+	h, err := GetOrBuildHierarchy(deps)
 	if err != nil {
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}
@@ -74,7 +74,7 @@ func describeDataTransformerFn(ctx context.Context, name ast.QualifiedName, deps
 		return mdlerrors.NewBackend("list data transformers", err)
 	}
 
-	h, err := NewContainerHierarchyFromRoles(deps.ModuleLister, deps.MetadataReader, deps.FolderManager)
+	h, err := GetOrBuildHierarchy(deps)
 	if err != nil {
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}
@@ -187,7 +187,7 @@ func findDataTransformerFn(deps *HandlerDeps, moduleName, name string) (*model.D
 	if err != nil {
 		return nil, ""
 	}
-	h, err := NewContainerHierarchyFromRoles(deps.ModuleLister, deps.MetadataReader, deps.FolderManager)
+	h, err := GetOrBuildHierarchy(deps)
 	if err != nil {
 		return nil, ""
 	}
@@ -218,7 +218,7 @@ func execDropDataTransformerFn(ctx context.Context, s *ast.DropDataTransformerSt
 		return mdlerrors.NewBackend("list data transformers", err)
 	}
 
-	h, err := NewContainerHierarchyFromRoles(deps.ModuleLister, deps.MetadataReader, deps.FolderManager)
+	h, err := GetOrBuildHierarchy(deps)
 	if err != nil {
 		return err
 	}

@@ -52,7 +52,7 @@ func execGrantMicroflowAccessGenFn(ctx context.Context, s *ast.GrantMicroflowAcc
 		return mdlerrors.NewBackend("microflows repo unavailable", nil)
 	}
 
-	h, err := NewContainerHierarchyFromRoles(deps.ModuleLister, deps.MetadataReader, deps.FolderManager)
+	h, err := GetOrBuildHierarchy(deps)
 	if err != nil {
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}
@@ -113,7 +113,7 @@ func execRevokeMicroflowAccessGenFn(ctx context.Context, s *ast.RevokeMicroflowA
 		return mdlerrors.NewBackend("microflows repo unavailable", nil)
 	}
 
-	h, err := NewContainerHierarchyFromRoles(deps.ModuleLister, deps.MetadataReader, deps.FolderManager)
+	h, err := GetOrBuildHierarchy(deps)
 	if err != nil {
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}
@@ -163,7 +163,7 @@ func execGrantNanoflowAccessGenFn(ctx context.Context, s *ast.GrantNanoflowAcces
 		return mdlerrors.NewBackend("nanoflows repo unavailable", nil)
 	}
 
-	h, err := NewContainerHierarchyFromRoles(deps.ModuleLister, deps.MetadataReader, deps.FolderManager)
+	h, err := GetOrBuildHierarchy(deps)
 	if err != nil {
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}
@@ -224,7 +224,7 @@ func execRevokeNanoflowAccessGenFn(ctx context.Context, s *ast.RevokeNanoflowAcc
 		return mdlerrors.NewBackend("nanoflows repo unavailable", nil)
 	}
 
-	h, err := NewContainerHierarchyFromRoles(deps.ModuleLister, deps.MetadataReader, deps.FolderManager)
+	h, err := GetOrBuildHierarchy(deps)
 	if err != nil {
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}
@@ -271,7 +271,7 @@ func cascadeRemoveRoleFromMicroflowsGenFn(ctx context.Context, deps *HandlerDeps
 	if deps.MicroflowRepo == nil {
 		return nil
 	}
-	h, err := NewContainerHierarchyFromRoles(deps.ModuleLister, deps.MetadataReader, deps.FolderManager)
+	h, err := GetOrBuildHierarchy(deps)
 	if err != nil {
 		return nil
 	}
@@ -309,7 +309,7 @@ func cascadeRemoveRoleFromNanoflowsGenFn(ctx context.Context, deps *HandlerDeps,
 	if deps.NanoflowRepo == nil {
 		return nil
 	}
-	h, err := NewContainerHierarchyFromRoles(deps.ModuleLister, deps.MetadataReader, deps.FolderManager)
+	h, err := GetOrBuildHierarchy(deps)
 	if err != nil {
 		return nil
 	}
@@ -387,6 +387,27 @@ func validateModuleRoleFn(deps *HandlerDeps, role ast.QualifiedName) (bool, erro
 			return false, nil
 		}
 		return false, mdlerrors.NewBackend(fmt.Sprintf("read module for role %s.%s", role.Module, role.Name), err)
+	}
+
+	// Fallback: use Backend directly when Security repo is not available
+	// (e.g., mock backends that don't implement repos.SecurityRepository).
+	if deps.Security == nil {
+		ms, err := deps.Backend.GetModuleSecurityGen(module.ID)
+		if err != nil {
+			return false, mdlerrors.NewBackend(fmt.Sprintf("read module security for %s", role.Module), err)
+		}
+		if ms != nil {
+			for _, item := range ms.ModuleRolesItems() {
+				if item != nil {
+					if mi, ok := item.(*genSec.ModuleRole); ok && mi.Name() == role.Name {
+						return true, nil
+					}
+				}
+			}
+		}
+		fmt.Fprintf(deps.Output, "WARNING: module role '%s.%s' not found — grant skipped\n",
+			role.Module, role.Name)
+		return false, nil
 	}
 
 	ms, err := deps.Security.GetModuleSecurity(module.ID)

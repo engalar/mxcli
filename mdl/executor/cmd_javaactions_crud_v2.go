@@ -35,7 +35,7 @@ func execDropJavaActionGenFn(ctx context.Context, s *ast.DropJavaActionStmt, dep
 	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
-	h, err := NewContainerHierarchyFromRoles(deps.ModuleLister, deps.MetadataReader, deps.FolderManager)
+	h, err := GetOrBuildHierarchy(deps)
 	if err != nil {
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}
@@ -93,7 +93,7 @@ func execCreateJavaScriptActionFn(ctx context.Context, s *ast.CreateJavaScriptAc
 		return mdlerrors.NewNotConnectedWrite()
 	}
 
-	h, err := NewContainerHierarchyFromRoles(deps.ModuleLister, deps.MetadataReader, deps.FolderManager)
+	h, err := GetOrBuildHierarchy(deps)
 	if err != nil {
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}
@@ -267,7 +267,7 @@ func execCreateJavaActionGenFn(ctx context.Context, s *ast.CreateJavaActionStmt,
 		return mdlerrors.NewNotConnectedWrite()
 	}
 
-	h, err := NewContainerHierarchyFromRoles(deps.ModuleLister, deps.MetadataReader, deps.FolderManager)
+	h, err := GetOrBuildHierarchy(deps)
 	if err != nil {
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}

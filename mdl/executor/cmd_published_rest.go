@@ -25,7 +25,7 @@ func listPublishedRestServicesFn(ctx context.Context, output io.Writer, format O
 		return mdlerrors.NewBackend("list published rest services", err)
 	}
 
-	h, err := NewContainerHierarchyFromRoles(deps.ModuleLister, deps.MetadataReader, deps.FolderManager)
+	h, err := GetOrBuildHierarchy(deps)
 	if err != nil {
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}
@@ -86,7 +86,7 @@ func describePublishedRestServiceFn(ctx context.Context, output io.Writer, deps 
 		return mdlerrors.NewBackend("list published rest services", err)
 	}
 
-	h, err := NewContainerHierarchyFromRoles(deps.ModuleLister, deps.MetadataReader, deps.FolderManager)
+	h, err := GetOrBuildHierarchy(deps)
 	if err != nil {
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}
@@ -162,7 +162,7 @@ func findPublishedRestServiceFn(deps *HandlerDeps, moduleName, name string) (*mo
 	if err != nil {
 		return nil, err
 	}
-	h, err := NewContainerHierarchyFromRoles(deps.ModuleLister, deps.MetadataReader, deps.FolderManager)
+	h, err := GetOrBuildHierarchy(deps)
 	if err != nil {
 		return nil, err
 	}
@@ -271,7 +271,7 @@ func execDropPublishedRestServiceFn(ctx context.Context, s *ast.DropPublishedRes
 		return mdlerrors.NewBackend("list published rest services", err)
 	}
 
-	h, err := NewContainerHierarchyFromRoles(deps.ModuleLister, deps.MetadataReader, deps.FolderManager)
+	h, err := GetOrBuildHierarchy(deps)
 	if err != nil {
 		return err
 	}

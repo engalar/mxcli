@@ -22,8 +22,7 @@ func listJsonStructuresFn(ctx context.Context, deps *HandlerDeps, moduleName str
 	if err != nil {
 		return mdlerrors.NewBackend("list json structures", err)
 	}
-	ectx := phase3d2bNewExecContext(ctx, deps)
-	h, err := getHierarchy(ectx)
+	h, err := GetOrBuildHierarchy(deps)
 	if err != nil {
 		return err
 	}
@@ -66,8 +65,7 @@ func describeJsonStructureFn(ctx context.Context, deps *HandlerDeps, name ast.Qu
 	if js == nil {
 		return mdlerrors.NewNotFound("json structure", name.String())
 	}
-	ectx := phase3d2bNewExecContext(ctx, deps)
-	h, err := getHierarchy(ectx)
+	h, err := GetOrBuildHierarchy(deps)
 	if err != nil {
 		return err
 	}
@@ -185,9 +183,20 @@ func findJsonStructureFn(deps *HandlerDeps, moduleName, structName string) *type
 	if err != nil {
 		return nil
 	}
+	// Resolve module ID: prefer cached hierarchy, fall back to ModuleLister.
+	var modID model.ID
+	if deps.Cache != nil && deps.Cache.hierarchy != nil {
+		for mID, mName := range deps.Cache.hierarchy.moduleNames {
+			if mName == moduleName {
+				modID = mID
+				break
+			}
+		}
+	} else {
+		modID = findModuleByName(deps.ModuleLister, moduleName)
+	}
 	for _, js := range structures {
 		if js.Name == structName {
-			modID := findModuleByName(deps.ModuleLister, moduleName)
 			if modID != "" {
 				if js.ContainerID == modID {
 					return js

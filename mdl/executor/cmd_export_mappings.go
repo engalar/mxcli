@@ -27,7 +27,7 @@ func listExportMappingsFn(ctx context.Context, inModule string, deps *HandlerDep
 		return mdlerrors.NewBackend("list export mappings", err)
 	}
 
-	h, err := NewContainerHierarchyFromRoles(deps.ModuleLister, deps.MetadataReader, deps.FolderManager)
+	h, err := GetOrBuildHierarchy(deps)
 	if err != nil {
 		return err
 	}
@@ -104,7 +104,7 @@ func describeExportMappingFn(ctx context.Context, name ast.QualifiedName, deps *
 		fmt.Fprintf(deps.Output, "/**\n * %s\n */\n", strings.ReplaceAll(em.Documentation, "\n", "\n * "))
 	}
 
-	h, err := NewContainerHierarchyFromRoles(deps.ModuleLister, deps.MetadataReader, deps.FolderManager)
+	h, err := GetOrBuildHierarchy(deps)
 	if err != nil {
 		return err
 	}

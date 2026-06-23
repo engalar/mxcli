@@ -30,7 +30,7 @@ func execDropMicroflowFn(ctx context.Context, s *ast.DropMicroflowStmt, deps *Ha
 		return mdlerrors.NewNotConnectedWrite()
 	}
 
-	h, err := NewContainerHierarchyFromRoles(deps.ModuleLister, deps.MetadataReader, deps.FolderManager)
+	h, err := GetOrBuildHierarchy(deps)
 	if err != nil {
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}

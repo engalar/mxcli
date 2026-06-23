@@ -55,7 +55,7 @@ func execDropNanoflowGenFn(ctx context.Context, s *ast.DropNanoflowStmt, deps *H
 		return mdlerrors.NewBackend("nanoflows repo unavailable", nil)
 	}
 
-	h, err := NewContainerHierarchyFromRoles(deps.ModuleLister, deps.MetadataReader, deps.FolderManager)
+	h, err := GetOrBuildHierarchy(deps)
 	if err != nil {
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}

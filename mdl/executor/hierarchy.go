@@ -58,6 +58,16 @@ func NewContainerHierarchyFromRoles(ml backend.ModuleLister, mur backend.Metadat
 	return newContainerHierarchyImpl(hierarchyRolesSource{ml: ml, mur: mur, fm: fm})
 }
 
+// GetOrBuildHierarchy returns the cached hierarchy from deps.Cache if available,
+// otherwise builds one from role-specific interfaces. Fn functions should call
+// this instead of NewContainerHierarchyFromRoles to respect test cache setup.
+func GetOrBuildHierarchy(deps *HandlerDeps) (*ContainerHierarchy, error) {
+	if deps.Cache != nil && deps.Cache.hierarchy != nil {
+		return deps.Cache.hierarchy, nil
+	}
+	return NewContainerHierarchyFromRoles(deps.ModuleLister, deps.MetadataReader, deps.FolderManager)
+}
+
 func newContainerHierarchyImpl(src hierarchySource) (*ContainerHierarchy, error) {
 	h := &ContainerHierarchy{
 		moduleIDs:       make(map[model.ID]bool),

@@ -90,7 +90,7 @@ func listJavaActionsGen(ctx *ExecContext, moduleName string) error {
 
 // listJavaActionsGenFn is the HandlerDeps version of listJavaActionsGen.
 func listJavaActionsGenFn(ctx context.Context, moduleName string, deps *HandlerDeps) error {
-	h, err := NewContainerHierarchyFromRoles(deps.ModuleLister, deps.MetadataReader, deps.FolderManager)
+	h, err := GetOrBuildHierarchy(deps)
 	if err != nil {
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}
@@ -320,7 +320,7 @@ func listJavaScriptActionsGen(ctx *ExecContext, moduleName string) error {
 
 // listJavaScriptActionsGenFn is the HandlerDeps version of listJavaScriptActionsGen.
 func listJavaScriptActionsGenFn(ctx context.Context, moduleName string, deps *HandlerDeps) error {
-	h, err := NewContainerHierarchyFromRoles(deps.ModuleLister, deps.MetadataReader, deps.FolderManager)
+	h, err := GetOrBuildHierarchy(deps)
 	if err != nil {
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}
@@ -396,7 +396,7 @@ func describeJavaScriptActionGenFn(ctx context.Context, name ast.QualifiedName, 
 	if err != nil {
 		return mdlerrors.NewBackend("list javascript actions", err)
 	}
-	h, err := NewContainerHierarchyFromRoles(deps.ModuleLister, deps.MetadataReader, deps.FolderManager)
+	h, err := GetOrBuildHierarchy(deps)
 	if err != nil {
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}

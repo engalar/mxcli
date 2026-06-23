@@ -88,6 +88,8 @@ func execLintFn(ctx context.Context, s *ast.LintStmt, deps *HandlerDeps) error {
 
 // listLintRulesFn is the HandlerDeps version of listLintRules.
 func listLintRulesFn(ctx context.Context, deps *HandlerDeps) error {
+	fmt.Fprintln(deps.Output, "Built-in rules:")
+	fmt.Fprintln(deps.Output)
 	lint := linter.New(nil)
 	lint.AddRule(rules.NewNamingConventionRule())
 	lint.AddRule(rules.NewEmptyMicroflowRule())
