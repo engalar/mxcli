@@ -60,10 +60,10 @@ The script installs to `/usr/local/bin` (if writable) or `~/.local/bin`, and upd
 
 ### Upgrade
 
+Re-run the install script — it replaces the binary in-place:
+
 ```bash
-mxcli upgrade          # upgrade the launcher
-mxcli daemon upgrade   # upgrade the daemon (~20 MB, downloaded on first use)
-mxcli local upgrade    # upgrade mxcli-local (local build + run without Docker)
+curl -fsSL https://github.com/engalar/mxcli/raw/refs/heads/dev/install.sh | bash
 ```
 
 ## Quick Start

@@ -8,8 +8,8 @@
 #   exec   — mdlrun MDL files (01-10 + 99)
 #   check  — mx check (Studio Pro-level BSON validation, baseline=0)
 #   ext    — copy theme SCSS; confirm widget installed
-#   build  — mxcli-local build (PAD package)
-#   run    — mxcli-local run (blocks until Ctrl+C, human validation)
+#   build  — mxcli build (PAD package, merged from mxcli-local)
+#   run    — mxcli run (blocks until Ctrl+C, human validation)
 #
 # Usage:
 #   ./validate-academy-capstone.sh                          # full run (all 7 steps)
@@ -30,8 +30,7 @@
 #   12     Integration — wire JS/Java actions into pages + logic
 #
 # Overrides:
-#   MXCLI=path/to/mxcli         use compiled binary instead of go run ./cmd/mxcli
-#   MXCLI_LOCAL=path/to/local   use compiled binary instead of go run ./cmd/mxcli-local
+#   MXCLI=path/to/mxcli   use compiled binary instead of go run ./cmd/mxcli
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -75,8 +74,7 @@ while [ $# -gt 0 ]; do
             echo "  -p, --project PATH       use custom MPR project path instead of default"
             echo ""
             echo "Overrides:"
-            echo "  MXCLI=path/to/mxcli         use compiled mxcli binary"
-            echo "  MXCLI_LOCAL=path/to/local   use compiled mxcli-local binary"
+            echo "  MXCLI=path/to/mxcli  use compiled mxcli binary"
             exit 0
             ;;
         *)
@@ -142,15 +140,6 @@ run_mdlrun() {
     for f in "${args[@]}"; do
         (cd "$REPO_ROOT" && go run ./cmd/mxcli exec ${project:+-p "$project"} "$f")
     done
-}
-
-# local runtime commands: build, run — bypasses launcher entirely
-run_mxcli_local() {
-    if [ -n "${MXCLI_LOCAL:-}" ]; then
-        "$MXCLI_LOCAL" "$@"
-    else
-        (cd "$REPO_ROOT" && go run ./cmd/mxcli-local "$@")
-    fi
 }
 
 # stop_runtime kills any process holding port 8090 (Mendix admin API).
@@ -326,7 +315,7 @@ fi
 
 if step_enabled build; then
     echo "  building..."
-    run_mxcli_local build -p "$MPR" --skip-check
+    run_mxcli build -p "$MPR" --skip-check
     echo "  build complete."
 else
     echo "  skipping build"
@@ -344,5 +333,5 @@ if step_enabled run; then
     echo "  Manager:  demo_manager@helpdesk.test  / Demo12345678"
     echo
     echo "Starting runtime — Ctrl+C to stop."
-    run_mxcli_local run -p "$MPR" --admin-password Admin1234
+    run_mxcli run -p "$MPR" --admin-password Admin1234
 fi

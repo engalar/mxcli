@@ -325,21 +325,22 @@ grant execute on microflow KB.ACT_Article_Archive to KB.Contributor, KB.Admin;
 create or modify microflow KB.SUB_Article_TruncateContent (
   $Article: KB.Article
 )
-returns String as $Preview
+returns String as $TruncatedContent
 {
   @position(360,200)
-  declare $Preview String = $Article/Content;
-  return $Preview;
+  set $TruncatedContent = $Article/Content
+  ;
+  return $TruncatedContent;
 }
 /
 create or modify nanoflow KB.NF_Article_FormatPreview (
   $Article: KB.Article
 )
-returns String
+returns String as $Preview
 {
   @position(360,200)
-  $Preview = call microflow KB.SUB_Article_TruncateContent(Article = $Article);
-  return $Preview;
+  $FormattedText = call microflow KB.SUB_Article_TruncateContent(Article = $Article);
+  return $FormattedText;
 }
 
 grant execute on nanoflow KB.NF_Article_FormatPreview to KB.Reader, KB.Contributor, KB.Admin;
@@ -484,6 +485,7 @@ returns Boolean as $Success
 create or modify microflow HD.ACT_Ticket_MarkCommentsRead (
   $Ticket: HD.Ticket
 )
+returns Nothing
 {
   @position(360,200)
   retrieve $Comments from HD.TicketComment
@@ -502,6 +504,7 @@ create or modify microflow HD.ACT_Ticket_MarkCommentsRead (
 create or modify microflow HD.ACT_EscalationRequest_Cleanup (
   $Ticket: HD.Ticket
 )
+returns Nothing
 {
   @position(360,200)
   retrieve $Requests from HD.EscalationRequest
@@ -595,7 +598,7 @@ create or modify nanoflow HD.NF_Ticket_QuickCreate (
   $Customer: HD.Customer,
   $Subject: String
 )
-returns Ticket
+returns Ticket as $Ticket
 {
   @position(360,200)
   $Ticket = create HD.Ticket (Subject = $Subject
@@ -613,7 +616,7 @@ grant execute on nanoflow HD.NF_Ticket_QuickCreate to HD.CustomerRole, HD.AgentR
 create or modify nanoflow HD.NF_TicketSearch_Apply (
   $Search: HD.TicketSearch
 )
-returns List of HD.Ticket
+returns List of HD.Ticket as $Tickets
 {
   @position(360,200)
   retrieve $Tickets from HD.Ticket
@@ -626,7 +629,7 @@ grant execute on nanoflow HD.NF_TicketSearch_Apply to HD.CustomerRole, HD.AgentR
 create or modify nanoflow HD.NF_Priority_GetLabel (
   $PriorityStr: String
 )
-returns String
+returns String as $CSSClass
 {
   @position(360,200)
   declare $CSSClass String = 'badge-default';
@@ -667,6 +670,7 @@ returns List of System.User as $Users
 create or modify microflow HD.WFS_SendReminder (
   $EscalationRequest: HD.EscalationRequest
 )
+returns Nothing
 {
   @position(360,200)
   log info node 'Application' '{1}' with ({1} = 'Escalation reminder sent for request ' + toString($EscalationRequest/Reason));
@@ -676,6 +680,7 @@ create or modify microflow HD.WFS_SendReminder (
 create or modify microflow HD.WFS_Approve (
   $EscalationRequest: HD.EscalationRequest
 )
+returns Nothing
 {
   @position(360,200)
   retrieve $Ticket from HD.Ticket
@@ -694,6 +699,7 @@ create or modify microflow HD.WFS_Approve (
 create or modify microflow HD.WFS_Reject (
   $EscalationRequest: HD.EscalationRequest
 )
+returns Nothing
 {
   @position(360,200)
   change $EscalationRequest (RejectionReason = 'Rejected by manager review board.'
@@ -706,6 +712,7 @@ create or modify microflow HD.WFS_Reject (
 create or modify microflow HD.WFS_Escalation_Initialize (
   $EscalationRequest: HD.EscalationRequest
 )
+returns Nothing
 {
   @position(360,200)
   change $EscalationRequest (RequestedAt = [%CurrentDateTime%]
@@ -718,6 +725,7 @@ create or modify microflow HD.WFS_Escalation_Initialize (
 create or modify microflow HD.WFS_AutoReject (
   $EscalationRequest: HD.EscalationRequest
 )
+returns Nothing
 {
   @position(360,200)
   change $EscalationRequest (RejectionReason = 'Auto-rejected: no manager response within 48 hours.'
@@ -730,6 +738,7 @@ create or modify microflow HD.WFS_AutoReject (
 create or modify microflow HD.WFS_UpdateTicketPriority (
   $EscalationRequest: HD.EscalationRequest
 )
+returns Nothing
 {
   @position(360,200)
   retrieve $Ticket from HD.Ticket
@@ -749,6 +758,7 @@ create or modify microflow HD.WFS_UpdateTicketPriority (
 create or modify microflow HD.WFS_NotifyAgent (
   $EscalationRequest: HD.EscalationRequest
 )
+returns Nothing
 {
   @position(360,200)
   log info node 'Application' '{1}' with ({1} = 'Agent notified: escalation approved for request ' + toString($EscalationRequest/Reason));
@@ -758,6 +768,7 @@ create or modify microflow HD.WFS_NotifyAgent (
 create or modify microflow HD.WFC_EscalationRequest_OnCreate (
   $EscalationRequest: HD.EscalationRequest
 )
+returns Nothing
 {
   @position(360,200)
   log info node 'Application' '{1}' with ({1} = 'EscalationRequest created: ' + toString($EscalationRequest/Reason));
@@ -792,6 +803,7 @@ create or modify microflow HD.ACT_Workflow_ChangeState (
   $Workflow: System.Workflow,
   $Operation: String
 )
+returns Nothing
 {
   if $Operation = 'Pause' {
     @position(530,200)
@@ -814,6 +826,7 @@ create or modify microflow HD.ACT_Workflow_CompleteTask (
   $UserTask: System.WorkflowUserTask,
   $Outcome: String
 )
+returns Nothing
 {
   @position(360,200)
   set task outcome $UserTask 'Approve';
@@ -825,6 +838,7 @@ grant execute on microflow HD.ACT_Workflow_CompleteTask to HD.ManagerRole;
 create or modify microflow HD.ACT_Workflow_GenerateJumpTo (
   $Workflow: System.Workflow
 )
+returns Nothing
 {
   @position(360,200)
   generate jump to options for $Workflow as HD.WF_TicketEscalation;
@@ -836,6 +850,7 @@ grant execute on microflow HD.ACT_Workflow_GenerateJumpTo to HD.ManagerRole;
 create or modify microflow HD.ACT_Workflow_ApplyJumpTo (
   $JumpOption: System.WorkflowJumpToDetails
 )
+returns Nothing
 {
   @position(360,200)
   apply jump to option $JumpOption;
@@ -847,6 +862,7 @@ grant execute on microflow HD.ACT_Workflow_ApplyJumpTo to HD.ManagerRole;
 create or modify microflow HD.ACT_Workflow_GetHistory (
   $Workflow: System.Workflow
 )
+returns Nothing
 {
   @position(360,200)
   get workflow activity records $Workflow;
@@ -858,6 +874,7 @@ grant execute on microflow HD.ACT_Workflow_GetHistory to HD.ManagerRole;
 create or modify microflow HD.ACT_Workflow_GetContext (
   $Workflow: System.Workflow
 )
+returns Nothing
 {
   @position(360,200)
   get workflow data $Workflow as HD.WF_TicketEscalation;
@@ -869,6 +886,7 @@ grant execute on microflow HD.ACT_Workflow_GetContext to HD.ManagerRole;
 create or modify microflow HD.DS_WorkflowInstances (
   $EscalationRequest: HD.EscalationRequest
 )
+returns Nothing
 {
   @position(360,200)
   get workflows for $EscalationRequest;
@@ -880,6 +898,7 @@ grant execute on microflow HD.DS_WorkflowInstances to HD.ManagerRole;
 create or modify microflow HD.ACT_Workflow_ShowTaskPage (
   $UserTask: System.WorkflowUserTask
 )
+returns Nothing
 {
   @position(360,200)
   open user task $UserTask;
@@ -889,6 +908,7 @@ create or modify microflow HD.ACT_Workflow_ShowTaskPage (
 create or modify microflow HD.ACT_Workflow_ShowAdminPage (
   $Workflow: System.Workflow
 )
+returns Nothing
 {
   @position(360,200)
   open workflow $Workflow;
@@ -898,6 +918,7 @@ create or modify microflow HD.ACT_Workflow_ShowAdminPage (
 create or modify microflow HD.ACT_Workflow_Lock (
   $Workflow: System.WorkflowDefinition
 )
+returns Nothing
 {
   @position(360,200)
   lock workflow $Workflow;
@@ -909,6 +930,7 @@ grant execute on microflow HD.ACT_Workflow_Lock to HD.ManagerRole;
 create or modify microflow HD.ACT_Workflow_Unlock (
   $Workflow: System.WorkflowDefinition
 )
+returns Nothing
 {
   @position(360,200)
   unlock workflow $Workflow;
@@ -920,6 +942,7 @@ grant execute on microflow HD.ACT_Workflow_Unlock to HD.ManagerRole;
 create or modify microflow HD.ACT_Workflow_Notify (
   $Workflow: System.Workflow
 )
+returns Nothing
 {
   @position(360,200)
   notify workflow $Workflow activity HD.WF_TicketEscalation.WaitForManagerAvailable;
@@ -991,6 +1014,7 @@ grant execute on microflow HD.ACT_ChangePassword to HD.CustomerRole, HD.AgentRol
 create or modify microflow HD.ACT_Agent_Deactivate (
   $Agent: HD.Agent
 )
+returns Nothing
 {
   @position(360,200)
   change $Agent (IsActive = false
@@ -1005,6 +1029,7 @@ grant execute on microflow HD.ACT_Agent_Deactivate to HD.ManagerRole;
 create or modify microflow HD.ACT_Agent_Reactivate (
   $Agent: HD.Agent
 )
+returns Nothing
 {
   @position(360,200)
   change $Agent (IsActive = true

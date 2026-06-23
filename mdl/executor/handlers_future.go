@@ -2757,7 +2757,7 @@ func execConnectFuture(ctx context.Context, s *ast.ConnectStmt, ex *Executor) er
 		Context: ctx,
 		ExecIO: ExecIO{
 			Output:       ex.guard,
-			StatusOutput: ex.guard.w,
+			StatusOutput: ex.statusOutput,
 			Format:       ex.guard.format,
 			Quiet:        ex.guard.quiet,
 		},
@@ -2776,12 +2776,19 @@ func execConnectFuture(ctx context.Context, s *ast.ConnectStmt, ex *Executor) er
 		tmpCtx.Cache = ex.cache
 	}
 	err := execConnect(tmpCtx, s)
-	// Inline syncBack for Connect: propagate Executor state
-	if tmpCtx.Backend != nil {
-		ex.backend = tmpCtx.Backend
-	}
+	// Inline syncBack for Connect: propagate Executor state.
+	// Order matters: mprPath/cache must be set before reRegisterAll
+	// so buildHandlerDeps captures the live values.
 	ex.mprPath = tmpCtx.MprPath
 	ex.cache = tmpCtx.Cache
+	if tmpCtx.Backend != nil {
+		ex.backend = tmpCtx.Backend
+		// Re-register all handlers with the live backend so HandlerDeps
+		// captures ConnectionManager, BackendFactory, MprPath, etc.
+		// instead of the nil-backend snapshot taken at construction time.
+		ex.registerFutureOverlays()
+		ex.reRegisterAll()
+	}
 	if tmpCtx.Graph != nil {
 		ex.graphCatalog = tmpCtx.Graph
 	}

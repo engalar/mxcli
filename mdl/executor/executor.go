@@ -222,6 +222,12 @@ type Executor struct {
 	// perfStats accumulates per-statement execution timing so the
 	// caller can print a summary when the script finishes.
 	perfStats []perfStmt
+
+	// reregisterHandlers holds closures that re-register subpackage handlers
+	// (misc, microflow, page, etc.) with a fresh HandlerDeps. Called after
+	// Connect sets the backend so handler closures capture a live backend
+	// instead of the nil-backend snapshot taken at Executor construction time.
+	reregisterHandlers []func(*HandlerDeps)
 }
 
 // perfStmt captures one statement's execution timing.
@@ -331,6 +337,21 @@ func (e *Executor) Registry() *Registry {
 // BuildHandlerDeps constructs a HandlerDeps from the current executor state.
 func (e *Executor) BuildHandlerDeps() *HandlerDeps {
 	return e.buildHandlerDeps()
+}
+
+// AddReregister adds a closure that re-registers subpackage handlers
+// with a fresh HandlerDeps. Called after Connect sets the backend.
+func (e *Executor) AddReregister(fn func(*HandlerDeps)) {
+	e.reregisterHandlers = append(e.reregisterHandlers, fn)
+}
+
+// reRegisterAll calls all stored re-registration closures with a fresh
+// HandlerDeps, so handler closures capture the live backend.
+func (e *Executor) reRegisterAll() {
+	deps := e.buildHandlerDeps()
+	for _, fn := range e.reregisterHandlers {
+		fn(deps)
+	}
 }
 
 // SetLogger sets the diagnostics logger for session logging.

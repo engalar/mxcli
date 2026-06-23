@@ -29,7 +29,7 @@ import (
 )
 
 var (
-	version   = "0.1.0"
+	version = "dev"
 	Version   = ""
 	BuildTime = ""
 	CommitSHA = ""
@@ -114,7 +114,7 @@ func shouldSuppressWarning() bool {
 		switch arg {
 		case "-q", "--quiet", "-h", "--help", "--version":
 			return true
-		case "help", "version", "changelog":
+		case "help", "version", "changelog", "completion":
 			return true
 		}
 	}
@@ -259,6 +259,8 @@ func buildExec(mode string, out io.Writer) (*executor.Executor, *diaglog.Logger)
 
 	// Register domain-specific handlers from subpackages, overriding
 	// handler_deps.go's legacy registrations (kept for test backward compat).
+	// Store re-registration closures so Connect can re-register with a live
+	// HandlerDeps after setting the backend.
 	deps := exec.BuildHandlerDeps()
 	microflow.RegisterHandlers(exec.Registry(), deps)
 	page.RegisterHandlers(exec.Registry(), deps)
@@ -267,6 +269,15 @@ func buildExec(mode string, out io.Writer) (*executor.Executor, *diaglog.Logger)
 	security.RegisterHandlers(exec.Registry(), deps)
 	query.RegisterHandlers(exec.Registry(), deps)
 	misc.RegisterHandlers(exec.Registry(), deps)
+	exec.AddReregister(func(fresh *executor.HandlerDeps) {
+		microflow.RegisterHandlers(exec.Registry(), fresh)
+		page.RegisterHandlers(exec.Registry(), fresh)
+		workflow.RegisterHandlers(exec.Registry(), fresh)
+		domainmodel.RegisterHandlers(exec.Registry(), fresh)
+		security.RegisterHandlers(exec.Registry(), fresh)
+		query.RegisterHandlers(exec.Registry(), fresh)
+		misc.RegisterHandlers(exec.Registry(), fresh)
+	})
 
 	if daemonProgressOut != nil {
 		exec.SetProgressOut(daemonProgressOut)

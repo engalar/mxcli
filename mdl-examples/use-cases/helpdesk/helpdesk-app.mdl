@@ -743,11 +743,11 @@ create or modify nanoflow HD.NF_Priority_GetLabel
 -- SUB_Article_TruncateContent must be defined BEFORE the nanoflow that calls it
 create or modify microflow KB.SUB_Article_TruncateContent
   ($Article: KB.Article)
-  returns string as $Preview
+  returns string as $TruncatedContent
   folder 'Article'
 {
-  $Preview = $Article/Content;
-  return $Preview;
+  $TruncatedContent = $Article/Content;
+  return $TruncatedContent;
 }
 /
 
@@ -758,8 +758,8 @@ create or modify nanoflow KB.NF_Article_FormatPreview
   returns string as $Preview
   folder 'Article'
 {
-  $Preview = call microflow KB.SUB_Article_TruncateContent(Article = $Article);
-  return $Preview;
+  $FormattedText = call microflow KB.SUB_Article_TruncateContent(Article = $Article);
+  return $FormattedText;
 }
 /
 

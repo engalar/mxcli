@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+
+	"github.com/mendixlabs/mxcli/modelsdk/widgets/mpk"
 )
 
 // InstallMPK copies mpkPath into <projectDir>/widgets/.
@@ -20,6 +22,7 @@ func InstallMPK(mpkPath, projectPath string) error {
 	if err := os.WriteFile(dst, data, 0644); err != nil {
 		return fmt.Errorf("write mpk: %w", err)
 	}
+	mpk.ClearCache()
 	fmt.Printf("Installed → %s\n", dst)
 	return nil
 }

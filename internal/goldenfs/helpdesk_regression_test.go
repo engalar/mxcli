@@ -20,6 +20,13 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/backend"
 	mprbackend "github.com/mendixlabs/mxcli/mdl/backend/mpr"
 	"github.com/mendixlabs/mxcli/mdl/executor"
+	"github.com/mendixlabs/mxcli/mdl/executor/domainmodel"
+	"github.com/mendixlabs/mxcli/mdl/executor/microflow"
+	"github.com/mendixlabs/mxcli/mdl/executor/misc"
+	"github.com/mendixlabs/mxcli/mdl/executor/page"
+	"github.com/mendixlabs/mxcli/mdl/executor/query"
+	"github.com/mendixlabs/mxcli/mdl/executor/security"
+	"github.com/mendixlabs/mxcli/mdl/executor/workflow"
 	"github.com/mendixlabs/mxcli/mdl/visitor"
 	"github.com/pmezard/go-difflib/difflib"
 )
@@ -305,6 +312,32 @@ func helpdeskParseableDescribeScript(t *testing.T, mprPath string) string {
 	return fmt.Sprintf("connect local '%s';\n", mprPath) + string(data)
 }
 
+// newDescribeExecutor creates a bare executor wired for describe/test use
+// (factory backend + subpackage handlers + re-registration support).
+func newDescribeExecutor(w io.Writer) *executor.Executor {
+	e := executor.New(w)
+	e.SetQuiet(true)
+	e.SetBackendFactory(func() backend.ConnectionBackend { return mprbackend.New() })
+	deps := e.BuildHandlerDeps()
+	microflow.RegisterHandlers(e.Registry(), deps)
+	page.RegisterHandlers(e.Registry(), deps)
+	workflow.RegisterHandlers(e.Registry(), deps)
+	domainmodel.RegisterHandlers(e.Registry(), deps)
+	security.RegisterHandlers(e.Registry(), deps)
+	query.RegisterHandlers(e.Registry(), deps)
+	misc.RegisterHandlers(e.Registry(), deps)
+	e.AddReregister(func(fresh *executor.HandlerDeps) {
+		microflow.RegisterHandlers(e.Registry(), fresh)
+		page.RegisterHandlers(e.Registry(), fresh)
+		workflow.RegisterHandlers(e.Registry(), fresh)
+		domainmodel.RegisterHandlers(e.Registry(), fresh)
+		security.RegisterHandlers(e.Registry(), fresh)
+		query.RegisterHandlers(e.Registry(), fresh)
+		misc.RegisterHandlers(e.Registry(), fresh)
+	})
+	return e
+}
+
 // helpdeskCleanDescribeScript returns the describe script for the blank
 // base project (helpdesk-clean-11.6.6). It only targets MyFirstModule
 // content that exists in every Mendix 11.6 starter project, never KB/HD
@@ -321,9 +354,7 @@ describe microflow MyFirstModule.MyFirstLogic;
 func describeMDLParseableClean(t *testing.T, mprPath string) string {
 	t.Helper()
 	var buf strings.Builder
-	e := executor.New(&buf)
-	e.SetQuiet(true)
-	e.SetBackendFactory(func() backend.ConnectionBackend { return mprbackend.New() })
+	e := newDescribeExecutor(&buf)
 	defer func() {
 		if err := e.Close(); err != nil {
 			t.Logf("executor close: %v", err)
@@ -356,9 +387,7 @@ show module roles in HD;
 func describeMDL(t *testing.T, mprPath string) string {
 	t.Helper()
 	var buf strings.Builder
-	e := executor.New(&buf)
-	e.SetQuiet(true)
-	e.SetBackendFactory(func() backend.ConnectionBackend { return mprbackend.New() })
+	e := newDescribeExecutor(&buf)
 	defer func() {
 		if err := e.Close(); err != nil {
 			t.Logf("executor close: %v", err)
@@ -432,9 +461,7 @@ func TestHelpdeskGolden_DescribeSnapshot(t *testing.T) {
 func describeMDLParseable(t *testing.T, mprPath string) string {
 	t.Helper()
 	var buf strings.Builder
-	e := executor.New(&buf)
-	e.SetQuiet(true)
-	e.SetBackendFactory(func() backend.ConnectionBackend { return mprbackend.New() })
+	e := newDescribeExecutor(&buf)
 	defer func() {
 		if err := e.Close(); err != nil {
 			t.Logf("executor close: %v", err)

@@ -14,6 +14,13 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/backend"
 	mprbackend "github.com/mendixlabs/mxcli/mdl/backend/mpr"
 	"github.com/mendixlabs/mxcli/mdl/executor"
+	"github.com/mendixlabs/mxcli/mdl/executor/domainmodel"
+	"github.com/mendixlabs/mxcli/mdl/executor/microflow"
+	"github.com/mendixlabs/mxcli/mdl/executor/misc"
+	"github.com/mendixlabs/mxcli/mdl/executor/page"
+	"github.com/mendixlabs/mxcli/mdl/executor/query"
+	"github.com/mendixlabs/mxcli/mdl/executor/security"
+	"github.com/mendixlabs/mxcli/mdl/executor/workflow"
 	"github.com/mendixlabs/mxcli/mdl/visitor"
 )
 
@@ -32,6 +39,25 @@ func runMDL(t *testing.T, mprPath, script string) {
 	e := executor.New(io.Discard)
 	e.SetQuiet(true)
 	e.SetBackendFactory(func() backend.ConnectionBackend { return mprbackend.New() })
+	// Register subpackage handlers so Connect's registerFutureOverlays
+	// + reRegisterAll have proper deps to work with.
+	deps := e.BuildHandlerDeps()
+	microflow.RegisterHandlers(e.Registry(), deps)
+	page.RegisterHandlers(e.Registry(), deps)
+	workflow.RegisterHandlers(e.Registry(), deps)
+	domainmodel.RegisterHandlers(e.Registry(), deps)
+	security.RegisterHandlers(e.Registry(), deps)
+	query.RegisterHandlers(e.Registry(), deps)
+	misc.RegisterHandlers(e.Registry(), deps)
+	e.AddReregister(func(fresh *executor.HandlerDeps) {
+		microflow.RegisterHandlers(e.Registry(), fresh)
+		page.RegisterHandlers(e.Registry(), fresh)
+		workflow.RegisterHandlers(e.Registry(), fresh)
+		domainmodel.RegisterHandlers(e.Registry(), fresh)
+		security.RegisterHandlers(e.Registry(), fresh)
+		query.RegisterHandlers(e.Registry(), fresh)
+		misc.RegisterHandlers(e.Registry(), fresh)
+	})
 	defer func() {
 		if err := e.Close(); err != nil {
 			t.Errorf("runMDL: executor close: %v", err)
