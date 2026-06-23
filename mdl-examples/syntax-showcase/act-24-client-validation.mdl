@@ -9,9 +9,9 @@ create module Showcase;
 -- [ACT-VAL-01] validation feedback on attribute path
 create microflow Showcase.Act_Val_01 ($order: Showcase.Order)
 returns Nothing
-begin
+{
   if $order/OrderNumber = '' then
     validation feedback $order/OrderNumber message 'Order number is required.';
   end if;
-end;
+}
 /

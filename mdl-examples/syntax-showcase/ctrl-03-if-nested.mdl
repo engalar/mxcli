@@ -8,7 +8,7 @@ create module Showcase;
 -- [CTRL-IF-NESTED-01] 嵌套 if（新形式）
 create microflow Showcase.Ctrl_If_Nested_01 ($amount: decimal, $priority: Showcase.Priority)
 returns string as $r
-begin
+{
   declare $r: string = 'none';
   if $amount > 100.00 {
     if $priority = Showcase.Priority.High {
@@ -22,5 +22,5 @@ begin
     $r = 'small';
   }
   return $r;
-end;
+}
 /

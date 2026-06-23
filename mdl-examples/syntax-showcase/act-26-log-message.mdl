@@ -9,20 +9,20 @@ create module Showcase;
 -- [ACT-LOG-01] 六个级别
 create microflow Showcase.Act_Log_01 ()
 returns Nothing
-begin
+{
   log trace node 'Showcase' 'trace message';
   log debug node 'Showcase' 'debug message';
   log info  node 'Showcase' 'info message';
   log warning node 'Showcase' 'warning message';
   log error node 'Showcase' 'error message';
   log critical node 'Showcase' 'critical message';
-end;
+}
 /
 
 -- [ACT-LOG-02] with template params
 create microflow Showcase.Act_Log_02 ($name: string)
 returns Nothing
-begin
+{
   log info node 'Showcase' 'Order {1} processed' with ({1} = $name);
-end;
+}
 /

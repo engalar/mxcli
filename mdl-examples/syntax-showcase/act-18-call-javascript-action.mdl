@@ -9,9 +9,9 @@ create module Showcase;
 -- [ACT-JS-01] call javascript action（nanoflow context）
 create nanoflow Showcase.Act_JsCall_01 ($text: string)
 returns string as $r
-begin
+{
   declare $r: string = empty;
   $r = call javascript action Showcase.JSA_Trim (Input = $text);
   return $r;
-end;
+}
 /

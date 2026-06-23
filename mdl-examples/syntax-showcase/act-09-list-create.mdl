@@ -9,18 +9,18 @@ create module Showcase;
 -- [ACT-LIST-CREATE-01] declare list = empty
 create microflow Showcase.Act_ListCreate_01 ()
 returns list of Showcase.Product as $r
-begin
+{
   declare $r: list of Showcase.Product = empty;
   return $r;
-end;
+}
 /
 
 -- [ACT-LIST-CREATE-02] create list directly
 create microflow Showcase.Act_ListCreate_02 ()
 returns list of Showcase.Product as $r
-begin
+{
   declare $r: list of Showcase.Product = empty;
   $r = create list of Showcase.Product;
   return $r;
-end;
+}
 /

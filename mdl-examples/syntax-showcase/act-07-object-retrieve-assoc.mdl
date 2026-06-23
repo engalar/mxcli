@@ -9,9 +9,9 @@ create module Showcase;
 -- [ACT-RETR-ASSOC-01] retrieve from association
 create microflow Showcase.Act_RetrAssoc_01 ($order: Showcase.Order)
 returns Showcase.Product as $r
-begin
+{
   declare $r: Showcase.Product = empty;
   retrieve $r from $order/Showcase.Order_Product;
   return $r;
-end;
+}
 /

@@ -10,7 +10,7 @@ create module Showcase;
 -- [ACT-CAST-01] CAST VARIABLE（最常见：在 split type 内绑定子类型）
 create microflow Showcase.Act_Cast_01 ($animal: Showcase.Animal)
 returns Showcase.Dog as $dog
-begin
+{
   declare $dog: Showcase.Dog = empty;
   split type $animal
   case Showcase.Dog
@@ -19,13 +19,13 @@ begin
   else
     return empty;
   end split;
-end;
+}
 /
 
 -- [ACT-CAST-02] VARIABLE EQUALS CAST VARIABLE（赋值形式）
 create microflow Showcase.Act_Cast_02 ($animal: Showcase.Animal)
 returns Showcase.Dog as $dog
-begin
+{
   declare $dog: Showcase.Dog = empty;
   split type $animal
   case Showcase.Dog
@@ -34,5 +34,5 @@ begin
   else
     return empty;
   end split;
-end;
+}
 /

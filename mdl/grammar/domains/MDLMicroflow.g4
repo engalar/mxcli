@@ -248,7 +248,7 @@ createObjectStatement
 // Optional commit clauses: WITH COMMIT, WITH COMMIT WITHOUT EVENTS, WITH COMMIT REFRESH, WITH COMMIT WITHOUT EVENTS REFRESH
 changeObjectStatement
     : CHANGE VARIABLE (LPAREN memberAssignmentList? RPAREN)?
-      (WITH COMMIT (WITHOUT EVENTS)? REFRESH?)? onErrorClause?
+      (WITH COMMIT (WITHOUT EVENTS)? REFRESH? | REFRESH)? onErrorClause?
     ;
 
 // Shared by SET, LOOP, aggregate expressions, and validation feedback targets.
@@ -258,7 +258,7 @@ attributePath
 
 // COMMIT $Product; or COMMIT $Product WITH EVENTS; or COMMIT $Product WITH EVENTS REFRESH;
 commitStatement
-    : COMMIT VARIABLE (WITH EVENTS REFRESH?)? onErrorClause?
+    : COMMIT VARIABLE (WITH EVENTS REFRESH? | REFRESH)? onErrorClause?
     ;
 
 deleteObjectStatement

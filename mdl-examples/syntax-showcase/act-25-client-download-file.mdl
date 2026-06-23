@@ -9,7 +9,7 @@ create module Showcase;
 -- [ACT-DL-01] download file
 create microflow Showcase.Act_Download_01 ($file: System.FileDocument)
 returns Nothing
-begin
+{
   download file $file;
-end;
+}
 /

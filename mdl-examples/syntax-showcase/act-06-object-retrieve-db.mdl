@@ -9,17 +9,17 @@ create module Showcase;
 -- [ACT-RETR-DB-01] 基本 retrieve
 create microflow Showcase.Act_RetrDb_01 ()
 returns list of Showcase.Order as $r
-begin
+{
   declare $r: list of Showcase.Order = empty;
   retrieve $r from Showcase.Order;
   return $r;
-end;
+}
 /
 
 -- [ACT-RETR-DB-02] where + sort + limit + offset
 create microflow Showcase.Act_RetrDb_02 ($status: Showcase.OrderStatus)
 returns list of Showcase.Order as $r
-begin
+{
   declare $r: list of Showcase.Order = empty;
   retrieve $r from Showcase.Order
     where [Status = $status]
@@ -27,17 +27,17 @@ begin
     limit 10
     offset 0;
   return $r;
-end;
+}
 /
 
 -- [ACT-RETR-DB-03] single object (limit 1)
 create microflow Showcase.Act_RetrDb_03 ($num: string)
 returns Showcase.Order as $r
-begin
+{
   declare $r: Showcase.Order = empty;
   retrieve $r from Showcase.Order
     where [OrderNumber = $num]
     limit 1;
   return $r;
-end;
+}
 /

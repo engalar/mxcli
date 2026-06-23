@@ -10,20 +10,20 @@ create module Showcase;
 -- [ACT-REST-01] 基本 GET，返回字符串
 create microflow Showcase.Act_Rest_01 ()
 returns string as $r
-begin
+{
   declare $r: string = empty;
   $r = rest call get 'https://api.example.com/orders' returns string;
   return $r;
-end;
+}
 /
 
 -- [ACT-REST-02] POST + header + body 模板，忽略响应
 create microflow Showcase.Act_Rest_02 ($payload: string)
 returns Nothing
-begin
+{
   rest call post 'https://api.example.com/orders'
     header 'Content-Type' = 'application/json'
     body $payload
     returns none;
-end;
+}
 /

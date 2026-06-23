@@ -9,18 +9,18 @@ create module Showcase;
 -- [ACT-CHANGE-01] 基本 change
 create microflow Showcase.Act_Change_01 ($order: Showcase.Order)
 returns Nothing
-begin
+{
   change $order (
     Status = Showcase.OrderStatus.Active,
     IsActive = true
   );
-end;
+}
 /
 
 -- [ACT-CHANGE-02] change + REFRESH
 create microflow Showcase.Act_Change_02 ($order: Showcase.Order)
 returns Nothing
-begin
+{
   change $order (IsActive = false) refresh;
-end;
+}
 /

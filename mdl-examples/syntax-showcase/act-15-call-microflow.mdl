@@ -10,44 +10,44 @@ create module Showcase;
 -- 前提：target microflow
 create microflow Showcase.MF_Target ($name: string)
 returns string as $out
-begin
+{
   declare $out: string = $name;
   return $out;
-end;
+}
 /
 
 -- [MF-CALL-01] 无返回值
 create microflow Showcase.MF_Call_NoReturn ()
 returns Nothing
-begin
+{
   call microflow Showcase.MF_Target (name = 'test');
-end;
+}
 /
 
 -- [MF-CALL-02] 有返回值
 create microflow Showcase.MF_Call_WithReturn ()
 returns string as $r
-begin
+{
   declare $r: string = empty;
   $r = call microflow Showcase.MF_Target (name = 'hello');
   return $r;
-end;
+}
 /
 
 -- [MF-CALL-03] 带 on error continue
 create microflow Showcase.MF_Call_OnError ()
 returns Nothing
-begin
+{
   call microflow Showcase.MF_Target (name = 'x') on error continue;
-end;
+}
 /
 
 -- [MF-CALL-04] 带 on error { body }
 create microflow Showcase.MF_Call_OnErrorBody ()
 returns Nothing
-begin
+{
   call microflow Showcase.MF_Target (name = 'x') on error {
     log error node 'Showcase' 'call failed';
   };
-end;
+}
 /

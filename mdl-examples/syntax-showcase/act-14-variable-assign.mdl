@@ -8,29 +8,29 @@ create module Showcase;
 -- [ACT-ASSIGN-01] 新规范形式（$x = expr，无 set 关键字）
 create microflow Showcase.Act_Assign_01 ()
 returns integer as $r
-begin
+{
   declare $r: integer = 0;
   $r = $r + 1;
   $r = $r * 2;
   return $r;
-end;
+}
 /
 
 -- [ACT-ASSIGN-02] 向后兼容形式（set $x = expr）
 create microflow Showcase.Act_Assign_02 ()
 returns integer as $r
-begin
+{
   declare $r: integer = 0;
   set $r = $r + 1;
   return $r;
-end;
+}
 /
 
 -- [ACT-ASSIGN-03] 赋值 attribute path
 create microflow Showcase.Act_Assign_03 ($order: Showcase.Order)
 returns Nothing
-begin
+{
   $order/IsActive = true;
   $order/Quantity = 10;
-end;
+}
 /

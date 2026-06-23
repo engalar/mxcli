@@ -9,15 +9,15 @@ create module Showcase;
 -- [ACT-ROLLBACK-01]
 create microflow Showcase.Act_Rollback_01 ($order: Showcase.Order)
 returns Nothing
-begin
+{
   rollback $order;
-end;
+}
 /
 
 -- [ACT-ROLLBACK-02] rollback + REFRESH
 create microflow Showcase.Act_Rollback_02 ($order: Showcase.Order)
 returns Nothing
-begin
+{
   rollback $order refresh;
-end;
+}
 /

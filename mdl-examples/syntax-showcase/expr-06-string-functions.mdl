@@ -9,62 +9,62 @@ create module Showcase;
 -- [EXPR-STR-01] contains, startsWith, endsWith
 create microflow Showcase.Expr_Str_01 ($s: string)
 returns boolean as $r
-begin
+{
   declare $r: boolean = contains($s, 'foo') or startsWith($s, 'bar') or endsWith($s, 'baz');
   return $r;
-end;
+}
 /
 
 -- [EXPR-STR-02] toLowerCase, toUpperCase, trim, length
 create microflow Showcase.Expr_Str_02 ($s: string)
 returns string as $r
-begin
+{
   declare $r: string = trim(toLowerCase($s));
   return $r;
-end;
+}
 /
 
 -- [EXPR-STR-03] substring, find
 create microflow Showcase.Expr_Str_03 ($s: string)
 returns string as $r
-begin
+{
   declare $r: string = substring($s, 0, 5);
   return $r;
-end;
+}
 /
 
 -- [EXPR-STR-04] replaceAll
 create microflow Showcase.Expr_Str_04 ($s: string)
 returns string as $r
-begin
+{
   declare $r: string = replaceAll($s, 'foo', 'bar');
   return $r;
-end;
+}
 /
 
 -- [EXPR-STR-05] urlEncode, urlDecode
 create microflow Showcase.Expr_Str_05 ($s: string)
 returns string as $r
-begin
+{
   declare $r: string = urlEncode($s);
   return $r;
-end;
+}
 /
 
 -- [EXPR-STR-06] htmlEncode
 create microflow Showcase.Expr_Str_06 ($s: string)
 returns string as $r
-begin
+{
   declare $r: string = htmlEncode($s);
   return $r;
-end;
+}
 /
 
 -- [EXPR-STR-07] length
 create microflow Showcase.Expr_Str_07 ($s: string)
 returns integer as $r
-begin
+{
   declare $r: integer = length($s);
   return $r;
-end;
+}
 /

@@ -9,23 +9,23 @@ create module Showcase;
 -- [ACT-COMMIT-01] 基本 commit
 create microflow Showcase.Act_Commit_01 ($order: Showcase.Order)
 returns Nothing
-begin
+{
   commit $order;
-end;
+}
 /
 
 -- [ACT-COMMIT-02] commit WITH EVENTS
 create microflow Showcase.Act_Commit_02 ($order: Showcase.Order)
 returns Nothing
-begin
+{
   commit $order with events;
-end;
+}
 /
 
 -- [ACT-COMMIT-03] commit REFRESH
 create microflow Showcase.Act_Commit_03 ($order: Showcase.Order)
 returns Nothing
-begin
+{
   commit $order refresh;
-end;
+}
 /

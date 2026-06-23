@@ -8,25 +8,25 @@ create module Showcase;
 -- [CTRL-BREAK-01] break in loop（新形式）
 create microflow Showcase.Ctrl_Break_01 ($products: list of Showcase.Product)
 returns Nothing
-begin
+{
   loop $product in $products {
     if $currentIndex = 5 {
       break;
     }
     change $product (IsActive = true);
   }
-end;
+}
 /
 
 -- [CTRL-CONTINUE-01] continue in loop（新形式）
 create microflow Showcase.Ctrl_Continue_01 ($products: list of Showcase.Product)
 returns Nothing
-begin
+{
   loop $product in $products {
     if not($product/IsActive) {
       continue;
     }
     change $product (Name = $product/Name + '_ok');
   }
-end;
+}
 /

@@ -9,9 +9,9 @@ create module Showcase;
 -- [XPATH-01] 基本路径语法在 retrieve where 子句
 create microflow Showcase.XPath_Tokens_01 ()
 returns list of Showcase.Order as $r
-begin
+{
   retrieve $r from Showcase.Order
     where [IsActive = true];
   return $r;
-end;
+}
 /

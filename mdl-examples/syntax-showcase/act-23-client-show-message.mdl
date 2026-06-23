@@ -10,23 +10,23 @@ create module Showcase;
 -- [ACT-MSG-01] info message
 create microflow Showcase.Act_Msg_01 ()
 returns Nothing
-begin
+{
   show message 'Order saved successfully.' type info;
-end;
+}
 /
 
 -- [ACT-MSG-02] warning message
 create microflow Showcase.Act_Msg_02 ()
 returns Nothing
-begin
+{
   show message 'Please review the order.' type warning;
-end;
+}
 /
 
 -- [ACT-MSG-03] error message
 create microflow Showcase.Act_Msg_03 ()
 returns Nothing
-begin
+{
   show message 'Order could not be processed.' type error;
-end;
+}
 /

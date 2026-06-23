@@ -9,17 +9,17 @@ create module Showcase;
 -- [EXPR-ENUM-01] 枚举值比较
 create microflow Showcase.Expr_Enum_01 ($order: Showcase.Order)
 returns boolean as $r
-begin
+{
   declare $r: boolean = $order/Status = Showcase.OrderStatus.Active;
   return $r;
-end;
+}
 /
 
 -- [EXPR-ENUM-02] getCaption
 create microflow Showcase.Expr_Enum_02 ($order: Showcase.Order)
 returns string as $r
-begin
+{
   declare $r: string = getCaption($order/Status);
   return $r;
-end;
+}
 /

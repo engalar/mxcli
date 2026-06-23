@@ -9,7 +9,7 @@ create module Showcase;
 -- [ACT-DECL-01] 新规范形式（: 冒号，P3）
 create microflow Showcase.Act_Decl_01 ()
 returns Nothing
-begin
+{
   declare $count: integer = 0;
   declare $name: string;
   declare $flag: boolean = true;
@@ -18,15 +18,15 @@ begin
   declare $products: list of Showcase.Product = empty;
   declare $order: Showcase.Order = empty;
   return;
-end;
+}
 /
 
 -- [ACT-DECL-02] 向后兼容形式（无冒号，仍有效）
 create microflow Showcase.Act_Decl_02 ()
 returns Nothing
-begin
+{
   declare $count integer = 0;
   declare $name string;
   return;
-end;
+}
 /

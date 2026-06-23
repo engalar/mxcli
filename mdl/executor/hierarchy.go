@@ -191,6 +191,7 @@ func getHierarchy(ctx *ExecContext) (*ContainerHierarchy, error) {
 	if !ctx.Connected() {
 		return nil, nil
 	}
+	ctx.initRoles()
 	if ctx.Cache == nil {
 		ctx.Cache = &executorCache{}
 	}

@@ -25,7 +25,7 @@ var upgradeCmd = &cobra.Command{
 	Short: "Upgrade mxcli to the latest version",
 	Args:  cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return runSelfUpgrade(args)
+		return runSelfUpgrade(cmd, args)
 	},
 }
 
@@ -33,7 +33,7 @@ var rollbackCmd = &cobra.Command{
 	Use:   "rollback",
 	Short: "Rollback mxcli to the previous version",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return runRollback()
+		return runRollback(cmd)
 	},
 }
 
@@ -43,7 +43,7 @@ type PIDWaiter interface {
 }
 
 // runSelfUpgrade downloads the latest mxcli and replaces the running binary.
-func runSelfUpgrade(args []string) error {
+func runSelfUpgrade(cobraCmd *cobra.Command, args []string) error {
 	selfPath, err := os.Executable()
 	if err != nil {
 		return fmt.Errorf("resolve self path: %w", err)
@@ -59,7 +59,7 @@ func runSelfUpgrade(args []string) error {
 		}
 	}
 
-	fmt.Printf("Downloading mxcli %s...\n", tag)
+	fmt.Fprintln(cobraCmd.OutOrStdout(), "Downloading mxcli "+tag+"...")
 
 	tmpDest := selfPath + ".new"
 	if err := downloadBinary(tag, tmpDest); err != nil {
@@ -68,26 +68,25 @@ func runSelfUpgrade(args []string) error {
 	}
 
 	pid := os.Getpid()
-	cmd := exec.Command(selfPath,
+	updCmd := exec.Command(selfPath,
 		"--internal-update",
 		fmt.Sprintf("--pid=%d", pid),
 		fmt.Sprintf("--new=%s", tmpDest),
 		fmt.Sprintf("--target=%s", selfPath),
 	)
-	hideDaemonWindow(cmd)
-	if err := cmd.Start(); err != nil {
+	hideDaemonWindow(updCmd)
+	if err := updCmd.Start(); err != nil {
 		os.Remove(tmpDest)
 		return fmt.Errorf("start updater: %w", err)
 	}
-	go func() { _ = cmd.Wait() }()
+	go func() { _ = updCmd.Wait() }()
 
-	fmt.Printf("Updater started (PID %d). mxcli will restart automatically.\n", cmd.Process.Pid)
-	os.Exit(0)
+	fmt.Fprintf(cobraCmd.OutOrStdout(), "Updater started (PID %d). mxcli will restart automatically.\n", updCmd.Process.Pid)
 	return nil
 }
 
 // runRollback restores the previous binary backup.
-func runRollback() error {
+func runRollback(cobraCmd *cobra.Command) error {
 	selfPath, err := os.Executable()
 	if err != nil {
 		return fmt.Errorf("resolve self path: %w", err)
@@ -97,20 +96,19 @@ func runRollback() error {
 		return fmt.Errorf("no backup binary found at %s", backupPath)
 	}
 	pid := os.Getpid()
-	cmd := exec.Command(selfPath,
+	updCmd := exec.Command(selfPath,
 		"--internal-update",
 		fmt.Sprintf("--pid=%d", pid),
 		fmt.Sprintf("--new=%s", backupPath),
 		fmt.Sprintf("--target=%s", selfPath),
 	)
-	hideDaemonWindow(cmd)
-	if err := cmd.Start(); err != nil {
+	hideDaemonWindow(updCmd)
+	if err := updCmd.Start(); err != nil {
 		return fmt.Errorf("start updater: %w", err)
 	}
-	go func() { _ = cmd.Wait() }()
+	go func() { _ = updCmd.Wait() }()
 
-	fmt.Println("Rollback started. mxcli will restart automatically.")
-	os.Exit(0)
+	fmt.Fprintln(cobraCmd.OutOrStdout(), "Rollback started. mxcli will restart automatically.")
 	return nil
 }
 

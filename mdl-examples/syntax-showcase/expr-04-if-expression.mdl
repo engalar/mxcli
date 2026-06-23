@@ -12,25 +12,25 @@ create module Showcase;
 -- [EXPR-IF-01] 内联条件值表达式（官方语法，P0 保护）
 create microflow Showcase.Expr_IfExpr_01 ($weight: decimal)
 returns decimal as $fee
-begin
+{
   declare $fee: decimal = if $weight < 1.00 then 0.00 else 5.00;
   return $fee;
-end;
+}
 /
 
 -- [EXPR-IF-02] 嵌套 if 表达式（inline）
 create microflow Showcase.Expr_IfExpr_02 ($score: integer)
 returns string as $grade
-begin
+{
   declare $grade: string = if $score >= 90 then 'A' else if $score >= 80 then 'B' else 'C';
   return $grade;
-end;
+}
 /
 
 -- [EXPR-IF-03] if 表达式在 return 上下文
 create microflow Showcase.Expr_IfExpr_03 ($active: boolean)
 returns string as $r
-begin
+{
   return if $active then 'active' else 'inactive';
-end;
+}
 /

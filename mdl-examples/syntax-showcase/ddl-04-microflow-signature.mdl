@@ -16,26 +16,26 @@ create microflow Showcase.Sig_AllParams (
   $products: list of Showcase.Product
 ) returns string as $out
 folder 'Showcase'
-begin
+{
   declare $out: string = 'ok';
   return $out;
-end;
+}
 /
 
 -- [DDL-SIG-02] reset layout（清除活动位置）
 create microflow Showcase.Sig_ResetLayout ()
 returns Nothing
 reset layout
-begin
+{
   return;
-end;
+}
 /
 
 -- [DDL-SIG-03] nanoflow 签名
 create nanoflow Showcase.NF_Sig ($name: string)
 returns string as $r
-begin
+{
   declare $r: string = $name;
   return $r;
-end;
+}
 /

@@ -9,26 +9,26 @@ create module Showcase;
 -- [EXPR-DATE-FMT-01] formatDateTime
 create microflow Showcase.Expr_DateFmt_01 ($d: datetime)
 returns string as $r
-begin
+{
   declare $r: string = formatDateTime($d, 'yyyy-MM-dd');
   return $r;
-end;
+}
 /
 
 -- [EXPR-DATE-FMT-02] parseDateTime
 create microflow Showcase.Expr_DateFmt_02 ($s: string)
 returns datetime as $r
-begin
+{
   declare $r: datetime = parseDateTime($s, 'yyyy-MM-dd');
   return $r;
-end;
+}
 /
 
 -- [EXPR-DATE-FMT-03] formatDateTimeUTC, parseDateTimeUTC
 create microflow Showcase.Expr_DateFmt_03 ($d: datetime, $s: string)
 returns Nothing
-begin
+{
   declare $f: string = formatDateTimeUTC($d, 'yyyy-MM-dd');
   declare $p: datetime = parseDateTimeUTC($s, 'yyyy-MM-dd');
-end;
+}
 /

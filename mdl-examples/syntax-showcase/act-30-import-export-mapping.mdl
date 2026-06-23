@@ -11,19 +11,19 @@ create module Showcase;
 -- [ACT-MAP-01] import from mapping
 create microflow Showcase.Act_Import_01 ($json: string)
 returns Showcase.Order as $r
-begin
+{
   declare $r: Showcase.Order = empty;
   $r = import from mapping Showcase.OrderImportMapping ($json);
   return $r;
-end;
+}
 /
 
 -- [ACT-MAP-02] export to mapping
 create microflow Showcase.Act_Export_01 ($order: Showcase.Order)
 returns string as $r
-begin
+{
   declare $r: string = empty;
   $r = export to mapping Showcase.OrderExportMapping ($order);
   return $r;
-end;
+}
 /

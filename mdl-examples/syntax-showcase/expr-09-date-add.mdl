@@ -9,46 +9,46 @@ create module Showcase;
 -- [EXPR-DATE-ADD-01] addDays, addWeeks, addMonths, addYears
 create microflow Showcase.Expr_DateAdd_01 ($d: datetime)
 returns datetime as $r
-begin
+{
   declare $r: datetime = addDays($d, 1);
   return $r;
-end;
+}
 /
 
 -- [EXPR-DATE-ADD-02] addHours, addMinutes, addSeconds
 create microflow Showcase.Expr_DateAdd_02 ($d: datetime)
 returns datetime as $r
-begin
+{
   declare $r: datetime = addHours($d, 2);
   return $r;
-end;
+}
 /
 
 -- [EXPR-DATE-ADD-03] addWeeks, addMonths, addYears, addQuarters
 create microflow Showcase.Expr_DateAdd_03 ($d: datetime)
 returns datetime as $r
-begin
+{
   declare $r: datetime = addMonths($d, 3);
   return $r;
-end;
+}
 /
 
 -- [EXPR-DATE-ADD-04] addYears, addWeeks, addQuarters
 create microflow Showcase.Expr_DateAdd_04 ($d: datetime)
 returns Nothing
-begin
+{
   declare $d1: datetime = addYears($d, 1);
   declare $d2: datetime = addWeeks($d, 2);
   declare $d3: datetime = addQuarters($d, 1);
-end;
+}
 /
 
 -- [EXPR-DATE-ADD-05] addMinutes, addSeconds, addMilliseconds
 create microflow Showcase.Expr_DateAdd_05 ($d: datetime)
 returns Nothing
-begin
+{
   declare $d1: datetime = addMinutes($d, 30);
   declare $d2: datetime = addSeconds($d, 60);
   declare $d3: datetime = addMilliseconds($d, 500);
-end;
+}
 /

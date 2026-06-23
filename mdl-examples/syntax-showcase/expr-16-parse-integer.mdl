@@ -9,17 +9,17 @@ create module Showcase;
 -- [EXPR-PARSE-01] parseInt
 create microflow Showcase.Expr_Parse_01 ($s: string)
 returns integer as $r
-begin
+{
   declare $r: integer = parseInt($s);
   return $r;
-end;
+}
 /
 
 -- [EXPR-PARSE-02] toString
 create microflow Showcase.Expr_Parse_02 ($n: integer)
 returns string as $r
-begin
+{
   declare $r: string = toString($n);
   return $r;
-end;
+}
 /

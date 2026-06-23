@@ -29,17 +29,17 @@ $$
 -- [ACT-JAVA-03] call java action（有返回值）
 create microflow Showcase.Act_JavaCall_01 ($text: string)
 returns string as $result
-begin
+{
   declare $result: string = empty;
   $result = call java action Showcase.JA_Trim (Input = $text);
   return $result;
-end;
+}
 /
 
 -- [ACT-JAVA-04] call java action（无返回值 + on error continue）
 create microflow Showcase.Act_JavaCall_02 ($text: string)
 returns Nothing
-begin
+{
   call java action Showcase.JA_Trim (Input = $text) on error continue;
-end;
+}
 /

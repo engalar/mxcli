@@ -9,15 +9,15 @@ create module Showcase;
 -- [ACT-DELETE-01] 基本 delete
 create microflow Showcase.Act_Delete_01 ($order: Showcase.Order)
 returns Nothing
-begin
+{
   delete $order;
-end;
+}
 /
 
 -- [ACT-DELETE-02] delete + on error continue
 create microflow Showcase.Act_Delete_02 ($order: Showcase.Order)
 returns Nothing
-begin
+{
   delete $order on error continue;
-end;
+}
 /

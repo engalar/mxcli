@@ -17,16 +17,16 @@ create persistent entity Showcase.AnnotatedEntity (
 @position(300, 100)
 create microflow Showcase.Annotated_MF ()
 returns Nothing
-begin
+{
   return;
-end;
+}
 /
 
 -- [DDL-ANN-03] @excluded（排除出发布版本）
 @excluded
 create microflow Showcase.Dev_Helper ()
 returns Nothing
-begin
+{
   return;
-end;
+}
 /

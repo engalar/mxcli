@@ -9,9 +9,9 @@ create module Showcase;
 -- [XPATH-04] 跨关联路径约束
 create microflow Showcase.XPath_Assoc_01 ($name: string)
 returns list of Showcase.Order as $r
-begin
+{
   retrieve $r from Showcase.Order
     where [Showcase.Order_Product/Showcase.Product/Name = $name];
   return $r;
-end;
+}
 /

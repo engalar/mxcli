@@ -9,16 +9,16 @@ create module Showcase;
 -- [EXPR-REL-01] 整数比较
 create microflow Showcase.Expr_Rel_01 ($a: integer, $b: integer)
 returns boolean as $r
-begin
+{
   declare $r: boolean = $a < $b;
   return $r;
-end;
+}
 /
 
 -- [EXPR-REL-02] 全运算符覆盖
 create microflow Showcase.Expr_Rel_02 ($x: integer)
 returns string as $r
-begin
+{
   declare $r: string = 'none';
   if $x = 0 then
     set $r = 'eq';
@@ -33,5 +33,5 @@ begin
     set $r = 'ge';
   end if;
   return $r;
-end;
+}
 /

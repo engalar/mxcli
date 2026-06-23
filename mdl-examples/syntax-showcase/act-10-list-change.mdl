@@ -9,15 +9,15 @@ create module Showcase;
 -- [ACT-LIST-CHANGE-01] add to list
 create microflow Showcase.Act_ListChange_01 ($list: list of Showcase.Product, $item: Showcase.Product)
 returns Nothing
-begin
+{
   add $item to $list;
-end;
+}
 /
 
 -- [ACT-LIST-CHANGE-02] remove from list
 create microflow Showcase.Act_ListChange_02 ($list: list of Showcase.Product, $item: Showcase.Product)
 returns Nothing
-begin
+{
   remove $item from $list;
-end;
+}
 /

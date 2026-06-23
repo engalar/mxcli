@@ -9,28 +9,28 @@ create module Showcase;
 -- [ACT-CREATE-01] 最小创建
 create microflow Showcase.Act_Create_01 ()
 returns Showcase.Order as $r
-begin
+{
   declare $r: Showcase.Order = empty;
   $r = create Showcase.Order (
     OrderNumber = '001',
     Status = Showcase.OrderStatus.Pending
   );
   return $r;
-end;
+}
 /
 
 -- [ACT-CREATE-02] 带 on error continue
 create microflow Showcase.Act_Create_02 ()
 returns Nothing
-begin
+{
   create Showcase.Order (OrderNumber = '002') on error continue;
-end;
+}
 /
 
 -- [ACT-CREATE-03] 带 on error rollback
 create microflow Showcase.Act_Create_03 ()
 returns Nothing
-begin
+{
   create Showcase.Order (OrderNumber = '003') on error rollback;
-end;
+}
 /

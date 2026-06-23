@@ -2,8 +2,6 @@
 package fkg_test
 
 import (
-	"os/exec"
-	"strings"
 	"testing"
 
 	"github.com/mendixlabs/mxcli/internal/fkg"
@@ -17,77 +15,6 @@ func mustNew(t *testing.T) fkg.Querier {
 		t.Fatalf("fkg.New(): %v", err)
 	}
 	return q
-}
-
-// gitRoot returns the absolute repo root by running git rev-parse.
-func gitRoot() string {
-	out, err := exec.Command("git", "rev-parse", "--show-toplevel").Output()
-	if err != nil {
-		return ""
-	}
-	return strings.TrimSpace(string(out))
-}
-
-// gitStatusAll returns porcelain output from the repo root (no path filter).
-func gitStatusAll() (string, error) {
-	out, err := exec.Command("git", "-C", gitRoot(), "status", "--porcelain").Output()
-	return strings.TrimSpace(string(out)), err
-}
-
-// gitStatusLazygitStyle runs the exact command lazygit v0.44.1 uses.
-func gitStatusLazygitStyle() (string, error) {
-	out, err := exec.Command("git", "-C", gitRoot(),
-		"status",
-		"--untracked-files=all",
-		"--porcelain",
-		"-z",
-		"--find-renames=50%",
-	).Output()
-	// lazygit splits on \x00; replace for readability
-	return strings.TrimSpace(strings.ReplaceAll(string(out), "\x00", "\n")), err
-}
-
-// ── Discoverability ──────────────────────────────────────────────────────────
-
-func TestFkgGo_IsDiscoverableByGitStatus(t *testing.T) {
-	root := gitRoot()
-	if root == "" {
-		t.Skip("not in a git repo")
-	}
-	out, err := gitStatusAll()
-	if err != nil {
-		t.Fatalf("git status failed: %v", err)
-	}
-	if !strings.Contains(out, "internal/fkg/fkg.go") {
-		t.Error("internal/fkg/fkg.go is NOT visible in git status --porcelain; lazygit won't discover it")
-	}
-	t.Logf("git status root: %s", root)
-	for _, line := range strings.Split(out, "\n") {
-		if strings.Contains(line, "fkg") {
-			t.Logf("  %s", line)
-		}
-	}
-}
-
-func TestFkgGo_IsDiscoverableByLazygitStyleStatus(t *testing.T) {
-	root := gitRoot()
-	if root == "" {
-		t.Skip("not in a git repo")
-	}
-	out, err := gitStatusLazygitStyle()
-	if err != nil {
-		t.Fatalf("git status (lazygit-style) failed: %v", err)
-	}
-	// This runs the exact command lazygit v0.44.1 uses to discover files.
-	// If the file is absent here, it's invisible to lazygit.
-	if !strings.Contains(out, "internal/fkg/fkg.go") {
-		t.Error("internal/fkg/fkg.go is NOT visible in lazygit-style git status; lazygit can't discover it")
-	}
-	for _, line := range strings.Split(out, "\n") {
-		if strings.Contains(line, "fkg") {
-			t.Logf("  %s", line)
-		}
-	}
 }
 
 // ── New ──────────────────────────────────────────────────────────────────────

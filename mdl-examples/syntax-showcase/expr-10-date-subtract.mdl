@@ -9,38 +9,38 @@ create module Showcase;
 -- [EXPR-DATE-SUB-01] subtractDays
 create microflow Showcase.Expr_DateSub_01 ($d: datetime)
 returns datetime as $r
-begin
+{
   declare $r: datetime = subtractDays($d, 7);
   return $r;
-end;
+}
 /
 
 -- [EXPR-DATE-SUB-02] subtractMonths, subtractYears
 create microflow Showcase.Expr_DateSub_02 ($d: datetime)
 returns datetime as $r
-begin
+{
   declare $r: datetime = subtractMonths($d, 1);
   return $r;
-end;
+}
 /
 
 -- [EXPR-DATE-SUB-03] subtractYears, subtractWeeks, subtractQuarters
 create microflow Showcase.Expr_DateSub_03 ($d: datetime)
 returns Nothing
-begin
+{
   declare $d1: datetime = subtractYears($d, 1);
   declare $d2: datetime = subtractWeeks($d, 1);
   declare $d3: datetime = subtractQuarters($d, 1);
-end;
+}
 /
 
 -- [EXPR-DATE-SUB-04] subtractHours, subtractMinutes, subtractSeconds, subtractMilliseconds
 create microflow Showcase.Expr_DateSub_04 ($d: datetime)
 returns Nothing
-begin
+{
   declare $d1: datetime = subtractHours($d, 2);
   declare $d2: datetime = subtractMinutes($d, 30);
   declare $d3: datetime = subtractSeconds($d, 60);
   declare $d4: datetime = subtractMilliseconds($d, 500);
-end;
+}
 /
