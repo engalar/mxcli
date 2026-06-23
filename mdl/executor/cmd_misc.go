@@ -4,6 +4,7 @@
 package executor
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -21,6 +22,28 @@ import (
 // Use errors.Is(err, ErrExit) to detect exit requests.
 var ErrExit = mdlerrors.ErrExit
 
+// execUpdateFn handles UPDATE statements (refresh from disk) with HandlerDeps.
+func execUpdateFn(ctx context.Context, deps *HandlerDeps, ex *Executor) error {
+	if deps.MprPath == "" {
+		return mdlerrors.NewNotConnected()
+	}
+	path := deps.MprPath
+	// Disconnect via executor's FinalizeFn, then reconnect.
+	if deps.ConnectionManager != nil && deps.ConnectionManager.IsConnected() {
+	if ex != nil {
+		if err := ex.finalizeProgramExecution(); err != nil {
+				fmt.Fprintf(deps.Output, "Warning: finalization error: %v\n", err)
+			}
+		}
+		if err := deps.ConnectionManager.Disconnect(); err != nil {
+			fmt.Fprintf(deps.Output, "Warning: disconnect error: %v\n", err)
+		}
+		fmt.Fprintf(deps.Output, "Disconnected from: %s\n", deps.MprPath)
+	}
+	deps.MprPath = ""
+	return execConnectFuture(ctx, &ast.ConnectStmt{Path: path}, ex)
+}
+
 // execUpdate handles UPDATE statements (refresh from disk).
 func execUpdate(ctx *ExecContext) error {
 	if ctx.MprPath == "" {
@@ -33,30 +56,48 @@ func execUpdate(ctx *ExecContext) error {
 	return execConnect(ctx, &ast.ConnectStmt{Path: path})
 }
 
+// execRefreshFn handles REFRESH statements (alias for UPDATE) with HandlerDeps.
+func execRefreshFn(ctx context.Context, deps *HandlerDeps, ex *Executor) error {
+	return execUpdateFn(ctx, deps, ex)
+}
+
 // execRefresh handles REFRESH statements (alias for UPDATE).
 func execRefresh(ctx *ExecContext) error {
 	return execUpdate(ctx)
 }
 
-// execSet handles SET statements.
-func execSet(ctx *ExecContext, s *ast.SetStmt) error {
-	if ctx.Settings == nil {
-		ctx.Settings = make(map[string]any)
+// execSetFn handles SET statements with HandlerDeps.
+func execSetFn(ctx context.Context, s *ast.SetStmt, deps *HandlerDeps) error {
+	if deps.Settings == nil {
+		deps.Settings = make(map[string]any)
 	}
-	ctx.Settings[s.Key] = s.Value
+	deps.Settings[s.Key] = s.Value
 
-	// Apply recognized session keys to the live context immediately.
-	// syncBack will persist ctx.Format back to e.format so subsequent
-	// statements in the same session also pick up the change.
 	switch strings.ToLower(s.Key) {
 	case "format":
 		if v, ok := s.Value.(string); ok {
-			ctx.Format = OutputFormat(strings.ToLower(v))
+			deps.Format = OutputFormat(strings.ToLower(v))
 		}
 	}
 
-	fmt.Fprintf(ctx.Output, "Set %s = %v\n", s.Key, s.Value)
+	fmt.Fprintf(deps.Output, "Set %s = %v\n", s.Key, s.Value)
 	return nil
+}
+
+// execSet handles SET statements.
+func execSet(ctx *ExecContext, s *ast.SetStmt) error {
+	deps := execContextToDeps(ctx)
+	err := execSetFn(ctx, s, deps)
+	ctx.Format = deps.Format
+	if len(deps.Settings) > 0 {
+		if ctx.Settings == nil {
+			ctx.Settings = make(map[string]any)
+		}
+		for k, v := range deps.Settings {
+			ctx.Settings[k] = v
+		}
+	}
+	return err
 }
 
 // execHelp handles HELP statements. With topic words, queries the syntax registry.

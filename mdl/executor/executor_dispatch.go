@@ -13,12 +13,6 @@ import (
 func (e *Executor) executeInner(ctx context.Context, stmt ast.Statement) error {
 	ectx := e.newExecContext(ctx)
 	err := e.registry.Dispatch(ectx, stmt)
-	// Only sync back when the context has not been cancelled. Execute() runs
-	// executeInner in a goroutine with a wall-clock timeout; if the timeout
-	// fires, the goroutine keeps running but Execute() has already returned.
-	// Syncing stale state back at that point would race with subsequent calls.
-	// Any handler-side state changes made after cancellation are intentionally
-	// lost — this is expected behavior, not a regression.
 	if ctx.Err() == nil {
 		e.syncBack(ectx)
 	}

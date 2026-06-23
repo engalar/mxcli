@@ -2926,7 +2926,8 @@ func execDropConstantFuture(ctx context.Context, stmt ast.Statement, deps *Handl
 }
 
 func execAlterModuleJarDepFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	return execAlterModuleJarDepFn(ctx, stmt.(*ast.AlterModuleJarDepStmt), deps)
+	ectx := phase3d2bNewExecContext(ctx, deps)
+	return execAlterModuleJarDep(ectx, stmt.(*ast.AlterModuleJarDepStmt))
 }
 
 func execCreateDatabaseConnectionFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
@@ -3013,27 +3014,33 @@ func execDropBusinessEventServiceFuture(ctx context.Context, stmt ast.Statement,
 }
 
 func execCreateODataClientFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	return createODataClientFn(ctx, deps, stmt.(*ast.CreateODataClientStmt))
+	ectx := phase3d2bNewExecContext(ctx, deps)
+	return createODataClient(ectx, stmt.(*ast.CreateODataClientStmt))
 }
 
 func execAlterODataClientFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	return alterODataClientFn(ctx, deps, stmt.(*ast.AlterODataClientStmt))
+	ectx := phase3d2bNewExecContext(ctx, deps)
+	return alterODataClient(ectx, stmt.(*ast.AlterODataClientStmt))
 }
 
 func execDropODataClientFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	return dropODataClientFn(ctx, deps, stmt.(*ast.DropODataClientStmt))
+	ectx := phase3d2bNewExecContext(ctx, deps)
+	return dropODataClient(ectx, stmt.(*ast.DropODataClientStmt))
 }
 
 func execCreateODataServiceFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	return createODataServiceFn(ctx, deps, stmt.(*ast.CreateODataServiceStmt))
+	ectx := phase3d2bNewExecContext(ctx, deps)
+	return createODataService(ectx, stmt.(*ast.CreateODataServiceStmt))
 }
 
 func execAlterODataServiceFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	return alterODataServiceFn(ctx, deps, stmt.(*ast.AlterODataServiceStmt))
+	ectx := phase3d2bNewExecContext(ctx, deps)
+	return alterODataService(ectx, stmt.(*ast.AlterODataServiceStmt))
 }
 
 func execDropODataServiceFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	return dropODataServiceFn(ctx, deps, stmt.(*ast.DropODataServiceStmt))
+	ectx := phase3d2bNewExecContext(ctx, deps)
+	return dropODataService(ectx, stmt.(*ast.DropODataServiceStmt))
 }
 
 func execCreateJsonStructureFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
@@ -3090,7 +3097,8 @@ func execAlterPublishedRestServiceFuture(ctx context.Context, stmt ast.Statement
 }
 
 func execCreateExternalEntityFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	return execCreateExternalEntityFn(ctx, deps, stmt.(*ast.CreateExternalEntityStmt))
+	ectx := phase3d2bNewExecContext(ctx, deps)
+	return execCreateExternalEntity(ectx, stmt.(*ast.CreateExternalEntityStmt))
 }
 
 func execCreateExternalEntitiesFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
@@ -3268,4 +3276,85 @@ func execCreateAgentFuture(ctx context.Context, stmt ast.Statement, deps *Handle
 func execDropAgentFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
 	ectx := phase3d2bNewExecContext(ctx, deps)
 	return execDropAgent(ectx, stmt.(*ast.DropAgentStmt))
+}
+
+// Missing Fn wrappers (bridges to old *ExecContext functions for handlers that
+// reference Fn patterns in handler_deps.go but don't have native Fn versions yet).
+func execCreateModuleFn(ctx context.Context, s *ast.CreateModuleStmt, deps *HandlerDeps) error {
+	ectx := phase3d2bNewExecContext(ctx, deps)
+	return execCreateModule(ectx, s)
+}
+
+func execDropModuleFn(ctx context.Context, s *ast.DropModuleStmt, deps *HandlerDeps) error {
+	ectx := phase3d2bNewExecContext(ctx, deps)
+	return execDropModule(ectx, s)
+}
+
+func execCreateAssociationFn(ctx context.Context, s *ast.CreateAssociationStmt, deps *HandlerDeps) error {
+	ectx := phase3d2bNewExecContext(ctx, deps)
+	return execCreateAssociation(ectx, s)
+}
+
+func execAlterAssociationFn(ctx context.Context, s *ast.AlterAssociationStmt, deps *HandlerDeps) error {
+	ectx := phase3d2bNewExecContext(ctx, deps)
+	return execAlterAssociationGen(ectx, s)
+}
+
+func execDropAssociationFn(ctx context.Context, s *ast.DropAssociationStmt, deps *HandlerDeps) error {
+	ectx := phase3d2bNewExecContext(ctx, deps)
+	return execDropAssociationGen(ectx, s)
+}
+
+func execCreatePageV3Fn(ctx context.Context, s *ast.CreatePageStmtV3, deps *HandlerDeps) error {
+	ectx := phase3d2bNewExecContext(ctx, deps)
+	return execCreatePageV3(ectx, s)
+}
+
+func execCreateSnippetV3Fn(ctx context.Context, s *ast.CreateSnippetStmtV3, deps *HandlerDeps) error {
+	ectx := phase3d2bNewExecContext(ctx, deps)
+	return execCreateSnippetV3(ectx, s)
+}
+
+func execAlterPageFn(ctx context.Context, s *ast.AlterPageStmt, deps *HandlerDeps) error {
+	ectx := phase3d2bNewExecContext(ctx, deps)
+	return execAlterPage(ectx, s)
+}
+
+func listODataClientsFn(ctx context.Context, deps *HandlerDeps, format OutputFormat, moduleName string) error {
+	ectx := phase3d2bNewExecContext(ctx, deps)
+	ectx.Format = format
+	return listODataClients(ectx, moduleName)
+}
+
+func listODataServicesFn(ctx context.Context, deps *HandlerDeps, format OutputFormat, moduleName string) error {
+	ectx := phase3d2bNewExecContext(ctx, deps)
+	ectx.Format = format
+	return listODataServices(ectx, moduleName)
+}
+
+func listExternalEntitiesFn(ctx context.Context, deps *HandlerDeps, format OutputFormat, moduleName string) error {
+	ectx := phase3d2bNewExecContext(ctx, deps)
+	ectx.Format = format
+	return listExternalEntities(ectx, moduleName)
+}
+
+func listExternalActionsFn(ctx context.Context, deps *HandlerDeps, format OutputFormat, moduleName string) error {
+	ectx := phase3d2bNewExecContext(ctx, deps)
+	ectx.Format = format
+	return listExternalActions(ectx, moduleName)
+}
+
+func describeODataClientFn(ctx context.Context, deps *HandlerDeps, name ast.QualifiedName) error {
+	ectx := phase3d2bNewExecContext(ctx, deps)
+	return describeODataClient(ectx, name)
+}
+
+func describeODataServiceFn(ctx context.Context, deps *HandlerDeps, name ast.QualifiedName) error {
+	ectx := phase3d2bNewExecContext(ctx, deps)
+	return describeODataService(ectx, name)
+}
+
+func describeExternalEntityFn(ctx context.Context, deps *HandlerDeps, name ast.QualifiedName) error {
+	ectx := phase3d2bNewExecContext(ctx, deps)
+	return describeExternalEntity(ectx, name)
 }

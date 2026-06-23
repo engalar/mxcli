@@ -108,6 +108,16 @@ func (r *Registry) Dispatch(ctx *ExecContext, stmt ast.Statement) error {
 	return h(ctx, stmt)
 }
 
+// DispatchFuture dispatches a statement to its new-style handler only.
+// Returns unsupported error when no future handler is registered (no fallback).
+// Used by executeInner after all handlers were migrated to RegisterFuture.
+func (r *Registry) DispatchFuture(ctx context.Context, stmt ast.Statement) error {
+	if fn, ok := r.futureFuncs[stmt.TypeName()]; ok {
+		return fn(ctx, stmt)
+	}
+	return mdlerrors.NewUnsupported(fmt.Sprintf("unhandled statement type %s", stmt.TypeName()))
+}
+
 // Validate checks that every known AST statement type has a registered handler.
 func (r *Registry) Validate(knownTypes []ast.Statement) error {
 	var missing []string
@@ -139,5 +149,11 @@ func (r *Registry) RegisteredTypes() []string {
 // HasHandler returns true if a handler is registered for the given type.
 func (r *Registry) HasHandler(stmt ast.Statement) bool {
 	_, ok := r.handlers[stmt.TypeName()]
+	return ok
+}
+
+// HasFutureHandler returns true if a RegisterFuture handler is registered.
+func (r *Registry) HasFutureHandler(stmt ast.Statement) bool {
+	_, ok := r.futureFuncs[stmt.TypeName()]
 	return ok
 }

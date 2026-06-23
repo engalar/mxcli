@@ -3,6 +3,7 @@
 package executor
 
 import (
+	"context"
 	"fmt"
 	"sort"
 	"text/tabwriter"
@@ -10,6 +11,17 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 )
+
+// ensureGraphForShowFn checks that the in-memory project graph exists with HandlerDeps.
+func ensureGraphForShowFn(ctx context.Context, deps *HandlerDeps) error {
+	if deps.Graph != nil {
+		return nil
+	}
+	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
+		return mdlerrors.NewNotConnected()
+	}
+	return mdlerrors.NewBackend("graph", fmt.Errorf("project graph not built — run REFRESH CATALOG FULL first"))
+}
 
 // ensureGraph builds the in-memory project graph if it has not been built yet.
 func ensureGraph(ctx *ExecContext) error {
@@ -22,26 +34,26 @@ func ensureGraph(ctx *ExecContext) error {
 	return buildGraph(ctx)
 }
 
-// execShowCallers handles SHOW CALLERS OF Module.Microflow [TRANSITIVE].
-func execShowCallers(ctx *ExecContext, s *ast.ShowStmt) error {
+// execShowCallersFn handles SHOW CALLERS OF with HandlerDeps.
+func execShowCallersFn(ctx context.Context, s *ast.ShowStmt, deps *HandlerDeps) error {
 	if s.Name == nil {
 		return mdlerrors.NewValidation("target name required for show callers")
 	}
-	if err := ensureGraph(ctx); err != nil {
+	if err := ensureGraphForShowFn(ctx, deps); err != nil {
 		return err
 	}
 
 	targetName := s.Name.String()
-	fmt.Fprintf(ctx.Output, "\nCallers of %s", targetName)
+	fmt.Fprintf(deps.Output, "\nCallers of %s", targetName)
 	if s.Transitive {
-		fmt.Fprintln(ctx.Output, " (transitive)")
+		fmt.Fprintln(deps.Output, " (transitive)")
 	} else {
-		fmt.Fprintln(ctx.Output, "")
+		fmt.Fprintln(deps.Output, "")
 	}
 
-	callers := ctx.Graph.Callers(targetName, s.Transitive)
+	callers := deps.Graph.Callers(targetName, s.Transitive)
 	if len(callers) == 0 {
-		fmt.Fprintln(ctx.Output, "(no callers found)")
+		fmt.Fprintln(deps.Output, "(no callers found)")
 		return nil
 	}
 	sort.SliceStable(callers, func(i, j int) bool {
@@ -51,8 +63,8 @@ func execShowCallers(ctx *ExecContext, s *ast.ShowStmt) error {
 		return callers[i].Caller < callers[j].Caller
 	})
 
-	fmt.Fprintf(ctx.Output, "Found %d caller(s)\n", len(callers))
-	w := tabwriter.NewWriter(ctx.Output, 0, 0, 2, ' ', 0)
+	fmt.Fprintf(deps.Output, "Found %d caller(s)\n", len(callers))
+	w := tabwriter.NewWriter(deps.Output, 0, 0, 2, ' ', 0)
 	fmt.Fprintln(w, "CALLER\tDEPTH")
 	for _, c := range callers {
 		fmt.Fprintf(w, "%s\t%d\n", c.Caller, c.Depth)
@@ -60,26 +72,31 @@ func execShowCallers(ctx *ExecContext, s *ast.ShowStmt) error {
 	return w.Flush()
 }
 
-// execShowCallees handles SHOW CALLEES OF Module.Microflow [TRANSITIVE].
-func execShowCallees(ctx *ExecContext, s *ast.ShowStmt) error {
+// execShowCallers handles SHOW CALLERS OF Module.Microflow [TRANSITIVE].
+func execShowCallers(ctx *ExecContext, s *ast.ShowStmt) error {
+	return execShowCallersFn(ctx, s, execContextToDeps(ctx))
+}
+
+// execShowCalleesFn handles SHOW CALLEES OF with HandlerDeps.
+func execShowCalleesFn(ctx context.Context, s *ast.ShowStmt, deps *HandlerDeps) error {
 	if s.Name == nil {
 		return mdlerrors.NewValidation("target name required for show callees")
 	}
-	if err := ensureGraph(ctx); err != nil {
+	if err := ensureGraphForShowFn(ctx, deps); err != nil {
 		return err
 	}
 
 	sourceName := s.Name.String()
-	fmt.Fprintf(ctx.Output, "\nCallees of %s", sourceName)
+	fmt.Fprintf(deps.Output, "\nCallees of %s", sourceName)
 	if s.Transitive {
-		fmt.Fprintln(ctx.Output, " (transitive)")
+		fmt.Fprintln(deps.Output, " (transitive)")
 	} else {
-		fmt.Fprintln(ctx.Output, "")
+		fmt.Fprintln(deps.Output, "")
 	}
 
-	callees := ctx.Graph.Callees(sourceName, s.Transitive)
+	callees := deps.Graph.Callees(sourceName, s.Transitive)
 	if len(callees) == 0 {
-		fmt.Fprintln(ctx.Output, "(no callees found)")
+		fmt.Fprintln(deps.Output, "(no callees found)")
 		return nil
 	}
 	sort.SliceStable(callees, func(i, j int) bool {
@@ -89,8 +106,8 @@ func execShowCallees(ctx *ExecContext, s *ast.ShowStmt) error {
 		return callees[i].Callee < callees[j].Callee
 	})
 
-	fmt.Fprintf(ctx.Output, "Found %d callee(s)\n", len(callees))
-	w := tabwriter.NewWriter(ctx.Output, 0, 0, 2, ' ', 0)
+	fmt.Fprintf(deps.Output, "Found %d callee(s)\n", len(callees))
+	w := tabwriter.NewWriter(deps.Output, 0, 0, 2, ' ', 0)
 	fmt.Fprintln(w, "CALLEE\tDEPTH")
 	for _, c := range callees {
 		fmt.Fprintf(w, "%s\t%d\n", c.Callee, c.Depth)
@@ -98,22 +115,26 @@ func execShowCallees(ctx *ExecContext, s *ast.ShowStmt) error {
 	return w.Flush()
 }
 
-// execShowReferences handles SHOW REFERENCES TO Module.Entity.
-// Lists every element that references the target (inbound edges).
-func execShowReferences(ctx *ExecContext, s *ast.ShowStmt) error {
+// execShowCallees handles SHOW CALLEES OF Module.Microflow [TRANSITIVE].
+func execShowCallees(ctx *ExecContext, s *ast.ShowStmt) error {
+	return execShowCalleesFn(ctx, s, execContextToDeps(ctx))
+}
+
+// execShowReferencesFn handles SHOW REFERENCES TO with HandlerDeps.
+func execShowReferencesFn(ctx context.Context, s *ast.ShowStmt, deps *HandlerDeps) error {
 	if s.Name == nil {
 		return mdlerrors.NewValidation("target name required for show references")
 	}
-	if err := ensureGraph(ctx); err != nil {
+	if err := ensureGraphForShowFn(ctx, deps); err != nil {
 		return err
 	}
 
 	targetName := s.Name.String()
-	fmt.Fprintf(ctx.Output, "\nReferences to %s\n", targetName)
+	fmt.Fprintf(deps.Output, "\nReferences to %s\n", targetName)
 
-	refs := ctx.Graph.Impact(targetName)
+	refs := deps.Graph.Impact(targetName)
 	if len(refs) == 0 {
-		fmt.Fprintln(ctx.Output, "(no references found)")
+		fmt.Fprintln(deps.Output, "(no references found)")
 		return nil
 	}
 	sort.SliceStable(refs, func(i, j int) bool {
@@ -123,8 +144,8 @@ func execShowReferences(ctx *ExecContext, s *ast.ShowStmt) error {
 		return refs[i].Source < refs[j].Source
 	})
 
-	fmt.Fprintf(ctx.Output, "Found %d reference(s)\n", len(refs))
-	w := tabwriter.NewWriter(ctx.Output, 0, 0, 2, ' ', 0)
+	fmt.Fprintf(deps.Output, "Found %d reference(s)\n", len(refs))
+	w := tabwriter.NewWriter(deps.Output, 0, 0, 2, ' ', 0)
 	fmt.Fprintln(w, "SOURCE\tREF KIND")
 	for _, r := range refs {
 		fmt.Fprintf(w, "%s\t%s\n", r.Source, r.RefKind)
@@ -132,23 +153,26 @@ func execShowReferences(ctx *ExecContext, s *ast.ShowStmt) error {
 	return w.Flush()
 }
 
-// execShowImpact handles SHOW IMPACT OF Module.Entity.
-// This shows all elements that would be affected by changing the target
-// (inbound edges), grouped by reference kind.
-func execShowImpact(ctx *ExecContext, s *ast.ShowStmt) error {
+// execShowReferences handles SHOW REFERENCES TO Module.Entity.
+func execShowReferences(ctx *ExecContext, s *ast.ShowStmt) error {
+	return execShowReferencesFn(ctx, s, execContextToDeps(ctx))
+}
+
+// execShowImpactFn handles SHOW IMPACT OF with HandlerDeps.
+func execShowImpactFn(ctx context.Context, s *ast.ShowStmt, deps *HandlerDeps) error {
 	if s.Name == nil {
 		return mdlerrors.NewValidation("target name required for show impact")
 	}
-	if err := ensureGraph(ctx); err != nil {
+	if err := ensureGraphForShowFn(ctx, deps); err != nil {
 		return err
 	}
 
 	targetName := s.Name.String()
-	fmt.Fprintf(ctx.Output, "\nImpact analysis for %s\n", targetName)
+	fmt.Fprintf(deps.Output, "\nImpact analysis for %s\n", targetName)
 
-	refs := ctx.Graph.Impact(targetName)
+	refs := deps.Graph.Impact(targetName)
 	if len(refs) == 0 {
-		fmt.Fprintln(ctx.Output, "(no impact - element is not referenced)")
+		fmt.Fprintln(deps.Output, "(no impact - element is not referenced)")
 		return nil
 	}
 
@@ -162,11 +186,11 @@ func execShowImpact(ctx *ExecContext, s *ast.ShowStmt) error {
 	}
 	sort.Strings(kinds)
 
-	fmt.Fprintf(ctx.Output, "\nSummary:\n")
+	fmt.Fprintf(deps.Output, "\nSummary:\n")
 	for _, k := range kinds {
-		fmt.Fprintf(ctx.Output, "  %s: %d\n", k, kindCounts[k])
+		fmt.Fprintf(deps.Output, "  %s: %d\n", k, kindCounts[k])
 	}
-	fmt.Fprintln(ctx.Output)
+	fmt.Fprintln(deps.Output)
 
 	sort.SliceStable(refs, func(i, j int) bool {
 		if refs[i].RefKind != refs[j].RefKind {
@@ -175,11 +199,16 @@ func execShowImpact(ctx *ExecContext, s *ast.ShowStmt) error {
 		return refs[i].Source < refs[j].Source
 	})
 
-	fmt.Fprintf(ctx.Output, "Found %d affected element(s)\n", len(refs))
-	w := tabwriter.NewWriter(ctx.Output, 0, 0, 2, ' ', 0)
+	fmt.Fprintf(deps.Output, "Found %d affected element(s)\n", len(refs))
+	w := tabwriter.NewWriter(deps.Output, 0, 0, 2, ' ', 0)
 	fmt.Fprintln(w, "SOURCE\tREF KIND")
 	for _, r := range refs {
 		fmt.Fprintf(w, "%s\t%s\n", r.Source, r.RefKind)
 	}
 	return w.Flush()
+}
+
+// execShowImpact handles SHOW IMPACT OF Module.Entity.
+func execShowImpact(ctx *ExecContext, s *ast.ShowStmt) error {
+	return execShowImpactFn(ctx, s, execContextToDeps(ctx))
 }

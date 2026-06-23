@@ -3,6 +3,7 @@
 package executor
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"sort"
@@ -15,18 +16,18 @@ import (
 	"github.com/mendixlabs/mxcli/model"
 )
 
-// listExportMappings prints a table of all export mapping documents.
-func listExportMappings(ctx *ExecContext, inModule string) error {
-	if !ctx.Connected() {
+// listExportMappingsFn handles SHOW EXPORT MAPPINGS with HandlerDeps.
+func listExportMappingsFn(ctx context.Context, inModule string, deps *HandlerDeps) error {
+	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnected()
 	}
 
-	all, err := ctx.MappingReader.ListExportMappings()
+	all, err := deps.MapperReader.ListExportMappings()
 	if err != nil {
 		return mdlerrors.NewBackend("list export mappings", err)
 	}
 
-	h, err := getHierarchy(ctx)
+	h, err := NewContainerHierarchyFromRoles(deps.ModuleLister, deps.MetadataReader, deps.FolderManager)
 	if err != nil {
 		return err
 	}
@@ -59,14 +60,13 @@ func listExportMappings(ctx *ExecContext, inModule string) error {
 
 	if len(rows) == 0 {
 		if inModule != "" {
-			fmt.Fprintf(ctx.Output, "No export mappings found in module %s\n", inModule)
+			fmt.Fprintf(deps.Output, "No export mappings found in module %s\n", inModule)
 		} else {
-			fmt.Fprintln(ctx.Output, "No export mappings found")
+			fmt.Fprintln(deps.Output, "No export mappings found")
 		}
 		return nil
 	}
 
-	// Sort alphabetically by qualified name
 	sort.Slice(rows, func(i, j int) bool { return rows[i].qualifiedName < rows[j].qualifiedName })
 
 	result := &TableResult{
@@ -75,16 +75,21 @@ func listExportMappings(ctx *ExecContext, inModule string) error {
 	for _, r := range rows {
 		result.Rows = append(result.Rows, []any{r.qualifiedName, r.name, r.schemaSource, r.elementCount})
 	}
-	return writeResult(ctx, result)
+	return writeResultTo(deps.Output, deps.Format, result)
 }
 
-// describeExportMapping prints the MDL representation of an export mapping.
-func describeExportMapping(ctx *ExecContext, name ast.QualifiedName) error {
-	if !ctx.Connected() {
+// listExportMappings prints a table of all export mapping documents.
+func listExportMappings(ctx *ExecContext, inModule string) error {
+	return listExportMappingsFn(ctx, inModule, execContextToDeps(ctx))
+}
+
+// describeExportMappingFn handles DESCRIBE EXPORT MAPPING with HandlerDeps.
+func describeExportMappingFn(ctx context.Context, name ast.QualifiedName, deps *HandlerDeps) error {
+	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnected()
 	}
 
-	em, err := ctx.MappingReader.GetExportMappingByQualifiedName(name.Module, name.Name)
+	em, err := deps.MapperReader.GetExportMappingByQualifiedName(name.Module, name.Name)
 	if err != nil {
 		if strings.Contains(err.Error(), "not found") {
 			return mdlerrors.NewNotFound("export mapping", name.String())
@@ -96,37 +101,42 @@ func describeExportMapping(ctx *ExecContext, name ast.QualifiedName) error {
 	}
 
 	if em.Documentation != "" {
-		fmt.Fprintf(ctx.Output, "/**\n * %s\n */\n", strings.ReplaceAll(em.Documentation, "\n", "\n * "))
+		fmt.Fprintf(deps.Output, "/**\n * %s\n */\n", strings.ReplaceAll(em.Documentation, "\n", "\n * "))
 	}
 
-	h, err := getHierarchy(ctx)
+	h, err := NewContainerHierarchyFromRoles(deps.ModuleLister, deps.MetadataReader, deps.FolderManager)
 	if err != nil {
 		return err
 	}
 	modID := h.FindModuleID(em.ContainerID)
 	moduleName := h.GetModuleName(modID)
 
-	fmt.Fprintf(ctx.Output, "create export mapping %s.%s\n", moduleName, em.Name)
+	fmt.Fprintf(deps.Output, "create export mapping %s.%s\n", moduleName, em.Name)
 
 	if em.JsonStructure != "" {
-		fmt.Fprintf(ctx.Output, "  with json structure %s\n", em.JsonStructure)
+		fmt.Fprintf(deps.Output, "  with json structure %s\n", em.JsonStructure)
 	} else if em.XmlSchema != "" {
-		fmt.Fprintf(ctx.Output, "  with xml schema %s\n", em.XmlSchema)
+		fmt.Fprintf(deps.Output, "  with xml schema %s\n", em.XmlSchema)
 	}
 
 	if em.NullValueOption != "" && em.NullValueOption != "LeaveOutElement" {
-		fmt.Fprintf(ctx.Output, "  null values %s\n", em.NullValueOption)
+		fmt.Fprintf(deps.Output, "  null values %s\n", em.NullValueOption)
 	}
 
 	if len(em.Elements) > 0 {
-		fmt.Fprintln(ctx.Output, "{")
+		fmt.Fprintln(deps.Output, "{")
 		for _, elem := range em.Elements {
-			printExportMappingElement(ctx.Output, elem, 1, true)
-			fmt.Fprintln(ctx.Output)
+			printExportMappingElement(deps.Output, elem, 1, true)
+			fmt.Fprintln(deps.Output)
 		}
-		fmt.Fprintln(ctx.Output, "};")
+		fmt.Fprintln(deps.Output, "};")
 	}
 	return nil
+}
+
+// describeExportMapping prints the MDL representation of an export mapping.
+func describeExportMapping(ctx *ExecContext, name ast.QualifiedName) error {
+	return describeExportMappingFn(ctx, name, execContextToDeps(ctx))
 }
 
 func printExportMappingElement(w io.Writer, elem *model.ExportMappingElement, depth int, isRoot bool) {
@@ -179,19 +189,29 @@ func printExportMappingElement(w io.Writer, elem *model.ExportMappingElement, de
 	}
 }
 
-// execCreateExportMapping creates a new export mapping.
-func execCreateExportMapping(ctx *ExecContext, s *ast.CreateExportMappingStmt) error {
-	if !ctx.ConnectedForWrite() {
+// execCreateExportMappingFn creates a new export mapping with HandlerDeps.
+func execCreateExportMappingFn(ctx context.Context, s *ast.CreateExportMappingStmt, deps *HandlerDeps) error {
+	if deps.Backend == nil || !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
 
-	existing, _ := ctx.MappingReader.GetExportMappingByQualifiedName(s.Name.Module, s.Name.Name)
+	existing, _ := deps.MapperReader.GetExportMappingByQualifiedName(s.Name.Module, s.Name.Name)
 	if existing != nil && !s.CreateOrModify {
 		return mdlerrors.NewAlreadyExists("export mapping", s.Name.String())
 	}
 
-	module, err := findModule(ctx, s.Name.Module)
+	modules, err := deps.ModuleLister.ListModules()
 	if err != nil {
+		return mdlerrors.NewBackend("list modules", err)
+	}
+	var module *model.Module
+	for _, m := range modules {
+		if m.Name == s.Name.Module {
+			module = m
+			break
+		}
+	}
+	if module == nil {
 		return mdlerrors.NewNotFound("module", s.Name.Module)
 	}
 	containerID := module.ID
@@ -217,36 +237,41 @@ func execCreateExportMapping(ctx *ExecContext, s *ast.CreateExportMappingStmt) e
 	// Build a path→element info map from the JSON structure for schema alignment.
 	jsElems := map[string]*types.JsonElement{}
 	if s.SchemaKind == "JSON_STRUCTURE" && s.SchemaRef.Module != "" {
-		if js, err2 := ctx.MappingReader.GetJsonStructureByQualifiedName(s.SchemaRef.Module, s.SchemaRef.Name); err2 == nil && js != nil {
+		if js, err2 := deps.MapperReader.GetJsonStructureByQualifiedName(s.SchemaRef.Module, s.SchemaRef.Name); err2 == nil && js != nil {
 			buildJsonElementPathMap(js.Elements, jsElems)
 		}
 	}
 
 	// Build element tree from the AST definition, cloning JSON structure properties
 	if s.RootElement != nil {
-		root := buildExportMappingElementModel(s.Name.Module, s.RootElement, "", "(Object)", jsElems, ctx.Backend, true)
+		root := buildExportMappingElementModel(s.Name.Module, s.RootElement, "", "(Object)", jsElems, deps.Backend, true)
 		em.Elements = append(em.Elements, root)
 	}
 
 	if existing != nil {
 		em.ID = existing.ID
-		if err := ctx.MappingWriter.UpdateExportMapping(em); err != nil {
+		if err := deps.MapperWriter.UpdateExportMapping(em); err != nil {
 			return mdlerrors.NewBackend("update export mapping", err)
 		}
-		if !ctx.Quiet {
-			fmt.Fprintf(ctx.Output, "Modified export mapping %s.%s\n", s.Name.Module, s.Name.Name)
+		if !deps.Quiet {
+			fmt.Fprintf(deps.Output, "Modified export mapping %s.%s\n", s.Name.Module, s.Name.Name)
 		}
 		return nil
 	}
 
-	if err := ctx.MappingWriter.CreateExportMapping(em); err != nil {
+	if err := deps.MapperWriter.CreateExportMapping(em); err != nil {
 		return mdlerrors.NewBackend("create export mapping", err)
 	}
 
-	if !ctx.Quiet {
-		fmt.Fprintf(ctx.Output, "Created export mapping %s.%s\n", s.Name.Module, s.Name.Name)
+	if !deps.Quiet {
+		fmt.Fprintf(deps.Output, "Created export mapping %s.%s\n", s.Name.Module, s.Name.Name)
 	}
 	return nil
+}
+
+// execCreateExportMapping creates a new export mapping.
+func execCreateExportMapping(ctx *ExecContext, s *ast.CreateExportMappingStmt) error {
+	return execCreateExportMappingFn(ctx, s, execContextToDeps(ctx))
 }
 
 // buildExportMappingElementModel converts an AST element definition to a model element.
@@ -379,13 +404,13 @@ func buildExportMappingElementModel(moduleName string, def *ast.ExportMappingEle
 	return elem
 }
 
-// execDropExportMapping deletes an export mapping.
-func execDropExportMapping(ctx *ExecContext, s *ast.DropExportMappingStmt) error {
-	if !ctx.ConnectedForWrite() {
+// execDropExportMappingFn deletes an export mapping with HandlerDeps.
+func execDropExportMappingFn(ctx context.Context, s *ast.DropExportMappingStmt, deps *HandlerDeps) error {
+	if deps.Backend == nil || !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
 
-	em, err := ctx.MappingReader.GetExportMappingByQualifiedName(s.Name.Module, s.Name.Name)
+	em, err := deps.MapperReader.GetExportMappingByQualifiedName(s.Name.Module, s.Name.Name)
 	if err != nil {
 		if strings.Contains(err.Error(), "not found") {
 			return mdlerrors.NewNotFound("export mapping", s.Name.String())
@@ -396,12 +421,17 @@ func execDropExportMapping(ctx *ExecContext, s *ast.DropExportMappingStmt) error
 		return mdlerrors.NewNotFound("export mapping", s.Name.String())
 	}
 
-	if err := ctx.MappingWriter.DeleteExportMapping(em.ID); err != nil {
+	if err := deps.MapperWriter.DeleteExportMapping(em.ID); err != nil {
 		return mdlerrors.NewBackend("drop export mapping", err)
 	}
 
-	if !ctx.Quiet {
-		fmt.Fprintf(ctx.Output, "Dropped export mapping %s.%s\n", s.Name.Module, s.Name.Name)
+	if !deps.Quiet {
+		fmt.Fprintf(deps.Output, "Dropped export mapping %s.%s\n", s.Name.Module, s.Name.Name)
 	}
 	return nil
+}
+
+// execDropExportMapping deletes an export mapping.
+func execDropExportMapping(ctx *ExecContext, s *ast.DropExportMappingStmt) error {
+	return execDropExportMappingFn(ctx, s, execContextToDeps(ctx))
 }
