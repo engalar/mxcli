@@ -510,20 +510,16 @@ func (e *Executor) registerFutureOverlays() {
 		return execRevokePageAccessGen(ectx, stmt.(*ast.RevokePageAccessStmt))
 	})
 	r.RegisterFuture("GrantMicroflowAccess", func(ctx context.Context, stmt ast.Statement) error {
-		ectx := phase3d2bNewExecContext(ctx, deps)
-		return execGrantMicroflowAccessGen(ectx, stmt.(*ast.GrantMicroflowAccessStmt))
+		return execGrantMicroflowAccessGenFn(ctx, stmt.(*ast.GrantMicroflowAccessStmt), deps)
 	})
 	r.RegisterFuture("RevokeMicroflowAccess", func(ctx context.Context, stmt ast.Statement) error {
-		ectx := phase3d2bNewExecContext(ctx, deps)
-		return execRevokeMicroflowAccessGen(ectx, stmt.(*ast.RevokeMicroflowAccessStmt))
+		return execRevokeMicroflowAccessGenFn(ctx, stmt.(*ast.RevokeMicroflowAccessStmt), deps)
 	})
 	r.RegisterFuture("GrantNanoflowAccess", func(ctx context.Context, stmt ast.Statement) error {
-		ectx := phase3d2bNewExecContext(ctx, deps)
-		return execGrantNanoflowAccessGen(ectx, stmt.(*ast.GrantNanoflowAccessStmt))
+		return execGrantNanoflowAccessGenFn(ctx, stmt.(*ast.GrantNanoflowAccessStmt), deps)
 	})
 	r.RegisterFuture("RevokeNanoflowAccess", func(ctx context.Context, stmt ast.Statement) error {
-		ectx := phase3d2bNewExecContext(ctx, deps)
-		return execRevokeNanoflowAccessGen(ectx, stmt.(*ast.RevokeNanoflowAccessStmt))
+		return execRevokeNanoflowAccessGenFn(ctx, stmt.(*ast.RevokeNanoflowAccessStmt), deps)
 	})
 	r.RegisterFuture("GrantWorkflowAccess", func(ctx context.Context, stmt ast.Statement) error {
 		ectx := phase3d2bNewExecContext(ctx, deps)
