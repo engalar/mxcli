@@ -2757,7 +2757,7 @@ func execConnectFuture(ctx context.Context, s *ast.ConnectStmt, ex *Executor) er
 		Context: ctx,
 		ExecIO: ExecIO{
 			Output:       ex.guard,
-			StatusOutput: ex.guard.status,
+			StatusOutput: ex.guard.w,
 			Format:       ex.guard.format,
 			Quiet:        ex.guard.quiet,
 		},

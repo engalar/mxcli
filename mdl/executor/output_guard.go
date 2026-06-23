@@ -17,13 +17,16 @@ import (
 type outputGuard struct {
 	mu       sync.Mutex
 	w        io.Writer
+	status   io.Writer
 	maxLines int
 	lines    int
 	exceeded bool
+	format   OutputFormat
+	quiet    bool
 }
 
 func newOutputGuard(w io.Writer, maxLines int) *outputGuard {
-	return &outputGuard{w: w, maxLines: maxLines}
+	return &outputGuard{w: w, maxLines: maxLines, quiet: false}
 }
 
 // reset clears the line count for the next statement.

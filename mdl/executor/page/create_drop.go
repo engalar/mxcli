@@ -30,7 +30,3 @@ func ExecDropSnippetFn(ctx context.Context, s *ast.DropSnippetStmt, deps *execut
 func ExecCreateOrModifyLayoutFn(ctx context.Context, s *ast.CreateLayoutStmt, deps *executor.HandlerDeps) error {
 	return executor.ExecCreateOrModifyLayoutFn(ctx, s, deps)
 }
-
-func ExecAlterPageFn(ctx context.Context, s *ast.AlterPageStmt, deps *executor.HandlerDeps) error {
-	return executor.ExecAlterPageFn(ctx, s, deps)
-}

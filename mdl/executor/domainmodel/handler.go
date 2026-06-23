@@ -9,19 +9,16 @@ import (
 
 func RegisterHandlers(r *executor.Registry, deps *executor.HandlerDeps) {
 	r.RegisterFuture("CreateEntity", func(ctx context.Context, stmt ast.Statement) error {
-		ectx := executor.NewExecContext(ctx, deps)
-		return executor.ExecCreateEntity(ectx, stmt.(*ast.CreateEntityStmt))
+		return ExecCreateEntityFn(ctx, stmt.(*ast.CreateEntityStmt), deps)
 	})
 	r.RegisterFuture("AlterEntity", func(ctx context.Context, stmt ast.Statement) error {
-		return executor.ExecAlterEntityGenFn(ctx, stmt.(*ast.AlterEntityStmt), deps)
+		return ExecAlterEntityFn(ctx, stmt.(*ast.AlterEntityStmt), deps)
 	})
 	r.RegisterFuture("DropEntity", func(ctx context.Context, stmt ast.Statement) error {
-		ectx := executor.NewExecContext(ctx, deps)
-		return executor.ExecDropEntity(ectx, stmt.(*ast.DropEntityStmt))
+		return ExecDropEntityFn(ctx, stmt.(*ast.DropEntityStmt), deps)
 	})
 	r.RegisterFuture("CreateViewEntity", func(ctx context.Context, stmt ast.Statement) error {
-		ectx := executor.NewExecContext(ctx, deps)
-		return executor.ExecCreateViewEntity(ectx, stmt.(*ast.CreateViewEntityStmt))
+		return ExecCreateViewEntityFn(ctx, stmt.(*ast.CreateViewEntityStmt), deps)
 	})
 	r.RegisterFuture("CreateAssociation", func(ctx context.Context, stmt ast.Statement) error {
 		return ExecCreateAssociationFn(ctx, stmt.(*ast.CreateAssociationStmt), deps)

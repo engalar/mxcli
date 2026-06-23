@@ -2,6 +2,7 @@ package executor
 
 import (
 	"context"
+	"fmt"
 	"io"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
@@ -415,13 +416,16 @@ func (e *Executor) registerFutureOverlays() {
 	})
 
 	r.RegisterFuture("CreateAssociation", func(ctx context.Context, stmt ast.Statement) error {
-		return ExecCreateAssociationFn(ctx, stmt.(*ast.CreateAssociationStmt), deps)
+		ectx := NewExecContext(ctx, deps)
+		return ExecCreateAssociation(ectx, stmt.(*ast.CreateAssociationStmt))
 	})
 	r.RegisterFuture("AlterAssociation", func(ctx context.Context, stmt ast.Statement) error {
-		return ExecAlterAssociationFn(ctx, stmt.(*ast.AlterAssociationStmt), deps)
+		ectx := NewExecContext(ctx, deps)
+		return ExecAlterAssociationGen(ectx, stmt.(*ast.AlterAssociationStmt))
 	})
 	r.RegisterFuture("DropAssociation", func(ctx context.Context, stmt ast.Statement) error {
-		return ExecDropAssociationFn(ctx, stmt.(*ast.DropAssociationStmt), deps)
+		ectx := NewExecContext(ctx, deps)
+		return ExecDropAssociationGen(ectx, stmt.(*ast.DropAssociationStmt))
 	})
 
 	// ────────────────────────────────────────────────────
@@ -568,21 +572,25 @@ func (e *Executor) registerFutureOverlays() {
 
 	// Enumeration CRUD
 	r.RegisterFuture("CreateEnumeration", func(ctx context.Context, stmt ast.Statement) error {
-		return ExecCreateEnumerationFuture(ctx, stmt, deps)
+		ectx := NewExecContext(nil, deps)
+		return ExecCreateEnumeration(ectx, stmt.(*ast.CreateEnumerationStmt))
 	})
 	r.RegisterFuture("AlterEnumeration", func(ctx context.Context, stmt ast.Statement) error {
-		return ExecAlterEnumerationFuture(ctx, deps)
+		return fmt.Errorf("alter enumeration not yet implemented")
 	})
 	r.RegisterFuture("DropEnumeration", func(ctx context.Context, stmt ast.Statement) error {
-		return ExecDropEnumerationFuture(ctx, stmt, deps)
+		ectx := NewExecContext(nil, deps)
+		return ExecDropEnumeration(ectx, stmt.(*ast.DropEnumerationStmt))
 	})
 
 	// Constant CRUD
 	r.RegisterFuture("CreateConstant", func(ctx context.Context, stmt ast.Statement) error {
-		return ExecCreateConstantFuture(ctx, stmt, deps)
+		ectx := NewExecContext(nil, deps)
+		return ExecCreateConstant(ectx, stmt.(*ast.CreateConstantStmt))
 	})
 	r.RegisterFuture("DropConstant", func(ctx context.Context, stmt ast.Statement) error {
-		return ExecDropConstantFuture(ctx, stmt, deps)
+		ectx := NewExecContext(nil, deps)
+		return ExecDropConstant(ectx, stmt.(*ast.DropConstantStmt))
 	})
 
 	// Module settings
@@ -592,7 +600,8 @@ func (e *Executor) registerFutureOverlays() {
 
 	// Database connection
 	r.RegisterFuture("CreateDatabaseConnection", func(ctx context.Context, stmt ast.Statement) error {
-		return ExecCreateDatabaseConnectionFuture(ctx, stmt, deps)
+		ectx := NewExecContext(nil, deps)
+		return ExecCreateDatabaseConnection(ectx, stmt.(*ast.CreateDatabaseConnectionStmt))
 	})
 
 	// Java/JavaScript action CRUD
