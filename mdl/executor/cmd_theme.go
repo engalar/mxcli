@@ -69,12 +69,6 @@ func execShowThemeVariablesFn(ctx context.Context, s *ast.ShowThemeVariablesStmt
 	return nil
 }
 
-// execShowDesignPropertiesFromGraph 通过 mxgraph 查询设计属性。
-func execShowDesignPropertiesFromGraph(ctx *ExecContext, widgetType string) error {
-	deps := execContextToDeps(ctx)
-	return execShowDesignPropertiesFromGraphFn(ctx, widgetType, deps)
-}
-
 // execShowDesignPropertiesFromGraphFn is the HandlerDeps version of execShowDesignPropertiesFromGraph.
 func execShowDesignPropertiesFromGraphFn(ctx context.Context, widgetType string, deps *HandlerDeps) error {
 	if deps.Graph == nil {

@@ -66,7 +66,7 @@ func registerSecurityHandlers(r *Registry) {
 
 func registerNavigationHandlers(r *Registry) {
 	r.Register(&ast.AlterNavigationStmt{}, func(ctx *ExecContext, stmt ast.Statement) error {
-		return execAlterNavigation(ctx, stmt.(*ast.AlterNavigationStmt))
+		return execAlterNavigationFn(ctx, stmt.(*ast.AlterNavigationStmt), execContextToDeps(ctx))
 	})
 }
 

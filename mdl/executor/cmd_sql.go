@@ -249,12 +249,3 @@ func autoConnect(ctx *ExecContext, alias string) error {
 
 
 
-
-
-
-
-
-func executeGeneratedMDL(ctx *ExecContext, mdl string) error {
-	return executeGeneratedMDLFn(execContextToDeps(ctx), mdl)
-}
-

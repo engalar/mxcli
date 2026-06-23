@@ -13,13 +13,6 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/types"
 )
 
-// execAlterNavigation handles CREATE [OR REPLACE] NAVIGATION <profile> command.
-// It fully replaces the profile's home pages, login page, not-found page, and menu tree.
-func execAlterNavigation(ctx *ExecContext, s *ast.AlterNavigationStmt) error {
-	deps := execContextToDeps(ctx)
-	return execAlterNavigationFn(ctx, s, deps)
-}
-
 // convertMenuItemDef converts an AST NavMenuItemDef to a writer NavMenuItemSpec.
 func convertMenuItemDef(def ast.NavMenuItemDef) types.NavMenuItemSpec {
 	spec := types.NavMenuItemSpec{

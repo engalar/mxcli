@@ -20,11 +20,6 @@ func canExecAlterEntityGen(ctx *ExecContext, s *ast.AlterEntityStmt) bool {
 	return canExecAlterEntityGenFn(execContextToDeps(ctx), s)
 }
 
-func execAlterEntityGen(ctx *ExecContext, s *ast.AlterEntityStmt) error {
-	deps := execContextToDeps(ctx)
-	return execAlterEntityGenFn(ctx, s, deps)
-}
-
 func loadAlterEntityGenTarget(ctx *ExecContext, s *ast.AlterEntityStmt) (*genDm.Entity, *genDm.DomainModel, *model.Module, bool) {
 	if ctx == nil || s == nil {
 		return nil, nil, nil, false
