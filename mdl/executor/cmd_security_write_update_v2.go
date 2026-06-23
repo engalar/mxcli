@@ -12,12 +12,12 @@ import (
 	"github.com/mendixlabs/mxcli/model"
 )
 
-// execUpdateSecurityGenFn is the HandlerDeps version of execUpdateSecurityGen.
-func execUpdateSecurityGenFn(ctx context.Context, s *ast.UpdateSecurityStmt, deps *HandlerDeps) error {
+// ExecUpdateSecurityGenFn is the HandlerDeps version of execUpdateSecurityGen.
+func ExecUpdateSecurityGenFn(ctx context.Context, s *ast.UpdateSecurityStmt, deps *HandlerDeps) error {
 	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
-	ectx := phase3d2bNewExecContext(ctx, deps)
+	ectx := NewExecContext(ctx, deps)
 	modules, err := getModulesFromCache(ectx)
 	if err != nil {
 		return err

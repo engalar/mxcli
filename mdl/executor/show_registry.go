@@ -15,205 +15,205 @@ type ShowHandler func(ctx context.Context, s *ast.ShowStmt, deps *HandlerDeps) e
 // Adding a new SHOW command only requires appending one entry here.
 //
 // ast.ShowWidgets is intentionally absent: it is dispatched via the dedicated
-// ShowWidgetsStmt statement type, not through execShow.
+// ShowWidgetsStmt statement type, not through ExecShow.
 var showHandlers = map[ast.ShowObjectType]ShowHandler{
 	ast.ShowModules: func(ctx context.Context, _ *ast.ShowStmt, deps *HandlerDeps) error {
-		return listModules(phase3d2bNewExecContext(ctx, deps))
+		return listModules(NewExecContext(ctx, deps))
 	},
 	ast.ShowEnumerations: func(ctx context.Context, s *ast.ShowStmt, deps *HandlerDeps) error {
-		return listEnumerations(phase3d2bNewExecContext(ctx, deps), s.InModule)
+		return listEnumerations(NewExecContext(ctx, deps), s.InModule)
 	},
 	ast.ShowConstants: func(ctx context.Context, s *ast.ShowStmt, deps *HandlerDeps) error {
-		return listConstants(phase3d2bNewExecContext(ctx, deps), s.InModule)
+		return listConstants(NewExecContext(ctx, deps), s.InModule)
 	},
 	ast.ShowConstantValues: func(ctx context.Context, s *ast.ShowStmt, deps *HandlerDeps) error {
-		return listConstantValues(phase3d2bNewExecContext(ctx, deps), s.InModule)
+		return listConstantValues(NewExecContext(ctx, deps), s.InModule)
 	},
 	ast.ShowEntities: func(ctx context.Context, s *ast.ShowStmt, deps *HandlerDeps) error {
-		return listEntitiesGen(phase3d2bNewExecContext(ctx, deps), s.InModule)
+		return listEntitiesGen(NewExecContext(ctx, deps), s.InModule)
 	},
 	ast.ShowEntity: func(ctx context.Context, s *ast.ShowStmt, deps *HandlerDeps) error {
-		return listEntity(phase3d2bNewExecContext(ctx, deps), s.Name)
+		return listEntity(NewExecContext(ctx, deps), s.Name)
 	},
 	ast.ShowAssociations: func(ctx context.Context, s *ast.ShowStmt, deps *HandlerDeps) error {
-		return listAssociations(phase3d2bNewExecContext(ctx, deps), s.InModule)
+		return listAssociations(NewExecContext(ctx, deps), s.InModule)
 	},
 	ast.ShowAssociation: func(ctx context.Context, s *ast.ShowStmt, deps *HandlerDeps) error {
-		return listAssociation(phase3d2bNewExecContext(ctx, deps), s.Name)
+		return listAssociation(NewExecContext(ctx, deps), s.Name)
 	},
 	ast.ShowMicroflows: func(ctx context.Context, s *ast.ShowStmt, deps *HandlerDeps) error {
-		return listMicroflows(phase3d2bNewExecContext(ctx, deps), s.InModule)
+		return listMicroflows(NewExecContext(ctx, deps), s.InModule)
 	},
 	ast.ShowNanoflows: func(ctx context.Context, s *ast.ShowStmt, deps *HandlerDeps) error {
-		return listNanoflows(phase3d2bNewExecContext(ctx, deps), s.InModule)
+		return listNanoflows(NewExecContext(ctx, deps), s.InModule)
 	},
 	ast.ShowPages: func(ctx context.Context, s *ast.ShowStmt, deps *HandlerDeps) error {
-		return listPagesGen(phase3d2bNewExecContext(ctx, deps), s.InModule)
+		return listPagesGen(NewExecContext(ctx, deps), s.InModule)
 	},
 	ast.ShowSnippets: func(ctx context.Context, s *ast.ShowStmt, deps *HandlerDeps) error {
-		return listSnippetsGen(phase3d2bNewExecContext(ctx, deps), s.InModule)
+		return listSnippetsGen(NewExecContext(ctx, deps), s.InModule)
 	},
 	ast.ShowLayouts: func(ctx context.Context, s *ast.ShowStmt, deps *HandlerDeps) error {
-		return listLayoutsGen(phase3d2bNewExecContext(ctx, deps), s.InModule)
+		return listLayoutsGen(NewExecContext(ctx, deps), s.InModule)
 	},
 	ast.ShowJavaActions: func(ctx context.Context, s *ast.ShowStmt, deps *HandlerDeps) error {
-		return listJavaActionsGen(phase3d2bNewExecContext(ctx, deps), s.InModule)
+		return listJavaActionsGen(NewExecContext(ctx, deps), s.InModule)
 	},
 	ast.ShowJavaScriptActions: func(ctx context.Context, s *ast.ShowStmt, deps *HandlerDeps) error {
-		return listJavaScriptActionsGen(phase3d2bNewExecContext(ctx, deps), s.InModule)
+		return listJavaScriptActionsGen(NewExecContext(ctx, deps), s.InModule)
 	},
 	ast.ShowVersion: func(ctx context.Context, _ *ast.ShowStmt, deps *HandlerDeps) error {
-		return listVersion(phase3d2bNewExecContext(ctx, deps))
+		return listVersion(NewExecContext(ctx, deps))
 	},
 	ast.ShowCatalogTables: func(ctx context.Context, _ *ast.ShowStmt, deps *HandlerDeps) error {
-		return execShowCatalogTables(phase3d2bNewExecContext(ctx, deps))
+		return execShowCatalogTables(NewExecContext(ctx, deps))
 	},
 	ast.ShowCatalogStatus: func(ctx context.Context, _ *ast.ShowStmt, deps *HandlerDeps) error {
-		return execShowCatalogStatus(phase3d2bNewExecContext(ctx, deps))
+		return execShowCatalogStatus(NewExecContext(ctx, deps))
 	},
 	ast.ShowCallers: func(ctx context.Context, s *ast.ShowStmt, deps *HandlerDeps) error {
-		return execShowCallersFn(ctx, s, deps)
+		return ExecShowCallersFn(ctx, s, deps)
 	},
 	ast.ShowCallees: func(ctx context.Context, s *ast.ShowStmt, deps *HandlerDeps) error {
-		return execShowCalleesFn(ctx, s, deps)
+		return ExecShowCalleesFn(ctx, s, deps)
 	},
 	ast.ShowReferences: func(ctx context.Context, s *ast.ShowStmt, deps *HandlerDeps) error {
-		return execShowReferencesFn(ctx, s, deps)
+		return ExecShowReferencesFn(ctx, s, deps)
 	},
 	ast.ShowImpact: func(ctx context.Context, s *ast.ShowStmt, deps *HandlerDeps) error {
-		return execShowImpactFn(ctx, s, deps)
+		return ExecShowImpactFn(ctx, s, deps)
 	},
 	ast.ShowContext: func(ctx context.Context, s *ast.ShowStmt, deps *HandlerDeps) error {
-		return execShowContext(phase3d2bNewExecContext(ctx, deps), s)
+		return execShowContext(NewExecContext(ctx, deps), s)
 	},
 	ast.ShowProjectSecurity: func(ctx context.Context, _ *ast.ShowStmt, deps *HandlerDeps) error {
-		return listProjectSecurityGen(phase3d2bNewExecContext(ctx, deps))
+		return listProjectSecurityGen(NewExecContext(ctx, deps))
 	},
 	ast.ShowModuleRoles: func(ctx context.Context, s *ast.ShowStmt, deps *HandlerDeps) error {
-		return listModuleRolesGen(phase3d2bNewExecContext(ctx, deps), s.InModule)
+		return listModuleRolesGen(NewExecContext(ctx, deps), s.InModule)
 	},
 	ast.ShowUserRoles: func(ctx context.Context, _ *ast.ShowStmt, deps *HandlerDeps) error {
-		return listUserRolesGen(phase3d2bNewExecContext(ctx, deps))
+		return listUserRolesGen(NewExecContext(ctx, deps))
 	},
 	ast.ShowDemoUsers: func(ctx context.Context, _ *ast.ShowStmt, deps *HandlerDeps) error {
-		return listDemoUsersGen(phase3d2bNewExecContext(ctx, deps))
+		return listDemoUsersGen(NewExecContext(ctx, deps))
 	},
 	ast.ShowAccessOn: func(ctx context.Context, s *ast.ShowStmt, deps *HandlerDeps) error {
-		return listAccessOnEntityGen(phase3d2bNewExecContext(ctx, deps), s.Name)
+		return listAccessOnEntityGen(NewExecContext(ctx, deps), s.Name)
 	},
 	ast.ShowAccessOnMicroflow: func(ctx context.Context, s *ast.ShowStmt, deps *HandlerDeps) error {
-		return listAccessOnMicroflowGen(phase3d2bNewExecContext(ctx, deps), s.Name)
+		return listAccessOnMicroflowGen(NewExecContext(ctx, deps), s.Name)
 	},
 	ast.ShowAccessOnPage: func(ctx context.Context, s *ast.ShowStmt, deps *HandlerDeps) error {
-		return listAccessOnPageGen(phase3d2bNewExecContext(ctx, deps), s.Name)
+		return listAccessOnPageGen(NewExecContext(ctx, deps), s.Name)
 	},
 	ast.ShowAccessOnWorkflow: func(ctx context.Context, s *ast.ShowStmt, deps *HandlerDeps) error {
-		return listAccessOnWorkflow(phase3d2bNewExecContext(ctx, deps), s.Name)
+		return listAccessOnWorkflow(NewExecContext(ctx, deps), s.Name)
 	},
 	ast.ShowAccessOnNanoflow: func(ctx context.Context, s *ast.ShowStmt, deps *HandlerDeps) error {
-		return listAccessOnNanoflowGen(phase3d2bNewExecContext(ctx, deps), s.Name)
+		return listAccessOnNanoflowGen(NewExecContext(ctx, deps), s.Name)
 	},
 	ast.ShowSecurityMatrix: func(ctx context.Context, s *ast.ShowStmt, deps *HandlerDeps) error {
-		return listSecurityMatrixGen(phase3d2bNewExecContext(ctx, deps), s.InModule)
+		return listSecurityMatrixGen(NewExecContext(ctx, deps), s.InModule)
 	},
 	ast.ShowODataClients: func(ctx context.Context, s *ast.ShowStmt, deps *HandlerDeps) error {
-		return listODataClients(phase3d2bNewExecContext(ctx, deps), s.InModule)
+		return listODataClients(NewExecContext(ctx, deps), s.InModule)
 	},
 	ast.ShowODataServices: func(ctx context.Context, s *ast.ShowStmt, deps *HandlerDeps) error {
-		return listODataServices(phase3d2bNewExecContext(ctx, deps), s.InModule)
+		return listODataServices(NewExecContext(ctx, deps), s.InModule)
 	},
 	ast.ShowExternalEntities: func(ctx context.Context, s *ast.ShowStmt, deps *HandlerDeps) error {
-		return listExternalEntities(phase3d2bNewExecContext(ctx, deps), s.InModule)
+		return listExternalEntities(NewExecContext(ctx, deps), s.InModule)
 	},
 	ast.ShowExternalActions: func(ctx context.Context, s *ast.ShowStmt, deps *HandlerDeps) error {
-		return listExternalActions(phase3d2bNewExecContext(ctx, deps), s.InModule)
+		return listExternalActions(NewExecContext(ctx, deps), s.InModule)
 	},
 	ast.ShowNavigation: func(ctx context.Context, _ *ast.ShowStmt, deps *HandlerDeps) error {
-		return listNavigation(phase3d2bNewExecContext(ctx, deps))
+		return listNavigation(NewExecContext(ctx, deps))
 	},
 	ast.ShowNavigationMenu: func(ctx context.Context, s *ast.ShowStmt, deps *HandlerDeps) error {
-		return listNavigationMenu(phase3d2bNewExecContext(ctx, deps), s.Name)
+		return listNavigationMenu(NewExecContext(ctx, deps), s.Name)
 	},
 	ast.ShowNavigationHomes: func(ctx context.Context, _ *ast.ShowStmt, deps *HandlerDeps) error {
-		return listNavigationHomes(phase3d2bNewExecContext(ctx, deps))
+		return listNavigationHomes(NewExecContext(ctx, deps))
 	},
 	ast.ShowStructure: func(ctx context.Context, s *ast.ShowStmt, deps *HandlerDeps) error {
 		return execShowStructureGenFn(ctx, s, deps)
 	},
 	ast.ShowWorkflows: func(ctx context.Context, s *ast.ShowStmt, deps *HandlerDeps) error {
-		return listWorkflowsGen(phase3d2bNewExecContext(ctx, deps), s.InModule)
+		return listWorkflowsGen(NewExecContext(ctx, deps), s.InModule)
 	},
 	ast.ShowBusinessEventServices: func(ctx context.Context, s *ast.ShowStmt, deps *HandlerDeps) error {
-		return listBusinessEventServices(phase3d2bNewExecContext(ctx, deps), s.InModule)
+		return listBusinessEventServices(NewExecContext(ctx, deps), s.InModule)
 	},
 	ast.ShowBusinessEventClients: func(ctx context.Context, s *ast.ShowStmt, deps *HandlerDeps) error {
-		return listBusinessEventClients(phase3d2bNewExecContext(ctx, deps), s.InModule)
+		return listBusinessEventClients(NewExecContext(ctx, deps), s.InModule)
 	},
 	ast.ShowBusinessEvents: func(ctx context.Context, s *ast.ShowStmt, deps *HandlerDeps) error {
-		return listBusinessEvents(phase3d2bNewExecContext(ctx, deps), s.InModule)
+		return listBusinessEvents(NewExecContext(ctx, deps), s.InModule)
 	},
 	ast.ShowSettings: func(ctx context.Context, _ *ast.ShowStmt, deps *HandlerDeps) error {
-		return listSettings(phase3d2bNewExecContext(ctx, deps))
+		return listSettings(NewExecContext(ctx, deps))
 	},
 	ast.ShowLanguages: func(ctx context.Context, _ *ast.ShowStmt, deps *HandlerDeps) error {
-		return listLanguages(phase3d2bNewExecContext(ctx, deps))
+		return listLanguages(NewExecContext(ctx, deps))
 	},
 	ast.ShowSupportedLanguages: func(ctx context.Context, _ *ast.ShowStmt, deps *HandlerDeps) error {
-		return listSupportedLanguages(phase3d2bNewExecContext(ctx, deps))
+		return listSupportedLanguages(NewExecContext(ctx, deps))
 	},
 	ast.ShowFragments: func(ctx context.Context, _ *ast.ShowStmt, deps *HandlerDeps) error {
-		return listFragments(phase3d2bNewExecContext(ctx, deps))
+		return listFragments(NewExecContext(ctx, deps))
 	},
 	ast.ShowDatabaseConnections: func(ctx context.Context, s *ast.ShowStmt, deps *HandlerDeps) error {
-		return listDatabaseConnections(phase3d2bNewExecContext(ctx, deps), s.InModule)
+		return listDatabaseConnections(NewExecContext(ctx, deps), s.InModule)
 	},
 	ast.ShowImageCollections: func(ctx context.Context, s *ast.ShowStmt, deps *HandlerDeps) error {
-		return listImageCollections(phase3d2bNewExecContext(ctx, deps), s.InModule)
+		return listImageCollections(NewExecContext(ctx, deps), s.InModule)
 	},
 	ast.ShowModels: func(ctx context.Context, s *ast.ShowStmt, deps *HandlerDeps) error {
-		return listAgentEditorModels(phase3d2bNewExecContext(ctx, deps), s.InModule)
+		return listAgentEditorModels(NewExecContext(ctx, deps), s.InModule)
 	},
 	ast.ShowAgents: func(ctx context.Context, s *ast.ShowStmt, deps *HandlerDeps) error {
-		return listAgentEditorAgents(phase3d2bNewExecContext(ctx, deps), s.InModule)
+		return listAgentEditorAgents(NewExecContext(ctx, deps), s.InModule)
 	},
 	ast.ShowKnowledgeBases: func(ctx context.Context, s *ast.ShowStmt, deps *HandlerDeps) error {
-		return listAgentEditorKnowledgeBases(phase3d2bNewExecContext(ctx, deps), s.InModule)
+		return listAgentEditorKnowledgeBases(NewExecContext(ctx, deps), s.InModule)
 	},
 	ast.ShowConsumedMCPServices: func(ctx context.Context, s *ast.ShowStmt, deps *HandlerDeps) error {
-		return listAgentEditorConsumedMCPServices(phase3d2bNewExecContext(ctx, deps), s.InModule)
+		return listAgentEditorConsumedMCPServices(NewExecContext(ctx, deps), s.InModule)
 	},
 	ast.ShowRestClients: func(ctx context.Context, s *ast.ShowStmt, deps *HandlerDeps) error {
-		return listRestClients(phase3d2bNewExecContext(ctx, deps), s.InModule)
+		return listRestClients(NewExecContext(ctx, deps), s.InModule)
 	},
 	ast.ShowPublishedRestServices: func(ctx context.Context, s *ast.ShowStmt, deps *HandlerDeps) error {
-		return listPublishedRestServices(phase3d2bNewExecContext(ctx, deps), s.InModule)
+		return listPublishedRestServices(NewExecContext(ctx, deps), s.InModule)
 	},
 	ast.ShowDataTransformers: func(ctx context.Context, s *ast.ShowStmt, deps *HandlerDeps) error {
-		return listDataTransformers(phase3d2bNewExecContext(ctx, deps), s.InModule)
+		return listDataTransformers(NewExecContext(ctx, deps), s.InModule)
 	},
 	ast.ShowContractEntities: func(ctx context.Context, s *ast.ShowStmt, deps *HandlerDeps) error {
-		return listContractEntities(phase3d2bNewExecContext(ctx, deps), s.Name)
+		return listContractEntities(NewExecContext(ctx, deps), s.Name)
 	},
 	ast.ShowContractActions: func(ctx context.Context, s *ast.ShowStmt, deps *HandlerDeps) error {
-		return listContractActions(phase3d2bNewExecContext(ctx, deps), s.Name)
+		return listContractActions(NewExecContext(ctx, deps), s.Name)
 	},
 	ast.ShowContractChannels: func(ctx context.Context, s *ast.ShowStmt, deps *HandlerDeps) error {
-		return listContractChannels(phase3d2bNewExecContext(ctx, deps), s.Name)
+		return listContractChannels(NewExecContext(ctx, deps), s.Name)
 	},
 	ast.ShowContractMessages: func(ctx context.Context, s *ast.ShowStmt, deps *HandlerDeps) error {
-		return listContractMessages(phase3d2bNewExecContext(ctx, deps), s.Name)
+		return listContractMessages(NewExecContext(ctx, deps), s.Name)
 	},
 	ast.ShowJsonStructures: func(ctx context.Context, s *ast.ShowStmt, deps *HandlerDeps) error {
-		return listJsonStructures(phase3d2bNewExecContext(ctx, deps), s.InModule)
+		return listJsonStructures(NewExecContext(ctx, deps), s.InModule)
 	},
 	ast.ShowImportMappings: func(ctx context.Context, s *ast.ShowStmt, deps *HandlerDeps) error {
-		return listImportMappings(phase3d2bNewExecContext(ctx, deps), s.InModule)
+		return listImportMappings(NewExecContext(ctx, deps), s.InModule)
 	},
 	ast.ShowExportMappings: func(ctx context.Context, s *ast.ShowStmt, deps *HandlerDeps) error {
-		return listExportMappings(phase3d2bNewExecContext(ctx, deps), s.InModule)
+		return listExportMappings(NewExecContext(ctx, deps), s.InModule)
 	},
 	ast.ShowJarDependencies: func(ctx context.Context, s *ast.ShowStmt, deps *HandlerDeps) error {
-		return execListJarDependencies(phase3d2bNewExecContext(ctx, deps), s.InModule)
+		return execListJarDependencies(NewExecContext(ctx, deps), s.InModule)
 	},
 }
 

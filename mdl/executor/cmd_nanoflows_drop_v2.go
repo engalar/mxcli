@@ -43,8 +43,8 @@ import (
 // is exercised on the same flow via the sdk track until Stage 3.2.3
 // reworks the dropped-tracker.
 
-// execDropNanoflowGenFn is the HandlerDeps version of execDropNanoflowGen.
-func execDropNanoflowGenFn(ctx context.Context, s *ast.DropNanoflowStmt, deps *HandlerDeps) error {
+// ExecDropNanoflowGenFn is the HandlerDeps version of execDropNanoflowGen.
+func ExecDropNanoflowGenFn(ctx context.Context, s *ast.DropNanoflowStmt, deps *HandlerDeps) error {
 	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
@@ -66,7 +66,7 @@ func execDropNanoflowGenFn(ctx context.Context, s *ast.DropNanoflowStmt, deps *H
 		if nf == nil {
 			continue
 		}
-		ectx := phase3d2bNewExecContext(ctx, deps)
+		ectx := NewExecContext(ctx, deps)
 		modName := genFlowContainerModule(ectx, h, model.ID(nf.ID()))
 		if modName != s.Name.Module || nf.Name() != s.Name.Name {
 			continue

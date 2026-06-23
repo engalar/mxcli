@@ -29,7 +29,7 @@ func execCreateImageCollectionFn(ctx context.Context, s *ast.CreateImageCollecti
 
 	module, err := findModuleFn(deps.ModuleLister, s.Name.Module)
 	if err != nil {
-		tmpCtx := phase3d2bNewExecContext(ctx, deps)
+		tmpCtx := NewExecContext(ctx, deps)
 		if createErr := execCreateModule(tmpCtx, &ast.CreateModuleStmt{Name: s.Name.Module}); createErr != nil {
 			return mdlerrors.NewBackend("auto-create module "+s.Name.Module, createErr)
 		}

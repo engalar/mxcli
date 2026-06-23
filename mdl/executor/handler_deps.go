@@ -244,13 +244,13 @@ func (e *Executor) registerFutureOverlays() {
 		case ast.ShowStructure:
 			return execShowStructureGenFuture(ctx, deps.Output, e.format, s, deps)
 		case ast.ShowCallers:
-			return execShowCallersFn(ctx, s, deps)
+			return ExecShowCallersFn(ctx, s, deps)
 		case ast.ShowCallees:
-			return execShowCalleesFn(ctx, s, deps)
+			return ExecShowCalleesFn(ctx, s, deps)
 		case ast.ShowReferences:
-			return execShowReferencesFn(ctx, s, deps)
+			return ExecShowReferencesFn(ctx, s, deps)
 		case ast.ShowImpact:
-			return execShowImpactFn(ctx, s, deps)
+			return ExecShowImpactFn(ctx, s, deps)
 		case ast.ShowExportMappings:
 			return listExportMappingsFn(ctx, s.InModule, deps)
 		case ast.ShowImportMappings:
@@ -392,36 +392,36 @@ func (e *Executor) registerFutureOverlays() {
 	// ────────────────────────────────────────────────────
 
 	r.RegisterFuture("CreateModule", func(ctx context.Context, stmt ast.Statement) error {
-		return execCreateModuleFn(ctx, stmt.(*ast.CreateModuleStmt), deps)
+		return ExecCreateModuleFn(ctx, stmt.(*ast.CreateModuleStmt), deps)
 	})
 	r.RegisterFuture("DropModule", func(ctx context.Context, stmt ast.Statement) error {
-		return execDropModuleFn(ctx, stmt.(*ast.DropModuleStmt), deps)
+		return ExecDropModuleFn(ctx, stmt.(*ast.DropModuleStmt), deps)
 	})
 
 	r.RegisterFuture("CreateEntity", func(ctx context.Context, stmt ast.Statement) error {
-		ectx := phase3d2bNewExecContext(ctx, deps)
-		return execCreateEntity(ectx, stmt.(*ast.CreateEntityStmt))
+		ectx := NewExecContext(ctx, deps)
+		return ExecCreateEntity(ectx, stmt.(*ast.CreateEntityStmt))
 	})
 	r.RegisterFuture("AlterEntity", func(ctx context.Context, stmt ast.Statement) error {
-		return execAlterEntityGenFn(ctx, stmt.(*ast.AlterEntityStmt), deps)
+		return ExecAlterEntityGenFn(ctx, stmt.(*ast.AlterEntityStmt), deps)
 	})
 	r.RegisterFuture("DropEntity", func(ctx context.Context, stmt ast.Statement) error {
-		ectx := phase3d2bNewExecContext(ctx, deps)
-		return execDropEntity(ectx, stmt.(*ast.DropEntityStmt))
+		ectx := NewExecContext(ctx, deps)
+		return ExecDropEntity(ectx, stmt.(*ast.DropEntityStmt))
 	})
 	r.RegisterFuture("CreateViewEntity", func(ctx context.Context, stmt ast.Statement) error {
-		ectx := phase3d2bNewExecContext(ctx, deps)
-		return execCreateViewEntity(ectx, stmt.(*ast.CreateViewEntityStmt))
+		ectx := NewExecContext(ctx, deps)
+		return ExecCreateViewEntity(ectx, stmt.(*ast.CreateViewEntityStmt))
 	})
 
 	r.RegisterFuture("CreateAssociation", func(ctx context.Context, stmt ast.Statement) error {
-		return execCreateAssociationFn(ctx, stmt.(*ast.CreateAssociationStmt), deps)
+		return ExecCreateAssociationFn(ctx, stmt.(*ast.CreateAssociationStmt), deps)
 	})
 	r.RegisterFuture("AlterAssociation", func(ctx context.Context, stmt ast.Statement) error {
-		return execAlterAssociationFn(ctx, stmt.(*ast.AlterAssociationStmt), deps)
+		return ExecAlterAssociationFn(ctx, stmt.(*ast.AlterAssociationStmt), deps)
 	})
 	r.RegisterFuture("DropAssociation", func(ctx context.Context, stmt ast.Statement) error {
-		return execDropAssociationFn(ctx, stmt.(*ast.DropAssociationStmt), deps)
+		return ExecDropAssociationFn(ctx, stmt.(*ast.DropAssociationStmt), deps)
 	})
 
 	// ────────────────────────────────────────────────────
@@ -430,56 +430,56 @@ func (e *Executor) registerFutureOverlays() {
 
 	// Microflow handlers
 	r.RegisterFuture("CreateMicroflow", func(ctx context.Context, stmt ast.Statement) error {
-		return execCreateMicroflowGenFn(ctx, stmt.(*ast.CreateMicroflowStmt), deps)
+		return ExecCreateMicroflowGenFn(ctx, stmt.(*ast.CreateMicroflowStmt), deps)
 	})
 	r.RegisterFuture("DropMicroflow", func(ctx context.Context, stmt ast.Statement) error {
-		return execDropMicroflowFn(ctx, stmt.(*ast.DropMicroflowStmt), deps)
+		return ExecDropMicroflowFn(ctx, stmt.(*ast.DropMicroflowStmt), deps)
 	})
 
 	// Nanoflow handlers
 	r.RegisterFuture("CreateNanoflow", func(ctx context.Context, stmt ast.Statement) error {
-		return execCreateNanoflowGenFn(ctx, stmt.(*ast.CreateNanoflowStmt), deps)
+		return ExecCreateNanoflowGenFn(ctx, stmt.(*ast.CreateNanoflowStmt), deps)
 	})
 	r.RegisterFuture("DropNanoflow", func(ctx context.Context, stmt ast.Statement) error {
-		return execDropNanoflowGenFn(ctx, stmt.(*ast.DropNanoflowStmt), deps)
+		return ExecDropNanoflowGenFn(ctx, stmt.(*ast.DropNanoflowStmt), deps)
 	})
 
 	// Page handlers
 	r.RegisterFuture("CreatePageStmtV3", func(ctx context.Context, stmt ast.Statement) error {
-		return execCreatePageV3Fn(ctx, stmt.(*ast.CreatePageStmtV3), deps)
+		return ExecCreatePageV3Fn(ctx, stmt.(*ast.CreatePageStmtV3), deps)
 	})
 	r.RegisterFuture("DropPage", func(ctx context.Context, stmt ast.Statement) error {
-		ectx := phase3d2bNewExecContext(ctx, deps)
-		return execDropPage(ectx, stmt.(*ast.DropPageStmt))
+		ectx := NewExecContext(ctx, deps)
+		return ExecDropPage(ectx, stmt.(*ast.DropPageStmt))
 	})
 	r.RegisterFuture("CreateSnippetStmtV3", func(ctx context.Context, stmt ast.Statement) error {
-		return execCreateSnippetV3Fn(ctx, stmt.(*ast.CreateSnippetStmtV3), deps)
+		return ExecCreateSnippetV3Fn(ctx, stmt.(*ast.CreateSnippetStmtV3), deps)
 	})
 	r.RegisterFuture("DropSnippet", func(ctx context.Context, stmt ast.Statement) error {
-		ectx := phase3d2bNewExecContext(ctx, deps)
-		return execDropSnippet(ectx, stmt.(*ast.DropSnippetStmt))
+		ectx := NewExecContext(ctx, deps)
+		return ExecDropSnippet(ectx, stmt.(*ast.DropSnippetStmt))
 	})
 
 	// Layout handler
 	r.RegisterFuture("CreateLayout", func(ctx context.Context, stmt ast.Statement) error {
-		return execCreateOrModifyLayoutFn(ctx, stmt.(*ast.CreateLayoutStmt), deps)
+		return ExecCreateOrModifyLayoutFn(ctx, stmt.(*ast.CreateLayoutStmt), deps)
 	})
 
 	// ALTER PAGE handler
 	r.RegisterFuture("AlterPage", func(ctx context.Context, stmt ast.Statement) error {
-		return execAlterPageFn(ctx, stmt.(*ast.AlterPageStmt), deps)
+		return ExecAlterPageFn(ctx, stmt.(*ast.AlterPageStmt), deps)
 	})
 
 	// Workflow handlers
 	r.RegisterFuture("CreateWorkflow", func(ctx context.Context, stmt ast.Statement) error {
-		return execCreateWorkflowGenFn(ctx, stmt.(*ast.CreateWorkflowStmt), deps)
+		return ExecCreateWorkflowGenFn(ctx, stmt.(*ast.CreateWorkflowStmt), deps)
 	})
 	r.RegisterFuture("DropWorkflow", func(ctx context.Context, stmt ast.Statement) error {
-		return execDropWorkflowGenFn(ctx, stmt.(*ast.DropWorkflowStmt), deps)
+		return ExecDropWorkflowGenFn(ctx, stmt.(*ast.DropWorkflowStmt), deps)
 	})
 	r.RegisterFuture("AlterWorkflow", func(ctx context.Context, stmt ast.Statement) error {
-		ectx := phase3d2bNewExecContext(ctx, deps)
-		return execAlterWorkflow(ectx, stmt.(*ast.AlterWorkflowStmt))
+		ectx := NewExecContext(ctx, deps)
+		return ExecAlterWorkflow(ectx, stmt.(*ast.AlterWorkflowStmt))
 	})
 
 	// ────────────────────────────────────────────────────
@@ -487,79 +487,79 @@ func (e *Executor) registerFutureOverlays() {
 	// ────────────────────────────────────────────────────
 
 	r.RegisterFuture("CreateModuleRole", func(ctx context.Context, stmt ast.Statement) error {
-		return execCreateModuleRoleGenFn(ctx, stmt.(*ast.CreateModuleRoleStmt), deps)
+		return ExecCreateModuleRoleGenFn(ctx, stmt.(*ast.CreateModuleRoleStmt), deps)
 	})
 	r.RegisterFuture("DropModuleRole", func(ctx context.Context, stmt ast.Statement) error {
-		return execDropModuleRoleGenFn(ctx, stmt.(*ast.DropModuleRoleStmt), deps)
+		return ExecDropModuleRoleGenFn(ctx, stmt.(*ast.DropModuleRoleStmt), deps)
 	})
 	r.RegisterFuture("CreateUserRole", func(ctx context.Context, stmt ast.Statement) error {
-		return execCreateUserRoleGenFn(ctx, stmt.(*ast.CreateUserRoleStmt), deps)
+		return ExecCreateUserRoleGenFn(ctx, stmt.(*ast.CreateUserRoleStmt), deps)
 	})
 	r.RegisterFuture("AlterUserRole", func(ctx context.Context, stmt ast.Statement) error {
-		return execAlterUserRoleGenFn(ctx, stmt.(*ast.AlterUserRoleStmt), deps)
+		return ExecAlterUserRoleGenFn(ctx, stmt.(*ast.AlterUserRoleStmt), deps)
 	})
 	r.RegisterFuture("DropUserRole", func(ctx context.Context, stmt ast.Statement) error {
-		return execDropUserRoleGenFn(ctx, stmt.(*ast.DropUserRoleStmt), deps)
+		return ExecDropUserRoleGenFn(ctx, stmt.(*ast.DropUserRoleStmt), deps)
 	})
 	r.RegisterFuture("GrantEntityAccess", func(ctx context.Context, stmt ast.Statement) error {
-		return execGrantEntityAccessGenFn(ctx, stmt.(*ast.GrantEntityAccessStmt), deps)
+		return ExecGrantEntityAccessGenFn(ctx, stmt.(*ast.GrantEntityAccessStmt), deps)
 	})
 	r.RegisterFuture("RevokeEntityAccess", func(ctx context.Context, stmt ast.Statement) error {
-		return execRevokeEntityAccessGenFn(ctx, stmt.(*ast.RevokeEntityAccessStmt), deps)
+		return ExecRevokeEntityAccessGenFn(ctx, stmt.(*ast.RevokeEntityAccessStmt), deps)
 	})
 	r.RegisterFuture("GrantPageAccess", func(ctx context.Context, stmt ast.Statement) error {
-		return execGrantPageAccessGenFn(ctx, stmt.(*ast.GrantPageAccessStmt), deps)
+		return ExecGrantPageAccessGenFn(ctx, stmt.(*ast.GrantPageAccessStmt), deps)
 	})
 	r.RegisterFuture("RevokePageAccess", func(ctx context.Context, stmt ast.Statement) error {
-		return execRevokePageAccessGenFn(ctx, stmt.(*ast.RevokePageAccessStmt), deps)
+		return ExecRevokePageAccessGenFn(ctx, stmt.(*ast.RevokePageAccessStmt), deps)
 	})
 	r.RegisterFuture("GrantMicroflowAccess", func(ctx context.Context, stmt ast.Statement) error {
-		return execGrantMicroflowAccessGenFn(ctx, stmt.(*ast.GrantMicroflowAccessStmt), deps)
+		return ExecGrantMicroflowAccessGenFn(ctx, stmt.(*ast.GrantMicroflowAccessStmt), deps)
 	})
 	r.RegisterFuture("RevokeMicroflowAccess", func(ctx context.Context, stmt ast.Statement) error {
-		return execRevokeMicroflowAccessGenFn(ctx, stmt.(*ast.RevokeMicroflowAccessStmt), deps)
+		return ExecRevokeMicroflowAccessGenFn(ctx, stmt.(*ast.RevokeMicroflowAccessStmt), deps)
 	})
 	r.RegisterFuture("GrantNanoflowAccess", func(ctx context.Context, stmt ast.Statement) error {
-		return execGrantNanoflowAccessGenFn(ctx, stmt.(*ast.GrantNanoflowAccessStmt), deps)
+		return ExecGrantNanoflowAccessGenFn(ctx, stmt.(*ast.GrantNanoflowAccessStmt), deps)
 	})
 	r.RegisterFuture("RevokeNanoflowAccess", func(ctx context.Context, stmt ast.Statement) error {
-		return execRevokeNanoflowAccessGenFn(ctx, stmt.(*ast.RevokeNanoflowAccessStmt), deps)
+		return ExecRevokeNanoflowAccessGenFn(ctx, stmt.(*ast.RevokeNanoflowAccessStmt), deps)
 	})
 	r.RegisterFuture("GrantWorkflowAccess", func(ctx context.Context, stmt ast.Statement) error {
-		ectx := phase3d2bNewExecContext(ctx, deps)
-		return execGrantWorkflowAccess(ectx, stmt.(*ast.GrantWorkflowAccessStmt))
+		ectx := NewExecContext(ctx, deps)
+		return ExecGrantWorkflowAccess(ectx, stmt.(*ast.GrantWorkflowAccessStmt))
 	})
 	r.RegisterFuture("RevokeWorkflowAccess", func(ctx context.Context, stmt ast.Statement) error {
-		ectx := phase3d2bNewExecContext(ctx, deps)
-		return execRevokeWorkflowAccess(ectx, stmt.(*ast.RevokeWorkflowAccessStmt))
+		ectx := NewExecContext(ctx, deps)
+		return ExecRevokeWorkflowAccess(ectx, stmt.(*ast.RevokeWorkflowAccessStmt))
 	})
 	r.RegisterFuture("GrantODataServiceAccess", func(ctx context.Context, stmt ast.Statement) error {
-		return execGrantODataServiceAccessGenFn(ctx, stmt.(*ast.GrantODataServiceAccessStmt), deps)
+		return ExecGrantODataServiceAccessGenFn(ctx, stmt.(*ast.GrantODataServiceAccessStmt), deps)
 	})
 	r.RegisterFuture("RevokeODataServiceAccess", func(ctx context.Context, stmt ast.Statement) error {
-		return execRevokeODataServiceAccessGenFn(ctx, stmt.(*ast.RevokeODataServiceAccessStmt), deps)
+		return ExecRevokeODataServiceAccessGenFn(ctx, stmt.(*ast.RevokeODataServiceAccessStmt), deps)
 	})
 	r.RegisterFuture("GrantPublishedRestServiceAccess", func(ctx context.Context, stmt ast.Statement) error {
-		return execGrantPublishedRestServiceAccessGenFn(ctx, stmt.(*ast.GrantPublishedRestServiceAccessStmt), deps)
+		return ExecGrantPublishedRestServiceAccessGenFn(ctx, stmt.(*ast.GrantPublishedRestServiceAccessStmt), deps)
 	})
 	r.RegisterFuture("RevokePublishedRestServiceAccess", func(ctx context.Context, stmt ast.Statement) error {
-		return execRevokePublishedRestServiceAccessGenFn(ctx, stmt.(*ast.RevokePublishedRestServiceAccessStmt), deps)
+		return ExecRevokePublishedRestServiceAccessGenFn(ctx, stmt.(*ast.RevokePublishedRestServiceAccessStmt), deps)
 	})
 	r.RegisterFuture("AlterProjectSecurity", func(ctx context.Context, stmt ast.Statement) error {
-		return execAlterProjectSecurityGenFn(ctx, stmt.(*ast.AlterProjectSecurityStmt), deps)
+		return ExecAlterProjectSecurityGenFn(ctx, stmt.(*ast.AlterProjectSecurityStmt), deps)
 	})
 	r.RegisterFuture("UpdateSecurity", func(ctx context.Context, stmt ast.Statement) error {
-		return execUpdateSecurityGenFn(ctx, stmt.(*ast.UpdateSecurityStmt), deps)
+		return ExecUpdateSecurityGenFn(ctx, stmt.(*ast.UpdateSecurityStmt), deps)
 	})
 	r.RegisterFuture("CreateDemoUser", func(ctx context.Context, stmt ast.Statement) error {
-		return execCreateDemoUserGenFn(ctx, stmt.(*ast.CreateDemoUserStmt), deps)
+		return ExecCreateDemoUserGenFn(ctx, stmt.(*ast.CreateDemoUserStmt), deps)
 	})
 	r.RegisterFuture("DropDemoUser", func(ctx context.Context, stmt ast.Statement) error {
-		return execDropDemoUserGenFn(ctx, stmt.(*ast.DropDemoUserStmt), deps)
+		return ExecDropDemoUserGenFn(ctx, stmt.(*ast.DropDemoUserStmt), deps)
 	})
 	r.RegisterFuture("AlterLanguage", func(ctx context.Context, stmt ast.Statement) error {
-		ectx := phase3d2bNewExecContext(ctx, deps)
-		return alterLanguage(ectx, stmt.(*ast.AlterLanguageStmt))
+		ectx := NewExecContext(ctx, deps)
+		return AlterLanguage(ectx, stmt.(*ast.AlterLanguageStmt))
 	})
 
 	// ────────────────────────────────────────────────────
@@ -568,311 +568,311 @@ func (e *Executor) registerFutureOverlays() {
 
 	// Enumeration CRUD
 	r.RegisterFuture("CreateEnumeration", func(ctx context.Context, stmt ast.Statement) error {
-		return execCreateEnumerationFuture(ctx, stmt, deps)
+		return ExecCreateEnumerationFuture(ctx, stmt, deps)
 	})
 	r.RegisterFuture("AlterEnumeration", func(ctx context.Context, stmt ast.Statement) error {
-		return execAlterEnumerationFuture(ctx, deps)
+		return ExecAlterEnumerationFuture(ctx, deps)
 	})
 	r.RegisterFuture("DropEnumeration", func(ctx context.Context, stmt ast.Statement) error {
-		return execDropEnumerationFuture(ctx, stmt, deps)
+		return ExecDropEnumerationFuture(ctx, stmt, deps)
 	})
 
 	// Constant CRUD
 	r.RegisterFuture("CreateConstant", func(ctx context.Context, stmt ast.Statement) error {
-		return execCreateConstantFuture(ctx, stmt, deps)
+		return ExecCreateConstantFuture(ctx, stmt, deps)
 	})
 	r.RegisterFuture("DropConstant", func(ctx context.Context, stmt ast.Statement) error {
-		return execDropConstantFuture(ctx, stmt, deps)
+		return ExecDropConstantFuture(ctx, stmt, deps)
 	})
 
 	// Module settings
 	r.RegisterFuture("AlterModuleJarDep", func(ctx context.Context, stmt ast.Statement) error {
-		return execAlterModuleJarDepFuture(ctx, stmt, deps)
+		return ExecAlterModuleJarDepFuture(ctx, stmt, deps)
 	})
 
 	// Database connection
 	r.RegisterFuture("CreateDatabaseConnection", func(ctx context.Context, stmt ast.Statement) error {
-		return execCreateDatabaseConnectionFuture(ctx, stmt, deps)
+		return ExecCreateDatabaseConnectionFuture(ctx, stmt, deps)
 	})
 
 	// Java/JavaScript action CRUD
 	r.RegisterFuture("CreateJavaAction", func(ctx context.Context, stmt ast.Statement) error {
-		return execCreateJavaActionFuture(ctx, stmt, deps)
+		return ExecCreateJavaActionFuture(ctx, stmt, deps)
 	})
 	r.RegisterFuture("DropJavaAction", func(ctx context.Context, stmt ast.Statement) error {
-		return execDropJavaActionFuture(ctx, stmt, deps)
+		return ExecDropJavaActionFuture(ctx, stmt, deps)
 	})
 	r.RegisterFuture("CreateJavaScriptAction", func(ctx context.Context, stmt ast.Statement) error {
-		return execCreateJavaScriptActionFuture(ctx, stmt, deps)
+		return ExecCreateJavaScriptActionFuture(ctx, stmt, deps)
 	})
 
 	// Folder/rename/move
 	r.RegisterFuture("DropFolder", func(ctx context.Context, stmt ast.Statement) error {
-		return execDropFolderFuture(ctx, stmt, deps)
+		return ExecDropFolderFuture(ctx, stmt, deps)
 	})
 	r.RegisterFuture("MoveFolder", func(ctx context.Context, stmt ast.Statement) error {
-		return execMoveFolderFuture(ctx, stmt, deps)
+		return ExecMoveFolderFuture(ctx, stmt, deps)
 	})
 	r.RegisterFuture("Move", func(ctx context.Context, stmt ast.Statement) error {
-		return execMoveFuture(ctx, stmt, deps)
+		return ExecMoveFuture(ctx, stmt, deps)
 	})
 	r.RegisterFuture("Rename", func(ctx context.Context, stmt ast.Statement) error {
-		return execRenameFuture(ctx, stmt, deps)
+		return ExecRenameFuture(ctx, stmt, deps)
 	})
 
 	// Navigation
 	r.RegisterFuture("AlterNavigation", func(ctx context.Context, stmt ast.Statement) error {
-		return execAlterNavigationFuture(ctx, stmt, deps)
+		return ExecAlterNavigationFuture(ctx, stmt, deps)
 	})
 
 	// Image collection CRUD
 	r.RegisterFuture("CreateImageCollection", func(ctx context.Context, stmt ast.Statement) error {
-		return execCreateImageCollectionFuture(ctx, stmt, deps)
+		return ExecCreateImageCollectionFuture(ctx, stmt, deps)
 	})
 	r.RegisterFuture("DropImageCollection", func(ctx context.Context, stmt ast.Statement) error {
-		return execDropImageCollectionFuture(ctx, stmt, deps)
+		return ExecDropImageCollectionFuture(ctx, stmt, deps)
 	})
 	r.RegisterFuture("AlterImageCollection", func(ctx context.Context, stmt ast.Statement) error {
-		return execAlterImageCollectionFuture(ctx, stmt, deps)
+		return ExecAlterImageCollectionFuture(ctx, stmt, deps)
 	})
 
 	// Settings
 	r.RegisterFuture("AlterSettings", func(ctx context.Context, stmt ast.Statement) error {
-		return execAlterSettingsFuture(ctx, stmt, deps)
+		return ExecAlterSettingsFuture(ctx, stmt, deps)
 	})
 
 	// Translate
 	r.RegisterFuture("Translate", func(ctx context.Context, stmt ast.Statement) error {
-		return execTranslateFuture(ctx, stmt, deps)
+		return ExecTranslateFuture(ctx, stmt, deps)
 	})
 	r.RegisterFuture("TranslateMicroflow", func(ctx context.Context, stmt ast.Statement) error {
-		return execTranslateMicroflowFuture(ctx, deps)
+		return ExecTranslateMicroflowFuture(ctx, deps)
 	})
 
 	// Configuration CRUD
 	r.RegisterFuture("CreateConfiguration", func(ctx context.Context, stmt ast.Statement) error {
-		return execCreateConfigurationFuture(ctx, stmt, deps)
+		return ExecCreateConfigurationFuture(ctx, stmt, deps)
 	})
 	r.RegisterFuture("DropConfiguration", func(ctx context.Context, stmt ast.Statement) error {
-		return execDropConfigurationFuture(ctx, stmt, deps)
+		return ExecDropConfigurationFuture(ctx, stmt, deps)
 	})
 
 	// Business event service CRUD
 	r.RegisterFuture("CreateBusinessEventService", func(ctx context.Context, stmt ast.Statement) error {
-		return execCreateBusinessEventServiceFuture(ctx, stmt, deps)
+		return ExecCreateBusinessEventServiceFuture(ctx, stmt, deps)
 	})
 	r.RegisterFuture("DropBusinessEventService", func(ctx context.Context, stmt ast.Statement) error {
-		return execDropBusinessEventServiceFuture(ctx, stmt, deps)
+		return ExecDropBusinessEventServiceFuture(ctx, stmt, deps)
 	})
 
 	// OData client CRUD
 	r.RegisterFuture("CreateODataClient", func(ctx context.Context, stmt ast.Statement) error {
-		return execCreateODataClientFuture(ctx, stmt, deps)
+		return ExecCreateODataClientFuture(ctx, stmt, deps)
 	})
 	r.RegisterFuture("AlterODataClient", func(ctx context.Context, stmt ast.Statement) error {
-		return execAlterODataClientFuture(ctx, stmt, deps)
+		return ExecAlterODataClientFuture(ctx, stmt, deps)
 	})
 	r.RegisterFuture("DropODataClient", func(ctx context.Context, stmt ast.Statement) error {
-		return execDropODataClientFuture(ctx, stmt, deps)
+		return ExecDropODataClientFuture(ctx, stmt, deps)
 	})
 
 	// OData service CRUD
 	r.RegisterFuture("CreateODataService", func(ctx context.Context, stmt ast.Statement) error {
-		return execCreateODataServiceFuture(ctx, stmt, deps)
+		return ExecCreateODataServiceFuture(ctx, stmt, deps)
 	})
 	r.RegisterFuture("AlterODataService", func(ctx context.Context, stmt ast.Statement) error {
-		return execAlterODataServiceFuture(ctx, stmt, deps)
+		return ExecAlterODataServiceFuture(ctx, stmt, deps)
 	})
 	r.RegisterFuture("DropODataService", func(ctx context.Context, stmt ast.Statement) error {
-		return execDropODataServiceFuture(ctx, stmt, deps)
+		return ExecDropODataServiceFuture(ctx, stmt, deps)
 	})
 
 	// JSON structure CRUD
 	r.RegisterFuture("CreateJsonStructure", func(ctx context.Context, stmt ast.Statement) error {
-		return execCreateJsonStructureFuture(ctx, stmt, deps)
+		return ExecCreateJsonStructureFuture(ctx, stmt, deps)
 	})
 	r.RegisterFuture("DropJsonStructure", func(ctx context.Context, stmt ast.Statement) error {
-		return execDropJsonStructureFuture(ctx, stmt, deps)
+		return ExecDropJsonStructureFuture(ctx, stmt, deps)
 	})
 
 	// Import/Export mapping CRUD
 	r.RegisterFuture("CreateImportMapping", func(ctx context.Context, stmt ast.Statement) error {
-		return execCreateImportMappingFuture(ctx, stmt, deps)
+		return ExecCreateImportMappingFuture(ctx, stmt, deps)
 	})
 	r.RegisterFuture("DropImportMapping", func(ctx context.Context, stmt ast.Statement) error {
-		return execDropImportMappingFuture(ctx, stmt, deps)
+		return ExecDropImportMappingFuture(ctx, stmt, deps)
 	})
 	r.RegisterFuture("CreateExportMapping", func(ctx context.Context, stmt ast.Statement) error {
-		return execCreateExportMappingFuture(ctx, stmt, deps)
+		return ExecCreateExportMappingFuture(ctx, stmt, deps)
 	})
 	r.RegisterFuture("DropExportMapping", func(ctx context.Context, stmt ast.Statement) error {
-		return execDropExportMappingFuture(ctx, stmt, deps)
+		return ExecDropExportMappingFuture(ctx, stmt, deps)
 	})
 
 	// REST client CRUD
 	r.RegisterFuture("CreateRestClient", func(ctx context.Context, stmt ast.Statement) error {
-		return execCreateRestClientFuture(ctx, stmt, deps)
+		return ExecCreateRestClientFuture(ctx, stmt, deps)
 	})
 	r.RegisterFuture("DropRestClient", func(ctx context.Context, stmt ast.Statement) error {
-		return execDropRestClientFuture(ctx, stmt, deps)
+		return ExecDropRestClientFuture(ctx, stmt, deps)
 	})
 
 	// Contract from OpenAPI
 	r.RegisterFuture("DescribeContractFromOpenAPI", func(ctx context.Context, stmt ast.Statement) error {
-		return execDescribeContractFromOpenAPIFuture(ctx, stmt, deps)
+		return ExecDescribeContractFromOpenAPIFuture(ctx, stmt, deps)
 	})
 
 	// Published REST service CRUD
 	r.RegisterFuture("CreatePublishedRestService", func(ctx context.Context, stmt ast.Statement) error {
-		return execCreatePublishedRestServiceFuture(ctx, stmt, deps)
+		return ExecCreatePublishedRestServiceFuture(ctx, stmt, deps)
 	})
 	r.RegisterFuture("DropPublishedRestService", func(ctx context.Context, stmt ast.Statement) error {
-		return execDropPublishedRestServiceFuture(ctx, stmt, deps)
+		return ExecDropPublishedRestServiceFuture(ctx, stmt, deps)
 	})
 	r.RegisterFuture("AlterPublishedRestService", func(ctx context.Context, stmt ast.Statement) error {
-		return execAlterPublishedRestServiceFuture(ctx, stmt, deps)
+		return ExecAlterPublishedRestServiceFuture(ctx, stmt, deps)
 	})
 
 	// External entities
 	r.RegisterFuture("CreateExternalEntity", func(ctx context.Context, stmt ast.Statement) error {
-		return execCreateExternalEntityFuture(ctx, stmt, deps)
+		return ExecCreateExternalEntityFuture(ctx, stmt, deps)
 	})
 	r.RegisterFuture("CreateExternalEntities", func(ctx context.Context, stmt ast.Statement) error {
-		return execCreateExternalEntitiesFuture(ctx, stmt, deps)
+		return ExecCreateExternalEntitiesFuture(ctx, stmt, deps)
 	})
 
 	// Data transformer CRUD
 	r.RegisterFuture("CreateDataTransformer", func(ctx context.Context, stmt ast.Statement) error {
-		return execCreateDataTransformerFuture(ctx, stmt, deps)
+		return ExecCreateDataTransformerFuture(ctx, stmt, deps)
 	})
 	r.RegisterFuture("DropDataTransformer", func(ctx context.Context, stmt ast.Statement) error {
-		return execDropDataTransformerFuture(ctx, stmt, deps)
+		return ExecDropDataTransformerFuture(ctx, stmt, deps)
 	})
 
 	// Widget commands
 	r.RegisterFuture("ShowWidgets", func(ctx context.Context, stmt ast.Statement) error {
-		return execShowWidgetsFuture(ctx, stmt, deps)
+		return ExecShowWidgetsFuture(ctx, stmt, deps)
 	})
 	r.RegisterFuture("ShowInstalledWidgets", func(ctx context.Context, stmt ast.Statement) error {
-		return execShowInstalledWidgetsFuture(ctx, stmt, deps)
+		return ExecShowInstalledWidgetsFuture(ctx, stmt, deps)
 	})
 	r.RegisterFuture("UpdateWidgets", func(ctx context.Context, stmt ast.Statement) error {
-		return execUpdateWidgetsFuture(ctx, stmt, deps)
+		return ExecUpdateWidgetsFuture(ctx, stmt, deps)
 	})
 
 	// Catalog/query
 	r.RegisterFuture("Select", func(ctx context.Context, stmt ast.Statement) error {
-		return execSelectFuture(ctx, stmt, deps)
+		return ExecSelectFuture(ctx, stmt, deps)
 	})
 	r.RegisterFuture("DescribeTranslations", func(ctx context.Context, stmt ast.Statement) error {
-		return execDescribeTranslationsFuture(ctx, stmt, deps)
+		return ExecDescribeTranslationsFuture(ctx, stmt, deps)
 	})
 	r.RegisterFuture("DescribeCatalogTable", func(ctx context.Context, stmt ast.Statement) error {
-		return execDescribeCatalogTableFuture(ctx, deps)
+		return ExecDescribeCatalogTableFuture(ctx, deps)
 	})
 
 	// Features
 	r.RegisterFuture("ShowFeatures", func(ctx context.Context, stmt ast.Statement) error {
-		return execShowFeaturesFuture(ctx, stmt, deps)
+		return ExecShowFeaturesFuture(ctx, stmt, deps)
 	})
 
 	// Styling
 	r.RegisterFuture("ShowDesignProperties", func(ctx context.Context, stmt ast.Statement) error {
-		return execShowDesignPropertiesFuture(ctx, stmt, deps)
+		return ExecShowDesignPropertiesFuture(ctx, stmt, deps)
 	})
 	r.RegisterFuture("DescribeStyling", func(ctx context.Context, stmt ast.Statement) error {
-		return execDescribeStylingFuture(ctx, stmt, deps)
+		return ExecDescribeStylingFuture(ctx, stmt, deps)
 	})
 	r.RegisterFuture("AlterStyling", func(ctx context.Context, stmt ast.Statement) error {
-		return execAlterStylingFuture(ctx, stmt, deps)
+		return ExecAlterStylingFuture(ctx, stmt, deps)
 	})
 
 	// Theme
 	r.RegisterFuture("ShowThemeVariables", func(ctx context.Context, stmt ast.Statement) error {
-		return execShowThemeVariablesFuture(ctx, stmt, deps)
+		return ExecShowThemeVariablesFuture(ctx, stmt, deps)
 	})
 
 	// Search
 	r.RegisterFuture("Search", func(ctx context.Context, stmt ast.Statement) error {
-		return execSearchFuture(ctx, stmt, deps)
+		return ExecSearchFuture(ctx, stmt, deps)
 	})
 
 	// Refresh catalog
 	r.RegisterFuture("RefreshCatalog", func(ctx context.Context, stmt ast.Statement) error {
-		return execRefreshCatalogFuture(ctx, stmt, deps)
+		return ExecRefreshCatalogFuture(ctx, stmt, deps)
 	})
 
 	// Lint
 	r.RegisterFuture("Lint", func(ctx context.Context, stmt ast.Statement) error {
-		return execLintFn(ctx, stmt.(*ast.LintStmt), deps)
+		return ExecLintFn(ctx, stmt.(*ast.LintStmt), deps)
 	})
 
 	// Fragment commands
 	r.RegisterFuture("DefineFragment", func(ctx context.Context, stmt ast.Statement) error {
-		return execDefineFragmentFn(ctx, stmt.(*ast.DefineFragmentStmt), deps)
+		return ExecDefineFragmentFn(ctx, stmt.(*ast.DefineFragmentStmt), deps)
 	})
 	r.RegisterFuture("DescribeFragmentFrom", func(ctx context.Context, stmt ast.Statement) error {
-		return execDescribeFragmentFromFn(ctx, stmt.(*ast.DescribeFragmentFromStmt), deps)
+		return ExecDescribeFragmentFromFn(ctx, stmt.(*ast.DescribeFragmentFromStmt), deps)
 	})
 
 	// SQL commands
 	r.RegisterFuture("SQLConnect", func(ctx context.Context, stmt ast.Statement) error {
-		return execSQLConnectFn(ctx, stmt.(*ast.SQLConnectStmt), deps)
+		return ExecSQLConnectFn(ctx, stmt.(*ast.SQLConnectStmt), deps)
 	})
 	r.RegisterFuture("SQLDisconnect", func(ctx context.Context, stmt ast.Statement) error {
-		return execSQLDisconnectFn(ctx, stmt.(*ast.SQLDisconnectStmt), deps)
+		return ExecSQLDisconnectFn(ctx, stmt.(*ast.SQLDisconnectStmt), deps)
 	})
 	r.RegisterFuture("SQLConnections", func(ctx context.Context, stmt ast.Statement) error {
-		return execSQLConnectionsFn(ctx, deps)
+		return ExecSQLConnectionsFn(ctx, deps)
 	})
 	r.RegisterFuture("SQLQuery", func(ctx context.Context, stmt ast.Statement) error {
-		return execSQLQueryFn(ctx, stmt.(*ast.SQLQueryStmt), deps)
+		return ExecSQLQueryFn(ctx, stmt.(*ast.SQLQueryStmt), deps)
 	})
 	r.RegisterFuture("SQLShowTables", func(ctx context.Context, stmt ast.Statement) error {
-		return execSQLShowTablesFn(ctx, stmt.(*ast.SQLShowTablesStmt), deps)
+		return ExecSQLShowTablesFn(ctx, stmt.(*ast.SQLShowTablesStmt), deps)
 	})
 	r.RegisterFuture("SQLShowViews", func(ctx context.Context, stmt ast.Statement) error {
-		return execSQLShowViewsFn(ctx, stmt.(*ast.SQLShowViewsStmt), deps)
+		return ExecSQLShowViewsFn(ctx, stmt.(*ast.SQLShowViewsStmt), deps)
 	})
 	r.RegisterFuture("SQLShowFunctions", func(ctx context.Context, stmt ast.Statement) error {
-		return execSQLShowFunctionsFn(ctx, stmt.(*ast.SQLShowFunctionsStmt), deps)
+		return ExecSQLShowFunctionsFn(ctx, stmt.(*ast.SQLShowFunctionsStmt), deps)
 	})
 	r.RegisterFuture("SQLDescribeTable", func(ctx context.Context, stmt ast.Statement) error {
-		return execSQLDescribeTableFn(ctx, stmt.(*ast.SQLDescribeTableStmt), deps)
+		return ExecSQLDescribeTableFn(ctx, stmt.(*ast.SQLDescribeTableStmt), deps)
 	})
 	r.RegisterFuture("SQLGenerateConnector", func(ctx context.Context, stmt ast.Statement) error {
-		return execSQLGenerateConnectorFn(ctx, stmt.(*ast.SQLGenerateConnectorStmt), deps)
+		return ExecSQLGenerateConnectorFn(ctx, stmt.(*ast.SQLGenerateConnectorStmt), deps)
 	})
 
 	// Import
 	r.RegisterFuture("Import", func(ctx context.Context, stmt ast.Statement) error {
-		return execImportFn(ctx, stmt.(*ast.ImportStmt), deps)
+		return ExecImportFn(ctx, stmt.(*ast.ImportStmt), deps)
 	})
 
 	// Agent editor CRUD
 	r.RegisterFuture("CreateModel", func(ctx context.Context, stmt ast.Statement) error {
-		return execCreateModelFuture(ctx, stmt, deps)
+		return ExecCreateModelFuture(ctx, stmt, deps)
 	})
 	r.RegisterFuture("DropModel", func(ctx context.Context, stmt ast.Statement) error {
-		return execDropModelFuture(ctx, stmt, deps)
+		return ExecDropModelFuture(ctx, stmt, deps)
 	})
 	r.RegisterFuture("CreateConsumedMCPService", func(ctx context.Context, stmt ast.Statement) error {
-		return execCreateConsumedMCPServiceFn(ctx, stmt.(*ast.CreateConsumedMCPServiceStmt), deps)
+		return ExecCreateConsumedMCPServiceFn(ctx, stmt.(*ast.CreateConsumedMCPServiceStmt), deps)
 	})
 	r.RegisterFuture("DropConsumedMCPService", func(ctx context.Context, stmt ast.Statement) error {
-		return execDropConsumedMCPServiceFn(ctx, stmt.(*ast.DropConsumedMCPServiceStmt), deps)
+		return ExecDropConsumedMCPServiceFn(ctx, stmt.(*ast.DropConsumedMCPServiceStmt), deps)
 	})
 	r.RegisterFuture("CreateKnowledgeBase", func(ctx context.Context, stmt ast.Statement) error {
-		return execCreateKnowledgeBaseFn(ctx, stmt.(*ast.CreateKnowledgeBaseStmt), deps)
+		return ExecCreateKnowledgeBaseFn(ctx, stmt.(*ast.CreateKnowledgeBaseStmt), deps)
 	})
 	r.RegisterFuture("DropKnowledgeBase", func(ctx context.Context, stmt ast.Statement) error {
-		return execDropKnowledgeBaseFn(ctx, stmt.(*ast.DropKnowledgeBaseStmt), deps)
+		return ExecDropKnowledgeBaseFn(ctx, stmt.(*ast.DropKnowledgeBaseStmt), deps)
 	})
 	r.RegisterFuture("CreateAgent", func(ctx context.Context, stmt ast.Statement) error {
-		return execCreateAgentFn(ctx, stmt.(*ast.CreateAgentStmt), deps)
+		return ExecCreateAgentFn(ctx, stmt.(*ast.CreateAgentStmt), deps)
 	})
 	r.RegisterFuture("DropAgent", func(ctx context.Context, stmt ast.Statement) error {
-		return execDropAgentFn(ctx, stmt.(*ast.DropAgentStmt), deps)
+		return ExecDropAgentFn(ctx, stmt.(*ast.DropAgentStmt), deps)
 	})
 }
 

@@ -36,7 +36,7 @@ func execDropJavaActionGenFn(ctx context.Context, s *ast.DropJavaActionStmt, dep
 	if err != nil {
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}
-	ectx := phase3d2bNewExecContext(ctx, deps)
+	ectx := NewExecContext(ctx, deps)
 	pairs, err := listJavaActionsWithContainerGen(ectx)
 	if err != nil {
 		return mdlerrors.NewBackend("list java actions", err)
@@ -111,7 +111,7 @@ func execCreateJavaScriptActionFn(ctx context.Context, s *ast.CreateJavaScriptAc
 		return mdlerrors.NewNotFound("module", s.Name.Module)
 	}
 
-	ectx := phase3d2bNewExecContext(ctx, deps)
+	ectx := NewExecContext(ctx, deps)
 	pairs, err := listJavaScriptActionsWithContainerGen(ectx)
 	if err != nil {
 		return mdlerrors.NewBackend("list javascript actions", err)
@@ -282,7 +282,7 @@ func execCreateJavaActionGenFn(ctx context.Context, s *ast.CreateJavaActionStmt,
 		return mdlerrors.NewNotFound("module", s.Name.Module)
 	}
 
-	ectx := phase3d2bNewExecContext(ctx, deps)
+	ectx := NewExecContext(ctx, deps)
 	pairs, err := listJavaActionsWithContainerGen(ectx)
 	if err != nil {
 		return mdlerrors.NewBackend("list java actions", err)

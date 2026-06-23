@@ -14,8 +14,8 @@ import (
 	"github.com/mendixlabs/mxcli/model"
 )
 
-// execDefineFragmentFn is the HandlerDeps version of execDefineFragment.
-func execDefineFragmentFn(ctx context.Context, s *ast.DefineFragmentStmt, deps *HandlerDeps) error {
+// ExecDefineFragmentFn is the HandlerDeps version of execDefineFragment.
+func ExecDefineFragmentFn(ctx context.Context, s *ast.DefineFragmentStmt, deps *HandlerDeps) error {
 	if deps.Fragments == nil {
 		deps.Fragments = make(map[string]*ast.DefineFragmentStmt)
 	}
@@ -65,11 +65,11 @@ func describeFragmentFn(ctx context.Context, output io.Writer, deps *HandlerDeps
 }
 
 // describeFragmentFromFn is the HandlerDeps version of describeFragmentFrom.
-func execDescribeFragmentFromFn(ctx context.Context, s *ast.DescribeFragmentFromStmt, deps *HandlerDeps) error {
+func ExecDescribeFragmentFromFn(ctx context.Context, s *ast.DescribeFragmentFromStmt, deps *HandlerDeps) error {
 	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnected()
 	}
-	ectx := phase3d2bNewExecContext(ctx, deps)
+	ectx := NewExecContext(ctx, deps)
 	h, err := getHierarchy(ectx)
 	if err != nil {
 		return mdlerrors.NewBackend("build hierarchy", err)
@@ -144,7 +144,7 @@ func describeFragment(ctx *ExecContext, name ast.QualifiedName) error {
 }
 
 func describeFragmentFrom(ctx *ExecContext, s *ast.DescribeFragmentFromStmt) error {
-	return execDescribeFragmentFromFn(ctx, s, execContextToDeps(ctx))
+	return ExecDescribeFragmentFromFn(ctx, s, execContextToDeps(ctx))
 }
 
 // findRawWidgetByName recursively searches the widget tree for a widget with the given name.

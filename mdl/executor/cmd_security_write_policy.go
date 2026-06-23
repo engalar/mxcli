@@ -20,7 +20,7 @@ func execAlterPasswordPolicyFn(ctx context.Context, s *ast.AlterProjectSecurityS
 	if opts == nil {
 		return nil
 	}
-	ectx := phase3d2bNewExecContext(ctx, deps)
+	ectx := NewExecContext(ctx, deps)
 	ps, err := getProjectSecurityGen(ectx)
 	if err != nil {
 		return mdlerrors.NewBackend("read project security", err)

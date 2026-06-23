@@ -17,6 +17,13 @@ import (
 	mprbackend "github.com/mendixlabs/mxcli/mdl/backend/mpr"
 	"github.com/mendixlabs/mxcli/mdl/diaglog"
 	"github.com/mendixlabs/mxcli/mdl/executor"
+	"github.com/mendixlabs/mxcli/mdl/executor/domainmodel"
+	"github.com/mendixlabs/mxcli/mdl/executor/microflow"
+	"github.com/mendixlabs/mxcli/mdl/executor/misc"
+	"github.com/mendixlabs/mxcli/mdl/executor/page"
+	"github.com/mendixlabs/mxcli/mdl/executor/query"
+	"github.com/mendixlabs/mxcli/mdl/executor/security"
+	"github.com/mendixlabs/mxcli/mdl/executor/workflow"
 	"github.com/mendixlabs/mxcli/mdl/visitor"
 	"github.com/spf13/cobra"
 )
@@ -249,6 +256,18 @@ func buildExec(mode string, out io.Writer) (*executor.Executor, *diaglog.Logger)
 		b = b.Format(executor.FormatJSON)
 	}
 	exec := b.Create()
+
+	// Register domain-specific handlers from subpackages, overriding
+	// handler_deps.go's legacy registrations (kept for test backward compat).
+	deps := exec.BuildHandlerDeps()
+	microflow.RegisterHandlers(exec.Registry(), deps)
+	page.RegisterHandlers(exec.Registry(), deps)
+	workflow.RegisterHandlers(exec.Registry(), deps)
+	domainmodel.RegisterHandlers(exec.Registry(), deps)
+	security.RegisterHandlers(exec.Registry(), deps)
+	query.RegisterHandlers(exec.Registry(), deps)
+	misc.RegisterHandlers(exec.Registry(), deps)
+
 	if daemonProgressOut != nil {
 		exec.SetProgressOut(daemonProgressOut)
 	}

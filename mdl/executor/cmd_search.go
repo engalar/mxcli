@@ -34,8 +34,8 @@ func ensureGraph(ctx *ExecContext) error {
 	return buildGraph(ctx)
 }
 
-// execShowCallersFn handles SHOW CALLERS OF with HandlerDeps.
-func execShowCallersFn(ctx context.Context, s *ast.ShowStmt, deps *HandlerDeps) error {
+// ExecShowCallersFn handles SHOW CALLERS OF with HandlerDeps.
+func ExecShowCallersFn(ctx context.Context, s *ast.ShowStmt, deps *HandlerDeps) error {
 	if s.Name == nil {
 		return mdlerrors.NewValidation("target name required for show callers")
 	}
@@ -74,8 +74,8 @@ func execShowCallersFn(ctx context.Context, s *ast.ShowStmt, deps *HandlerDeps) 
 
 // execShowCallers handles SHOW CALLERS OF Module.Microflow [TRANSITIVE].
 
-// execShowCalleesFn handles SHOW CALLEES OF with HandlerDeps.
-func execShowCalleesFn(ctx context.Context, s *ast.ShowStmt, deps *HandlerDeps) error {
+// ExecShowCalleesFn handles SHOW CALLEES OF with HandlerDeps.
+func ExecShowCalleesFn(ctx context.Context, s *ast.ShowStmt, deps *HandlerDeps) error {
 	if s.Name == nil {
 		return mdlerrors.NewValidation("target name required for show callees")
 	}
@@ -114,8 +114,8 @@ func execShowCalleesFn(ctx context.Context, s *ast.ShowStmt, deps *HandlerDeps) 
 
 // execShowCallees handles SHOW CALLEES OF Module.Microflow [TRANSITIVE].
 
-// execShowReferencesFn handles SHOW REFERENCES TO with HandlerDeps.
-func execShowReferencesFn(ctx context.Context, s *ast.ShowStmt, deps *HandlerDeps) error {
+// ExecShowReferencesFn handles SHOW REFERENCES TO with HandlerDeps.
+func ExecShowReferencesFn(ctx context.Context, s *ast.ShowStmt, deps *HandlerDeps) error {
 	if s.Name == nil {
 		return mdlerrors.NewValidation("target name required for show references")
 	}
@@ -149,8 +149,8 @@ func execShowReferencesFn(ctx context.Context, s *ast.ShowStmt, deps *HandlerDep
 
 // execShowReferences handles SHOW REFERENCES TO Module.Entity.
 
-// execShowImpactFn handles SHOW IMPACT OF with HandlerDeps.
-func execShowImpactFn(ctx context.Context, s *ast.ShowStmt, deps *HandlerDeps) error {
+// ExecShowImpactFn handles SHOW IMPACT OF with HandlerDeps.
+func ExecShowImpactFn(ctx context.Context, s *ast.ShowStmt, deps *HandlerDeps) error {
 	if s.Name == nil {
 		return mdlerrors.NewValidation("target name required for show impact")
 	}

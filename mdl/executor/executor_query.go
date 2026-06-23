@@ -9,7 +9,7 @@ import (
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 )
 
-func execShow(ctx context.Context, s *ast.ShowStmt, deps *HandlerDeps) error {
+func ExecShow(ctx context.Context, s *ast.ShowStmt, deps *HandlerDeps) error {
 	handler, ok := showHandlers[s.ObjectType]
 	if !ok {
 		return mdlerrors.NewUnsupported("unknown show object type")
@@ -17,7 +17,7 @@ func execShow(ctx context.Context, s *ast.ShowStmt, deps *HandlerDeps) error {
 	return handler(ctx, s, deps)
 }
 
-func execDescribe(ctx context.Context, s *ast.DescribeStmt, deps *HandlerDeps) error {
+func ExecDescribe(ctx context.Context, s *ast.DescribeStmt, deps *HandlerDeps) error {
 	entry, ok := describeHandlers[s.ObjectType]
 	if !ok {
 		return mdlerrors.NewUnsupported("unknown describe object type")

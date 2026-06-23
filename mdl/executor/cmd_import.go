@@ -16,8 +16,8 @@ import (
 
 // execImport handles IMPORT FROM <alias> QUERY '<sql>' INTO Module.Entity MAP (...) [LINK (...)] [BATCH n] [LIMIT n]
 
-// execImportFn is the HandlerDeps version of execImport.
-func execImportFn(ctx context.Context, s *ast.ImportStmt, deps *HandlerDeps) error {
+// ExecImportFn is the HandlerDeps version of execImport.
+func ExecImportFn(ctx context.Context, s *ast.ImportStmt, deps *HandlerDeps) error {
 	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnected()
 	}
@@ -29,7 +29,7 @@ func execImportFn(ctx context.Context, s *ast.ImportStmt, deps *HandlerDeps) err
 	}
 
 	// Get source connection (auto-connects from config if needed)
-	ectx := phase3d2bNewExecContext(ctx, deps)
+	ectx := NewExecContext(ctx, deps)
 	sourceConn, err := getOrAutoConnect(ectx, s.SourceAlias)
 	if err != nil {
 		return fmt.Errorf("source connection: %w", err)
@@ -120,7 +120,7 @@ func resolveImportLinksFn(ctx context.Context, deps *HandlerDeps, goCtx context.
 	}
 	targetModule := targetParts[0]
 
-	ectx := phase3d2bNewExecContext(ctx, deps)
+	ectx := NewExecContext(ctx, deps)
 	dms, err := listDomainModelsWithContainerGen(ectx)
 	if err != nil {
 		return nil, mdlerrors.NewBackend("list domain models", err)

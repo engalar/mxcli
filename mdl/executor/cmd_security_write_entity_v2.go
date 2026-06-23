@@ -26,12 +26,12 @@ import (
 	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 )
 
-// execGrantEntityAccessGenFn is the HandlerDeps version of execGrantEntityAccessGen.
-func execGrantEntityAccessGenFn(ctx context.Context, s *ast.GrantEntityAccessStmt, deps *HandlerDeps) error {
+// ExecGrantEntityAccessGenFn is the HandlerDeps version of execGrantEntityAccessGen.
+func ExecGrantEntityAccessGenFn(ctx context.Context, s *ast.GrantEntityAccessStmt, deps *HandlerDeps) error {
 	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
-	ectx := phase3d2bNewExecContext(ctx, deps)
+	ectx := NewExecContext(ctx, deps)
 	module, err := findModule(ectx, s.Entity.Module)
 	if err != nil {
 		return err
@@ -206,12 +206,12 @@ func execGrantEntityAccessGenFn(ctx context.Context, s *ast.GrantEntityAccessStm
 	return nil
 }
 
-// execRevokeEntityAccessGenFn is the HandlerDeps version of execRevokeEntityAccessGen.
-func execRevokeEntityAccessGenFn(ctx context.Context, s *ast.RevokeEntityAccessStmt, deps *HandlerDeps) error {
+// ExecRevokeEntityAccessGenFn is the HandlerDeps version of execRevokeEntityAccessGen.
+func ExecRevokeEntityAccessGenFn(ctx context.Context, s *ast.RevokeEntityAccessStmt, deps *HandlerDeps) error {
 	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
-	ectx := phase3d2bNewExecContext(ctx, deps)
+	ectx := NewExecContext(ctx, deps)
 	module, err := findModule(ectx, s.Entity.Module)
 	if err != nil {
 		return err

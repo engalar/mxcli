@@ -49,7 +49,7 @@ func execMoveFn(ctx context.Context, s *ast.MoveStmt, deps *HandlerDeps) error {
 
 	var targetContainerID model.ID
 	if s.Folder != "" {
-		ectx := phase3d2bNewExecContext(ctx, deps)
+		ectx := NewExecContext(ctx, deps)
 		targetContainerID, err = resolveFolder(ectx, targetModule.ID, s.Folder, nil)
 		if err != nil {
 			return mdlerrors.NewBackend("resolve target folder", err)
@@ -58,7 +58,7 @@ func execMoveFn(ctx context.Context, s *ast.MoveStmt, deps *HandlerDeps) error {
 		targetContainerID = targetModule.ID
 	}
 
-	ectx := phase3d2bNewExecContext(ctx, deps)
+	ectx := NewExecContext(ctx, deps)
 	id, err := mover.find(ectx, s.Name)
 	if err != nil {
 		return err
@@ -101,7 +101,7 @@ func updateQualifiedNameRefsFn(ctx context.Context, deps *HandlerDeps, name ast.
 
 // moveEntityFn is the HandlerDeps version of moveEntity.
 func moveEntityFn(ctx context.Context, deps *HandlerDeps, name ast.QualifiedName, sourceModule, targetModule *model.Module) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
+	ectx := NewExecContext(ctx, deps)
 	sourceDM, err := getDomainModelGenCached(ectx, sourceModule.ID)
 	if err != nil {
 		return mdlerrors.NewBackend("get source domain model", err)

@@ -19,11 +19,11 @@ const (
 	layoutCanvasHeight int32 = 600
 )
 
-func execCreateOrModifyLayoutFn(ctx context.Context, s *ast.CreateLayoutStmt, deps *HandlerDeps) error {
+func ExecCreateOrModifyLayoutFn(ctx context.Context, s *ast.CreateLayoutStmt, deps *HandlerDeps) error {
 	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
-	ectx := phase3d2bNewExecContext(ctx, deps)
+	ectx := NewExecContext(ctx, deps)
 	return execCreateOrModifyLayoutImpl(ectx, s)
 }
 

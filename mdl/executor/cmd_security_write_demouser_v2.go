@@ -30,12 +30,12 @@ import (
 	genSec "github.com/mendixlabs/mxcli/modelsdk/gen/security"
 )
 
-// execCreateDemoUserGenFn is the HandlerDeps version of execCreateDemoUserGen.
-func execCreateDemoUserGenFn(ctx context.Context, s *ast.CreateDemoUserStmt, deps *HandlerDeps) error {
+// ExecCreateDemoUserGenFn is the HandlerDeps version of execCreateDemoUserGen.
+func ExecCreateDemoUserGenFn(ctx context.Context, s *ast.CreateDemoUserStmt, deps *HandlerDeps) error {
 	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
-	ectx := phase3d2bNewExecContext(ctx, deps)
+	ectx := NewExecContext(ctx, deps)
 	ps, err := getProjectSecurityGen(ectx)
 	if err != nil {
 		return mdlerrors.NewBackend("read project security", err)
@@ -101,12 +101,12 @@ func execCreateDemoUserGenFn(ctx context.Context, s *ast.CreateDemoUserStmt, dep
 	return nil
 }
 
-// execDropDemoUserGenFn is the HandlerDeps version of execDropDemoUserGen.
-func execDropDemoUserGenFn(ctx context.Context, s *ast.DropDemoUserStmt, deps *HandlerDeps) error {
+// ExecDropDemoUserGenFn is the HandlerDeps version of execDropDemoUserGen.
+func ExecDropDemoUserGenFn(ctx context.Context, s *ast.DropDemoUserStmt, deps *HandlerDeps) error {
 	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
-	ectx := phase3d2bNewExecContext(ctx, deps)
+	ectx := NewExecContext(ctx, deps)
 	ps, err := getProjectSecurityGen(ectx)
 	if err != nil {
 		return mdlerrors.NewBackend("read project security", err)
@@ -138,7 +138,7 @@ func execDropDemoUserGenFn(ctx context.Context, s *ast.DropDemoUserStmt, deps *H
 
 // detectUserEntityGenFn is the HandlerDeps version of detectUserEntityGen.
 func detectUserEntityGenFn(ctx context.Context, deps *HandlerDeps) (string, error) {
-	ectx := phase3d2bNewExecContext(ctx, deps)
+	ectx := NewExecContext(ctx, deps)
 	return detectUserEntityGen(ectx)
 }
 

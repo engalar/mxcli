@@ -268,11 +268,11 @@ func (e *Executor) registerNonBackendHandlers() {
 	// Fragment handlers — only need Output and e.fragments, no backend.
 	r.RegisterFuture("DefineFragment", func(ctx context.Context, stmt ast.Statement) error {
 		deps := &HandlerDeps{Output: e.output, Fragments: e.fragments}
-		return execDefineFragmentFn(ctx, stmt.(*ast.DefineFragmentStmt), deps)
+		return ExecDefineFragmentFn(ctx, stmt.(*ast.DefineFragmentStmt), deps)
 	})
 	// Show and Describe need to be registered so non-backend subtypes
 	// (e.g. ShowFragments, DescribeFragment) work before connect.
-	// They delegate to the full execShow/execDescribe which handle
+	// They delegate to the full ExecShow/ExecDescribe which handle
 	// individual subtypes; backend-dependent subtypes will return
 	// "not connected" errors at runtime.
 	r.RegisterFuture("Show", func(ctx context.Context, stmt ast.Statement) error {
@@ -321,6 +321,16 @@ func (e *Executor) SetQuiet(quiet bool) {
 // SetFormat sets the output format (table or json).
 func (e *Executor) SetFormat(f OutputFormat) {
 	e.format = f
+}
+
+// Registry returns the statement registry for external handler registration.
+func (e *Executor) Registry() *Registry {
+	return e.registry
+}
+
+// BuildHandlerDeps constructs a HandlerDeps from the current executor state.
+func (e *Executor) BuildHandlerDeps() *HandlerDeps {
+	return e.buildHandlerDeps()
 }
 
 // SetLogger sets the diagnostics logger for session logging.

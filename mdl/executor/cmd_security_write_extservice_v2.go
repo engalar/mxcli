@@ -30,12 +30,12 @@ import (
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 )
 
-// execGrantODataServiceAccessGenFn is the HandlerDeps version.
-func execGrantODataServiceAccessGenFn(ctx context.Context, s *ast.GrantODataServiceAccessStmt, deps *HandlerDeps) error {
+// ExecGrantODataServiceAccessGenFn is the HandlerDeps version.
+func ExecGrantODataServiceAccessGenFn(ctx context.Context, s *ast.GrantODataServiceAccessStmt, deps *HandlerDeps) error {
 	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
-	ectx := phase3d2bNewExecContext(ctx, deps)
+	ectx := NewExecContext(ctx, deps)
 	h, err := getHierarchy(ectx)
 	if err != nil {
 		return mdlerrors.NewBackend("build hierarchy", err)
@@ -77,12 +77,12 @@ func execGrantODataServiceAccessGenFn(ctx context.Context, s *ast.GrantODataServ
 	return mdlerrors.NewNotFound("published OData service", s.Service.Module+"."+s.Service.Name)
 }
 
-// execRevokeODataServiceAccessGenFn is the HandlerDeps version.
-func execRevokeODataServiceAccessGenFn(ctx context.Context, s *ast.RevokeODataServiceAccessStmt, deps *HandlerDeps) error {
+// ExecRevokeODataServiceAccessGenFn is the HandlerDeps version.
+func ExecRevokeODataServiceAccessGenFn(ctx context.Context, s *ast.RevokeODataServiceAccessStmt, deps *HandlerDeps) error {
 	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
-	ectx := phase3d2bNewExecContext(ctx, deps)
+	ectx := NewExecContext(ctx, deps)
 	h, err := getHierarchy(ectx)
 	if err != nil {
 		return mdlerrors.NewBackend("build hierarchy", err)
@@ -111,12 +111,12 @@ func execRevokeODataServiceAccessGenFn(ctx context.Context, s *ast.RevokeODataSe
 	return mdlerrors.NewNotFound("published OData service", s.Service.Module+"."+s.Service.Name)
 }
 
-// execGrantPublishedRestServiceAccessGenFn is the HandlerDeps version.
-func execGrantPublishedRestServiceAccessGenFn(ctx context.Context, s *ast.GrantPublishedRestServiceAccessStmt, deps *HandlerDeps) error {
+// ExecGrantPublishedRestServiceAccessGenFn is the HandlerDeps version.
+func ExecGrantPublishedRestServiceAccessGenFn(ctx context.Context, s *ast.GrantPublishedRestServiceAccessStmt, deps *HandlerDeps) error {
 	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
-	ectx := phase3d2bNewExecContext(ctx, deps)
+	ectx := NewExecContext(ctx, deps)
 	if err := checkFeatureFn(ctx, deps, "integration", "published_rest_grant_revoke",
 		"grant access on published rest service",
 		"upgrade your project to 10.0+"); err != nil {
@@ -163,12 +163,12 @@ func execGrantPublishedRestServiceAccessGenFn(ctx context.Context, s *ast.GrantP
 	return mdlerrors.NewNotFound("published rest service", s.Service.Module+"."+s.Service.Name)
 }
 
-// execRevokePublishedRestServiceAccessGenFn is the HandlerDeps version.
-func execRevokePublishedRestServiceAccessGenFn(ctx context.Context, s *ast.RevokePublishedRestServiceAccessStmt, deps *HandlerDeps) error {
+// ExecRevokePublishedRestServiceAccessGenFn is the HandlerDeps version.
+func ExecRevokePublishedRestServiceAccessGenFn(ctx context.Context, s *ast.RevokePublishedRestServiceAccessStmt, deps *HandlerDeps) error {
 	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
-	ectx := phase3d2bNewExecContext(ctx, deps)
+	ectx := NewExecContext(ctx, deps)
 	h, err := getHierarchy(ectx)
 	if err != nil {
 		return mdlerrors.NewBackend("build hierarchy", err)

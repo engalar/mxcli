@@ -438,8 +438,8 @@ func (pb *pageBuilder) createFolder(name string, containerID model.ID) (model.ID
 	return folder.ID, nil
 }
 
-// execDropPage handles DROP PAGE statement.
-func execDropPage(ctx *ExecContext, s *ast.DropPageStmt) error {
+// ExecDropPage handles DROP PAGE statement.
+func ExecDropPage(ctx *ExecContext, s *ast.DropPageStmt) error {
 	if !ctx.ConnectedForWrite() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
@@ -474,8 +474,8 @@ func execDropPage(ctx *ExecContext, s *ast.DropPageStmt) error {
 	return mdlerrors.NewNotFound("page", s.Name.String())
 }
 
-// execDropSnippet handles DROP SNIPPET statement.
-func execDropSnippet(ctx *ExecContext, s *ast.DropSnippetStmt) error {
+// ExecDropSnippet handles DROP SNIPPET statement.
+func ExecDropSnippet(ctx *ExecContext, s *ast.DropSnippetStmt) error {
 	if !ctx.ConnectedForWrite() {
 		return mdlerrors.NewNotConnectedWrite()
 	}

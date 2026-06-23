@@ -115,7 +115,7 @@ func execCreateJsonStructureFn(ctx context.Context, s *ast.CreateJsonStructureSt
 	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnected()
 	}
-	ectx := phase3d2bNewExecContext(ctx, deps)
+	ectx := NewExecContext(ctx, deps)
 	module, err := findOrCreateModule(ectx, s.Name.Module)
 	if err != nil {
 		return err

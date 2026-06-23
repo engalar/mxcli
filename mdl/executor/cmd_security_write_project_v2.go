@@ -12,12 +12,12 @@ import (
 	"github.com/mendixlabs/mxcli/model"
 )
 
-// execAlterProjectSecurityGenFn is the HandlerDeps version of execAlterProjectSecurityGen.
-func execAlterProjectSecurityGenFn(ctx context.Context, s *ast.AlterProjectSecurityStmt, deps *HandlerDeps) error {
+// ExecAlterProjectSecurityGenFn is the HandlerDeps version of execAlterProjectSecurityGen.
+func ExecAlterProjectSecurityGenFn(ctx context.Context, s *ast.AlterProjectSecurityStmt, deps *HandlerDeps) error {
 	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
-	ectx := phase3d2bNewExecContext(ctx, deps)
+	ectx := NewExecContext(ctx, deps)
 	ps, err := getProjectSecurityGen(ectx)
 	if err != nil || ps == nil {
 		return mdlerrors.NewBackend("read project security", err)

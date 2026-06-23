@@ -13,8 +13,8 @@ import (
 	genWf "github.com/mendixlabs/mxcli/modelsdk/gen/workflows"
 )
 
-// execAlterWorkflow handles ALTER WORKFLOW Module.Name { operations }.
-func execAlterWorkflow(ctx *ExecContext, s *ast.AlterWorkflowStmt) error {
+// ExecAlterWorkflow handles ALTER WORKFLOW Module.Name { operations }.
+func ExecAlterWorkflow(ctx *ExecContext, s *ast.AlterWorkflowStmt) error {
 	if !ctx.Connected() {
 		return mdlerrors.NewNotConnected()
 	}

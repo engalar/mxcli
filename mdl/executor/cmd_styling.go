@@ -122,7 +122,7 @@ func execDescribeStylingFn(ctx context.Context, s *ast.DescribeStylingStmt, deps
 		return mdlerrors.NewNotConnected()
 	}
 
-	tmpCtx := phase3d2bNewExecContext(ctx, deps)
+	tmpCtx := NewExecContext(ctx, deps)
 
 	h, err := getHierarchy(tmpCtx)
 	if err != nil {
@@ -199,7 +199,7 @@ func execAlterStylingFn(ctx context.Context, s *ast.AlterStylingStmt, deps *Hand
 		return mdlerrors.NewNotConnectedWrite()
 	}
 
-	tmpCtx := phase3d2bNewExecContext(ctx, deps)
+	tmpCtx := NewExecContext(ctx, deps)
 
 	h, err := getHierarchy(tmpCtx)
 	if err != nil {

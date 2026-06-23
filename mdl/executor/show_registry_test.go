@@ -8,11 +8,11 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/executor"
 )
 
-// TestShowRegistryCoverage 确认每个经由 execShow 分发的 ShowObjectType 常量都有注册 handler。
+// TestShowRegistryCoverage 确认每个经由 ExecShow 分发的 ShowObjectType 常量都有注册 handler。
 // 这个测试在添加新 ShowObjectType 后立刻失败，提醒同步注册。
 //
 // 注意：ast.ShowWidgets 虽是 ShowObjectType 枚举值，但通过独立的 ShowWidgetsStmt
-// 语句类型分发（见 register_stubs.go / cmd_widgets.go），不走 execShow，因此不在此覆盖范围内。
+// 语句类型分发（见 register_stubs.go / cmd_widgets.go），不走 ExecShow，因此不在此覆盖范围内。
 func TestShowRegistryCoverage(t *testing.T) {
 	allTypes := []ast.ShowObjectType{
 		ast.ShowModules, ast.ShowEnumerations, ast.ShowConstants,

@@ -2,7 +2,7 @@
 
 // Stage 3.3.4 D1: AST → gen-typed entity / attribute / association
 // builders. These mirror helpers.go::convertDataType and the entity /
-// association construction in cmd_entities.go::execCreateEntity but
+// association construction in cmd_entities.go::ExecCreateEntity but
 // produce *genDm.* values for use by the gen-typed write path
 // (D2-D7 executors landing on top of this).
 
@@ -49,7 +49,7 @@ func astToAttributeGen(a *ast.Attribute) *genDm.Attribute {
 // astAttributeDefaultStringGen renders an AST default value as the
 // string the gen StoredValue.DefaultValue stores. For enum attributes
 // Mendix stores just the value name (the trailing segment of the
-// qualified default), matching legacy execCreateEntity behavior.
+// qualified default), matching legacy ExecCreateEntity behavior.
 func astAttributeDefaultStringGen(a *ast.Attribute) string {
 	if !a.HasDefault {
 		return ""
@@ -66,7 +66,7 @@ func astAttributeDefaultStringGen(a *ast.Attribute) string {
 }
 
 // stringifyDefault converts the AST DefaultValue (any) to its string
-// form using the same fmt-based rendering as legacy execCreateEntity.
+// form using the same fmt-based rendering as legacy ExecCreateEntity.
 func stringifyDefault(v any) string {
 	if v == nil {
 		return ""

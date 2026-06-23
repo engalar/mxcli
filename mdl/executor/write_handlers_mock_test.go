@@ -123,7 +123,7 @@ func TestExecDropEntity_Mock(t *testing.T) {
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb))
-	err := execDropEntity(ctx, &ast.DropEntityStmt{
+	err := ExecDropEntity(ctx, &ast.DropEntityStmt{
 		Name: ast.QualifiedName{Module: "MyModule", Name: "Customer"},
 	})
 	assertNoError(t, err)
@@ -170,7 +170,7 @@ func TestExecDropMicroflow_Mock(t *testing.T) {
 		withHierarchy(h),
 		withMicroflowsRepo(mfRepo),
 	)
-	err := execDropMicroflowFn(ctx, &ast.DropMicroflowStmt{
+	err := ExecDropMicroflowFn(ctx, &ast.DropMicroflowStmt{
 		Name: ast.QualifiedName{Module: "MyModule", Name: "DoSomething"},
 	}, execContextToDeps(ctx))
 	assertNoError(t, err)
@@ -197,7 +197,7 @@ func TestExecDropPage_Mock(t *testing.T) {
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
 	ctx.Pages = makePagesRepo([]*genPg.Page{pg}, mod.ID)
-	err := execDropPage(ctx, &ast.DropPageStmt{
+	err := ExecDropPage(ctx, &ast.DropPageStmt{
 		Name: ast.QualifiedName{Module: "MyModule", Name: "HomePage"},
 	})
 	assertNoError(t, err)
@@ -224,7 +224,7 @@ func TestExecDropSnippet_Mock(t *testing.T) {
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
 	ctx.Snippets = makeSnippetsRepo([]*genPg.Snippet{snp}, mod.ID)
-	err := execDropSnippet(ctx, &ast.DropSnippetStmt{
+	err := ExecDropSnippet(ctx, &ast.DropSnippetStmt{
 		Name: ast.QualifiedName{Module: "MyModule", Name: "HeaderSnippet"},
 	})
 	assertNoError(t, err)
@@ -389,7 +389,7 @@ func TestExecDropEntity_Mock_NotFound(t *testing.T) {
 		},
 	}
 	ctx, _ := newMockCtx(t, withBackend(mb))
-	assertError(t, execDropEntity(ctx, &ast.DropEntityStmt{
+	assertError(t, ExecDropEntity(ctx, &ast.DropEntityStmt{
 		Name: ast.QualifiedName{Module: "MyModule", Name: "NonExistent"},
 	}))
 }
@@ -405,7 +405,7 @@ func TestExecDropMicroflow_Mock_NotFound(t *testing.T) {
 	// Stage 3.2.6.5: execDropMicroflow now reads from ctx.Microflows
 	// (modelsdk repo); no repo seeded → empty list → NotFound, which
 	// is the expected error path for this test.
-	assertError(t, execDropMicroflowFn(ctx, &ast.DropMicroflowStmt{
+	assertError(t, ExecDropMicroflowFn(ctx, &ast.DropMicroflowStmt{
 		Name: ast.QualifiedName{Module: "MyModule", Name: "NonExistent"},
 	}, execContextToDeps(ctx)))
 }
@@ -417,7 +417,7 @@ func TestExecDropPage_Mock_NotFound(t *testing.T) {
 	mb := &mock.MockBackend{IsConnectedFunc: func() bool { return true }}
 	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
 	ctx.Pages = makePagesRepo(nil, mod.ID)
-	assertError(t, execDropPage(ctx, &ast.DropPageStmt{
+	assertError(t, ExecDropPage(ctx, &ast.DropPageStmt{
 		Name: ast.QualifiedName{Module: "MyModule", Name: "NonExistent"},
 	}))
 }
@@ -429,7 +429,7 @@ func TestExecDropSnippet_Mock_NotFound(t *testing.T) {
 	mb := &mock.MockBackend{IsConnectedFunc: func() bool { return true }}
 	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
 	ctx.Snippets = makeSnippetsRepo(nil, mod.ID)
-	assertError(t, execDropSnippet(ctx, &ast.DropSnippetStmt{
+	assertError(t, ExecDropSnippet(ctx, &ast.DropSnippetStmt{
 		Name: ast.QualifiedName{Module: "MyModule", Name: "NonExistent"},
 	}))
 }
@@ -527,7 +527,7 @@ func TestDropThenCreatePreservesMicroflowUnitID(t *testing.T) {
 		withMicroflowsRepo(mfRepo),
 	)
 
-	if err := execDropMicroflowFn(ctx, &ast.DropMicroflowStmt{
+	if err := ExecDropMicroflowFn(ctx, &ast.DropMicroflowStmt{
 		Name: ast.QualifiedName{Module: "MyModule", Name: "DoSomething"},
 	}, execContextToDeps(ctx)); err != nil {
 		t.Fatalf("DROP MICROFLOW failed: %v", err)
@@ -547,7 +547,7 @@ func TestDropThenCreatePreservesMicroflowUnitID(t *testing.T) {
 		CreateOrModify: true,
 		Body:           nil, // empty body is fine for this test
 	}
-	if err := execCreateMicroflowGenFn(ctx, createStmt, execContextToDeps(ctx)); err != nil {
+	if err := ExecCreateMicroflowGenFn(ctx, createStmt, execContextToDeps(ctx)); err != nil {
 		t.Fatalf("CREATE OR MODIFY MICROFLOW failed: %v", err)
 	}
 
@@ -610,7 +610,7 @@ func TestCreateOrModifyMicroflowPreservesAllowedRoles(t *testing.T) {
 		withMicroflowsRepo(mfRepo),
 	)
 
-	if err := execCreateMicroflowGenFn(ctx, &ast.CreateMicroflowStmt{
+	if err := ExecCreateMicroflowGenFn(ctx, &ast.CreateMicroflowStmt{
 		Name:           ast.QualifiedName{Module: "MyModule", Name: "DoSomething"},
 		CreateOrModify: true,
 	}, execContextToDeps(ctx)); err != nil {

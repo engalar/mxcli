@@ -54,8 +54,8 @@ import (
 // execCreateMicroflowGen handles CREATE MICROFLOW via the gen-typed
 // write path.
 
-// execCreateMicroflowGenFn is the HandlerDeps version of execCreateMicroflowGen.
-func execCreateMicroflowGenFn(ctx context.Context, s *ast.CreateMicroflowStmt, deps *HandlerDeps) error {
+// ExecCreateMicroflowGenFn is the HandlerDeps version of execCreateMicroflowGen.
+func ExecCreateMicroflowGenFn(ctx context.Context, s *ast.CreateMicroflowStmt, deps *HandlerDeps) error {
 	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
@@ -67,7 +67,7 @@ func execCreateMicroflowGenFn(ctx context.Context, s *ast.CreateMicroflowStmt, d
 		return mdlerrors.NewValidation("microflow name must not be empty")
 	}
 
-	ectx := phase3d2bNewExecContext(ctx, deps)
+	ectx := NewExecContext(ctx, deps)
 	module, err := findOrCreateModule(ectx, s.Name.Module)
 	if err != nil {
 		return err

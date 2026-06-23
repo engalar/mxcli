@@ -18,7 +18,7 @@ import (
 // Pseudo-types (AutoOwner / AutoChangedBy / AutoCreatedDate /
 // AutoChangedDate) flip the corresponding flag on the entity's
 // NoGeneralization element rather than producing real attributes,
-// matching legacy execCreateEntity semantics.
+// matching legacy ExecCreateEntity semantics.
 func astToEntityGen(s *ast.CreateEntityStmt) *genDm.Entity {
 	if s == nil {
 		return nil

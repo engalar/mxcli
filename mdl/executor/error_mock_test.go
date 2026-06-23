@@ -450,8 +450,8 @@ func TestExecCreateEnumeration_Mock_BackendError(t *testing.T) {
 // gen flows.
 
 // Stage 3.3.5.E0.error: TestExecDropPage_Mock_BackendError and
-// TestExecDropSnippet_Mock_BackendError removed — execDropPage /
-// execDropSnippet now read from ctx.Pages / ctx.Snippets repos (gen
+// TestExecDropSnippet_Mock_BackendError removed — ExecDropPage /
+// ExecDropSnippet now read from ctx.Pages / ctx.Snippets repos (gen
 // path) instead of ctx.Backend.ListPages / ListSnippets, so the
 // simulated sdk-typed backend error never reaches the dispatch path.
 // Error coverage for the gen path lives in the repo-level tests.

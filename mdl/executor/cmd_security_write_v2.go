@@ -43,8 +43,8 @@ import (
 // Fn (HandlerDeps) versions
 // ─────────────────────────────────────────────────────────────
 
-// execGrantMicroflowAccessGenFn handles GRANT EXECUTE ON MICROFLOW.
-func execGrantMicroflowAccessGenFn(ctx context.Context, s *ast.GrantMicroflowAccessStmt, deps *HandlerDeps) error {
+// ExecGrantMicroflowAccessGenFn handles GRANT EXECUTE ON MICROFLOW.
+func ExecGrantMicroflowAccessGenFn(ctx context.Context, s *ast.GrantMicroflowAccessStmt, deps *HandlerDeps) error {
 	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
@@ -104,8 +104,8 @@ func execGrantMicroflowAccessGenFn(ctx context.Context, s *ast.GrantMicroflowAcc
 	return mdlerrors.NewNotFound("microflow", s.Microflow.Module+"."+s.Microflow.Name)
 }
 
-// execRevokeMicroflowAccessGenFn handles REVOKE EXECUTE ON MICROFLOW.
-func execRevokeMicroflowAccessGenFn(ctx context.Context, s *ast.RevokeMicroflowAccessStmt, deps *HandlerDeps) error {
+// ExecRevokeMicroflowAccessGenFn handles REVOKE EXECUTE ON MICROFLOW.
+func ExecRevokeMicroflowAccessGenFn(ctx context.Context, s *ast.RevokeMicroflowAccessStmt, deps *HandlerDeps) error {
 	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
@@ -154,8 +154,8 @@ func execRevokeMicroflowAccessGenFn(ctx context.Context, s *ast.RevokeMicroflowA
 	return mdlerrors.NewNotFound("microflow", s.Microflow.Module+"."+s.Microflow.Name)
 }
 
-// execGrantNanoflowAccessGenFn handles GRANT EXECUTE ON NANOFLOW.
-func execGrantNanoflowAccessGenFn(ctx context.Context, s *ast.GrantNanoflowAccessStmt, deps *HandlerDeps) error {
+// ExecGrantNanoflowAccessGenFn handles GRANT EXECUTE ON NANOFLOW.
+func ExecGrantNanoflowAccessGenFn(ctx context.Context, s *ast.GrantNanoflowAccessStmt, deps *HandlerDeps) error {
 	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
@@ -215,8 +215,8 @@ func execGrantNanoflowAccessGenFn(ctx context.Context, s *ast.GrantNanoflowAcces
 	return mdlerrors.NewNotFound("nanoflow", s.Nanoflow.Module+"."+s.Nanoflow.Name)
 }
 
-// execRevokeNanoflowAccessGenFn handles REVOKE EXECUTE ON NANOFLOW.
-func execRevokeNanoflowAccessGenFn(ctx context.Context, s *ast.RevokeNanoflowAccessStmt, deps *HandlerDeps) error {
+// ExecRevokeNanoflowAccessGenFn handles REVOKE EXECUTE ON NANOFLOW.
+func ExecRevokeNanoflowAccessGenFn(ctx context.Context, s *ast.RevokeNanoflowAccessStmt, deps *HandlerDeps) error {
 	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnectedWrite()
 	}

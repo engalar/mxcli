@@ -31,7 +31,7 @@ func TestExecCreateNanoflowGen_EmptyBodyRoundTrip(t *testing.T) {
 		Name: ast.QualifiedName{Module: "MyFirstModule", Name: "NF_GenSmoke"},
 	}
 
-	if err := execCreateNanoflowGenFn(ctx, stmt, execContextToDeps(ctx)); err != nil {
+	if err := ExecCreateNanoflowGenFn(ctx, stmt, execContextToDeps(ctx)); err != nil {
 		t.Fatalf("execCreateNanoflowGen: %v", err)
 	}
 
@@ -62,7 +62,7 @@ func TestExecCreateNanoflowGen_WithParametersAndDocumentation(t *testing.T) {
 		},
 	}
 
-	if err := execCreateNanoflowGenFn(ctx, stmt, execContextToDeps(ctx)); err != nil {
+	if err := ExecCreateNanoflowGenFn(ctx, stmt, execContextToDeps(ctx)); err != nil {
 		t.Fatalf("execCreateNanoflowGen: %v", err)
 	}
 
@@ -90,7 +90,7 @@ func TestExecCreateNanoflowGen_ReplaceExisting(t *testing.T) {
 	first := &ast.CreateNanoflowStmt{
 		Name: ast.QualifiedName{Module: "MyFirstModule", Name: "NF_Replace"},
 	}
-	if err := execCreateNanoflowGenFn(ctx, first, execContextToDeps(ctx)); err != nil {
+	if err := ExecCreateNanoflowGenFn(ctx, first, execContextToDeps(ctx)); err != nil {
 		t.Fatalf("first create: %v", err)
 	}
 
@@ -98,7 +98,7 @@ func TestExecCreateNanoflowGen_ReplaceExisting(t *testing.T) {
 		conflict := &ast.CreateNanoflowStmt{
 			Name: ast.QualifiedName{Module: "MyFirstModule", Name: "NF_Replace"},
 		}
-		if err := execCreateNanoflowGenFn(ctx, conflict, execContextToDeps(ctx)); err == nil {
+		if err := ExecCreateNanoflowGenFn(ctx, conflict, execContextToDeps(ctx)); err == nil {
 			t.Error("expected AlreadyExists error, got nil")
 		}
 	})
@@ -109,7 +109,7 @@ func TestExecCreateNanoflowGen_ReplaceExisting(t *testing.T) {
 			CreateOrModify: true,
 			Documentation:  "updated",
 		}
-		if err := execCreateNanoflowGenFn(ctx, replace, execContextToDeps(ctx)); err != nil {
+		if err := ExecCreateNanoflowGenFn(ctx, replace, execContextToDeps(ctx)); err != nil {
 			t.Errorf("create or modify: %v", err)
 		}
 
@@ -144,7 +144,7 @@ func TestExecCreateNanoflowGen_CompoundBodyAccepted(t *testing.T) {
 			},
 		},
 	}
-	if err := execCreateNanoflowGenFn(ctx, stmt, execContextToDeps(ctx)); err != nil {
+	if err := ExecCreateNanoflowGenFn(ctx, stmt, execContextToDeps(ctx)); err != nil {
 		t.Fatalf("compound body should be accepted post-Stage-3.2.3, got error: %v", err)
 	}
 }
@@ -159,7 +159,7 @@ func TestExecCreateNanoflowGen_ValidationFailures(t *testing.T) {
 		stmt := &ast.CreateNanoflowStmt{
 			Name: ast.QualifiedName{Module: "MyFirstModule", Name: "  "},
 		}
-		if err := execCreateNanoflowGenFn(ctx, stmt, execContextToDeps(ctx)); err == nil {
+		if err := ExecCreateNanoflowGenFn(ctx, stmt, execContextToDeps(ctx)); err == nil {
 			t.Error("expected validation error for blank name")
 		}
 	})
@@ -171,7 +171,7 @@ func TestExecCreateNanoflowGen_ValidationFailures(t *testing.T) {
 				&ast.CallJavaActionStmt{},
 			},
 		}
-		err := execCreateNanoflowGenFn(ctx, stmt, execContextToDeps(ctx))
+		err := ExecCreateNanoflowGenFn(ctx, stmt, execContextToDeps(ctx))
 		if err == nil {
 			t.Fatal("expected nanoflow-body validation error")
 		}
@@ -186,7 +186,7 @@ func TestExecCreateNanoflowGen_ValidationFailures(t *testing.T) {
 		stmt := &ast.CreateNanoflowStmt{
 			Name: ast.QualifiedName{Module: "MyFirstModule", Name: "NF_NoRepo"},
 		}
-		if err := execCreateNanoflowGenFn(&bare, stmt, execContextToDeps(&bare)); err == nil {
+		if err := ExecCreateNanoflowGenFn(&bare, stmt, execContextToDeps(&bare)); err == nil {
 			t.Error("expected error when ctx.Nanoflows is nil")
 		}
 	})
@@ -208,7 +208,7 @@ func TestExecCreateNanoflowGen_MultiParamLayout(t *testing.T) {
 			{Name: "Subject", Type: ast.DataType{Kind: ast.TypeString}},
 		},
 	}
-	if err := execCreateNanoflowGenFn(ctx, stmt, execContextToDeps(ctx)); err != nil {
+	if err := ExecCreateNanoflowGenFn(ctx, stmt, execContextToDeps(ctx)); err != nil {
 		t.Fatalf("execCreateNanoflowGen: %v", err)
 	}
 
@@ -259,7 +259,7 @@ func TestExecCreateNanoflowGen_PrintsCreatedToOutput(t *testing.T) {
 	stmt := &ast.CreateNanoflowStmt{
 		Name: ast.QualifiedName{Module: "MyFirstModule", Name: "NF_PrintCheck"},
 	}
-	if err := execCreateNanoflowGenFn(ctx, stmt, execContextToDeps(ctx)); err != nil {
+	if err := ExecCreateNanoflowGenFn(ctx, stmt, execContextToDeps(ctx)); err != nil {
 		t.Fatalf("execCreateNanoflowGen: %v", err)
 	}
 	if !strings.Contains(buf.String(), "Created nanoflow: MyFirstModule.NF_PrintCheck") {

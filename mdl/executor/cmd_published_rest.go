@@ -181,7 +181,7 @@ func execCreatePublishedRestServiceFn(ctx context.Context, s *ast.CreatePublishe
 		return mdlerrors.NewNotConnectedWrite()
 	}
 
-	tmpCtx := phase3d2bNewExecContext(ctx, deps)
+	tmpCtx := NewExecContext(ctx, deps)
 
 	if err := checkFeature(tmpCtx, "integration", "published_rest_service",
 		"create published rest service",
@@ -298,7 +298,7 @@ func execAlterPublishedRestServiceFn(ctx context.Context, s *ast.AlterPublishedR
 		return mdlerrors.NewNotConnectedWrite()
 	}
 
-	tmpCtx := phase3d2bNewExecContext(ctx, deps)
+	tmpCtx := NewExecContext(ctx, deps)
 
 	if err := checkFeature(tmpCtx, "integration", "published_rest_alter",
 		"alter published rest service",

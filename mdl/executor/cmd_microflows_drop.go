@@ -21,8 +21,8 @@ import (
 // info is recorded with the same qualified-name shape so a subsequent
 // CREATE OR MODIFY can reuse the UnitID via consumeDroppedMicroflow.
 
-// execDropMicroflowFn is the HandlerDeps version of execDropMicroflow.
-func execDropMicroflowFn(ctx context.Context, s *ast.DropMicroflowStmt, deps *HandlerDeps) error {
+// ExecDropMicroflowFn is the HandlerDeps version of execDropMicroflow.
+func ExecDropMicroflowFn(ctx context.Context, s *ast.DropMicroflowStmt, deps *HandlerDeps) error {
 	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnectedWrite()
 	}

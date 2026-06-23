@@ -14,11 +14,11 @@ import (
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 )
 
-func execCreateConsumedMCPServiceFn(ctx context.Context, s *ast.CreateConsumedMCPServiceStmt, deps *HandlerDeps) error {
+func ExecCreateConsumedMCPServiceFn(ctx context.Context, s *ast.CreateConsumedMCPServiceStmt, deps *HandlerDeps) error {
 	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnected()
 	}
-	ectx := phase3d2bNewExecContext(ctx, deps)
+	ectx := NewExecContext(ctx, deps)
 	existing := findAgentEditorConsumedMCPService(ectx, s.Name.Module, s.Name.Name)
 	if existing != nil && !s.CreateOrModify {
 		return mdlerrors.NewAlreadyExists("consumed mcp service", s.Name.String())
@@ -53,11 +53,11 @@ func execCreateConsumedMCPServiceFn(ctx context.Context, s *ast.CreateConsumedMC
 	return nil
 }
 
-func execDropConsumedMCPServiceFn(ctx context.Context, s *ast.DropConsumedMCPServiceStmt, deps *HandlerDeps) error {
+func ExecDropConsumedMCPServiceFn(ctx context.Context, s *ast.DropConsumedMCPServiceStmt, deps *HandlerDeps) error {
 	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnected()
 	}
-	ectx := phase3d2bNewExecContext(ctx, deps)
+	ectx := NewExecContext(ctx, deps)
 	c := findAgentEditorConsumedMCPService(ectx, s.Name.Module, s.Name.Name)
 	if c == nil {
 		return mdlerrors.NewNotFound("consumed mcp service", s.Name.String())
@@ -69,11 +69,11 @@ func execDropConsumedMCPServiceFn(ctx context.Context, s *ast.DropConsumedMCPSer
 	return nil
 }
 
-func execCreateKnowledgeBaseFn(ctx context.Context, s *ast.CreateKnowledgeBaseStmt, deps *HandlerDeps) error {
+func ExecCreateKnowledgeBaseFn(ctx context.Context, s *ast.CreateKnowledgeBaseStmt, deps *HandlerDeps) error {
 	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnected()
 	}
-	ectx := phase3d2bNewExecContext(ctx, deps)
+	ectx := NewExecContext(ctx, deps)
 	existing := findAgentEditorKnowledgeBase(ectx, s.Name.Module, s.Name.Name)
 	if existing != nil && !s.CreateOrModify {
 		return mdlerrors.NewAlreadyExists("knowledge base", s.Name.String())
@@ -123,11 +123,11 @@ func execCreateKnowledgeBaseFn(ctx context.Context, s *ast.CreateKnowledgeBaseSt
 	return nil
 }
 
-func execDropKnowledgeBaseFn(ctx context.Context, s *ast.DropKnowledgeBaseStmt, deps *HandlerDeps) error {
+func ExecDropKnowledgeBaseFn(ctx context.Context, s *ast.DropKnowledgeBaseStmt, deps *HandlerDeps) error {
 	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnected()
 	}
-	ectx := phase3d2bNewExecContext(ctx, deps)
+	ectx := NewExecContext(ctx, deps)
 	k := findAgentEditorKnowledgeBase(ectx, s.Name.Module, s.Name.Name)
 	if k == nil {
 		return mdlerrors.NewNotFound("knowledge base", s.Name.String())
@@ -139,11 +139,11 @@ func execDropKnowledgeBaseFn(ctx context.Context, s *ast.DropKnowledgeBaseStmt, 
 	return nil
 }
 
-func execCreateAgentFn(ctx context.Context, s *ast.CreateAgentStmt, deps *HandlerDeps) error {
+func ExecCreateAgentFn(ctx context.Context, s *ast.CreateAgentStmt, deps *HandlerDeps) error {
 	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnected()
 	}
-	ectx := phase3d2bNewExecContext(ctx, deps)
+	ectx := NewExecContext(ctx, deps)
 	existingAgent := findAgentEditorAgent(ectx, s.Name.Module, s.Name.Name)
 	if existingAgent != nil && !s.CreateOrModify {
 		return mdlerrors.NewAlreadyExists("agent", s.Name.String())
@@ -242,11 +242,11 @@ func execCreateAgentFn(ctx context.Context, s *ast.CreateAgentStmt, deps *Handle
 	return nil
 }
 
-func execDropAgentFn(ctx context.Context, s *ast.DropAgentStmt, deps *HandlerDeps) error {
+func ExecDropAgentFn(ctx context.Context, s *ast.DropAgentStmt, deps *HandlerDeps) error {
 	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnected()
 	}
-	ectx := phase3d2bNewExecContext(ctx, deps)
+	ectx := NewExecContext(ctx, deps)
 	a := findAgentEditorAgent(ectx, s.Name.Module, s.Name.Name)
 	if a == nil {
 		return mdlerrors.NewNotFound("agent", s.Name.String())

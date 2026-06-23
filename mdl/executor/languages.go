@@ -128,8 +128,8 @@ func listSupportedLanguages(ctx *ExecContext) error {
 	return writeResult(ctx, tr)
 }
 
-// alterLanguage handles ALTER SETTINGS LANGUAGE ADD/DROP.
-func alterLanguage(ctx *ExecContext, stmt *ast.AlterLanguageStmt) error {
+// AlterLanguage handles ALTER SETTINGS LANGUAGE ADD/DROP.
+func AlterLanguage(ctx *ExecContext, stmt *ast.AlterLanguageStmt) error {
 	if !ctx.ConnectedForWrite() {
 		return mdlerrors.NewNotConnectedWrite()
 	}

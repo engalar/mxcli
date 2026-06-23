@@ -82,7 +82,7 @@ func execRenameFn(ctx context.Context, s *ast.RenameStmt, deps *HandlerDeps) err
 }
 
 func execRenameEntityFn(ctx context.Context, s *ast.RenameStmt, deps *HandlerDeps) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
+	ectx := NewExecContext(ctx, deps)
 
 	module, err := findModule(ectx, s.Name.Module)
 	if err != nil {
@@ -159,7 +159,7 @@ func execRenameModuleFn(ctx context.Context, s *ast.RenameStmt, deps *HandlerDep
 	oldModuleName := s.Name.Module
 	newModuleName := s.NewName
 
-	ectx := phase3d2bNewExecContext(ctx, deps)
+	ectx := NewExecContext(ctx, deps)
 	module, err := findModule(ectx, oldModuleName)
 	if err != nil {
 		return err
@@ -201,7 +201,7 @@ func execRenameDocumentFn(ctx context.Context, s *ast.RenameStmt, deps *HandlerD
 	oldQualifiedName := s.Name.Module + "." + s.Name.Name
 	newQualifiedName := s.Name.Module + "." + s.NewName
 
-	ectx := phase3d2bNewExecContext(ctx, deps)
+	ectx := NewExecContext(ctx, deps)
 	h, err := getHierarchy(ectx)
 	if err != nil {
 		return err
@@ -328,7 +328,7 @@ func execRenameEnumerationFn(ctx context.Context, s *ast.RenameStmt, deps *Handl
 	if err != nil {
 		return mdlerrors.NewBackend("list enumerations", err)
 	}
-	ectx := phase3d2bNewExecContext(ctx, deps)
+	ectx := NewExecContext(ctx, deps)
 	h, err := getHierarchy(ectx)
 	if err != nil {
 		return err
@@ -385,7 +385,7 @@ func execRenameAssociationFn(ctx context.Context, s *ast.RenameStmt, deps *Handl
 	oldQualifiedName := s.Name.Module + "." + s.Name.Name
 	newQualifiedName := s.Name.Module + "." + s.NewName
 
-	ectx := phase3d2bNewExecContext(ctx, deps)
+	ectx := NewExecContext(ctx, deps)
 	module, err := findModule(ectx, s.Name.Module)
 	if err != nil {
 		return err
@@ -458,7 +458,7 @@ func execRenameJavaActionFn(ctx context.Context, s *ast.RenameStmt, deps *Handle
 	oldQualifiedName := s.Name.Module + "." + s.Name.Name
 	newQualifiedName := s.Name.Module + "." + s.NewName
 
-	ectx := phase3d2bNewExecContext(ctx, deps)
+	ectx := NewExecContext(ctx, deps)
 	pairs, err := listJavaActionsWithContainerGen(ectx)
 	if err != nil {
 		return mdlerrors.NewBackend("list java actions", err)

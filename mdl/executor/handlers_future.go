@@ -2888,10 +2888,10 @@ func execExecuteScriptFuture(ctx context.Context, s *ast.ExecuteScriptStmt, deps
 // Phase 3d-2b: module/entity/association CRUD handler bridge
 // ────────────────────────────────────────────────────────────
 
-// phase3d2bNewExecContext builds a temporary *ExecContext from HandlerDeps
+// NewExecContext builds a temporary *ExecContext from HandlerDeps
 // for bridge functions that still call old *ExecContext handlers.
 // Populates ALL fields from deps so old handler functions have everything they need.
-func phase3d2bNewExecContext(ctx context.Context, deps *HandlerDeps) *ExecContext {
+func NewExecContext(ctx context.Context, deps *HandlerDeps) *ExecContext {
 	ectx := &ExecContext{
 		Context:   ctx,
 		Backend:   deps.Backend,
@@ -2990,271 +2990,271 @@ func phase3d2bNewExecContext(ctx context.Context, deps *HandlerDeps) *ExecContex
 // Phase 3d-2e: remaining handler bridges (Enumeration, Constant, Module, etc.)
 // ────────────────────────────────────────────────────────────
 
-func execCreateEnumerationFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
+func ExecCreateEnumerationFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
+	ectx := NewExecContext(ctx, deps)
 	return execCreateEnumeration(ectx, stmt.(*ast.CreateEnumerationStmt))
 }
 
-func execAlterEnumerationFuture(ctx context.Context, deps *HandlerDeps) error {
+func ExecAlterEnumerationFuture(ctx context.Context, deps *HandlerDeps) error {
 	return mdlerrors.NewUnsupported("alter enumeration not yet implemented")
 }
 
-func execDropEnumerationFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
+func ExecDropEnumerationFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
+	ectx := NewExecContext(ctx, deps)
 	return execDropEnumeration(ectx, stmt.(*ast.DropEnumerationStmt))
 }
 
-func execCreateConstantFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
+func ExecCreateConstantFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
+	ectx := NewExecContext(ctx, deps)
 	return createConstant(ectx, stmt.(*ast.CreateConstantStmt))
 }
 
-func execDropConstantFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
+func ExecDropConstantFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
+	ectx := NewExecContext(ctx, deps)
 	return dropConstant(ectx, stmt.(*ast.DropConstantStmt))
 }
 
-func execAlterModuleJarDepFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
+func ExecAlterModuleJarDepFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
+	ectx := NewExecContext(ctx, deps)
 	return execAlterModuleJarDep(ectx, stmt.(*ast.AlterModuleJarDepStmt))
 }
 
-func execCreateDatabaseConnectionFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
+func ExecCreateDatabaseConnectionFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
+	ectx := NewExecContext(ctx, deps)
 	return createDatabaseConnection(ectx, stmt.(*ast.CreateDatabaseConnectionStmt))
 }
 
-func execCreateJavaActionFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
+func ExecCreateJavaActionFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
 	return execCreateJavaActionGenFn(ctx, stmt.(*ast.CreateJavaActionStmt), deps)
 }
 
-func execDropJavaActionFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
+func ExecDropJavaActionFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
 	return execDropJavaActionGenFn(ctx, stmt.(*ast.DropJavaActionStmt), deps)
 }
 
-func execCreateJavaScriptActionFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
+func ExecCreateJavaScriptActionFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
 	return execCreateJavaScriptActionFn(ctx, stmt.(*ast.CreateJavaScriptActionStmt), deps)
 }
 
-func execDropFolderFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
+func ExecDropFolderFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
 	return execDropFolderFn(ctx, stmt.(*ast.DropFolderStmt), deps)
 }
 
-func execMoveFolderFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
+func ExecMoveFolderFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
 	return execMoveFolderFn(ctx, stmt.(*ast.MoveFolderStmt), deps)
 }
 
-func execMoveFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
+func ExecMoveFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
 	return execMoveFn(ctx, stmt.(*ast.MoveStmt), deps)
 }
 
-func execRenameFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
+func ExecRenameFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
 	return execRenameFn(ctx, stmt.(*ast.RenameStmt), deps)
 }
 
-func execAlterNavigationFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
+func ExecAlterNavigationFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
 	return execAlterNavigationFn(ctx, stmt.(*ast.AlterNavigationStmt), deps)
 }
 
-func execCreateImageCollectionFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
+func ExecCreateImageCollectionFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
 	return execCreateImageCollectionFn(ctx, stmt.(*ast.CreateImageCollectionStmt), deps)
 }
 
-func execDropImageCollectionFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
+func ExecDropImageCollectionFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
 	return execDropImageCollectionFn(ctx, stmt.(*ast.DropImageCollectionStmt), deps)
 }
 
-func execAlterImageCollectionFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
+func ExecAlterImageCollectionFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
 	return execAlterImageCollectionFn(ctx, stmt.(*ast.AlterImageCollectionStmt), deps)
 }
 
-func execAlterSettingsFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
+func ExecAlterSettingsFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
+	ectx := NewExecContext(ctx, deps)
 	return alterSettings(ectx, stmt.(*ast.AlterSettingsStmt))
 }
 
-func execTranslateFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
+func ExecTranslateFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
+	ectx := NewExecContext(ctx, deps)
 	return translateDocument(ectx, stmt.(*ast.TranslateStmt))
 }
 
-func execTranslateMicroflowFuture(ctx context.Context, deps *HandlerDeps) error {
+func ExecTranslateMicroflowFuture(ctx context.Context, deps *HandlerDeps) error {
 	return mdlerrors.NewUnsupported("TRANSLATE MICROFLOW not yet implemented")
 }
 
-func execCreateConfigurationFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
+func ExecCreateConfigurationFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
+	ectx := NewExecContext(ctx, deps)
 	return createConfiguration(ectx, stmt.(*ast.CreateConfigurationStmt))
 }
 
-func execDropConfigurationFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
+func ExecDropConfigurationFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
+	ectx := NewExecContext(ctx, deps)
 	return dropConfiguration(ectx, stmt.(*ast.DropConfigurationStmt))
 }
 
-func execCreateBusinessEventServiceFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
+func ExecCreateBusinessEventServiceFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
+	ectx := NewExecContext(ctx, deps)
 	return createBusinessEventService(ectx, stmt.(*ast.CreateBusinessEventServiceStmt))
 }
 
-func execDropBusinessEventServiceFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
+func ExecDropBusinessEventServiceFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
+	ectx := NewExecContext(ctx, deps)
 	return dropBusinessEventService(ectx, stmt.(*ast.DropBusinessEventServiceStmt))
 }
 
-func execCreateODataClientFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
+func ExecCreateODataClientFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
+	ectx := NewExecContext(ctx, deps)
 	return createODataClient(ectx, stmt.(*ast.CreateODataClientStmt))
 }
 
-func execAlterODataClientFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
+func ExecAlterODataClientFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
+	ectx := NewExecContext(ctx, deps)
 	return alterODataClient(ectx, stmt.(*ast.AlterODataClientStmt))
 }
 
-func execDropODataClientFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
+func ExecDropODataClientFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
+	ectx := NewExecContext(ctx, deps)
 	return dropODataClient(ectx, stmt.(*ast.DropODataClientStmt))
 }
 
-func execCreateODataServiceFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
+func ExecCreateODataServiceFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
+	ectx := NewExecContext(ctx, deps)
 	return createODataService(ectx, stmt.(*ast.CreateODataServiceStmt))
 }
 
-func execAlterODataServiceFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
+func ExecAlterODataServiceFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
+	ectx := NewExecContext(ctx, deps)
 	return alterODataService(ectx, stmt.(*ast.AlterODataServiceStmt))
 }
 
-func execDropODataServiceFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
+func ExecDropODataServiceFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
+	ectx := NewExecContext(ctx, deps)
 	return dropODataService(ectx, stmt.(*ast.DropODataServiceStmt))
 }
 
-func execCreateJsonStructureFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
+func ExecCreateJsonStructureFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
 	return execCreateJsonStructureFn(ctx, stmt.(*ast.CreateJsonStructureStmt), deps)
 }
 
-func execDropJsonStructureFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
+func ExecDropJsonStructureFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
 	return execDropJsonStructureFn(ctx, stmt.(*ast.DropJsonStructureStmt), deps)
 }
 
-func execCreateImportMappingFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
+func ExecCreateImportMappingFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
 	return execCreateImportMappingFn(ctx, stmt.(*ast.CreateImportMappingStmt), deps)
 }
 
-func execDropImportMappingFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
+func ExecDropImportMappingFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
 	return execDropImportMappingFn(ctx, stmt.(*ast.DropImportMappingStmt), deps)
 }
 
-func execCreateExportMappingFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
+func ExecCreateExportMappingFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
 	return execCreateExportMappingFn(ctx, stmt.(*ast.CreateExportMappingStmt), deps)
 }
 
-func execDropExportMappingFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
+func ExecDropExportMappingFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
 	return execDropExportMappingFn(ctx, stmt.(*ast.DropExportMappingStmt), deps)
 }
 
-func execCreateRestClientFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
+func ExecCreateRestClientFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
+	ectx := NewExecContext(ctx, deps)
 	return createRestClient(ectx, stmt.(*ast.CreateRestClientStmt))
 }
 
-func execDropRestClientFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
+func ExecDropRestClientFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
+	ectx := NewExecContext(ctx, deps)
 	return dropRestClient(ectx, stmt.(*ast.DropRestClientStmt))
 }
 
-func execDescribeContractFromOpenAPIFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
+func ExecDescribeContractFromOpenAPIFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
+	ectx := NewExecContext(ctx, deps)
 	return describeContractFromOpenAPI(ectx, stmt.(*ast.DescribeContractFromOpenAPIStmt))
 }
 
-func execCreatePublishedRestServiceFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
+func ExecCreatePublishedRestServiceFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
 	return execCreatePublishedRestServiceFn(ctx, stmt.(*ast.CreatePublishedRestServiceStmt), deps)
 }
 
-func execDropPublishedRestServiceFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
+func ExecDropPublishedRestServiceFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
 	return execDropPublishedRestServiceFn(ctx, stmt.(*ast.DropPublishedRestServiceStmt), deps)
 }
 
-func execAlterPublishedRestServiceFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
+func ExecAlterPublishedRestServiceFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
 	return execAlterPublishedRestServiceFn(ctx, stmt.(*ast.AlterPublishedRestServiceStmt), deps)
 }
 
-func execCreateExternalEntityFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
+func ExecCreateExternalEntityFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
+	ectx := NewExecContext(ctx, deps)
 	return execCreateExternalEntity(ectx, stmt.(*ast.CreateExternalEntityStmt))
 }
 
-func execCreateExternalEntitiesFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
+func ExecCreateExternalEntitiesFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
+	ectx := NewExecContext(ctx, deps)
 	return createExternalEntities(ectx, stmt.(*ast.CreateExternalEntitiesStmt))
 }
 
-func execCreateDataTransformerFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
+func ExecCreateDataTransformerFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
 	return execCreateDataTransformerFn(ctx, stmt.(*ast.CreateDataTransformerStmt), deps)
 }
 
-func execDropDataTransformerFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
+func ExecDropDataTransformerFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
 	return execDropDataTransformerFn(ctx, stmt.(*ast.DropDataTransformerStmt), deps)
 }
 
-func execShowWidgetsFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
+func ExecShowWidgetsFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
 	return execShowWidgetsFn(ctx, stmt.(*ast.ShowWidgetsStmt), deps)
 }
 
-func execShowInstalledWidgetsFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
+func ExecShowInstalledWidgetsFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
 	return execShowInstalledWidgetsFn(ctx, stmt.(*ast.ShowInstalledWidgetsStmt), deps)
 }
 
-func execUpdateWidgetsFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
+func ExecUpdateWidgetsFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
 	return execUpdateWidgetsFn(ctx, stmt.(*ast.UpdateWidgetsStmt), deps)
 }
 
-func execSelectFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
+func ExecSelectFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
+	ectx := NewExecContext(ctx, deps)
 	return execCatalogQuery(ectx, stmt.(*ast.SelectStmt).Query)
 }
 
-func execDescribeTranslationsFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
+func ExecDescribeTranslationsFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
+	ectx := NewExecContext(ctx, deps)
 	return describeTranslations(ectx, stmt.(*ast.DescribeTranslationsStmt))
 }
 
-func execDescribeCatalogTableFuture(ctx context.Context, deps *HandlerDeps) error {
+func ExecDescribeCatalogTableFuture(ctx context.Context, deps *HandlerDeps) error {
 	return mdlerrors.NewUnsupported("Catalog SQLite system has been removed")
 }
 
-func execShowFeaturesFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
+func ExecShowFeaturesFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
+	ectx := NewExecContext(ctx, deps)
 	return execShowFeatures(ectx, stmt.(*ast.ShowFeaturesStmt))
 }
 
-func execShowDesignPropertiesFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
+func ExecShowDesignPropertiesFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
 	return execShowDesignPropertiesFn(ctx, stmt.(*ast.ShowDesignPropertiesStmt), deps)
 }
 
-func execDescribeStylingFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
+func ExecDescribeStylingFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
 	return execDescribeStylingFn(ctx, stmt.(*ast.DescribeStylingStmt), deps)
 }
 
-func execAlterStylingFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
+func ExecAlterStylingFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
 	return execAlterStylingFn(ctx, stmt.(*ast.AlterStylingStmt), deps)
 }
 
-func execShowThemeVariablesFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
+func ExecShowThemeVariablesFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
 	return execShowThemeVariablesFn(ctx, stmt.(*ast.ShowThemeVariablesStmt), deps)
 }
 
-func execSearchFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
+func ExecSearchFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
+	ectx := NewExecContext(ctx, deps)
 	return execSearch(ectx, stmt.(*ast.SearchStmt))
 }
 
-func execRefreshCatalogFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
+func ExecRefreshCatalogFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
+	ectx := NewExecContext(ctx, deps)
 	if err := execRefreshCatalogStmt(ectx, stmt.(*ast.RefreshCatalogStmt)); err != nil {
 		return err
 	}
@@ -3262,169 +3262,169 @@ func execRefreshCatalogFuture(ctx context.Context, stmt ast.Statement, deps *Han
 }
 
 func execLintFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	return execLintFn(ctx, stmt.(*ast.LintStmt), deps)
+	return ExecLintFn(ctx, stmt.(*ast.LintStmt), deps)
 }
 
 func execDefineFragmentFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	return execDefineFragmentFn(ctx, stmt.(*ast.DefineFragmentStmt), deps)
+	return ExecDefineFragmentFn(ctx, stmt.(*ast.DefineFragmentStmt), deps)
 }
 
 func execDescribeFragmentFromFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
+	ectx := NewExecContext(ctx, deps)
 	return describeFragmentFrom(ectx, stmt.(*ast.DescribeFragmentFromStmt))
 }
 
 func execSQLConnectFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	return execSQLConnectFn(ctx, stmt.(*ast.SQLConnectStmt), deps)
+	return ExecSQLConnectFn(ctx, stmt.(*ast.SQLConnectStmt), deps)
 }
 
 func execSQLDisconnectFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	return execSQLDisconnectFn(ctx, stmt.(*ast.SQLDisconnectStmt), deps)
+	return ExecSQLDisconnectFn(ctx, stmt.(*ast.SQLDisconnectStmt), deps)
 }
 
 func execSQLConnectionsFuture(ctx context.Context, deps *HandlerDeps) error {
-	return execSQLConnectionsFn(ctx, deps)
+	return ExecSQLConnectionsFn(ctx, deps)
 }
 
 func execSQLQueryFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	return execSQLQueryFn(ctx, stmt.(*ast.SQLQueryStmt), deps)
+	return ExecSQLQueryFn(ctx, stmt.(*ast.SQLQueryStmt), deps)
 }
 
 func execSQLShowTablesFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	return execSQLShowTablesFn(ctx, stmt.(*ast.SQLShowTablesStmt), deps)
+	return ExecSQLShowTablesFn(ctx, stmt.(*ast.SQLShowTablesStmt), deps)
 }
 
 func execSQLShowViewsFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	return execSQLShowViewsFn(ctx, stmt.(*ast.SQLShowViewsStmt), deps)
+	return ExecSQLShowViewsFn(ctx, stmt.(*ast.SQLShowViewsStmt), deps)
 }
 
 func execSQLShowFunctionsFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	return execSQLShowFunctionsFn(ctx, stmt.(*ast.SQLShowFunctionsStmt), deps)
+	return ExecSQLShowFunctionsFn(ctx, stmt.(*ast.SQLShowFunctionsStmt), deps)
 }
 
 func execSQLDescribeTableFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	return execSQLDescribeTableFn(ctx, stmt.(*ast.SQLDescribeTableStmt), deps)
+	return ExecSQLDescribeTableFn(ctx, stmt.(*ast.SQLDescribeTableStmt), deps)
 }
 
 func execSQLGenerateConnectorFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	return execSQLGenerateConnectorFn(ctx, stmt.(*ast.SQLGenerateConnectorStmt), deps)
+	return ExecSQLGenerateConnectorFn(ctx, stmt.(*ast.SQLGenerateConnectorStmt), deps)
 }
 
 func execImportFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	return execImportFn(ctx, stmt.(*ast.ImportStmt), deps)
+	return ExecImportFn(ctx, stmt.(*ast.ImportStmt), deps)
 }
 
-func execCreateModelFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
+func ExecCreateModelFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
+	ectx := NewExecContext(ctx, deps)
 	return execCreateAgentEditorModel(ectx, stmt.(*ast.CreateModelStmt))
 }
 
-func execDropModelFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
+func ExecDropModelFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
+	ectx := NewExecContext(ctx, deps)
 	return execDropAgentEditorModel(ectx, stmt.(*ast.DropModelStmt))
 }
 
 func execCreateConsumedMCPServiceFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	return execCreateConsumedMCPServiceFn(ctx, stmt.(*ast.CreateConsumedMCPServiceStmt), deps)
+	return ExecCreateConsumedMCPServiceFn(ctx, stmt.(*ast.CreateConsumedMCPServiceStmt), deps)
 }
 
 func execDropConsumedMCPServiceFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	return execDropConsumedMCPServiceFn(ctx, stmt.(*ast.DropConsumedMCPServiceStmt), deps)
+	return ExecDropConsumedMCPServiceFn(ctx, stmt.(*ast.DropConsumedMCPServiceStmt), deps)
 }
 
 func execCreateKnowledgeBaseFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	return execCreateKnowledgeBaseFn(ctx, stmt.(*ast.CreateKnowledgeBaseStmt), deps)
+	return ExecCreateKnowledgeBaseFn(ctx, stmt.(*ast.CreateKnowledgeBaseStmt), deps)
 }
 
 func execDropKnowledgeBaseFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	return execDropKnowledgeBaseFn(ctx, stmt.(*ast.DropKnowledgeBaseStmt), deps)
+	return ExecDropKnowledgeBaseFn(ctx, stmt.(*ast.DropKnowledgeBaseStmt), deps)
 }
 
 func execCreateAgentFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	return execCreateAgentFn(ctx, stmt.(*ast.CreateAgentStmt), deps)
+	return ExecCreateAgentFn(ctx, stmt.(*ast.CreateAgentStmt), deps)
 }
 
 func execDropAgentFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	return execDropAgentFn(ctx, stmt.(*ast.DropAgentStmt), deps)
+	return ExecDropAgentFn(ctx, stmt.(*ast.DropAgentStmt), deps)
 }
 
 // Missing Fn wrappers (bridges to old *ExecContext functions for handlers that
 // reference Fn patterns in handler_deps.go but don't have native Fn versions yet).
-func execCreateModuleFn(ctx context.Context, s *ast.CreateModuleStmt, deps *HandlerDeps) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
+func ExecCreateModuleFn(ctx context.Context, s *ast.CreateModuleStmt, deps *HandlerDeps) error {
+	ectx := NewExecContext(ctx, deps)
 	return execCreateModule(ectx, s)
 }
 
-func execDropModuleFn(ctx context.Context, s *ast.DropModuleStmt, deps *HandlerDeps) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
+func ExecDropModuleFn(ctx context.Context, s *ast.DropModuleStmt, deps *HandlerDeps) error {
+	ectx := NewExecContext(ctx, deps)
 	return execDropModule(ectx, s)
 }
 
-func execCreateAssociationFn(ctx context.Context, s *ast.CreateAssociationStmt, deps *HandlerDeps) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
+func ExecCreateAssociationFn(ctx context.Context, s *ast.CreateAssociationStmt, deps *HandlerDeps) error {
+	ectx := NewExecContext(ctx, deps)
 	return execCreateAssociation(ectx, s)
 }
 
-func execAlterAssociationFn(ctx context.Context, s *ast.AlterAssociationStmt, deps *HandlerDeps) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
+func ExecAlterAssociationFn(ctx context.Context, s *ast.AlterAssociationStmt, deps *HandlerDeps) error {
+	ectx := NewExecContext(ctx, deps)
 	return execAlterAssociationGen(ectx, s)
 }
 
-func execDropAssociationFn(ctx context.Context, s *ast.DropAssociationStmt, deps *HandlerDeps) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
+func ExecDropAssociationFn(ctx context.Context, s *ast.DropAssociationStmt, deps *HandlerDeps) error {
+	ectx := NewExecContext(ctx, deps)
 	return execDropAssociationGen(ectx, s)
 }
 
-func execCreatePageV3Fn(ctx context.Context, s *ast.CreatePageStmtV3, deps *HandlerDeps) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
+func ExecCreatePageV3Fn(ctx context.Context, s *ast.CreatePageStmtV3, deps *HandlerDeps) error {
+	ectx := NewExecContext(ctx, deps)
 	return execCreatePageV3(ectx, s)
 }
 
-func execCreateSnippetV3Fn(ctx context.Context, s *ast.CreateSnippetStmtV3, deps *HandlerDeps) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
+func ExecCreateSnippetV3Fn(ctx context.Context, s *ast.CreateSnippetStmtV3, deps *HandlerDeps) error {
+	ectx := NewExecContext(ctx, deps)
 	return execCreateSnippetV3(ectx, s)
 }
 
-func execAlterPageFn(ctx context.Context, s *ast.AlterPageStmt, deps *HandlerDeps) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
+func ExecAlterPageFn(ctx context.Context, s *ast.AlterPageStmt, deps *HandlerDeps) error {
+	ectx := NewExecContext(ctx, deps)
 	return execAlterPage(ectx, s)
 }
 
 func listODataClientsFn(ctx context.Context, deps *HandlerDeps, format OutputFormat, moduleName string) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
+	ectx := NewExecContext(ctx, deps)
 	ectx.Format = format
 	return listODataClients(ectx, moduleName)
 }
 
 func listODataServicesFn(ctx context.Context, deps *HandlerDeps, format OutputFormat, moduleName string) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
+	ectx := NewExecContext(ctx, deps)
 	ectx.Format = format
 	return listODataServices(ectx, moduleName)
 }
 
 func listExternalEntitiesFn(ctx context.Context, deps *HandlerDeps, format OutputFormat, moduleName string) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
+	ectx := NewExecContext(ctx, deps)
 	ectx.Format = format
 	return listExternalEntities(ectx, moduleName)
 }
 
 func listExternalActionsFn(ctx context.Context, deps *HandlerDeps, format OutputFormat, moduleName string) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
+	ectx := NewExecContext(ctx, deps)
 	ectx.Format = format
 	return listExternalActions(ectx, moduleName)
 }
 
 func describeODataClientFn(ctx context.Context, deps *HandlerDeps, name ast.QualifiedName) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
+	ectx := NewExecContext(ctx, deps)
 	return describeODataClient(ectx, name)
 }
 
 func describeODataServiceFn(ctx context.Context, deps *HandlerDeps, name ast.QualifiedName) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
+	ectx := NewExecContext(ctx, deps)
 	return describeODataService(ectx, name)
 }
 
 func describeExternalEntityFn(ctx context.Context, deps *HandlerDeps, name ast.QualifiedName) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
+	ectx := NewExecContext(ctx, deps)
 	return describeExternalEntity(ectx, name)
 }

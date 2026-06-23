@@ -13,15 +13,15 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/linter/rules"
 )
 
-// execLintFn is the HandlerDeps version of execLint.
-func execLintFn(ctx context.Context, s *ast.LintStmt, deps *HandlerDeps) error {
+// ExecLintFn is the HandlerDeps version of execLint.
+func ExecLintFn(ctx context.Context, s *ast.LintStmt, deps *HandlerDeps) error {
 	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnected()
 	}
 	if s.ShowRules {
 		return listLintRulesFn(ctx, deps)
 	}
-	ectx := phase3d2bNewExecContext(ctx, deps)
+	ectx := NewExecContext(ctx, deps)
 	if ectx.Graph == nil {
 		fmt.Fprintln(deps.Output, "Building project graph for linting...")
 		if err := buildGraph(ectx); err != nil {

@@ -14,7 +14,7 @@ import (
 )
 
 // execDropEntityGen handles DROP ENTITY on the gen-typed read+write
-// path. Mirrors execDropEntity in cmd_entities.go: locates the entity
+// path. Mirrors ExecDropEntity in cmd_entities.go: locates the entity
 // via the gen DomainModel, optionally drops the associated
 // ViewEntitySourceDocument for OQL view entities, then calls
 // ctx.Backend.DeleteEntity (the sdk-id-only path — DeleteEntity

@@ -148,7 +148,7 @@ func execMoveFolderFn(ctx context.Context, s *ast.MoveFolderStmt, deps *HandlerD
 
 	var targetContainerID model.ID
 	if s.TargetFolder != "" {
-		ectx := phase3d2bNewExecContext(ctx, deps)
+		ectx := NewExecContext(ctx, deps)
 		targetContainerID, err = resolveFolder(ectx, targetModule.ID, s.TargetFolder, nil)
 		if err != nil {
 			return mdlerrors.NewBackend("resolve target folder", err)

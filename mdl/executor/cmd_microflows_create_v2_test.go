@@ -62,7 +62,7 @@ func TestMultipleParametersHaveDistinctPositions(t *testing.T) {
 		},
 	}
 
-	if err := execCreateMicroflowGenFn(ctx, stmt, execContextToDeps(ctx)); err != nil {
+	if err := ExecCreateMicroflowGenFn(ctx, stmt, execContextToDeps(ctx)); err != nil {
 		t.Fatalf("execCreateMicroflowGen failed: %v", err)
 	}
 	if capturedMF == nil {
@@ -114,7 +114,7 @@ func TestExecCreateMicroflowGenRejectsEmptyName(t *testing.T) {
 	stmt := &ast.CreateMicroflowStmt{
 		Name: ast.QualifiedName{Module: "M", Name: ""},
 	}
-	err := execCreateMicroflowGenFn(ctx, stmt, execContextToDeps(ctx))
+	err := ExecCreateMicroflowGenFn(ctx, stmt, execContextToDeps(ctx))
 	if err == nil {
 		t.Fatal("expected error for empty microflow name")
 	}
@@ -125,7 +125,7 @@ func TestExecCreateMicroflowGenRejectsWhitespaceName(t *testing.T) {
 	stmt := &ast.CreateMicroflowStmt{
 		Name: ast.QualifiedName{Module: "M", Name: "   "},
 	}
-	err := execCreateMicroflowGenFn(ctx, stmt, execContextToDeps(ctx))
+	err := ExecCreateMicroflowGenFn(ctx, stmt, execContextToDeps(ctx))
 	if err == nil {
 		t.Fatal("expected error for whitespace-only microflow name")
 	}
@@ -137,7 +137,7 @@ func TestExecCreateMicroflowGenRejectsNotConnected(t *testing.T) {
 	stmt := &ast.CreateMicroflowStmt{
 		Name: ast.QualifiedName{Module: "M", Name: "NewMF"},
 	}
-	err := execCreateMicroflowGenFn(ctx, stmt, execContextToDeps(ctx))
+	err := ExecCreateMicroflowGenFn(ctx, stmt, execContextToDeps(ctx))
 	if err == nil {
 		t.Fatal("expected error when not connected for write")
 	}
@@ -202,7 +202,7 @@ func TestExecCreateMicroflowGenEntityParamEnumRefPopulatesVarTypes(t *testing.T)
 		},
 	}
 
-	if err := execCreateMicroflowGenFn(ctx, stmt, execContextToDeps(ctx)); err != nil {
+	if err := ExecCreateMicroflowGenFn(ctx, stmt, execContextToDeps(ctx)); err != nil {
 		t.Fatalf("execCreateMicroflowGen failed: %v", err)
 	}
 	if capturedMF == nil {
@@ -292,7 +292,7 @@ func TestExecCreateMicroflowGen_WarnsOnRemovedParam(t *testing.T) {
 	}
 
 	// 允许 error（backend 未完整配置），但警告应在 output 里
-	_ = execCreateMicroflowGenFn(ctx, stmt, execContextToDeps(ctx))
+	_ = ExecCreateMicroflowGenFn(ctx, stmt, execContextToDeps(ctx))
 
 	output := buf.String()
 	if !strings.Contains(output, "OldParam") {

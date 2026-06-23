@@ -24,8 +24,8 @@ import (
 	genSec "github.com/mendixlabs/mxcli/modelsdk/gen/security"
 )
 
-// execCreateModuleRoleGenFn is the HandlerDeps version of execCreateModuleRoleGen.
-func execCreateModuleRoleGenFn(ctx context.Context, s *ast.CreateModuleRoleStmt, deps *HandlerDeps) error {
+// ExecCreateModuleRoleGenFn is the HandlerDeps version of execCreateModuleRoleGen.
+func ExecCreateModuleRoleGenFn(ctx context.Context, s *ast.CreateModuleRoleStmt, deps *HandlerDeps) error {
 	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
@@ -33,7 +33,7 @@ func execCreateModuleRoleGenFn(ctx context.Context, s *ast.CreateModuleRoleStmt,
 		return mdlerrors.NewBackend("backend not fully initialized", nil)
 	}
 
-	ectx := phase3d2bNewExecContext(ctx, deps)
+	ectx := NewExecContext(ctx, deps)
 	module, err := findModule(ectx, s.Name.Module)
 	if err != nil {
 		return err
@@ -89,13 +89,13 @@ func execCreateModuleRoleGenFn(ctx context.Context, s *ast.CreateModuleRoleStmt,
 	return nil
 }
 
-// execDropModuleRoleGenFn is the HandlerDeps version of execDropModuleRoleGen.
-func execDropModuleRoleGenFn(ctx context.Context, s *ast.DropModuleRoleStmt, deps *HandlerDeps) error {
+// ExecDropModuleRoleGenFn is the HandlerDeps version of execDropModuleRoleGen.
+func ExecDropModuleRoleGenFn(ctx context.Context, s *ast.DropModuleRoleStmt, deps *HandlerDeps) error {
 	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
 
-	ectx := phase3d2bNewExecContext(ctx, deps)
+	ectx := NewExecContext(ctx, deps)
 	module, err := findModule(ectx, s.Name.Module)
 	if err != nil {
 		return err

@@ -52,7 +52,7 @@ func execShowStructureGenFn(ctx context.Context, s *ast.ShowStmt, deps *HandlerD
 	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnected()
 	}
-	tmpCtx := phase3d2bNewExecContext(ctx, deps)
+	tmpCtx := NewExecContext(ctx, deps)
 	return execShowStructureGenImpl(tmpCtx, s)
 }
 

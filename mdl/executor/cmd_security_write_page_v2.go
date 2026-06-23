@@ -26,12 +26,12 @@ import (
 	"github.com/mendixlabs/mxcli/model"
 )
 
-// execGrantPageAccessGenFn is the HandlerDeps version of execGrantPageAccessGen.
-func execGrantPageAccessGenFn(ctx context.Context, s *ast.GrantPageAccessStmt, deps *HandlerDeps) error {
+// ExecGrantPageAccessGenFn is the HandlerDeps version of execGrantPageAccessGen.
+func ExecGrantPageAccessGenFn(ctx context.Context, s *ast.GrantPageAccessStmt, deps *HandlerDeps) error {
 	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
-	ectx := phase3d2bNewExecContext(ctx, deps)
+	ectx := NewExecContext(ctx, deps)
 	h, err := getHierarchy(ectx)
 	if err != nil {
 		return mdlerrors.NewBackend("build hierarchy", err)
@@ -59,7 +59,7 @@ func execGrantPageAccessGenFn(ctx context.Context, s *ast.GrantPageAccessStmt, d
 }
 
 func execGrantExistingPageFn(ctx context.Context, s *ast.GrantPageAccessStmt, pageID model.ID, modName string, deps *HandlerDeps) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
+	ectx := NewExecContext(ctx, deps)
 	var validRoles []ast.QualifiedName
 	for _, role := range s.Roles {
 		found, err := validateModuleRole(ectx, role)
@@ -93,12 +93,12 @@ func execGrantExistingPageFn(ctx context.Context, s *ast.GrantPageAccessStmt, pa
 	return nil
 }
 
-// execRevokePageAccessGenFn is the HandlerDeps version of execRevokePageAccessGen.
-func execRevokePageAccessGenFn(ctx context.Context, s *ast.RevokePageAccessStmt, deps *HandlerDeps) error {
+// ExecRevokePageAccessGenFn is the HandlerDeps version of execRevokePageAccessGen.
+func ExecRevokePageAccessGenFn(ctx context.Context, s *ast.RevokePageAccessStmt, deps *HandlerDeps) error {
 	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
-	ectx := phase3d2bNewExecContext(ctx, deps)
+	ectx := NewExecContext(ctx, deps)
 	h, err := getHierarchy(ectx)
 	if err != nil {
 		return mdlerrors.NewBackend("build hierarchy", err)

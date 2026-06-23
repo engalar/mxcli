@@ -101,7 +101,7 @@ func TestCreateConsumedMCPService_Mock(t *testing.T) {
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb))
-	err := execCreateConsumedMCPServiceFn(ctx, &ast.CreateConsumedMCPServiceStmt{
+	err := ExecCreateConsumedMCPServiceFn(ctx, &ast.CreateConsumedMCPServiceStmt{
 		Name:            ast.QualifiedName{Module: "M", Name: "WebSearch"},
 		ProtocolVersion: "v2025_03_26",
 		Version:         "1.0",
@@ -135,7 +135,7 @@ func TestDropConsumedMCPService_Mock(t *testing.T) {
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
-	err := execDropConsumedMCPServiceFn(ctx, &ast.DropConsumedMCPServiceStmt{
+	err := ExecDropConsumedMCPServiceFn(ctx, &ast.DropConsumedMCPServiceStmt{
 		Name: ast.QualifiedName{Module: "M", Name: "WebSearch"},
 	}, execContextToDeps(ctx))
 	assertNoError(t, err)
@@ -170,7 +170,7 @@ func TestCreateKnowledgeBase_Mock(t *testing.T) {
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
 	key := ast.QualifiedName{Module: "M", Name: "KBKey"}
-	err := execCreateKnowledgeBaseFn(ctx, &ast.CreateKnowledgeBaseStmt{
+	err := ExecCreateKnowledgeBaseFn(ctx, &ast.CreateKnowledgeBaseStmt{
 		Name:     ast.QualifiedName{Module: "M", Name: "ProductDocs"},
 		Provider: "MxCloudGenAI",
 		Key:      &key,
@@ -204,7 +204,7 @@ func TestDropKnowledgeBase_Mock(t *testing.T) {
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
-	err := execDropKnowledgeBaseFn(ctx, &ast.DropKnowledgeBaseStmt{
+	err := ExecDropKnowledgeBaseFn(ctx, &ast.DropKnowledgeBaseStmt{
 		Name: ast.QualifiedName{Module: "M", Name: "ProductDocs"},
 	}, execContextToDeps(ctx))
 	assertNoError(t, err)
@@ -243,7 +243,7 @@ func TestCreateAgent_Mock(t *testing.T) {
 
 	modelRef := ast.QualifiedName{Module: "M", Name: "GPT4"}
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
-	err := execCreateAgentFn(ctx, &ast.CreateAgentStmt{
+	err := ExecCreateAgentFn(ctx, &ast.CreateAgentStmt{
 		Name:         ast.QualifiedName{Module: "M", Name: "Summarizer"},
 		UsageType:    "Task",
 		Model:        &modelRef,
@@ -279,7 +279,7 @@ func TestDropAgent_Mock(t *testing.T) {
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
-	err := execDropAgentFn(ctx, &ast.DropAgentStmt{
+	err := ExecDropAgentFn(ctx, &ast.DropAgentStmt{
 		Name: ast.QualifiedName{Module: "M", Name: "Summarizer"},
 	}, execContextToDeps(ctx))
 	assertNoError(t, err)
@@ -615,7 +615,7 @@ func TestDropConsumedMCPService_Mock_NotFound(t *testing.T) {
 		ListAgentEditorConsumedMCPServicesFunc: func() ([]*types.ConsumedMCPService, error) { return nil, nil },
 	}
 	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
-	assertError(t, execDropConsumedMCPServiceFn(ctx, &ast.DropConsumedMCPServiceStmt{
+	assertError(t, ExecDropConsumedMCPServiceFn(ctx, &ast.DropConsumedMCPServiceStmt{
 		Name: ast.QualifiedName{Module: "M", Name: "NonExistent"},
 	}, execContextToDeps(ctx)))
 }
@@ -629,7 +629,7 @@ func TestDropKnowledgeBase_Mock_NotFound(t *testing.T) {
 		ListAgentEditorKnowledgeBasesFunc: func() ([]*types.KnowledgeBase, error) { return nil, nil },
 	}
 	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
-	assertError(t, execDropKnowledgeBaseFn(ctx, &ast.DropKnowledgeBaseStmt{
+	assertError(t, ExecDropKnowledgeBaseFn(ctx, &ast.DropKnowledgeBaseStmt{
 		Name: ast.QualifiedName{Module: "M", Name: "NonExistent"},
 	}, execContextToDeps(ctx)))
 }
@@ -643,7 +643,7 @@ func TestDropAgent_Mock_NotFound(t *testing.T) {
 		ListAgentEditorAgentsFunc: func() ([]*types.Agent, error) { return nil, nil },
 	}
 	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
-	assertError(t, execDropAgentFn(ctx, &ast.DropAgentStmt{
+	assertError(t, ExecDropAgentFn(ctx, &ast.DropAgentStmt{
 		Name: ast.QualifiedName{Module: "M", Name: "NonExistent"},
 	}, execContextToDeps(ctx)))
 }
@@ -777,7 +777,7 @@ func TestCreateConsumedMCPService_OrModify_PreservesID(t *testing.T) {
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
-	err := execCreateConsumedMCPServiceFn(ctx, &ast.CreateConsumedMCPServiceStmt{
+	err := ExecCreateConsumedMCPServiceFn(ctx, &ast.CreateConsumedMCPServiceStmt{
 		Name:            ast.QualifiedName{Module: "M", Name: "WebSearch"},
 		ProtocolVersion: "v2025_03_26",
 		CreateOrModify:  true,
@@ -810,7 +810,7 @@ func TestCreateKnowledgeBase_OrModify_PreservesID(t *testing.T) {
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
-	err := execCreateKnowledgeBaseFn(ctx, &ast.CreateKnowledgeBaseStmt{
+	err := ExecCreateKnowledgeBaseFn(ctx, &ast.CreateKnowledgeBaseStmt{
 		Name:           ast.QualifiedName{Module: "M", Name: "Docs"},
 		Provider:       "MxCloudGenAI",
 		CreateOrModify: true,
@@ -850,7 +850,7 @@ func TestCreateAgent_OrModify_PreservesID(t *testing.T) {
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
-	err := execCreateAgentFn(ctx, &ast.CreateAgentStmt{
+	err := ExecCreateAgentFn(ctx, &ast.CreateAgentStmt{
 		Name:           ast.QualifiedName{Module: "M", Name: "Assistant"},
 		UsageType:      "UserInitiated",
 		CreateOrModify: true,

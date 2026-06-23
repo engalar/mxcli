@@ -49,8 +49,8 @@ func autoConnectFn(deps *HandlerDeps, alias string) error {
 	return nil
 }
 
-// execSQLConnectFn handles SQL CONNECT with HandlerDeps.
-func execSQLConnectFn(ctx context.Context, s *ast.SQLConnectStmt, deps *HandlerDeps) error {
+// ExecSQLConnectFn handles SQL CONNECT with HandlerDeps.
+func ExecSQLConnectFn(ctx context.Context, s *ast.SQLConnectStmt, deps *HandlerDeps) error {
 	if s.DSN == "" && s.Driver == "" {
 		return autoConnectFn(deps, s.Alias)
 	}
@@ -66,8 +66,8 @@ func execSQLConnectFn(ctx context.Context, s *ast.SQLConnectStmt, deps *HandlerD
 	return nil
 }
 
-// execSQLDisconnectFn handles SQL DISCONNECT with HandlerDeps.
-func execSQLDisconnectFn(ctx context.Context, s *ast.SQLDisconnectStmt, deps *HandlerDeps) error {
+// ExecSQLDisconnectFn handles SQL DISCONNECT with HandlerDeps.
+func ExecSQLDisconnectFn(ctx context.Context, s *ast.SQLDisconnectStmt, deps *HandlerDeps) error {
 	mgr := ensureSQLManagerFn(deps)
 	if err := mgr.Disconnect(s.Alias); err != nil {
 		return err
@@ -76,8 +76,8 @@ func execSQLDisconnectFn(ctx context.Context, s *ast.SQLDisconnectStmt, deps *Ha
 	return nil
 }
 
-// execSQLConnectionsFn handles SQL CONNECTIONS with HandlerDeps.
-func execSQLConnectionsFn(ctx context.Context, deps *HandlerDeps) error {
+// ExecSQLConnectionsFn handles SQL CONNECTIONS with HandlerDeps.
+func ExecSQLConnectionsFn(ctx context.Context, deps *HandlerDeps) error {
 	mgr := ensureSQLManagerFn(deps)
 	infos := mgr.List()
 	if len(infos) == 0 {
@@ -97,8 +97,8 @@ func execSQLConnectionsFn(ctx context.Context, deps *HandlerDeps) error {
 	return nil
 }
 
-// execSQLQueryFn handles SQL <alias> <raw-sql> with HandlerDeps.
-func execSQLQueryFn(ctx context.Context, s *ast.SQLQueryStmt, deps *HandlerDeps) error {
+// ExecSQLQueryFn handles SQL <alias> <raw-sql> with HandlerDeps.
+func ExecSQLQueryFn(ctx context.Context, s *ast.SQLQueryStmt, deps *HandlerDeps) error {
 	conn, err := getOrAutoConnectFn(deps, s.Alias)
 	if err != nil {
 		return err
@@ -114,8 +114,8 @@ func execSQLQueryFn(ctx context.Context, s *ast.SQLQueryStmt, deps *HandlerDeps)
 	return nil
 }
 
-// execSQLShowTablesFn handles SQL <alias> SHOW TABLES with HandlerDeps.
-func execSQLShowTablesFn(ctx context.Context, s *ast.SQLShowTablesStmt, deps *HandlerDeps) error {
+// ExecSQLShowTablesFn handles SQL <alias> SHOW TABLES with HandlerDeps.
+func ExecSQLShowTablesFn(ctx context.Context, s *ast.SQLShowTablesStmt, deps *HandlerDeps) error {
 	conn, err := getOrAutoConnectFn(deps, s.Alias)
 	if err != nil {
 		return err
@@ -131,8 +131,8 @@ func execSQLShowTablesFn(ctx context.Context, s *ast.SQLShowTablesStmt, deps *Ha
 	return nil
 }
 
-// execSQLShowViewsFn handles SQL <alias> SHOW VIEWS with HandlerDeps.
-func execSQLShowViewsFn(ctx context.Context, s *ast.SQLShowViewsStmt, deps *HandlerDeps) error {
+// ExecSQLShowViewsFn handles SQL <alias> SHOW VIEWS with HandlerDeps.
+func ExecSQLShowViewsFn(ctx context.Context, s *ast.SQLShowViewsStmt, deps *HandlerDeps) error {
 	conn, err := getOrAutoConnectFn(deps, s.Alias)
 	if err != nil {
 		return err
@@ -148,8 +148,8 @@ func execSQLShowViewsFn(ctx context.Context, s *ast.SQLShowViewsStmt, deps *Hand
 	return nil
 }
 
-// execSQLShowFunctionsFn handles SQL <alias> SHOW FUNCTIONS with HandlerDeps.
-func execSQLShowFunctionsFn(ctx context.Context, s *ast.SQLShowFunctionsStmt, deps *HandlerDeps) error {
+// ExecSQLShowFunctionsFn handles SQL <alias> SHOW FUNCTIONS with HandlerDeps.
+func ExecSQLShowFunctionsFn(ctx context.Context, s *ast.SQLShowFunctionsStmt, deps *HandlerDeps) error {
 	conn, err := getOrAutoConnectFn(deps, s.Alias)
 	if err != nil {
 		return err
@@ -165,8 +165,8 @@ func execSQLShowFunctionsFn(ctx context.Context, s *ast.SQLShowFunctionsStmt, de
 	return nil
 }
 
-// execSQLGenerateConnectorFn handles SQL <alias> GENERATE CONNECTOR with HandlerDeps.
-func execSQLGenerateConnectorFn(ctx context.Context, s *ast.SQLGenerateConnectorStmt, deps *HandlerDeps) error {
+// ExecSQLGenerateConnectorFn handles SQL <alias> GENERATE CONNECTOR with HandlerDeps.
+func ExecSQLGenerateConnectorFn(ctx context.Context, s *ast.SQLGenerateConnectorStmt, deps *HandlerDeps) error {
 	conn, err := getOrAutoConnectFn(deps, s.Alias)
 	if err != nil {
 		return err
@@ -209,15 +209,15 @@ func executeGeneratedMDLFn(deps *HandlerDeps, mdl string) error {
 		return mdlerrors.NewBackend("parse generated MDL", fmt.Errorf("%v", errs[0]))
 	}
 	// Use the Executor's ExecuteProgram through a temporary ExecContext.
-	ectx := phase3d2bNewExecContext(context.Background(), deps)
+	ectx := NewExecContext(context.Background(), deps)
 	if ectx.ExecuteProgramFn == nil {
 		return mdlerrors.NewBackend("execute generated MDL", fmt.Errorf("ExecuteProgramFn not set — ExecContext was not created via Executor dispatch"))
 	}
 	return ectx.ExecuteProgramFn(prog)
 }
 
-// execSQLDescribeTableFn handles SQL <alias> DESCRIBE <table> with HandlerDeps.
-func execSQLDescribeTableFn(ctx context.Context, s *ast.SQLDescribeTableStmt, deps *HandlerDeps) error {
+// ExecSQLDescribeTableFn handles SQL <alias> DESCRIBE <table> with HandlerDeps.
+func ExecSQLDescribeTableFn(ctx context.Context, s *ast.SQLDescribeTableStmt, deps *HandlerDeps) error {
 	conn, err := getOrAutoConnectFn(deps, s.Alias)
 	if err != nil {
 		return err

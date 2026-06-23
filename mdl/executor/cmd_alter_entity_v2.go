@@ -171,7 +171,7 @@ func canExecAlterEntityGenFn(deps *HandlerDeps, s *ast.AlterEntityStmt) bool {
 	}
 }
 
-func execAlterEntityGenFn(ctx context.Context, s *ast.AlterEntityStmt, deps *HandlerDeps) error {
+func ExecAlterEntityGenFn(ctx context.Context, s *ast.AlterEntityStmt, deps *HandlerDeps) error {
 	if !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnected()
 	}
@@ -181,7 +181,7 @@ func execAlterEntityGenFn(ctx context.Context, s *ast.AlterEntityStmt, deps *Han
 		return mdlerrors.NewNotFoundMsg("entity", fmt.Sprint(s.Name), fmt.Sprintf("entity not found: %s", s.Name))
 	}
 
-	ectx := phase3d2bNewExecContext(ctx, deps)
+	ectx := NewExecContext(ctx, deps)
 
 	switch s.Operation {
 	case ast.AlterEntityAddAttribute:
@@ -489,7 +489,7 @@ func execAlterEntityGenFn(ctx context.Context, s *ast.AlterEntityStmt, deps *Han
 }
 
 func loadAlterEntityGenTargetFn(ctx context.Context, deps *HandlerDeps, s *ast.AlterEntityStmt) (*genDm.Entity, *genDm.DomainModel, *model.Module, bool) {
-	ectx := phase3d2bNewExecContext(ctx, deps)
+	ectx := NewExecContext(ctx, deps)
 	module, err := findModule(ectx, s.Name.Module)
 	if err != nil {
 		return nil, nil, nil, false

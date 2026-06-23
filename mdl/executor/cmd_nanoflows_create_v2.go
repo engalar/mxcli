@@ -44,8 +44,8 @@ import (
 // the cases it supports (header-only / empty-body); rejects compound
 // bodies with an actionable error pending Stage 3.2.3.
 
-// execCreateNanoflowGenFn is the HandlerDeps version of execCreateNanoflowGen.
-func execCreateNanoflowGenFn(ctx context.Context, s *ast.CreateNanoflowStmt, deps *HandlerDeps) error {
+// ExecCreateNanoflowGenFn is the HandlerDeps version of execCreateNanoflowGen.
+func ExecCreateNanoflowGenFn(ctx context.Context, s *ast.CreateNanoflowStmt, deps *HandlerDeps) error {
 	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
@@ -57,7 +57,7 @@ func execCreateNanoflowGenFn(ctx context.Context, s *ast.CreateNanoflowStmt, dep
 		return mdlerrors.NewValidation("nanoflow name must not be empty")
 	}
 
-	ectx := phase3d2bNewExecContext(ctx, deps)
+	ectx := NewExecContext(ctx, deps)
 	module, err := findOrCreateModule(ectx, s.Name.Module)
 	if err != nil {
 		return err

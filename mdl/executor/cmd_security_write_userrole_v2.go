@@ -23,12 +23,12 @@ import (
 	genSec "github.com/mendixlabs/mxcli/modelsdk/gen/security"
 )
 
-// execCreateUserRoleGenFn is the HandlerDeps version of execCreateUserRoleGen.
-func execCreateUserRoleGenFn(ctx context.Context, s *ast.CreateUserRoleStmt, deps *HandlerDeps) error {
+// ExecCreateUserRoleGenFn is the HandlerDeps version of execCreateUserRoleGen.
+func ExecCreateUserRoleGenFn(ctx context.Context, s *ast.CreateUserRoleStmt, deps *HandlerDeps) error {
 	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
-	ectx := phase3d2bNewExecContext(ctx, deps)
+	ectx := NewExecContext(ctx, deps)
 	ps, err := getProjectSecurityGen(ectx)
 	if err != nil {
 		return mdlerrors.NewBackend("read project security", err)
@@ -70,12 +70,12 @@ func execCreateUserRoleGenFn(ctx context.Context, s *ast.CreateUserRoleStmt, dep
 	return nil
 }
 
-// execAlterUserRoleGenFn is the HandlerDeps version of execAlterUserRoleGen.
-func execAlterUserRoleGenFn(ctx context.Context, s *ast.AlterUserRoleStmt, deps *HandlerDeps) error {
+// ExecAlterUserRoleGenFn is the HandlerDeps version of execAlterUserRoleGen.
+func ExecAlterUserRoleGenFn(ctx context.Context, s *ast.AlterUserRoleStmt, deps *HandlerDeps) error {
 	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
-	ectx := phase3d2bNewExecContext(ctx, deps)
+	ectx := NewExecContext(ctx, deps)
 	ps, err := getProjectSecurityGen(ectx)
 	if err != nil {
 		return mdlerrors.NewBackend("read project security", err)
@@ -115,12 +115,12 @@ func execAlterUserRoleGenFn(ctx context.Context, s *ast.AlterUserRoleStmt, deps 
 	return nil
 }
 
-// execDropUserRoleGenFn is the HandlerDeps version of execDropUserRoleGen.
-func execDropUserRoleGenFn(ctx context.Context, s *ast.DropUserRoleStmt, deps *HandlerDeps) error {
+// ExecDropUserRoleGenFn is the HandlerDeps version of execDropUserRoleGen.
+func ExecDropUserRoleGenFn(ctx context.Context, s *ast.DropUserRoleStmt, deps *HandlerDeps) error {
 	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
-	ectx := phase3d2bNewExecContext(ctx, deps)
+	ectx := NewExecContext(ctx, deps)
 	ps, err := getProjectSecurityGen(ectx)
 	if err != nil {
 		return mdlerrors.NewBackend("read project security", err)

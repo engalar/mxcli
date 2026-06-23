@@ -782,13 +782,13 @@ func buildParallelSplitGenActivity(wbc *wfBuildCtx, n *ast.WorkflowParallelSplit
 // deduplicateActivityNamesGen (defined below). autoBindWorkflowGen
 // fills CallMicroflow ParameterMappings via D4/D5 helpers.
 
-// execCreateWorkflowGenFn is the HandlerDeps version of execCreateWorkflowGen.
-func execCreateWorkflowGenFn(ctx context.Context, s *ast.CreateWorkflowStmt, deps *HandlerDeps) error {
+// ExecCreateWorkflowGenFn is the HandlerDeps version of execCreateWorkflowGen.
+func ExecCreateWorkflowGenFn(ctx context.Context, s *ast.CreateWorkflowStmt, deps *HandlerDeps) error {
 	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
 
-	ectx := phase3d2bNewExecContext(ctx, deps)
+	ectx := NewExecContext(ctx, deps)
 	module, err := findOrCreateModule(ectx, s.Name.Module)
 	if err != nil {
 		return err
@@ -1177,8 +1177,8 @@ func recurseConditionOutcomesDedupGen(outcomes []element.Element, nameCount map[
 // Lists via gen cache helper, deletes via FullBackend.DeleteWorkflow
 // (sdk-typed but ID-only — no migration needed).
 
-// execDropWorkflowGenFn is the HandlerDeps version of execDropWorkflowGen.
-func execDropWorkflowGenFn(ctx context.Context, s *ast.DropWorkflowStmt, deps *HandlerDeps) error {
+// ExecDropWorkflowGenFn is the HandlerDeps version of execDropWorkflowGen.
+func ExecDropWorkflowGenFn(ctx context.Context, s *ast.DropWorkflowStmt, deps *HandlerDeps) error {
 	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
@@ -1186,7 +1186,7 @@ func execDropWorkflowGenFn(ctx context.Context, s *ast.DropWorkflowStmt, deps *H
 	if err != nil {
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}
-	ectx := phase3d2bNewExecContext(ctx, deps)
+	ectx := NewExecContext(ctx, deps)
 	pairs, err := listWorkflowsWithContainerGen(ectx)
 	if err != nil {
 		return mdlerrors.NewBackend("list workflows", err)

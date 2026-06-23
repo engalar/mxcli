@@ -132,28 +132,28 @@ func TestExecDropEnumeration_Mock_NotConnected(t *testing.T) {
 
 func TestExecDropEntity_Mock_NotConnected(t *testing.T) {
 	ctx, _ := newMockCtx(t, withBackend(disconnectedBackend()))
-	assertError(t, execDropEntity(ctx, &ast.DropEntityStmt{
+	assertError(t, ExecDropEntity(ctx, &ast.DropEntityStmt{
 		Name: ast.QualifiedName{Module: "M", Name: "E"},
 	}))
 }
 
 func TestExecDropMicroflow_Mock_NotConnected(t *testing.T) {
 	ctx, _ := newMockCtx(t, withBackend(disconnectedBackend()))
-	assertError(t, execDropMicroflowFn(ctx, &ast.DropMicroflowStmt{
+	assertError(t, ExecDropMicroflowFn(ctx, &ast.DropMicroflowStmt{
 		Name: ast.QualifiedName{Module: "M", Name: "F"},
 	}, execContextToDeps(ctx)))
 }
 
 func TestExecDropPage_Mock_NotConnected(t *testing.T) {
 	ctx, _ := newMockCtx(t, withBackend(disconnectedBackend()))
-	assertError(t, execDropPage(ctx, &ast.DropPageStmt{
+	assertError(t, ExecDropPage(ctx, &ast.DropPageStmt{
 		Name: ast.QualifiedName{Module: "M", Name: "P"},
 	}))
 }
 
 func TestExecDropSnippet_Mock_NotConnected(t *testing.T) {
 	ctx, _ := newMockCtx(t, withBackend(disconnectedBackend()))
-	assertError(t, execDropSnippet(ctx, &ast.DropSnippetStmt{
+	assertError(t, ExecDropSnippet(ctx, &ast.DropSnippetStmt{
 		Name: ast.QualifiedName{Module: "M", Name: "S"},
 	}))
 }
