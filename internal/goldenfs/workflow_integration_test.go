@@ -127,7 +127,7 @@ create or modify workflow MyFirstModule.WF_ComplexApproval
           ;
       }
       'Cancel' { };
-end workflow;
+}
 `
 
 const wfStep5Alter = `
