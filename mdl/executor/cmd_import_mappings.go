@@ -97,6 +97,9 @@ func describeImportMappingFn(ctx context.Context, name ast.QualifiedName, deps *
 		}
 		return mdlerrors.NewBackend("get import mapping", err)
 	}
+	if im == nil {
+		return mdlerrors.NewNotFound("import mapping", name.String())
+	}
 
 	if im.Documentation != "" {
 		fmt.Fprintf(deps.Output, "/**\n * %s\n */\n", strings.ReplaceAll(im.Documentation, "\n", "\n * "))
