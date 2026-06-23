@@ -25,13 +25,6 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	"github.com/mendixlabs/mxcli/mdl/backend"
 	mprbackend "github.com/mendixlabs/mxcli/mdl/backend/mpr"
-	"github.com/mendixlabs/mxcli/mdl/executor/microflow"
-	"github.com/mendixlabs/mxcli/mdl/executor/page"
-	"github.com/mendixlabs/mxcli/mdl/executor/workflow"
-	"github.com/mendixlabs/mxcli/mdl/executor/domainmodel"
-	"github.com/mendixlabs/mxcli/mdl/executor/security"
-	"github.com/mendixlabs/mxcli/mdl/executor/query"
-	"github.com/mendixlabs/mxcli/mdl/executor/misc"
 	"github.com/mendixlabs/mxcli/mdl/visitor"
 	"github.com/pmezard/go-difflib/difflib"
 )
@@ -239,23 +232,6 @@ func setupTestEnv(t *testing.T) *testEnv {
 	output := &bytes.Buffer{}
 	exec := New(output)
 	exec.SetBackendFactory(func() backend.ConnectionBackend { return mprbackend.New() })
-	deps := exec.BuildHandlerDeps()
-	microflow.RegisterHandlers(exec.Registry(), deps)
-	page.RegisterHandlers(exec.Registry(), deps)
-	workflow.RegisterHandlers(exec.Registry(), deps)
-	domainmodel.RegisterHandlers(exec.Registry(), deps)
-	security.RegisterHandlers(exec.Registry(), deps)
-	query.RegisterHandlers(exec.Registry(), deps)
-	misc.RegisterHandlers(exec.Registry(), deps)
-	exec.AddReregister(func(fresh *executor.HandlerDeps) {
-		microflow.RegisterHandlers(exec.Registry(), fresh)
-		page.RegisterHandlers(exec.Registry(), fresh)
-		workflow.RegisterHandlers(exec.Registry(), fresh)
-		domainmodel.RegisterHandlers(exec.Registry(), fresh)
-		security.RegisterHandlers(exec.Registry(), fresh)
-		query.RegisterHandlers(exec.Registry(), fresh)
-		misc.RegisterHandlers(exec.Registry(), fresh)
-	})
 
 	// Connect to project
 	connectStmt := &ast.ConnectStmt{
