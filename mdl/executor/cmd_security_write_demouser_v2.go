@@ -19,6 +19,7 @@
 package executor
 
 import (
+	"context"
 	"fmt"
 	"unicode"
 
@@ -28,6 +29,118 @@ import (
 	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 	genSec "github.com/mendixlabs/mxcli/modelsdk/gen/security"
 )
+
+// execCreateDemoUserGenFn is the HandlerDeps version of execCreateDemoUserGen.
+func execCreateDemoUserGenFn(ctx context.Context, s *ast.CreateDemoUserStmt, deps *HandlerDeps) error {
+	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
+		return mdlerrors.NewNotConnectedWrite()
+	}
+	ectx := phase3d2bNewExecContext(ctx, deps)
+	ps, err := getProjectSecurityGen(ectx)
+	if err != nil {
+		return mdlerrors.NewBackend("read project security", err)
+	}
+	if ps == nil {
+		return mdlerrors.NewBackend("read project security", fmt.Errorf("ProjectSecurity not found"))
+	}
+	if raw := ps.PasswordPolicySettings(); raw != nil {
+		if pp, ok := raw.(*genSec.PasswordPolicySettings); ok && pp != nil {
+			if err := validatePasswordPolicy(s.UserName, s.Password, pp); err != nil {
+				return err
+			}
+		}
+	}
+	for _, du := range ps.DemoUsersItems() {
+		typed, ok := du.(*genSec.DemoUser)
+		if !ok {
+			continue
+		}
+		if typed.UserName() != s.UserName {
+			continue
+		}
+		if !s.CreateOrModify {
+			return mdlerrors.NewAlreadyExists("demo user", s.UserName)
+		}
+		mergedRoles := typed.UserRolesQualifiedNames()
+		existingSet := make(map[string]bool)
+		for _, r := range mergedRoles {
+			existingSet[r] = true
+		}
+		for _, r := range s.UserRoles {
+			if !existingSet[r] {
+				mergedRoles = append(mergedRoles, r)
+			}
+		}
+		entity := typed.EntityQualifiedName()
+		if s.Entity != "" {
+			entity = s.Entity
+		}
+		if err := deps.SecurityProjectManager.RemoveDemoUser(model.ID(ps.ID()), s.UserName); err != nil {
+			return mdlerrors.NewBackend("update demo user", err)
+		}
+		if err := deps.SecurityProjectManager.AddDemoUser(model.ID(ps.ID()), s.UserName, s.Password, entity, mergedRoles); err != nil {
+			return mdlerrors.NewBackend("update demo user", err)
+		}
+		invalidateProjectSecurityCache(ectx)
+		fmt.Fprintf(deps.Output, "Modified demo user: %s\n", s.UserName)
+		return nil
+	}
+	entity := s.Entity
+	if entity == "" {
+		detected, err := detectUserEntityGenFn(ctx, deps)
+		if err != nil {
+			return err
+		}
+		entity = detected
+	}
+	if err := deps.SecurityProjectManager.AddDemoUser(model.ID(ps.ID()), s.UserName, s.Password, entity, s.UserRoles); err != nil {
+		return mdlerrors.NewBackend("create demo user", err)
+	}
+	invalidateProjectSecurityCache(ectx)
+	fmt.Fprintf(deps.Output, "Created demo user: %s (entity: %s)\n", s.UserName, entity)
+	return nil
+}
+
+// execDropDemoUserGenFn is the HandlerDeps version of execDropDemoUserGen.
+func execDropDemoUserGenFn(ctx context.Context, s *ast.DropDemoUserStmt, deps *HandlerDeps) error {
+	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
+		return mdlerrors.NewNotConnectedWrite()
+	}
+	ectx := phase3d2bNewExecContext(ctx, deps)
+	ps, err := getProjectSecurityGen(ectx)
+	if err != nil {
+		return mdlerrors.NewBackend("read project security", err)
+	}
+	if ps == nil {
+		return mdlerrors.NewBackend("read project security", fmt.Errorf("ProjectSecurity not found"))
+	}
+	found := false
+	for _, du := range ps.DemoUsersItems() {
+		typed, ok := du.(*genSec.DemoUser)
+		if !ok {
+			continue
+		}
+		if typed.UserName() == s.UserName {
+			found = true
+			break
+		}
+	}
+	if !found {
+		return mdlerrors.NewNotFound("demo user", s.UserName)
+	}
+	if err := deps.SecurityProjectManager.RemoveDemoUser(model.ID(ps.ID()), s.UserName); err != nil {
+		return mdlerrors.NewBackend("drop demo user", err)
+	}
+	invalidateProjectSecurityCache(ectx)
+	fmt.Fprintf(deps.Output, "Dropped demo user: %s\n", s.UserName)
+	return nil
+}
+
+// detectUserEntityGenFn is the HandlerDeps version of detectUserEntityGen.
+func detectUserEntityGenFn(ctx context.Context, deps *HandlerDeps) (string, error) {
+	ectx := phase3d2bNewExecContext(ctx, deps)
+	return detectUserEntityGen(ectx)
+}
 
 // validatePasswordPolicy checks the password against all configured rules.
 // Returns a validation error with an actionable fix hint if any rule is violated.
@@ -109,126 +222,14 @@ func passwordContainsSymbol(s string) bool {
 	return false
 }
 
-// execCreateDemoUserGen handles CREATE [OR MODIFY] DEMO USER 'name' PASSWORD 'pw'
-// [ENTITY Module.Entity] (Roles) using the gen-typed ProjectSecurity path.
+// execCreateDemoUserGen handles CREATE [OR MODIFY] DEMO USER. Delegates to Fn version.
 func execCreateDemoUserGen(ctx *ExecContext, s *ast.CreateDemoUserStmt) error {
-	if !ctx.ConnectedForWrite() {
-		return mdlerrors.NewNotConnectedWrite()
-	}
-
-	ps, err := getProjectSecurityGen(ctx)
-	if err != nil {
-		return mdlerrors.NewBackend("read project security", err)
-	}
-	if ps == nil {
-		return mdlerrors.NewBackend("read project security", fmt.Errorf("ProjectSecurity not found"))
-	}
-
-	// Validate password against all project password policy rules.
-	// PasswordPolicySettings() returns element.Element; type-assert to access typed fields.
-	if raw := ps.PasswordPolicySettings(); raw != nil {
-		if pp, ok := raw.(*genSec.PasswordPolicySettings); ok && pp != nil {
-			if err := validatePasswordPolicy(s.UserName, s.Password, pp); err != nil {
-				return err
-			}
-		}
-	}
-
-	// Check if user already exists — walk DemoUsersItems() with type-assert.
-	for _, du := range ps.DemoUsersItems() {
-		typed, ok := du.(*genSec.DemoUser)
-		if !ok {
-			continue
-		}
-		if typed.UserName() != s.UserName {
-			continue
-		}
-		if !s.CreateOrModify {
-			return mdlerrors.NewAlreadyExists("demo user", s.UserName)
-		}
-		// Additive: merge roles, update password. Drop and re-create with merged roles.
-		mergedRoles := typed.UserRolesQualifiedNames()
-		existingSet := make(map[string]bool)
-		for _, r := range mergedRoles {
-			existingSet[r] = true
-		}
-		for _, r := range s.UserRoles {
-			if !existingSet[r] {
-				mergedRoles = append(mergedRoles, r)
-			}
-		}
-		entity := typed.EntityQualifiedName()
-		if s.Entity != "" {
-			entity = s.Entity
-		}
-		if err := ctx.SecurityProjectManager.RemoveDemoUser(model.ID(ps.ID()), s.UserName); err != nil {
-			return mdlerrors.NewBackend("update demo user", err)
-		}
-		if err := ctx.SecurityProjectManager.AddDemoUser(model.ID(ps.ID()), s.UserName, s.Password, entity, mergedRoles); err != nil {
-			return mdlerrors.NewBackend("update demo user", err)
-		}
-		invalidateProjectSecurityCache(ctx)
-		fmt.Fprintf(ctx.Output, "Modified demo user: %s\n", s.UserName)
-		return nil
-	}
-
-	// Resolve entity: use explicit value or auto-detect from domain models.
-	entity := s.Entity
-	if entity == "" {
-		detected, err := detectUserEntityGen(ctx)
-		if err != nil {
-			return err
-		}
-		entity = detected
-	}
-
-	if err := ctx.SecurityProjectManager.AddDemoUser(model.ID(ps.ID()), s.UserName, s.Password, entity, s.UserRoles); err != nil {
-		return mdlerrors.NewBackend("create demo user", err)
-	}
-	invalidateProjectSecurityCache(ctx)
-
-	fmt.Fprintf(ctx.Output, "Created demo user: %s (entity: %s)\n", s.UserName, entity)
-	return nil
+	return execCreateDemoUserGenFn(ctx, s, execContextToDeps(ctx))
 }
 
-// execDropDemoUserGen handles DROP DEMO USER 'name' using the gen-typed
-// ProjectSecurity path.
+// execDropDemoUserGen handles DROP DEMO USER. Delegates to Fn version.
 func execDropDemoUserGen(ctx *ExecContext, s *ast.DropDemoUserStmt) error {
-	if !ctx.ConnectedForWrite() {
-		return mdlerrors.NewNotConnectedWrite()
-	}
-
-	ps, err := getProjectSecurityGen(ctx)
-	if err != nil {
-		return mdlerrors.NewBackend("read project security", err)
-	}
-	if ps == nil {
-		return mdlerrors.NewBackend("read project security", fmt.Errorf("ProjectSecurity not found"))
-	}
-
-	// Check if user exists — walk DemoUsersItems() with type-assert.
-	found := false
-	for _, du := range ps.DemoUsersItems() {
-		typed, ok := du.(*genSec.DemoUser)
-		if !ok {
-			continue
-		}
-		if typed.UserName() == s.UserName {
-			found = true
-			break
-		}
-	}
-	if !found {
-		return mdlerrors.NewNotFound("demo user", s.UserName)
-	}
-
-	if err := ctx.SecurityProjectManager.RemoveDemoUser(model.ID(ps.ID()), s.UserName); err != nil {
-		return mdlerrors.NewBackend("drop demo user", err)
-	}
-	invalidateProjectSecurityCache(ctx)
-
-	fmt.Fprintf(ctx.Output, "Dropped demo user: %s\n", s.UserName)
-	return nil
+	return execDropDemoUserGenFn(ctx, s, execContextToDeps(ctx))
 }
 
 // detectUserEntityGen finds the entity that generalizes System.User.

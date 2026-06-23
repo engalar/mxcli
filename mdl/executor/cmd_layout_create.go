@@ -3,6 +3,7 @@
 package executor
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -13,14 +14,20 @@ import (
 	genPg "github.com/mendixlabs/mxcli/modelsdk/gen/pages"
 )
 
-// Mendix Studio Pro defaults for a layout's design canvas.
 const (
 	layoutCanvasWidth  int32 = 1198
 	layoutCanvasHeight int32 = 600
 )
 
-// execCreateOrModifyLayout handles CREATE [OR MODIFY] LAYOUT statements.
-func execCreateOrModifyLayout(ctx *ExecContext, s *ast.CreateLayoutStmt) error {
+func execCreateOrModifyLayoutFn(ctx context.Context, s *ast.CreateLayoutStmt, deps *HandlerDeps) error {
+	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
+		return mdlerrors.NewNotConnectedWrite()
+	}
+	ectx := phase3d2bNewExecContext(ctx, deps)
+	return execCreateOrModifyLayoutImpl(ectx, s)
+}
+
+func execCreateOrModifyLayoutImpl(ctx *ExecContext, s *ast.CreateLayoutStmt) error {
 	if !ctx.ConnectedForWrite() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
@@ -30,7 +37,6 @@ func execCreateOrModifyLayout(ctx *ExecContext, s *ast.CreateLayoutStmt) error {
 		return mdlerrors.NewBackend(fmt.Sprintf("find module %s", s.Name.Module), err)
 	}
 
-	// Locate an existing layout with the same qualified name.
 	existingPairs, _ := listLayoutsWithContainerGen(ctx)
 	var existingID model.ID
 	for _, pair := range existingPairs {
@@ -54,8 +60,6 @@ func execCreateOrModifyLayout(ctx *ExecContext, s *ast.CreateLayoutStmt) error {
 	layout.SetCanvasHeight(layoutCanvasHeight)
 	layout.SetContent(buildLayoutContent(s))
 
-	// MODIFY/REPLACE: build the new layout first, then drop the old one so a
-	// build failure leaves the existing layout intact.
 	if existingID != "" {
 		if err := ctx.PageWriter.DeleteLayoutGen(existingID); err != nil {
 			return mdlerrors.NewBackend("delete existing layout", err)
@@ -82,8 +86,10 @@ func execCreateOrModifyLayout(ctx *ExecContext, s *ast.CreateLayoutStmt) error {
 	return nil
 }
 
-// buildLayoutContent creates a WebLayoutContent or NativeLayoutContent from the
-// layout AST, wiring scroll containers, regions, and placeholders.
+func execCreateOrModifyLayout(ctx *ExecContext, s *ast.CreateLayoutStmt) error {
+	return execCreateOrModifyLayoutFn(ctx, s, execContextToDeps(ctx))
+}
+
 func buildLayoutContent(s *ast.CreateLayoutStmt) element.Element {
 	if strings.HasPrefix(strings.ToLower(s.LayoutType), "native") {
 		return buildNativeLayoutContent(s)

@@ -10,6 +10,7 @@ import (
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 	"github.com/mendixlabs/mxcli/mdl/graphcatalog"
 	"github.com/mendixlabs/mxcli/mdl/repos"
+	sqllib "github.com/mendixlabs/mxcli/sql"
 )
 
 // HandlerDeps carries the execution dependencies that were previously
@@ -93,11 +94,26 @@ type HandlerDeps struct {
 	// Output format (defaults to table).
 	Format OutputFormat
 
+	// Settings holds per-session mutable state set via SET (Phase 3d-5).
+	Settings map[string]any
+
+	// Fragments holds DEFINE FRAGMENT definitions for the session (Phase 3d-5).
+	Fragments map[string]*ast.DefineFragmentStmt
+
 	// Widget builder and page mutation (Phase 3d-5c/e).
 	WidgetBuilder              backend.WidgetBuilder
 	PageModelAccess            backend.PageModelAccess
 	PageMutationOperator       backend.PageMutationOperator
 	SecurityEntityAccessManager backend.SecurityEntityAccessManager
+	SecurityModuleManager backend.SecurityModuleManager
+	SecurityProjectManager backend.SecurityProjectManager
+	AgentEditorOperator backend.AgentEditorOperator
+	SqlMgr *sqllib.Manager
+	Cache *executorCache
+	JavaActionReader backend.JavaActionReader
+	JavaScriptActionWriter backend.JavaScriptActionWriter
+	SettingsWriter backend.SettingsWriter
+	ScriptTransactionManager backend.ScriptTransactionManager
 }
 
 // registerFutureOverlays registers new-style handlers (StmtHandlerFunc) for
@@ -240,6 +256,18 @@ func (e *Executor) registerFutureOverlays() {
 			return listExternalActionsFn(ctx, deps, e.format, s.InModule)
 		case ast.ShowStructure:
 			return execShowStructureGenFuture(ctx, deps.Output, e.format, s, deps)
+		case ast.ShowCallers:
+			return execShowCallersFn(ctx, s, deps)
+		case ast.ShowCallees:
+			return execShowCalleesFn(ctx, s, deps)
+		case ast.ShowReferences:
+			return execShowReferencesFn(ctx, s, deps)
+		case ast.ShowImpact:
+			return execShowImpactFn(ctx, s, deps)
+		case ast.ShowExportMappings:
+			return listExportMappingsFn(ctx, s.InModule, deps)
+		case ast.ShowImportMappings:
+			return listImportMappingsFn(ctx, s.InModule, deps)
 		default:
 			return nil // fall through to old handler
 		}
@@ -358,6 +386,14 @@ func (e *Executor) registerFutureOverlays() {
 			return writeDescribeJSONFuture(deps.Output, e.format, name, entry.label, func(output io.Writer) error {
 				return describeExternalEntityFn(ctx, deps, s.Name)
 			})
+		case ast.DescribeExportMapping:
+			return writeDescribeJSONFuture(deps.Output, e.format, name, entry.label, func(output io.Writer) error {
+				return describeExportMappingFn(ctx, s.Name, deps)
+			})
+		case ast.DescribeImportMapping:
+			return writeDescribeJSONFuture(deps.Output, e.format, name, entry.label, func(output io.Writer) error {
+				return describeImportMappingFn(ctx, s.Name, deps)
+			})
 		default:
 			// Not yet migrated — fall through to old handler.
 			ectx := ctx.(*ExecContext)
@@ -446,8 +482,7 @@ func (e *Executor) registerFutureOverlays() {
 
 	// Layout handler
 	r.RegisterFuture("CreateLayout", func(ctx context.Context, stmt ast.Statement) error {
-		ectx := phase3d2bNewExecContext(ctx, deps)
-		return execCreateOrModifyLayout(ectx, stmt.(*ast.CreateLayoutStmt))
+		return execCreateOrModifyLayoutFn(ctx, stmt.(*ast.CreateLayoutStmt), deps)
 	})
 
 	// ALTER PAGE handler
@@ -474,40 +509,31 @@ func (e *Executor) registerFutureOverlays() {
 	// ────────────────────────────────────────────────────
 
 	r.RegisterFuture("CreateModuleRole", func(ctx context.Context, stmt ast.Statement) error {
-		ectx := phase3d2bNewExecContext(ctx, deps)
-		return execCreateModuleRoleGen(ectx, stmt.(*ast.CreateModuleRoleStmt))
+		return execCreateModuleRoleGenFn(ctx, stmt.(*ast.CreateModuleRoleStmt), deps)
 	})
 	r.RegisterFuture("DropModuleRole", func(ctx context.Context, stmt ast.Statement) error {
-		ectx := phase3d2bNewExecContext(ctx, deps)
-		return execDropModuleRoleGen(ectx, stmt.(*ast.DropModuleRoleStmt))
+		return execDropModuleRoleGenFn(ctx, stmt.(*ast.DropModuleRoleStmt), deps)
 	})
 	r.RegisterFuture("CreateUserRole", func(ctx context.Context, stmt ast.Statement) error {
-		ectx := phase3d2bNewExecContext(ctx, deps)
-		return execCreateUserRoleGen(ectx, stmt.(*ast.CreateUserRoleStmt))
+		return execCreateUserRoleGenFn(ctx, stmt.(*ast.CreateUserRoleStmt), deps)
 	})
 	r.RegisterFuture("AlterUserRole", func(ctx context.Context, stmt ast.Statement) error {
-		ectx := phase3d2bNewExecContext(ctx, deps)
-		return execAlterUserRoleGen(ectx, stmt.(*ast.AlterUserRoleStmt))
+		return execAlterUserRoleGenFn(ctx, stmt.(*ast.AlterUserRoleStmt), deps)
 	})
 	r.RegisterFuture("DropUserRole", func(ctx context.Context, stmt ast.Statement) error {
-		ectx := phase3d2bNewExecContext(ctx, deps)
-		return execDropUserRoleGen(ectx, stmt.(*ast.DropUserRoleStmt))
+		return execDropUserRoleGenFn(ctx, stmt.(*ast.DropUserRoleStmt), deps)
 	})
 	r.RegisterFuture("GrantEntityAccess", func(ctx context.Context, stmt ast.Statement) error {
-		ectx := phase3d2bNewExecContext(ctx, deps)
-		return execGrantEntityAccessGen(ectx, stmt.(*ast.GrantEntityAccessStmt))
+		return execGrantEntityAccessGenFn(ctx, stmt.(*ast.GrantEntityAccessStmt), deps)
 	})
 	r.RegisterFuture("RevokeEntityAccess", func(ctx context.Context, stmt ast.Statement) error {
-		ectx := phase3d2bNewExecContext(ctx, deps)
-		return execRevokeEntityAccessGen(ectx, stmt.(*ast.RevokeEntityAccessStmt))
+		return execRevokeEntityAccessGenFn(ctx, stmt.(*ast.RevokeEntityAccessStmt), deps)
 	})
 	r.RegisterFuture("GrantPageAccess", func(ctx context.Context, stmt ast.Statement) error {
-		ectx := phase3d2bNewExecContext(ctx, deps)
-		return execGrantPageAccessGen(ectx, stmt.(*ast.GrantPageAccessStmt))
+		return execGrantPageAccessGenFn(ctx, stmt.(*ast.GrantPageAccessStmt), deps)
 	})
 	r.RegisterFuture("RevokePageAccess", func(ctx context.Context, stmt ast.Statement) error {
-		ectx := phase3d2bNewExecContext(ctx, deps)
-		return execRevokePageAccessGen(ectx, stmt.(*ast.RevokePageAccessStmt))
+		return execRevokePageAccessGenFn(ctx, stmt.(*ast.RevokePageAccessStmt), deps)
 	})
 	r.RegisterFuture("GrantMicroflowAccess", func(ctx context.Context, stmt ast.Statement) error {
 		return execGrantMicroflowAccessGenFn(ctx, stmt.(*ast.GrantMicroflowAccessStmt), deps)
@@ -530,36 +556,28 @@ func (e *Executor) registerFutureOverlays() {
 		return execRevokeWorkflowAccess(ectx, stmt.(*ast.RevokeWorkflowAccessStmt))
 	})
 	r.RegisterFuture("GrantODataServiceAccess", func(ctx context.Context, stmt ast.Statement) error {
-		ectx := phase3d2bNewExecContext(ctx, deps)
-		return execGrantODataServiceAccessGen(ectx, stmt.(*ast.GrantODataServiceAccessStmt))
+		return execGrantODataServiceAccessGenFn(ctx, stmt.(*ast.GrantODataServiceAccessStmt), deps)
 	})
 	r.RegisterFuture("RevokeODataServiceAccess", func(ctx context.Context, stmt ast.Statement) error {
-		ectx := phase3d2bNewExecContext(ctx, deps)
-		return execRevokeODataServiceAccessGen(ectx, stmt.(*ast.RevokeODataServiceAccessStmt))
+		return execRevokeODataServiceAccessGenFn(ctx, stmt.(*ast.RevokeODataServiceAccessStmt), deps)
 	})
 	r.RegisterFuture("GrantPublishedRestServiceAccess", func(ctx context.Context, stmt ast.Statement) error {
-		ectx := phase3d2bNewExecContext(ctx, deps)
-		return execGrantPublishedRestServiceAccessGen(ectx, stmt.(*ast.GrantPublishedRestServiceAccessStmt))
+		return execGrantPublishedRestServiceAccessGenFn(ctx, stmt.(*ast.GrantPublishedRestServiceAccessStmt), deps)
 	})
 	r.RegisterFuture("RevokePublishedRestServiceAccess", func(ctx context.Context, stmt ast.Statement) error {
-		ectx := phase3d2bNewExecContext(ctx, deps)
-		return execRevokePublishedRestServiceAccessGen(ectx, stmt.(*ast.RevokePublishedRestServiceAccessStmt))
+		return execRevokePublishedRestServiceAccessGenFn(ctx, stmt.(*ast.RevokePublishedRestServiceAccessStmt), deps)
 	})
 	r.RegisterFuture("AlterProjectSecurity", func(ctx context.Context, stmt ast.Statement) error {
-		ectx := phase3d2bNewExecContext(ctx, deps)
-		return execAlterProjectSecurityGen(ectx, stmt.(*ast.AlterProjectSecurityStmt))
+		return execAlterProjectSecurityGenFn(ctx, stmt.(*ast.AlterProjectSecurityStmt), deps)
 	})
 	r.RegisterFuture("UpdateSecurity", func(ctx context.Context, stmt ast.Statement) error {
-		ectx := phase3d2bNewExecContext(ctx, deps)
-		return execUpdateSecurityGen(ectx, stmt.(*ast.UpdateSecurityStmt))
+		return execUpdateSecurityGenFn(ctx, stmt.(*ast.UpdateSecurityStmt), deps)
 	})
 	r.RegisterFuture("CreateDemoUser", func(ctx context.Context, stmt ast.Statement) error {
-		ectx := phase3d2bNewExecContext(ctx, deps)
-		return execCreateDemoUserGen(ectx, stmt.(*ast.CreateDemoUserStmt))
+		return execCreateDemoUserGenFn(ctx, stmt.(*ast.CreateDemoUserStmt), deps)
 	})
 	r.RegisterFuture("DropDemoUser", func(ctx context.Context, stmt ast.Statement) error {
-		ectx := phase3d2bNewExecContext(ctx, deps)
-		return execDropDemoUserGen(ectx, stmt.(*ast.DropDemoUserStmt))
+		return execDropDemoUserGenFn(ctx, stmt.(*ast.DropDemoUserStmt), deps)
 	})
 	r.RegisterFuture("AlterLanguage", func(ctx context.Context, stmt ast.Statement) error {
 		ectx := phase3d2bNewExecContext(ctx, deps)
@@ -808,49 +826,49 @@ func (e *Executor) registerFutureOverlays() {
 
 	// Lint
 	r.RegisterFuture("Lint", func(ctx context.Context, stmt ast.Statement) error {
-		return execLintFuture(ctx, stmt, deps)
+		return execLintFn(ctx, stmt.(*ast.LintStmt), deps)
 	})
 
 	// Fragment commands
 	r.RegisterFuture("DefineFragment", func(ctx context.Context, stmt ast.Statement) error {
-		return execDefineFragmentFuture(ctx, stmt, deps)
+		return execDefineFragmentFn(ctx, stmt.(*ast.DefineFragmentStmt), deps)
 	})
 	r.RegisterFuture("DescribeFragmentFrom", func(ctx context.Context, stmt ast.Statement) error {
-		return execDescribeFragmentFromFuture(ctx, stmt, deps)
+		return execDescribeFragmentFromFn(ctx, stmt.(*ast.DescribeFragmentFromStmt), deps)
 	})
 
 	// SQL commands
 	r.RegisterFuture("SQLConnect", func(ctx context.Context, stmt ast.Statement) error {
-		return execSQLConnectFuture(ctx, stmt, deps)
+		return execSQLConnectFn(ctx, stmt.(*ast.SQLConnectStmt), deps)
 	})
 	r.RegisterFuture("SQLDisconnect", func(ctx context.Context, stmt ast.Statement) error {
-		return execSQLDisconnectFuture(ctx, stmt, deps)
+		return execSQLDisconnectFn(ctx, stmt.(*ast.SQLDisconnectStmt), deps)
 	})
 	r.RegisterFuture("SQLConnections", func(ctx context.Context, stmt ast.Statement) error {
-		return execSQLConnectionsFuture(ctx, deps)
+		return execSQLConnectionsFn(ctx, deps)
 	})
 	r.RegisterFuture("SQLQuery", func(ctx context.Context, stmt ast.Statement) error {
-		return execSQLQueryFuture(ctx, stmt, deps)
+		return execSQLQueryFn(ctx, stmt.(*ast.SQLQueryStmt), deps)
 	})
 	r.RegisterFuture("SQLShowTables", func(ctx context.Context, stmt ast.Statement) error {
-		return execSQLShowTablesFuture(ctx, stmt, deps)
+		return execSQLShowTablesFn(ctx, stmt.(*ast.SQLShowTablesStmt), deps)
 	})
 	r.RegisterFuture("SQLShowViews", func(ctx context.Context, stmt ast.Statement) error {
-		return execSQLShowViewsFuture(ctx, stmt, deps)
+		return execSQLShowViewsFn(ctx, stmt.(*ast.SQLShowViewsStmt), deps)
 	})
 	r.RegisterFuture("SQLShowFunctions", func(ctx context.Context, stmt ast.Statement) error {
-		return execSQLShowFunctionsFuture(ctx, stmt, deps)
+		return execSQLShowFunctionsFn(ctx, stmt.(*ast.SQLShowFunctionsStmt), deps)
 	})
 	r.RegisterFuture("SQLDescribeTable", func(ctx context.Context, stmt ast.Statement) error {
-		return execSQLDescribeTableFuture(ctx, stmt, deps)
+		return execSQLDescribeTableFn(ctx, stmt.(*ast.SQLDescribeTableStmt), deps)
 	})
 	r.RegisterFuture("SQLGenerateConnector", func(ctx context.Context, stmt ast.Statement) error {
-		return execSQLGenerateConnectorFuture(ctx, stmt, deps)
+		return execSQLGenerateConnectorFn(ctx, stmt.(*ast.SQLGenerateConnectorStmt), deps)
 	})
 
 	// Import
 	r.RegisterFuture("Import", func(ctx context.Context, stmt ast.Statement) error {
-		return execImportFuture(ctx, stmt, deps)
+		return execImportFn(ctx, stmt.(*ast.ImportStmt), deps)
 	})
 
 	// Agent editor CRUD
@@ -861,22 +879,22 @@ func (e *Executor) registerFutureOverlays() {
 		return execDropModelFuture(ctx, stmt, deps)
 	})
 	r.RegisterFuture("CreateConsumedMCPService", func(ctx context.Context, stmt ast.Statement) error {
-		return execCreateConsumedMCPServiceFuture(ctx, stmt, deps)
+		return execCreateConsumedMCPServiceFn(ctx, stmt.(*ast.CreateConsumedMCPServiceStmt), deps)
 	})
 	r.RegisterFuture("DropConsumedMCPService", func(ctx context.Context, stmt ast.Statement) error {
-		return execDropConsumedMCPServiceFuture(ctx, stmt, deps)
+		return execDropConsumedMCPServiceFn(ctx, stmt.(*ast.DropConsumedMCPServiceStmt), deps)
 	})
 	r.RegisterFuture("CreateKnowledgeBase", func(ctx context.Context, stmt ast.Statement) error {
-		return execCreateKnowledgeBaseFuture(ctx, stmt, deps)
+		return execCreateKnowledgeBaseFn(ctx, stmt.(*ast.CreateKnowledgeBaseStmt), deps)
 	})
 	r.RegisterFuture("DropKnowledgeBase", func(ctx context.Context, stmt ast.Statement) error {
-		return execDropKnowledgeBaseFuture(ctx, stmt, deps)
+		return execDropKnowledgeBaseFn(ctx, stmt.(*ast.DropKnowledgeBaseStmt), deps)
 	})
 	r.RegisterFuture("CreateAgent", func(ctx context.Context, stmt ast.Statement) error {
-		return execCreateAgentFuture(ctx, stmt, deps)
+		return execCreateAgentFn(ctx, stmt.(*ast.CreateAgentStmt), deps)
 	})
 	r.RegisterFuture("DropAgent", func(ctx context.Context, stmt ast.Statement) error {
-		return execDropAgentFuture(ctx, stmt, deps)
+		return execDropAgentFn(ctx, stmt.(*ast.DropAgentStmt), deps)
 	})
 }
 
@@ -898,6 +916,8 @@ func execContextToDeps(ectx *ExecContext) *HandlerDeps {
 		EnumerationReader:    ectx.EnumerationReader,
 		ConstantReader:       ectx.ConstantReader,
 		SettingsReader:       ectx.SettingsReader,
+		MapperReader:          ectx.MappingReader,
+		MapperWriter:          ectx.MappingWriter,
 		NavigationReader:     ectx.NavigationReader,
 		ScheduledEventReader: ectx.ScheduledEventReader,
 		DomainModelReader:    ectx.DomainModelReader,
@@ -926,11 +946,22 @@ func execContextToDeps(ectx *ExecContext) *HandlerDeps {
 		PageModelAccess:   ectx.PageModelAccess,
 		PageMutationOperator:    ectx.PageMutationOperator,
 		SecurityEntityAccessManager: ectx.SecurityEntityAccessManager,
+		SecurityModuleManager:      ectx.SecurityModuleManager,
+		SecurityProjectManager:     ectx.SecurityProjectManager,
+		AgentEditorOperator:        ectx.AgentEditorOperator,
+		SqlMgr:                     ectx.SqlMgr,
+		Cache:                      ectx.Cache,
+		JavaActionReader:           ectx.JavaActionReader,
+		JavaScriptActionWriter:     ectx.JavaScriptActionWriter,
+		SettingsWriter:             ectx.SettingsWriter,
+		ScriptTransactionManager:   ectx.ScriptTransactionManager,
+		Fragments:                  ectx.Fragments,
 		ImageCollectionWriter:      ectx.ImageCollectionWriter,
-		Format:            ectx.Format,
-		MprPath:           ectx.MprPath,
-		Graph:             ectx.Graph,
-		Perf:              ectx.Perf,
+		Format:                     ectx.Format,
+		Settings:                   ectx.Settings,
+		MprPath:                    ectx.MprPath,
+		Graph:                      ectx.Graph,
+		Perf:                       ectx.Perf,
 	}
 }
 
@@ -954,6 +985,8 @@ func (e *Executor) buildHandlerDeps() *HandlerDeps {
 		EnumerationReader:    e.backend,
 		ConstantReader:       e.backend,
 		SettingsReader:       e.backend,
+		MapperReader:          e.backend,
+		MapperWriter:          e.backend,
 		NavigationReader:     e.backend,
 		ScheduledEventReader: e.backend,
 		DomainModelReader:    e.backend,
@@ -982,8 +1015,18 @@ func (e *Executor) buildHandlerDeps() *HandlerDeps {
 		PageModelAccess:           e.backend,
 		PageMutationOperator:      e.backend,
 		SecurityEntityAccessManager: e.backend,
+		SecurityModuleManager:      e.backend,
+		SecurityProjectManager:     e.backend,
+		AgentEditorOperator:        e.backend,
+		Cache:                      nil, // deprecated cache; set only in ExecContext path
+		JavaActionReader:           e.backend,
+		JavaScriptActionWriter:     e.backend,
+		SettingsWriter:             e.backend,
+		ScriptTransactionManager:   e.backend,
+		Fragments:                  e.fragments,
 		ImageCollectionWriter:      e.backend,
 		Format:                   e.format,
+		Settings:                  nil, // SET key/value stored by handlers; initialized on first SET
 		MprPath:                   e.mprPath,
 		Graph:                     nil, // Populated lazily; see Analyzer.
 		Perf:                      nil, // Populated lazily; see Analyzer.

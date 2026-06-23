@@ -13,43 +13,32 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/linter/rules"
 )
 
-// execLint executes a LINT statement.
-func execLint(ctx *ExecContext, s *ast.LintStmt) error {
-	if !ctx.Connected() {
+// execLintFn is the HandlerDeps version of execLint.
+func execLintFn(ctx context.Context, s *ast.LintStmt, deps *HandlerDeps) error {
+	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnected()
 	}
-
-	// Handle SHOW LINT RULES
 	if s.ShowRules {
-		return listLintRules(ctx)
+		return listLintRulesFn(ctx, deps)
 	}
-
-	// Ensure the project graph is built (provides graphcatalog.LintReader).
-	if ctx.Graph == nil {
-		fmt.Fprintln(ctx.Output, "Building project graph for linting...")
-		if err := buildGraph(ctx); err != nil {
+	ectx := phase3d2bNewExecContext(ctx, deps)
+	if ectx.Graph == nil {
+		fmt.Fprintln(deps.Output, "Building project graph for linting...")
+		if err := buildGraph(ectx); err != nil {
 			return mdlerrors.NewBackend("build project graph", err)
 		}
 	}
-
-	// Create lint context
-	lintCtx := linter.NewLintContext(ctx.Graph, ctx.LintReader())
-
-	// Load configuration
-	projectDir := filepath.Dir(ctx.MprPath)
+	lintCtx := linter.NewLintContext(ectx.Graph, ectx.LintReader())
+	projectDir := filepath.Dir(deps.MprPath)
 	configPath := linter.FindConfigFile(projectDir)
 	config, err := linter.LoadConfig(configPath)
 	if err != nil {
-		fmt.Fprintf(ctx.Output, "Warning: failed to load lint config: %v\n", err)
+		fmt.Fprintf(deps.Output, "Warning: failed to load lint config: %v\n", err)
 		config = linter.DefaultConfig()
 	}
-
-	// Set excluded modules from config
 	if len(config.ExcludeModules) > 0 {
 		lintCtx.SetExcludedModules(config.ExcludeModules)
 	}
-
-	// Create linter and register built-in rules
 	lint := linter.New(lintCtx)
 	lint.AddRule(rules.NewNamingConventionRule())
 	lint.AddRule(rules.NewEmptyMicroflowRule())
@@ -58,35 +47,23 @@ func execLint(ctx *ExecContext, s *ast.LintStmt) error {
 	lint.AddRule(rules.NewImageSourceRule())
 	lint.AddRule(rules.NewMissingTranslationsRule())
 	lint.AddRule(rules.NewDataGrid2ColumnRule())
-
-	// Load custom Starlark rules
 	rulesDir := filepath.Join(projectDir, ".claude", "lint-rules")
 	starlarkRules, err := linter.LoadStarlarkRulesFromDir(rulesDir)
 	if err != nil {
-		fmt.Fprintf(ctx.Output, "Warning: failed to load custom rules: %v\n", err)
+		fmt.Fprintf(deps.Output, "Warning: failed to load custom rules: %v\n", err)
 	}
 	for _, rule := range starlarkRules {
 		lint.AddRule(rule)
 	}
-
-	// Apply configuration
 	config.ApplyConfig(lint)
-
-	// Handle module filtering
 	if s.Target != nil && s.ModuleOnly {
-		// Only lint specific module - set all others as excluded
-		lintCtx.SetExcludedModules(nil) // Clear any existing exclusions
-		// This is a simplified approach - ideally we'd filter in the linter
-		fmt.Fprintf(ctx.Output, "Linting module: %s\n", s.Target.Module)
+		lintCtx.SetExcludedModules(nil)
+		fmt.Fprintf(deps.Output, "Linting module: %s\n", s.Target.Module)
 	}
-
-	// Run linting
 	violations, err := lint.Run(context.Background())
 	if err != nil {
 		return mdlerrors.NewBackend("lint", err)
 	}
-
-	// Filter violations if targeting specific module
 	if s.Target != nil && s.ModuleOnly {
 		filtered := make([]linter.Violation, 0)
 		for _, v := range violations {
@@ -96,8 +73,6 @@ func execLint(ctx *ExecContext, s *ast.LintStmt) error {
 		}
 		violations = filtered
 	}
-
-	// Output results
 	var format linter.OutputFormat
 	switch s.Format {
 	case ast.LintFormatJSON:
@@ -107,17 +82,12 @@ func execLint(ctx *ExecContext, s *ast.LintStmt) error {
 	default:
 		format = linter.OutputFormatText
 	}
-
 	formatter := linter.GetFormatter(format, false)
-	return formatter.Format(violations, ctx.Output)
+	return formatter.Format(violations, deps.Output)
 }
 
-// listLintRules displays available lint rules.
-func listLintRules(ctx *ExecContext) error {
-	fmt.Fprintln(ctx.Output, "Built-in rules:")
-	fmt.Fprintln(ctx.Output)
-
-	// Create a temporary linter with built-in rules
+// listLintRulesFn is the HandlerDeps version of listLintRules.
+func listLintRulesFn(ctx context.Context, deps *HandlerDeps) error {
 	lint := linter.New(nil)
 	lint.AddRule(rules.NewNamingConventionRule())
 	lint.AddRule(rules.NewEmptyMicroflowRule())
@@ -127,32 +97,38 @@ func listLintRules(ctx *ExecContext) error {
 	lint.AddRule(rules.NewMissingTranslationsRule())
 	lint.AddRule(rules.NewDataGrid2ColumnRule())
 	lint.AddRule(rules.NewBrokenMFParamRefRule())
-
 	for _, rule := range lint.Rules() {
-		fmt.Fprintf(ctx.Output, "  %s (%s)\n", rule.ID(), rule.Name())
-		fmt.Fprintf(ctx.Output, "    %s\n", rule.Description())
-		fmt.Fprintf(ctx.Output, "    Category: %s, Default Severity: %s\n", rule.Category(), rule.DefaultSeverity())
-		fmt.Fprintln(ctx.Output)
+		fmt.Fprintf(deps.Output, "  %s (%s)\n", rule.ID(), rule.Name())
+		fmt.Fprintf(deps.Output, "    %s\n", rule.Description())
+		fmt.Fprintf(deps.Output, "    Category: %s, Default Severity: %s\n", rule.Category(), rule.DefaultSeverity())
+		fmt.Fprintln(deps.Output)
 	}
-
-	// Show custom Starlark rules if connected
-	if ctx.MprPath != "" {
-		projectDir := filepath.Dir(ctx.MprPath)
+	if deps.MprPath != "" {
+		projectDir := filepath.Dir(deps.MprPath)
 		rulesDir := filepath.Join(projectDir, ".claude", "lint-rules")
 		starlarkRules, err := linter.LoadStarlarkRulesFromDir(rulesDir)
 		if err == nil && len(starlarkRules) > 0 {
-			fmt.Fprintln(ctx.Output, "Custom rules (from .claude/lint-rules/):")
-			fmt.Fprintln(ctx.Output)
+			fmt.Fprintln(deps.Output, "Custom rules (from .claude/lint-rules/):")
+			fmt.Fprintln(deps.Output)
 			for _, rule := range starlarkRules {
-				fmt.Fprintf(ctx.Output, "  %s (%s)\n", rule.ID(), rule.Name())
-				fmt.Fprintf(ctx.Output, "    %s\n", rule.Description())
-				fmt.Fprintf(ctx.Output, "    Category: %s, Default Severity: %s\n", rule.Category(), rule.DefaultSeverity())
-				fmt.Fprintln(ctx.Output)
+				fmt.Fprintf(deps.Output, "  %s (%s)\n", rule.ID(), rule.Name())
+				fmt.Fprintf(deps.Output, "    %s\n", rule.Description())
+				fmt.Fprintf(deps.Output, "    Category: %s, Default Severity: %s\n", rule.Category(), rule.DefaultSeverity())
+				fmt.Fprintln(deps.Output)
 			}
 		}
 	}
-
 	return nil
+}
+
+// execLint executes a LINT statement. Delegates to Fn version.
+func execLint(ctx *ExecContext, s *ast.LintStmt) error {
+	return execLintFn(ctx, s, execContextToDeps(ctx))
+}
+
+// listLintRules displays available lint rules.
+func listLintRules(ctx *ExecContext) error {
+	return listLintRulesFn(ctx, execContextToDeps(ctx))
 }
 
 // --- Executor method wrappers for backward compatibility ---

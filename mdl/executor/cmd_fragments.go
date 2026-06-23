@@ -3,6 +3,7 @@
 package executor
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"sort"
@@ -13,79 +14,70 @@ import (
 	"github.com/mendixlabs/mxcli/model"
 )
 
-// execDefineFragment stores a fragment definition in the executor's session state.
-func execDefineFragment(ctx *ExecContext, s *ast.DefineFragmentStmt) error {
-	if ctx.Fragments == nil {
-		ctx.Fragments = make(map[string]*ast.DefineFragmentStmt)
+// execDefineFragmentFn is the HandlerDeps version of execDefineFragment.
+func execDefineFragmentFn(ctx context.Context, s *ast.DefineFragmentStmt, deps *HandlerDeps) error {
+	if deps.Fragments == nil {
+		deps.Fragments = make(map[string]*ast.DefineFragmentStmt)
 	}
-	if _, exists := ctx.Fragments[s.Name]; exists {
+	if _, exists := deps.Fragments[s.Name]; exists {
 		return mdlerrors.NewAlreadyExists("fragment", s.Name)
 	}
-	ctx.Fragments[s.Name] = s
-	fmt.Fprintf(ctx.Output, "Defined fragment %s (%d widgets)\n", s.Name, len(s.Widgets))
+	deps.Fragments[s.Name] = s
+	fmt.Fprintf(deps.Output, "Defined fragment %s (%d widgets)\n", s.Name, len(s.Widgets))
 	return nil
 }
 
-// listFragments lists all defined fragments in the current session.
-func listFragments(ctx *ExecContext) error {
-	if len(ctx.Fragments) == 0 {
-		fmt.Fprintln(ctx.Output, "No fragments defined.")
+// listFragmentsFn is the HandlerDeps version of listFragments.
+func listFragmentsFn(ctx context.Context, deps *HandlerDeps) error {
+	if len(deps.Fragments) == 0 {
+		fmt.Fprintln(deps.Output, "No fragments defined.")
 		return nil
 	}
-
-	// Sort by name for consistent output
-	names := make([]string, 0, len(ctx.Fragments))
-	for name := range ctx.Fragments {
+	names := make([]string, 0, len(deps.Fragments))
+	for name := range deps.Fragments {
 		names = append(names, name)
 	}
 	sort.Strings(names)
-
-	fmt.Fprintf(ctx.Output, "%-30s %s\n", "Fragment", "Widgets")
-	fmt.Fprintf(ctx.Output, "%-30s %s\n", strings.Repeat("-", 30), strings.Repeat("-", 10))
+	fmt.Fprintf(deps.Output, "%-30s %s\n", "Fragment", "Widgets")
+	fmt.Fprintf(deps.Output, "%-30s %s\n", strings.Repeat("-", 30), strings.Repeat("-", 10))
 	for _, name := range names {
-		frag := ctx.Fragments[name]
-		fmt.Fprintf(ctx.Output, "%-30s %d\n", name, len(frag.Widgets))
+		frag := deps.Fragments[name]
+		fmt.Fprintf(deps.Output, "%-30s %d\n", name, len(frag.Widgets))
 	}
 	return nil
 }
 
-// describeFragment outputs a fragment's definition as MDL.
-func describeFragment(ctx *ExecContext, name ast.QualifiedName) error {
-	if ctx.Fragments == nil {
+// describeFragmentFn is the HandlerDeps version of describeFragment.
+func describeFragmentFn(ctx context.Context, output io.Writer, deps *HandlerDeps, name ast.QualifiedName) error {
+	if deps.Fragments == nil {
 		return mdlerrors.NewNotFound("fragment", name.Name)
 	}
-	frag, ok := ctx.Fragments[name.Name]
+	frag, ok := deps.Fragments[name.Name]
 	if !ok {
 		return mdlerrors.NewNotFound("fragment", name.Name)
 	}
-
-	fmt.Fprintf(ctx.Output, "define fragment %s as {\n", frag.Name)
+	fmt.Fprintf(output, "define fragment %s as {\n", frag.Name)
 	for _, w := range frag.Widgets {
-		outputASTWidgetMDL(ctx.Output, w, 1)
+		outputASTWidgetMDL(output, w, 1)
 	}
-	fmt.Fprintln(ctx.Output, "};")
+	fmt.Fprintln(output, "};")
 	return nil
 }
 
-// describeFragmentFrom handles DESCRIBE FRAGMENT FROM PAGE/SNIPPET ... WIDGET ... command.
-// It finds a named widget in a page or snippet and outputs it as MDL.
-func describeFragmentFrom(ctx *ExecContext, s *ast.DescribeFragmentFromStmt) error {
-	if !ctx.Connected() {
+// describeFragmentFromFn is the HandlerDeps version of describeFragmentFrom.
+func execDescribeFragmentFromFn(ctx context.Context, s *ast.DescribeFragmentFromStmt, deps *HandlerDeps) error {
+	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnected()
 	}
-
-	h, err := getHierarchy(ctx)
+	ectx := phase3d2bNewExecContext(ctx, deps)
+	h, err := getHierarchy(ectx)
 	if err != nil {
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}
-
 	var rawWidgets []rawWidget
-
 	switch s.ContainerType {
 	case "page":
-		// Stage 3.3.5.C7a: walk gen-typed Page listings via the
-		// listPagesWithContainerGen cache helper.
-		pairs, err := listPagesWithContainerGen(ctx)
+		pairs, err := listPagesWithContainerGen(ectx)
 		if err != nil {
 			return mdlerrors.NewBackend("list pages", err)
 		}
@@ -104,10 +96,9 @@ func describeFragmentFrom(ctx *ExecContext, s *ast.DescribeFragmentFromStmt) err
 		if foundID == "" {
 			return mdlerrors.NewNotFound("page", s.ContainerName.String())
 		}
-		rawWidgets = getPageWidgetsFromRaw(ctx, foundID)
-
+		rawWidgets = getPageWidgetsFromRaw(ectx, foundID)
 	case "snippet":
-		pairs, err := listSnippetsWithContainerGen(ctx)
+		pairs, err := listSnippetsWithContainerGen(ectx)
 		if err != nil {
 			return mdlerrors.NewBackend("list snippets", err)
 		}
@@ -126,18 +117,37 @@ func describeFragmentFrom(ctx *ExecContext, s *ast.DescribeFragmentFromStmt) err
 		if foundID == "" {
 			return mdlerrors.NewNotFound("snippet", s.ContainerName.String())
 		}
-		rawWidgets = getSnippetWidgetsFromRaw(ctx, foundID)
+		rawWidgets = getSnippetWidgetsFromRaw(ectx, foundID)
 	}
-
-	// Find the widget by name
 	target := findRawWidgetByName(rawWidgets, s.WidgetName)
 	if target == nil {
 		return mdlerrors.NewNotFoundMsg("widget", s.WidgetName, fmt.Sprintf("not found in %s %s", strings.ToLower(s.ContainerType), s.ContainerName.String()))
 	}
-
-	// Output as MDL
-	outputWidgetMDLV3(ctx, *target, 0)
+	outputWidgetMDLV3(ectx, *target, 0)
 	return nil
+}
+
+// Fragments field accessor for HandlerDeps (used to bridge).
+func fragmentsFromDeps(deps *HandlerDeps) map[string]*ast.DefineFragmentStmt {
+	return deps.Fragments
+}
+
+// execDefineFragment stores a fragment definition in the executor's session state.
+func execDefineFragment(ctx *ExecContext, s *ast.DefineFragmentStmt) error {
+	return execDefineFragmentFn(ctx, s, execContextToDeps(ctx))
+}
+
+func listFragments(ctx *ExecContext) error {
+	return listFragmentsFn(ctx, execContextToDeps(ctx))
+}
+
+func describeFragment(ctx *ExecContext, name ast.QualifiedName) error {
+	deps := execContextToDeps(ctx)
+	return describeFragmentFn(ctx, deps.Output, deps, name)
+}
+
+func describeFragmentFrom(ctx *ExecContext, s *ast.DescribeFragmentFromStmt) error {
+	return execDescribeFragmentFromFn(ctx, s, execContextToDeps(ctx))
 }
 
 // findRawWidgetByName recursively searches the widget tree for a widget with the given name.

@@ -13,6 +13,7 @@
 package executor
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -22,30 +23,24 @@ import (
 	genSec "github.com/mendixlabs/mxcli/modelsdk/gen/security"
 )
 
-// execCreateUserRoleGen handles CREATE USER ROLE via the gen read path.
-// Mirrors execCreateUserRole but iterates ps.UserRolesItems() and casts
-// each entry to *genSec.UserRole to access typed accessors.
-func execCreateUserRoleGen(ctx *ExecContext, s *ast.CreateUserRoleStmt) error {
-	if !ctx.ConnectedForWrite() {
+// execCreateUserRoleGenFn is the HandlerDeps version of execCreateUserRoleGen.
+func execCreateUserRoleGenFn(ctx context.Context, s *ast.CreateUserRoleStmt, deps *HandlerDeps) error {
+	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
-
-	ps, err := getProjectSecurityGen(ctx)
+	ectx := phase3d2bNewExecContext(ctx, deps)
+	ps, err := getProjectSecurityGen(ectx)
 	if err != nil {
 		return mdlerrors.NewBackend("read project security", err)
 	}
 	if ps == nil {
 		return mdlerrors.NewBackend("read project security", nil)
 	}
-
-	// Build qualified module role names from the statement.
 	var moduleRoleNames []string
 	for _, mr := range s.ModuleRoles {
 		qn := mr.Module + "." + mr.Name
 		moduleRoleNames = append(moduleRoleNames, qn)
 	}
-
-	// Check if role already exists.
 	for _, item := range ps.UserRolesItems() {
 		ur, ok := item.(*genSec.UserRole)
 		if !ok || ur == nil {
@@ -55,47 +50,39 @@ func execCreateUserRoleGen(ctx *ExecContext, s *ast.CreateUserRoleStmt) error {
 			if !s.CreateOrModify {
 				return mdlerrors.NewAlreadyExists("user role", s.Name)
 			}
-			// Replace: remove existing module roles not in the new list, then add new ones.
-			// This makes "create or modify user role" idempotent (replace semantics, not additive).
 			existing := ur.ModuleRolesQualifiedNames()
-			if err := ctx.SecurityProjectManager.AlterUserRoleModuleRoles(model.ID(ps.ID()), s.Name, false, existing); err != nil {
+			if err := deps.SecurityProjectManager.AlterUserRoleModuleRoles(model.ID(ps.ID()), s.Name, false, existing); err != nil {
 				return mdlerrors.NewBackend("clear user role module roles", err)
 			}
-			if err := ctx.SecurityProjectManager.AlterUserRoleModuleRoles(model.ID(ps.ID()), s.Name, true, moduleRoleNames); err != nil {
+			if err := deps.SecurityProjectManager.AlterUserRoleModuleRoles(model.ID(ps.ID()), s.Name, true, moduleRoleNames); err != nil {
 				return mdlerrors.NewBackend("update user role", err)
 			}
-			invalidateProjectSecurityCache(ctx)
-			fmt.Fprintf(ctx.Output, "Modified user role: %s\n", s.Name)
+			invalidateProjectSecurityCache(ectx)
+			fmt.Fprintf(deps.Output, "Modified user role: %s\n", s.Name)
 			return nil
 		}
 	}
-
-	if err := ctx.SecurityProjectManager.AddUserRole(model.ID(ps.ID()), s.Name, moduleRoleNames, s.ManageAllRoles); err != nil {
+	if err := deps.SecurityProjectManager.AddUserRole(model.ID(ps.ID()), s.Name, moduleRoleNames, s.ManageAllRoles); err != nil {
 		return mdlerrors.NewBackend("create user role", err)
 	}
-	invalidateProjectSecurityCache(ctx)
-
-	fmt.Fprintf(ctx.Output, "Created user role: %s\n", s.Name)
+	invalidateProjectSecurityCache(ectx)
+	fmt.Fprintf(deps.Output, "Created user role: %s\n", s.Name)
 	return nil
 }
 
-// execAlterUserRoleGen handles ALTER USER ROLE Name ADD/REMOVE MODULE ROLES
-// via the gen read path.
-// Mirrors execAlterUserRole but iterates ps.UserRolesItems() + (*genSec.UserRole) cast.
-func execAlterUserRoleGen(ctx *ExecContext, s *ast.AlterUserRoleStmt) error {
-	if !ctx.ConnectedForWrite() {
+// execAlterUserRoleGenFn is the HandlerDeps version of execAlterUserRoleGen.
+func execAlterUserRoleGenFn(ctx context.Context, s *ast.AlterUserRoleStmt, deps *HandlerDeps) error {
+	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
-
-	ps, err := getProjectSecurityGen(ctx)
+	ectx := phase3d2bNewExecContext(ctx, deps)
+	ps, err := getProjectSecurityGen(ectx)
 	if err != nil {
 		return mdlerrors.NewBackend("read project security", err)
 	}
 	if ps == nil {
 		return mdlerrors.NewBackend("read project security", nil)
 	}
-
-	// Check user role exists.
 	found := false
 	for _, item := range ps.UserRolesItems() {
 		ur, ok := item.(*genSec.UserRole)
@@ -110,44 +97,37 @@ func execAlterUserRoleGen(ctx *ExecContext, s *ast.AlterUserRoleStmt) error {
 	if !found {
 		return mdlerrors.NewNotFound("user role", s.Name)
 	}
-
-	// Build qualified module role names.
 	var moduleRoleNames []string
 	for _, mr := range s.ModuleRoles {
 		moduleRoleNames = append(moduleRoleNames, mr.Module+"."+mr.Name)
 	}
-
-	if err := ctx.SecurityProjectManager.AlterUserRoleModuleRoles(model.ID(ps.ID()), s.Name, s.Add, moduleRoleNames); err != nil {
+	if err := deps.SecurityProjectManager.AlterUserRoleModuleRoles(model.ID(ps.ID()), s.Name, s.Add, moduleRoleNames); err != nil {
 		return mdlerrors.NewBackend("alter user role", err)
 	}
-	invalidateProjectSecurityCache(ctx)
-
+	invalidateProjectSecurityCache(ectx)
 	action := "Added"
 	prep := "to"
 	if !s.Add {
 		action = "Removed"
 		prep = "from"
 	}
-	fmt.Fprintf(ctx.Output, "%s module roles %s %s user role %s\n", action, strings.Join(moduleRoleNames, ", "), prep, s.Name)
+	fmt.Fprintf(deps.Output, "%s module roles %s %s user role %s\n", action, strings.Join(moduleRoleNames, ", "), prep, s.Name)
 	return nil
 }
 
-// execDropUserRoleGen handles DROP USER ROLE Name via the gen read path.
-// Mirrors execDropUserRole but iterates ps.UserRolesItems() + (*genSec.UserRole) cast.
-func execDropUserRoleGen(ctx *ExecContext, s *ast.DropUserRoleStmt) error {
-	if !ctx.ConnectedForWrite() {
+// execDropUserRoleGenFn is the HandlerDeps version of execDropUserRoleGen.
+func execDropUserRoleGenFn(ctx context.Context, s *ast.DropUserRoleStmt, deps *HandlerDeps) error {
+	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
-
-	ps, err := getProjectSecurityGen(ctx)
+	ectx := phase3d2bNewExecContext(ctx, deps)
+	ps, err := getProjectSecurityGen(ectx)
 	if err != nil {
 		return mdlerrors.NewBackend("read project security", err)
 	}
 	if ps == nil {
 		return mdlerrors.NewBackend("read project security", nil)
 	}
-
-	// Check user role exists.
 	found := false
 	for _, item := range ps.UserRolesItems() {
 		ur, ok := item.(*genSec.UserRole)
@@ -162,12 +142,25 @@ func execDropUserRoleGen(ctx *ExecContext, s *ast.DropUserRoleStmt) error {
 	if !found {
 		return mdlerrors.NewNotFound("user role", s.Name)
 	}
-
-	if err := ctx.SecurityProjectManager.RemoveUserRole(model.ID(ps.ID()), s.Name); err != nil {
+	if err := deps.SecurityProjectManager.RemoveUserRole(model.ID(ps.ID()), s.Name); err != nil {
 		return mdlerrors.NewBackend("drop user role", err)
 	}
-	invalidateProjectSecurityCache(ctx)
-
-	fmt.Fprintf(ctx.Output, "Dropped user role: %s\n", s.Name)
+	invalidateProjectSecurityCache(ectx)
+	fmt.Fprintf(deps.Output, "Dropped user role: %s\n", s.Name)
 	return nil
+}
+
+// execCreateUserRoleGen handles CREATE USER ROLE. Delegates to Fn version.
+func execCreateUserRoleGen(ctx *ExecContext, s *ast.CreateUserRoleStmt) error {
+	return execCreateUserRoleGenFn(ctx, s, execContextToDeps(ctx))
+}
+
+// execAlterUserRoleGen handles ALTER USER ROLE. Delegates to Fn version.
+func execAlterUserRoleGen(ctx *ExecContext, s *ast.AlterUserRoleStmt) error {
+	return execAlterUserRoleGenFn(ctx, s, execContextToDeps(ctx))
+}
+
+// execDropUserRoleGen handles DROP USER ROLE. Delegates to Fn version.
+func execDropUserRoleGen(ctx *ExecContext, s *ast.DropUserRoleStmt) error {
+	return execDropUserRoleGenFn(ctx, s, execContextToDeps(ctx))
 }

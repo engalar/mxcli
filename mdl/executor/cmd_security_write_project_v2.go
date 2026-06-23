@@ -4,6 +4,7 @@
 package executor
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
@@ -11,18 +12,16 @@ import (
 	"github.com/mendixlabs/mxcli/model"
 )
 
-// execAlterProjectSecurityGen handles ALTER PROJECT SECURITY using the
-// gen-typed read path (getProjectSecurityGen). No sdk/security import is
-// needed: security level constants are inlined as BSON string literals.
-func execAlterProjectSecurityGen(ctx *ExecContext, s *ast.AlterProjectSecurityStmt) error {
-	if !ctx.ConnectedForWrite() {
+// execAlterProjectSecurityGenFn is the HandlerDeps version of execAlterProjectSecurityGen.
+func execAlterProjectSecurityGenFn(ctx context.Context, s *ast.AlterProjectSecurityStmt, deps *HandlerDeps) error {
+	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
-	ps, err := getProjectSecurityGen(ctx)
+	ectx := phase3d2bNewExecContext(ctx, deps)
+	ps, err := getProjectSecurityGen(ectx)
 	if err != nil || ps == nil {
 		return mdlerrors.NewBackend("read project security", err)
 	}
-
 	if s.SecurityLevel != "" {
 		var bsonLevel string
 		switch s.SecurityLevel {
@@ -35,28 +34,30 @@ func execAlterProjectSecurityGen(ctx *ExecContext, s *ast.AlterProjectSecuritySt
 		default:
 			return mdlerrors.NewUnsupported(fmt.Sprintf("unknown security level: %s", s.SecurityLevel))
 		}
-		if err := ctx.SecurityProjectManager.SetProjectSecurityLevel(model.ID(ps.ID()), bsonLevel); err != nil {
+		if err := deps.SecurityProjectManager.SetProjectSecurityLevel(model.ID(ps.ID()), bsonLevel); err != nil {
 			return mdlerrors.NewBackend("set security level", err)
 		}
-		invalidateProjectSecurityCache(ctx)
-		fmt.Fprintf(ctx.Output, "Set project security level to %s\n", s.SecurityLevel)
+		invalidateProjectSecurityCache(ectx)
+		fmt.Fprintf(deps.Output, "Set project security level to %s\n", s.SecurityLevel)
 	}
-
 	if s.DemoUsersEnabled != nil {
-		if err := ctx.SecurityProjectManager.SetProjectDemoUsersEnabled(model.ID(ps.ID()), *s.DemoUsersEnabled); err != nil {
+		if err := deps.SecurityProjectManager.SetProjectDemoUsersEnabled(model.ID(ps.ID()), *s.DemoUsersEnabled); err != nil {
 			return mdlerrors.NewBackend("set demo users", err)
 		}
-		invalidateProjectSecurityCache(ctx)
+		invalidateProjectSecurityCache(ectx)
 		state := "disabled"
 		if *s.DemoUsersEnabled {
 			state = "enabled"
 		}
-		fmt.Fprintf(ctx.Output, "Demo users %s\n", state)
+		fmt.Fprintf(deps.Output, "Demo users %s\n", state)
 	}
-
 	if s.PasswordPolicy != nil {
-		return execAlterPasswordPolicy(ctx, s)
+		return execAlterPasswordPolicyFn(ctx, s, deps)
 	}
-
 	return nil
+}
+
+// execAlterProjectSecurityGen handles ALTER PROJECT SECURITY. Delegates to Fn version.
+func execAlterProjectSecurityGen(ctx *ExecContext, s *ast.AlterProjectSecurityStmt) error {
+	return execAlterProjectSecurityGenFn(ctx, s, execContextToDeps(ctx))
 }

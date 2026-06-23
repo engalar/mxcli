@@ -14,6 +14,7 @@
 package executor
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -25,19 +26,18 @@ import (
 	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 )
 
-// execGrantEntityAccessGen handles GRANT roles ON MODULE.ENTITY [(rights...)].
-// Gen-typed security validation; domain-model read via GetDomainModel (passthrough).
-func execGrantEntityAccessGen(ctx *ExecContext, s *ast.GrantEntityAccessStmt) error {
-	if !ctx.ConnectedForWrite() {
+// execGrantEntityAccessGenFn is the HandlerDeps version of execGrantEntityAccessGen.
+func execGrantEntityAccessGenFn(ctx context.Context, s *ast.GrantEntityAccessStmt, deps *HandlerDeps) error {
+	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
-
-	module, err := findModule(ctx, s.Entity.Module)
+	ectx := phase3d2bNewExecContext(ctx, deps)
+	module, err := findModule(ectx, s.Entity.Module)
 	if err != nil {
 		return err
 	}
 
-	dm, err := getDomainModelGenCached(ctx, module.ID)
+	dm, err := getDomainModelGenCached(ectx, module.ID)
 	if err != nil {
 		return mdlerrors.NewBackend("get domain model", err)
 	}
@@ -45,7 +45,7 @@ func execGrantEntityAccessGen(ctx *ExecContext, s *ast.GrantEntityAccessStmt) er
 		return mdlerrors.NewNotFound("entity", s.Entity.Module+"."+s.Entity.Name)
 	}
 
-	entity, _, err := findEntityGen(ctx, s.Entity)
+	entity, _, err := findEntityGen(ectx, s.Entity)
 	if err != nil {
 		return mdlerrors.NewBackend("find entity", err)
 	}
@@ -55,7 +55,7 @@ func execGrantEntityAccessGen(ctx *ExecContext, s *ast.GrantEntityAccessStmt) er
 
 	var roleNames []string
 	for _, role := range s.Roles {
-		found, err := validateModuleRole(ctx, role)
+		found, err := validateModuleRole(ectx, role)
 		if err != nil {
 			return err
 		}
@@ -91,9 +91,6 @@ func execGrantEntityAccessGen(ctx *ExecContext, s *ast.GrantEntityAccessStmt) er
 
 	var memberAccesses []types.EntityMemberAccess
 
-	// memberSetFrom builds a lookup that accepts both qualified names
-	// ("HD.Ticket_Customer") and local names ("Ticket_Customer") so that
-	// association.Name() matches even when the MDL grant uses a qualified form.
 	memberSetFrom := func(members []string) map[string]bool {
 		s := make(map[string]bool, len(members)*2)
 		for _, m := range members {
@@ -118,7 +115,6 @@ func execGrantEntityAccessGen(ctx *ExecContext, s *ast.GrantEntityAccessStmt) er
 		} else if readMemberSet[attr.Name()] {
 			rights = "ReadOnly"
 		}
-		// Calculated attributes cannot have write rights (CE6592).
 		isCalculated := false
 		if val := attr.Value(); val != nil && val.TypeName() == "DomainModels$CalculatedValue" {
 			isCalculated = true
@@ -132,8 +128,6 @@ func execGrantEntityAccessGen(ctx *ExecContext, s *ast.GrantEntityAccessStmt) er
 		})
 	}
 
-	// MemberAccess for associations is only required on the FROM entity
-	// (ParentID = FROM entity / FK owner). Adding to the TO side triggers CE0066.
 	for _, assocElem := range dm.AssociationsItems() {
 		assoc, ok := assocElem.(*genDm.Association)
 		if !ok || model.ID(assoc.ParentRefID()) != model.ID(entity.ID()) {
@@ -180,7 +174,7 @@ func execGrantEntityAccessGen(ctx *ExecContext, s *ast.GrantEntityAccessStmt) er
 		})
 	}
 
-	if err := ctx.SecurityEntityAccessManager.AddEntityAccessRule(backend.EntityAccessRuleParams{
+	if err := deps.SecurityEntityAccessManager.AddEntityAccessRule(backend.EntityAccessRuleParams{
 		UnitID:              model.ID(dm.ID()),
 		EntityName:          s.Entity.Name,
 		RoleNames:           roleNames,
@@ -193,40 +187,37 @@ func execGrantEntityAccessGen(ctx *ExecContext, s *ast.GrantEntityAccessStmt) er
 		return mdlerrors.NewBackend("grant entity access", err)
 	}
 
-	// Invalidate the domain model cache so subsequent reads (e.g. DROP ATTRIBUTE
-	// cleanup) see the access rules just written rather than the pre-grant snapshot.
-	invalidateDomainModelGenForModule(ctx, module.ID)
-	invalidateDomainModelsCache(ctx)
+	invalidateDomainModelGenForModule(ectx, module.ID)
+	invalidateDomainModelsCache(ectx)
 
-	if msgs, err := ctx.SecurityEntityAccessManager.ReconcileMemberAccesses(model.ID(dm.ID()), module.Name); err != nil {
+	if msgs, err := deps.SecurityEntityAccessManager.ReconcileMemberAccesses(model.ID(dm.ID()), module.Name); err != nil {
 		return mdlerrors.NewBackend("reconcile member accesses", err)
-	} else if len(msgs) > 0 && !ctx.Quiet {
+	} else if len(msgs) > 0 && !deps.Quiet {
 		for _, msg := range msgs {
-			fmt.Fprintf(ctx.Output, "  reconciled: %s\n", msg)
+			fmt.Fprintf(deps.Output, "  reconciled: %s\n", msg)
 		}
 	}
 
-	ctx.trackModifiedDomainModel(module.ID, module.Name)
-	fmt.Fprintf(ctx.Output, "Granted access on %s.%s to %s\n", s.Entity.Module, s.Entity.Name, strings.Join(roleNames, ", "))
-	if !ctx.Quiet {
-		fmt.Fprint(ctx.Output, formatAccessRuleResult(ctx, s.Entity.Module, s.Entity.Name, roleNames))
+	ectx.trackModifiedDomainModel(module.ID, module.Name)
+	fmt.Fprintf(deps.Output, "Granted access on %s.%s to %s\n", s.Entity.Module, s.Entity.Name, strings.Join(roleNames, ", "))
+	if !deps.Quiet {
+		fmt.Fprint(deps.Output, formatAccessRuleResult(ectx, s.Entity.Module, s.Entity.Name, roleNames))
 	}
 	return nil
 }
 
-// execRevokeEntityAccessGen handles REVOKE roles ON MODULE.ENTITY [(rights...)].
-// Gen-typed security validation; domain-model read via GetDomainModel (passthrough).
-func execRevokeEntityAccessGen(ctx *ExecContext, s *ast.RevokeEntityAccessStmt) error {
-	if !ctx.ConnectedForWrite() {
+// execRevokeEntityAccessGenFn is the HandlerDeps version of execRevokeEntityAccessGen.
+func execRevokeEntityAccessGenFn(ctx context.Context, s *ast.RevokeEntityAccessStmt, deps *HandlerDeps) error {
+	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
-
-	module, err := findModule(ctx, s.Entity.Module)
+	ectx := phase3d2bNewExecContext(ctx, deps)
+	module, err := findModule(ectx, s.Entity.Module)
 	if err != nil {
 		return err
 	}
 
-	dm, err := getDomainModelGenCached(ctx, module.ID)
+	dm, err := getDomainModelGenCached(ectx, module.ID)
 	if err != nil {
 		return mdlerrors.NewBackend("get domain model", err)
 	}
@@ -234,7 +225,7 @@ func execRevokeEntityAccessGen(ctx *ExecContext, s *ast.RevokeEntityAccessStmt) 
 		return mdlerrors.NewNotFound("entity", s.Entity.Module+"."+s.Entity.Name)
 	}
 
-	entity, _, err := findEntityGen(ctx, s.Entity)
+	entity, _, err := findEntityGen(ectx, s.Entity)
 	if err != nil {
 		return mdlerrors.NewBackend("find entity", err)
 	}
@@ -244,7 +235,7 @@ func execRevokeEntityAccessGen(ctx *ExecContext, s *ast.RevokeEntityAccessStmt) 
 
 	var roleNames []string
 	for _, role := range s.Roles {
-		found, err := validateModuleRole(ctx, role)
+		found, err := validateModuleRole(ectx, role)
 		if err != nil {
 			return err
 		}
@@ -257,7 +248,6 @@ func execRevokeEntityAccessGen(ctx *ExecContext, s *ast.RevokeEntityAccessStmt) 
 	}
 
 	if len(s.Rights) > 0 {
-		// Partial revoke — downgrade specific rights.
 		revocation := types.EntityAccessRevocation{}
 		for _, right := range s.Rights {
 			switch right.Type {
@@ -282,40 +272,49 @@ func execRevokeEntityAccessGen(ctx *ExecContext, s *ast.RevokeEntityAccessStmt) 
 			}
 		}
 
-		modified, err := ctx.SecurityEntityAccessManager.RevokeEntityMemberAccess(model.ID(dm.ID()), s.Entity.Name, roleNames, revocation)
+		modified, err := deps.SecurityEntityAccessManager.RevokeEntityMemberAccess(model.ID(dm.ID()), s.Entity.Name, roleNames, revocation)
 		if err != nil {
 			return mdlerrors.NewBackend("revoke entity access", err)
 		}
 
 		if modified == 0 {
-			fmt.Fprintf(ctx.Output, "No access rules found matching %s on %s.%s\n",
+			fmt.Fprintf(deps.Output, "No access rules found matching %s on %s.%s\n",
 				strings.Join(roleNames, ", "), s.Entity.Module, s.Entity.Name)
 		} else {
-			fmt.Fprintf(ctx.Output, "Revoked partial access on %s.%s from %s\n",
+			fmt.Fprintf(deps.Output, "Revoked partial access on %s.%s from %s\n",
 				s.Entity.Module, s.Entity.Name, strings.Join(roleNames, ", "))
-			if !ctx.Quiet {
-				fmt.Fprint(ctx.Output, formatAccessRuleResult(ctx, s.Entity.Module, s.Entity.Name, roleNames))
+			if !deps.Quiet {
+				fmt.Fprint(deps.Output, formatAccessRuleResult(ectx, s.Entity.Module, s.Entity.Name, roleNames))
 			}
 		}
 	} else {
-		// Full revoke — remove entire access rule.
-		modified, err := ctx.SecurityEntityAccessManager.RemoveEntityAccessRule(model.ID(dm.ID()), s.Entity.Name, roleNames)
+		modified, err := deps.SecurityEntityAccessManager.RemoveEntityAccessRule(model.ID(dm.ID()), s.Entity.Name, roleNames)
 		if err != nil {
 			return mdlerrors.NewBackend("revoke entity access", err)
 		}
 
 		if modified == 0 {
-			fmt.Fprintf(ctx.Output, "No access rules found matching %s on %s.%s\n",
+			fmt.Fprintf(deps.Output, "No access rules found matching %s on %s.%s\n",
 				strings.Join(roleNames, ", "), s.Entity.Module, s.Entity.Name)
 		} else {
-			fmt.Fprintf(ctx.Output, "Revoked access on %s.%s from %s\n",
+			fmt.Fprintf(deps.Output, "Revoked access on %s.%s from %s\n",
 				s.Entity.Module, s.Entity.Name, strings.Join(roleNames, ", "))
-			if !ctx.Quiet {
-				fmt.Fprint(ctx.Output, "  Result: (no access)\n")
+			if !deps.Quiet {
+				fmt.Fprint(deps.Output, "  Result: (no access)\n")
 			}
 		}
 	}
 
-	ctx.trackModifiedDomainModel(module.ID, module.Name)
+	ectx.trackModifiedDomainModel(module.ID, module.Name)
 	return nil
+}
+
+// execGrantEntityAccessGen handles GRANT roles ON MODULE.ENTITY. Delegates to Fn version.
+func execGrantEntityAccessGen(ctx *ExecContext, s *ast.GrantEntityAccessStmt) error {
+	return execGrantEntityAccessGenFn(ctx, s, execContextToDeps(ctx))
+}
+
+// execRevokeEntityAccessGen handles REVOKE roles ON MODULE.ENTITY. Delegates to Fn version.
+func execRevokeEntityAccessGen(ctx *ExecContext, s *ast.RevokeEntityAccessStmt) error {
+	return execRevokeEntityAccessGenFn(ctx, s, execContextToDeps(ctx))
 }

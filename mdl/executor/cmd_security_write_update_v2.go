@@ -4,6 +4,7 @@
 package executor
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
@@ -11,44 +12,44 @@ import (
 	"github.com/mendixlabs/mxcli/model"
 )
 
-// execUpdateSecurityGen handles UPDATE SECURITY [IN Module].
-func execUpdateSecurityGen(ctx *ExecContext, s *ast.UpdateSecurityStmt) error {
-	if !ctx.ConnectedForWrite() {
+// execUpdateSecurityGenFn is the HandlerDeps version of execUpdateSecurityGen.
+func execUpdateSecurityGenFn(ctx context.Context, s *ast.UpdateSecurityStmt, deps *HandlerDeps) error {
+	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
-
-	modules, err := getModulesFromCache(ctx)
+	ectx := phase3d2bNewExecContext(ctx, deps)
+	modules, err := getModulesFromCache(ectx)
 	if err != nil {
 		return err
 	}
-
 	totalModified := 0
 	for _, mod := range modules {
 		if s.Module != "" && mod.Name != s.Module {
 			continue
 		}
-
-		dm, err := getDomainModelGenCached(ctx, mod.ID)
+		dm, err := getDomainModelGenCached(ectx, mod.ID)
 		if err != nil || dm == nil {
-			continue // module may not have a domain model
+			continue
 		}
-
-		msgs, err := ctx.SecurityEntityAccessManager.ReconcileMemberAccesses(model.ID(dm.ID()), mod.Name)
+		msgs, err := deps.SecurityEntityAccessManager.ReconcileMemberAccesses(model.ID(dm.ID()), mod.Name)
 		if err != nil {
 			return mdlerrors.NewBackend(fmt.Sprintf("reconcile security for module %s", mod.Name), err)
 		}
 		if len(msgs) > 0 {
-			invalidateDomainModelGenForModule(ctx, mod.ID)
+			invalidateDomainModelGenForModule(ectx, mod.ID)
 		}
 		for _, msg := range msgs {
-			fmt.Fprintf(ctx.Output, "  [%s] %s\n", mod.Name, msg)
+			fmt.Fprintf(deps.Output, "  [%s] %s\n", mod.Name, msg)
 			totalModified++
 		}
 	}
-
 	if totalModified == 0 {
-		fmt.Fprintf(ctx.Output, "All entity access rules are up to date\n")
+		fmt.Fprintf(deps.Output, "All entity access rules are up to date\n")
 	}
-
 	return nil
+}
+
+// execUpdateSecurityGen handles UPDATE SECURITY. Delegates to Fn version.
+func execUpdateSecurityGen(ctx *ExecContext, s *ast.UpdateSecurityStmt) error {
+	return execUpdateSecurityGenFn(ctx, s, execContextToDeps(ctx))
 }
