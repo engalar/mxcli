@@ -1214,7 +1214,7 @@ func describeWorkflowGenFuture(ctx context.Context, output io.Writer, wfRepo rep
 	if paramEntity != "" {
 		rendered += fmt.Sprintf(" (entity: %s)", paramEntity)
 	}
-	rendered += "\nbegin"
+	rendered += "\n{"
 	if acts > 0 {
 		rendered += fmt.Sprintf("\n  -- %d activities", acts)
 	}
@@ -1224,7 +1224,7 @@ func describeWorkflowGenFuture(ctx context.Context, output io.Writer, wfRepo rep
 	if decs > 0 {
 		rendered += fmt.Sprintf("\n  -- %d decisions", decs)
 	}
-	rendered += "\nend;\n/"
+	rendered += "\n}\n/"
 
 	fmt.Fprintln(output, rendered)
 	return nil
