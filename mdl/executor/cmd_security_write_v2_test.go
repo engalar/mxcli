@@ -143,7 +143,7 @@ func TestExecGrantMicroflowAccessGen_Roundtrip(t *testing.T) {
 		},
 	}
 
-	if err := execGrantMicroflowAccessGen(ctx, stmt); err != nil {
+	if err := execGrantMicroflowAccessGenFn(ctx, stmt, execContextToDeps(ctx)); err != nil {
 		t.Fatalf("execGrantMicroflowAccessGen: %v", err)
 	}
 	out := buf.String()
@@ -178,7 +178,7 @@ func TestExecGrantMicroflowAccessGen_NotFound(t *testing.T) {
 		Roles:     []ast.QualifiedName{{Module: "MyFirstModule", Name: "User"}},
 	}
 
-	err := execGrantMicroflowAccessGen(ctx, stmt)
+	err := execGrantMicroflowAccessGenFn(ctx, stmt, execContextToDeps(ctx))
 	if err == nil {
 		t.Fatal("expected NotFound error, got nil")
 	}
@@ -198,7 +198,7 @@ func TestExecRevokeMicroflowAccessGen_Roundtrip(t *testing.T) {
 		Microflow: ast.QualifiedName{Module: "MyFirstModule", Name: "MyFirstLogic"},
 		Roles:     []ast.QualifiedName{{Module: "MyFirstModule", Name: "User"}},
 	}
-	if err := execGrantMicroflowAccessGen(ctx, grant); err != nil {
+	if err := execGrantMicroflowAccessGenFn(ctx, grant, execContextToDeps(ctx)); err != nil {
 		t.Fatalf("grant setup: %v", err)
 	}
 
@@ -208,7 +208,7 @@ func TestExecRevokeMicroflowAccessGen_Roundtrip(t *testing.T) {
 	}
 	var buf bytes.Buffer
 	ctx.Output = &buf
-	if err := execRevokeMicroflowAccessGen(ctx, revoke); err != nil {
+	if err := execRevokeMicroflowAccessGenFn(ctx, revoke, execContextToDeps(ctx)); err != nil {
 		t.Fatalf("execRevokeMicroflowAccessGen: %v", err)
 	}
 	if !strings.Contains(buf.String(), "Revoked") {
@@ -236,7 +236,7 @@ func TestExecRevokeMicroflowAccessGen_NoMatch(t *testing.T) {
 		Microflow: ast.QualifiedName{Module: "MyFirstModule", Name: "MyFirstLogic"},
 		Roles:     []ast.QualifiedName{{Module: "MyFirstModule", Name: "User"}},
 	}
-	if err := execRevokeMicroflowAccessGen(ctx, stmt); err != nil {
+	if err := execRevokeMicroflowAccessGenFn(ctx, stmt, execContextToDeps(ctx)); err != nil {
 		t.Fatalf("execRevokeMicroflowAccessGen: %v", err)
 	}
 	if !strings.Contains(buf.String(), "None of the specified roles") {

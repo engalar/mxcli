@@ -139,9 +139,9 @@ func TestExecDropEntity_Mock_NotConnected(t *testing.T) {
 
 func TestExecDropMicroflow_Mock_NotConnected(t *testing.T) {
 	ctx, _ := newMockCtx(t, withBackend(disconnectedBackend()))
-	assertError(t, execDropMicroflow(ctx, &ast.DropMicroflowStmt{
+	assertError(t, execDropMicroflowFn(ctx, &ast.DropMicroflowStmt{
 		Name: ast.QualifiedName{Module: "M", Name: "F"},
-	}))
+	}, execContextToDeps(ctx)))
 }
 
 func TestExecDropPage_Mock_NotConnected(t *testing.T) {
@@ -167,15 +167,15 @@ func TestExecDropAssociation_Mock_NotConnected(t *testing.T) {
 
 func TestExecDropJavaAction_Mock_NotConnected(t *testing.T) {
 	ctx, _ := newMockCtx(t, withBackend(disconnectedBackend()))
-	assertError(t, execDropJavaActionGen(ctx, &ast.DropJavaActionStmt{
+	assertError(t, execDropJavaActionGenFn(ctx, &ast.DropJavaActionStmt{
 		Name: ast.QualifiedName{Module: "M", Name: "J"},
-	}))
+	}, execContextToDeps(ctx)))
 }
 
 func TestExecDropFolder_Mock_NotConnected(t *testing.T) {
 	ctx, _ := newMockCtx(t, withBackend(disconnectedBackend()))
-	assertError(t, execDropFolder(ctx, &ast.DropFolderStmt{
+	assertError(t, execDropFolderFn(ctx, &ast.DropFolderStmt{
 		FolderPath: "Resources/Images",
 		Module:     "M",
-	}))
+	}, execContextToDeps(ctx)))
 }

@@ -25,11 +25,11 @@ func TestImport_NotConnected(t *testing.T) {
 		IsConnectedFunc: func() bool { return false },
 	}
 	ctx, _ := newMockCtx(t, withBackend(mb))
-	err := execImport(ctx, &ast.ImportStmt{
+	err := execImportFn(ctx, &ast.ImportStmt{
 		SourceAlias:  "mydb",
 		Query:        "SELECT * FROM users",
 		TargetEntity: "MyModule.User",
-	})
+	}, execContextToDeps(ctx))
 	assertError(t, err)
 	assertContainsStr(t, err.Error(), "not connected")
 }

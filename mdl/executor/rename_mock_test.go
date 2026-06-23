@@ -24,11 +24,11 @@ import (
 func TestRename_NotConnected(t *testing.T) {
 	mb := &mock.MockBackend{IsConnectedFunc: func() bool { return false }}
 	ctx, _ := newMockCtx(t, withBackend(mb))
-	err := execRename(ctx, &ast.RenameStmt{
+	err := execRenameFn(ctx, &ast.RenameStmt{
 		ObjectType: "entity",
 		Name:       ast.QualifiedName{Module: "MyModule", Name: "OldName"},
 		NewName:    "NewName",
-	})
+	}, execContextToDeps(ctx))
 	assertError(t, err)
 	assertContainsStr(t, err.Error(), "not connected")
 }
@@ -40,11 +40,11 @@ func TestRename_NotConnected(t *testing.T) {
 func TestRename_UnsupportedType(t *testing.T) {
 	mb := &mock.MockBackend{IsConnectedFunc: func() bool { return true }}
 	ctx, _ := newMockCtx(t, withBackend(mb))
-	err := execRename(ctx, &ast.RenameStmt{
+	err := execRenameFn(ctx, &ast.RenameStmt{
 		ObjectType: "snippet",
 		Name:       ast.QualifiedName{Module: "M", Name: "N"},
 		NewName:    "X",
-	})
+	}, execContextToDeps(ctx))
 	assertError(t, err)
 	assertContainsStr(t, err.Error(), "not supported")
 }
@@ -69,11 +69,11 @@ func TestRename_Entity_Success(t *testing.T) {
 	}
 	h := mkHierarchy(mod)
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
-	assertNoError(t, execRename(ctx, &ast.RenameStmt{
+	assertNoError(t, execRenameFn(ctx, &ast.RenameStmt{
 		ObjectType: "entity",
 		Name:       ast.QualifiedName{Module: "MyModule", Name: "OldEntity"},
 		NewName:    "NewEntity",
-	}))
+	}, execContextToDeps(ctx)))
 	if !dmUpdated {
 		t.Error("Expected UpdateDomainModel to be called")
 	}
@@ -97,11 +97,11 @@ func TestRename_Entity_NotFound(t *testing.T) {
 	}
 	h := mkHierarchy(mod)
 	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
-	err := execRename(ctx, &ast.RenameStmt{
+	err := execRenameFn(ctx, &ast.RenameStmt{
 		ObjectType: "entity",
 		Name:       ast.QualifiedName{Module: "MyModule", Name: "Missing"},
 		NewName:    "New",
-	})
+	}, execContextToDeps(ctx))
 	assertError(t, err)
 	assertContainsStr(t, err.Error(), "not found")
 }
@@ -127,12 +127,12 @@ func TestRename_Entity_DryRun(t *testing.T) {
 	}
 	h := mkHierarchy(mod)
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
-	assertNoError(t, execRename(ctx, &ast.RenameStmt{
+	assertNoError(t, execRenameFn(ctx, &ast.RenameStmt{
 		ObjectType: "entity",
 		Name:       ast.QualifiedName{Module: "MyModule", Name: "OldEntity"},
 		NewName:    "NewEntity",
 		DryRun:     true,
-	}))
+	}, execContextToDeps(ctx)))
 	assertContainsStr(t, buf.String(), "Would rename")
 	assertContainsStr(t, buf.String(), "Page1")
 }
@@ -175,11 +175,11 @@ func TestRename_Microflow_Success(t *testing.T) {
 		withHierarchy(h),
 		withMicroflowsRepo(mfRepo),
 	)
-	assertNoError(t, execRename(ctx, &ast.RenameStmt{
+	assertNoError(t, execRenameFn(ctx, &ast.RenameStmt{
 		ObjectType: "microflow",
 		Name:       ast.QualifiedName{Module: "MyModule", Name: "OldMF"},
 		NewName:    "NewMF",
-	}))
+	}, execContextToDeps(ctx)))
 	if !renameCalled {
 		t.Error("Expected RenameDocumentByName to be called")
 	}
@@ -203,11 +203,11 @@ func TestRename_Page_NotFound(t *testing.T) {
 	}
 	h := mkHierarchy(mod)
 	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
-	err := execRename(ctx, &ast.RenameStmt{
+	err := execRenameFn(ctx, &ast.RenameStmt{
 		ObjectType: "page",
 		Name:       ast.QualifiedName{Module: "MyModule", Name: "Missing"},
 		NewName:    "New",
-	})
+	}, execContextToDeps(ctx))
 	assertError(t, err)
 	assertContainsStr(t, err.Error(), "not found")
 }
@@ -235,11 +235,11 @@ func TestRename_Module_Success(t *testing.T) {
 	}
 	h := mkHierarchy(mod)
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
-	assertNoError(t, execRename(ctx, &ast.RenameStmt{
+	assertNoError(t, execRenameFn(ctx, &ast.RenameStmt{
 		ObjectType: "module",
 		Name:       ast.QualifiedName{Module: "OldModule"},
 		NewName:    "NewModule",
-	}))
+	}, execContextToDeps(ctx)))
 	if !moduleUpdated {
 		t.Error("Expected UpdateModule to be called")
 	}
@@ -269,11 +269,11 @@ func TestRename_Association_Success(t *testing.T) {
 	}
 	h := mkHierarchy(mod)
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
-	assertNoError(t, execRename(ctx, &ast.RenameStmt{
+	assertNoError(t, execRenameFn(ctx, &ast.RenameStmt{
 		ObjectType: "association",
 		Name:       ast.QualifiedName{Module: "MyModule", Name: "OldAssoc"},
 		NewName:    "NewAssoc",
-	}))
+	}, execContextToDeps(ctx)))
 	if !dmUpdated {
 		t.Error("Expected UpdateDomainModel to be called")
 	}
@@ -294,11 +294,11 @@ func TestRename_Association_NotFound(t *testing.T) {
 	}
 	h := mkHierarchy(mod)
 	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
-	err := execRename(ctx, &ast.RenameStmt{
+	err := execRenameFn(ctx, &ast.RenameStmt{
 		ObjectType: "association",
 		Name:       ast.QualifiedName{Module: "MyModule", Name: "Missing"},
 		NewName:    "New",
-	})
+	}, execContextToDeps(ctx))
 	assertError(t, err)
 	assertContainsStr(t, err.Error(), "not found")
 }
@@ -321,11 +321,11 @@ func TestRename_Entity_BackendError(t *testing.T) {
 	}
 	h := mkHierarchy(mod)
 	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
-	err := execRename(ctx, &ast.RenameStmt{
+	err := execRenameFn(ctx, &ast.RenameStmt{
 		ObjectType: "entity",
 		Name:       ast.QualifiedName{Module: "MyModule", Name: "Ent"},
 		NewName:    "New",
-	})
+	}, execContextToDeps(ctx))
 	assertError(t, err)
 	assertContainsStr(t, err.Error(), "scan references")
 }
@@ -362,11 +362,11 @@ func TestRename_JavaAction_Success(t *testing.T) {
 	h := mkHierarchy(mod)
 	withContainer(h, model.ID(jaGen.ID()), mod.ID)
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
-	assertNoError(t, execRename(ctx, &ast.RenameStmt{
+	assertNoError(t, execRenameFn(ctx, &ast.RenameStmt{
 		ObjectType: "javaaction",
 		Name:       ast.QualifiedName{Module: "MyModule", Name: "OldHelper"},
 		NewName:    "NewHelper",
-	}))
+	}, execContextToDeps(ctx)))
 	if !documentRenamed {
 		t.Error("Expected RenameDocumentByName to be called")
 	}
@@ -394,11 +394,11 @@ func TestRename_JavaAction_NotFound(t *testing.T) {
 	}
 	h := mkHierarchy(mod)
 	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
-	err := execRename(ctx, &ast.RenameStmt{
+	err := execRenameFn(ctx, &ast.RenameStmt{
 		ObjectType: "javaaction",
 		Name:       ast.QualifiedName{Module: "MyModule", Name: "Missing"},
 		NewName:    "New",
-	})
+	}, execContextToDeps(ctx))
 	assertError(t, err)
 	assertContainsStr(t, err.Error(), "not found")
 }
@@ -426,11 +426,11 @@ func TestRename_Workflow_Success(t *testing.T) {
 	h := mkHierarchy(mod)
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
 	ctx.Workflows = makeWorkflowsRepo([]*genWf.Workflow{wfGen}, mod.ID)
-	assertNoError(t, execRename(ctx, &ast.RenameStmt{
+	assertNoError(t, execRenameFn(ctx, &ast.RenameStmt{
 		ObjectType: "workflow",
 		Name:       ast.QualifiedName{Module: "BPModule", Name: "OldProcess"},
 		NewName:    "NewProcess",
-	}))
+	}, execContextToDeps(ctx)))
 	if !renameCalled {
 		t.Error("Expected RenameDocumentByName to be called")
 	}
@@ -482,11 +482,11 @@ func TestRename_Nanoflow_CollisionError(t *testing.T) {
 		withMicroflowsRepo(mfRepo),
 		withNanoflowsRepo(nfRepo),
 	)
-	err := execRename(ctx, &ast.RenameStmt{
+	err := execRenameFn(ctx, &ast.RenameStmt{
 		ObjectType: "nanoflow",
 		Name:       ast.QualifiedName{Module: "MyModule", Name: "NF1"},
 		NewName:    "NF2",
-	})
+	}, execContextToDeps(ctx))
 	assertError(t, err)
 	assertContainsStr(t, err.Error(), "already exists")
 }
@@ -519,11 +519,11 @@ func TestRename_Microflow_CollisionError(t *testing.T) {
 		withHierarchy(h),
 		withMicroflowsRepo(mfRepo),
 	)
-	err := execRename(ctx, &ast.RenameStmt{
+	err := execRenameFn(ctx, &ast.RenameStmt{
 		ObjectType: "microflow",
 		Name:       ast.QualifiedName{Module: "MyModule", Name: "MF1"},
 		NewName:    "MF2",
-	})
+	}, execContextToDeps(ctx))
 	assertError(t, err)
 	assertContainsStr(t, err.Error(), "already exists")
 }
@@ -540,11 +540,11 @@ func TestRename_Entity_CollisionError(t *testing.T) {
 	}
 	h := mkHierarchy(mod)
 	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
-	err := execRename(ctx, &ast.RenameStmt{
+	err := execRenameFn(ctx, &ast.RenameStmt{
 		ObjectType: "entity",
 		Name:       ast.QualifiedName{Module: "MyModule", Name: "EntityA"},
 		NewName:    "EntityB",
-	})
+	}, execContextToDeps(ctx))
 	assertError(t, err)
 	assertContainsStr(t, err.Error(), "already exists")
 }
@@ -559,11 +559,11 @@ func TestRename_Workflow_NotFound(t *testing.T) {
 	h := mkHierarchy(mod)
 	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
 	ctx.Workflows = makeWorkflowsRepo(nil, "")
-	err := execRename(ctx, &ast.RenameStmt{
+	err := execRenameFn(ctx, &ast.RenameStmt{
 		ObjectType: "workflow",
 		Name:       ast.QualifiedName{Module: "BPModule", Name: "Missing"},
 		NewName:    "New",
-	})
+	}, execContextToDeps(ctx))
 	assertError(t, err)
 	assertContainsStr(t, err.Error(), "not found")
 }

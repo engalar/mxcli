@@ -129,12 +129,12 @@ func TestCreateImportMapping_OrModify_PreservesID(t *testing.T) {
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
-	err := execCreateImportMapping(ctx, &ast.CreateImportMappingStmt{
+	err := execCreateImportMappingFn(ctx, &ast.CreateImportMappingStmt{
 		Name:           ast.QualifiedName{Module: "Integration", Name: "ImportOrders"},
 		SchemaKind:     "JSON_STRUCTURE",
 		SchemaRef:      ast.QualifiedName{Module: "Integration", Name: "PetSchema"},
 		CreateOrModify: true,
-	})
+	}, execContextToDeps(ctx))
 	assertNoError(t, err)
 	assertContainsStr(t, buf.String(), "Modified import mapping")
 	if updatedID != existingID {
@@ -159,8 +159,8 @@ func TestCreateImportMapping_AlreadyExists_NoOrModify(t *testing.T) {
 	}
 
 	ctx, _ := newMockCtx(t, withBackend(mb))
-	err := execCreateImportMapping(ctx, &ast.CreateImportMappingStmt{
+	err := execCreateImportMappingFn(ctx, &ast.CreateImportMappingStmt{
 		Name: ast.QualifiedName{Module: "Integration", Name: "ImportOrders"},
-	})
+	}, execContextToDeps(ctx))
 	assertError(t, err)
 }

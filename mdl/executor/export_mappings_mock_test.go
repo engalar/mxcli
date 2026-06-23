@@ -125,7 +125,7 @@ func TestDropExportMapping_NotFound_NilNil(t *testing.T) {
 
 	ctx, _ := newMockCtx(t, withBackend(mb))
 	stmt := &ast.DropExportMappingStmt{Name: ast.QualifiedName{Module: "Integration", Name: "NoSuch"}}
-	assertError(t, execDropExportMapping(ctx, stmt))
+	assertError(t, execDropExportMappingFn(ctx, stmt, execContextToDeps(ctx)))
 }
 
 func TestCreateExportMapping_OrModify_PreservesID(t *testing.T) {
@@ -156,12 +156,12 @@ func TestCreateExportMapping_OrModify_PreservesID(t *testing.T) {
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
-	err := execCreateExportMapping(ctx, &ast.CreateExportMappingStmt{
+	err := execCreateExportMappingFn(ctx, &ast.CreateExportMappingStmt{
 		Name:           ast.QualifiedName{Module: "Integration", Name: "ExportOrders"},
 		SchemaKind:     "JSON_STRUCTURE",
 		SchemaRef:      ast.QualifiedName{Module: "Integration", Name: "PetSchema"},
 		CreateOrModify: true,
-	})
+	}, execContextToDeps(ctx))
 	assertNoError(t, err)
 	assertContainsStr(t, buf.String(), "Modified export mapping")
 	if updatedID != existingID {
@@ -186,8 +186,8 @@ func TestCreateExportMapping_AlreadyExists_NoOrModify(t *testing.T) {
 	}
 
 	ctx, _ := newMockCtx(t, withBackend(mb))
-	err := execCreateExportMapping(ctx, &ast.CreateExportMappingStmt{
+	err := execCreateExportMappingFn(ctx, &ast.CreateExportMappingStmt{
 		Name: ast.QualifiedName{Module: "Integration", Name: "ExportOrders"},
-	})
+	}, execContextToDeps(ctx))
 	assertError(t, err)
 }

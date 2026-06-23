@@ -21,7 +21,7 @@ func TestDropFolder_NotConnected(t *testing.T) {
 		IsConnectedFunc: func() bool { return false },
 	}
 	ctx, _ := newMockCtx(t, withBackend(mb))
-	err := execDropFolder(ctx, &ast.DropFolderStmt{FolderPath: "Resources", Module: "MyModule"})
+	err := execDropFolderFn(ctx, &ast.DropFolderStmt{FolderPath: "Resources", Module: "MyModule"}, execContextToDeps(ctx))
 	assertError(t, err)
 	assertContainsStr(t, err.Error(), "not connected")
 }
@@ -34,7 +34,7 @@ func TestDropFolder_ModuleNotFound(t *testing.T) {
 	}
 	h := mkHierarchy(mod)
 	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
-	err := execDropFolder(ctx, &ast.DropFolderStmt{FolderPath: "Resources", Module: "MyModule"})
+	err := execDropFolderFn(ctx, &ast.DropFolderStmt{FolderPath: "Resources", Module: "MyModule"}, execContextToDeps(ctx))
 	assertError(t, err)
 	assertContainsStr(t, err.Error(), "not found")
 }
@@ -48,7 +48,7 @@ func TestDropFolder_FolderNotFound(t *testing.T) {
 	}
 	h := mkHierarchy(mod)
 	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
-	err := execDropFolder(ctx, &ast.DropFolderStmt{FolderPath: "NonExistent", Module: "MyModule"})
+	err := execDropFolderFn(ctx, &ast.DropFolderStmt{FolderPath: "NonExistent", Module: "MyModule"}, execContextToDeps(ctx))
 	assertError(t, err)
 	assertContainsStr(t, err.Error(), "not found")
 }
@@ -68,7 +68,7 @@ func TestDropFolder_Success(t *testing.T) {
 	}
 	h := mkHierarchy(mod)
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
-	assertNoError(t, execDropFolder(ctx, &ast.DropFolderStmt{FolderPath: "Resources", Module: "MyModule"}))
+	assertNoError(t, execDropFolderFn(ctx, &ast.DropFolderStmt{FolderPath: "Resources", Module: "MyModule"}, execContextToDeps(ctx)))
 	if !deleteCalled {
 		t.Error("expected DeleteFolder to be called")
 	}
@@ -90,7 +90,7 @@ func TestDropFolder_BackendError(t *testing.T) {
 	}
 	h := mkHierarchy(mod)
 	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
-	err := execDropFolder(ctx, &ast.DropFolderStmt{FolderPath: "Resources", Module: "MyModule"})
+	err := execDropFolderFn(ctx, &ast.DropFolderStmt{FolderPath: "Resources", Module: "MyModule"}, execContextToDeps(ctx))
 	assertError(t, err)
 	assertContainsStr(t, err.Error(), "delete folder")
 }
@@ -112,7 +112,7 @@ func TestDropFolder_NestedPath(t *testing.T) {
 	}
 	h := mkHierarchy(mod)
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
-	assertNoError(t, execDropFolder(ctx, &ast.DropFolderStmt{FolderPath: "Resources/Images", Module: "MyModule"}))
+	assertNoError(t, execDropFolderFn(ctx, &ast.DropFolderStmt{FolderPath: "Resources/Images", Module: "MyModule"}, execContextToDeps(ctx)))
 	if deletedID != childFolderID {
 		t.Errorf("expected to delete child folder %s, got %s", childFolderID, deletedID)
 	}
@@ -128,9 +128,9 @@ func TestMoveFolder_NotConnected(t *testing.T) {
 		IsConnectedFunc: func() bool { return false },
 	}
 	ctx, _ := newMockCtx(t, withBackend(mb))
-	err := execMoveFolder(ctx, &ast.MoveFolderStmt{
+	err := execMoveFolderFn(ctx, &ast.MoveFolderStmt{
 		Name: ast.QualifiedName{Module: "MyModule", Name: "Resources"},
-	})
+	}, execContextToDeps(ctx))
 	assertError(t, err)
 	assertContainsStr(t, err.Error(), "not connected")
 }
@@ -151,10 +151,10 @@ func TestMoveFolder_ToModule(t *testing.T) {
 	}
 	h := mkHierarchy(srcMod, dstMod)
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
-	assertNoError(t, execMoveFolder(ctx, &ast.MoveFolderStmt{
+	assertNoError(t, execMoveFolderFn(ctx, &ast.MoveFolderStmt{
 		Name:         ast.QualifiedName{Module: "MyModule", Name: "Resources"},
 		TargetModule: "OtherModule",
-	}))
+	}, execContextToDeps(ctx)))
 	if movedTo != dstMod.ID {
 		t.Errorf("expected move to %s, got %s", dstMod.ID, movedTo)
 	}
@@ -179,10 +179,10 @@ func TestMoveFolder_ToFolder(t *testing.T) {
 	}
 	h := mkHierarchy(mod)
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
-	assertNoError(t, execMoveFolder(ctx, &ast.MoveFolderStmt{
+	assertNoError(t, execMoveFolderFn(ctx, &ast.MoveFolderStmt{
 		Name:         ast.QualifiedName{Module: "MyModule", Name: "OldFolder"},
 		TargetFolder: "NewParent",
-	}))
+	}, execContextToDeps(ctx)))
 	if movedTo != dstFolderID {
 		t.Errorf("expected move to %s, got %s", dstFolderID, movedTo)
 	}

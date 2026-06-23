@@ -51,7 +51,7 @@ func TestExecCreateLayout_CallsCreateLayoutGen(t *testing.T) {
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(mkHierarchy(mod)))
 	ctx.Layouts = makeLayoutsRepo(nil, mod.ID)
 
-	if err := execCreateOrModifyLayout(ctx, layoutStmt("Mod", "MyLayout")); err != nil {
+	if err := execCreateOrModifyLayoutFn(ctx, layoutStmt("Mod", "MyLayout"), execContextToDeps(ctx)); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if created == nil {
@@ -71,7 +71,7 @@ func TestExecCreateLayout_CallsCreateLayoutGen(t *testing.T) {
 func TestExecCreateLayout_NotConnected(t *testing.T) {
 	mb := &mock.MockBackend{IsConnectedFunc: func() bool { return false }}
 	ctx, _ := newMockCtx(t, withBackend(mb))
-	err := execCreateOrModifyLayout(ctx, layoutStmt("Mod", "MyLayout"))
+	err := execCreateOrModifyLayoutFn(ctx, layoutStmt("Mod", "MyLayout"), execContextToDeps(ctx))
 	assertError(t, err)
 	assertContainsStr(t, err.Error(), "not connected")
 }
@@ -94,7 +94,7 @@ func TestExecCreateLayout_AlreadyExists(t *testing.T) {
 	ctx.Layouts = makeLayoutsRepo([]*genPg.Layout{existing}, mod.ID)
 
 	s := layoutStmt("Mod", "MyLayout") // IsModify=false → must error
-	err := execCreateOrModifyLayout(ctx, s)
+	err := execCreateOrModifyLayoutFn(ctx, s, execContextToDeps(ctx))
 	assertError(t, err)
 	assertContainsStr(t, err.Error(), "already exists")
 }
@@ -132,7 +132,7 @@ func TestExecCreateLayout_ModifyReplacesExisting(t *testing.T) {
 
 	s := layoutStmt("Mod", "MyLayout")
 	s.IsModify = true
-	if err := execCreateOrModifyLayout(ctx, s); err != nil {
+	if err := execCreateOrModifyLayoutFn(ctx, s, execContextToDeps(ctx)); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if !deleted || !created {

@@ -420,7 +420,7 @@ func TestGrantEntityAccess_XPathConstraint_PreservesRights(t *testing.T) {
 		},
 		XPathConstraint: "[Status = 'Open']",
 	}
-	assertNoError(t, execGrantEntityAccessGen(ctx, stmt))
+	assertNoError(t, execGrantEntityAccessGenFn(ctx, stmt, execContextToDeps(ctx)))
 
 	out := buf.String()
 	assertContainsStr(t, out, "Granted access")
@@ -496,11 +496,11 @@ func TestGrantEntityAccess_FakeRole_Issue399(t *testing.T) {
 			mod.ID: {dm},
 		})),
 	)
-	err := execGrantEntityAccessGen(ctx, &ast.GrantEntityAccessStmt{
+	err := execGrantEntityAccessGenFn(ctx, &ast.GrantEntityAccessStmt{
 		Entity: ast.QualifiedName{Module: "MyModule", Name: "Order"},
 		Roles:  []ast.QualifiedName{{Module: "MyModule", Name: "FakeRole"}},
 		Rights: []ast.EntityAccessRight{{Type: ast.EntityAccessReadAll}},
-	})
+	}, execContextToDeps(ctx))
 	// BUG-04: missing role is now a warning, not a fatal error.
 	if err != nil {
 		var nfe *mdlerrors.NotFoundError
@@ -536,10 +536,10 @@ func TestRevokeEntityAccess_FakeRole_Issue399(t *testing.T) {
 			mod.ID: {dm},
 		})),
 	)
-	err := execRevokeEntityAccessGen(ctx, &ast.RevokeEntityAccessStmt{
+	err := execRevokeEntityAccessGenFn(ctx, &ast.RevokeEntityAccessStmt{
 		Entity: ast.QualifiedName{Module: "MyModule", Name: "Customer"},
 		Roles:  []ast.QualifiedName{{Module: "MyModule", Name: "GhostRole"}},
-	})
+	}, execContextToDeps(ctx))
 	if err != nil {
 		var nfe *mdlerrors.NotFoundError
 		if errors.As(err, &nfe) && nfe.Kind == "module role" {
@@ -664,7 +664,7 @@ func TestGrantMicroflow_MissingRole_IsWarningNotError(t *testing.T) {
 			{Module: "TestModule", Name: "NonExistentRole"},
 		},
 	}
-	err := execGrantMicroflowAccessGen(ctx, stmt)
+	err := execGrantMicroflowAccessGenFn(ctx, stmt, execContextToDeps(ctx))
 	if err != nil {
 		t.Fatalf("expected nil error for missing module role, got: %v", err)
 	}
@@ -721,7 +721,7 @@ func TestGrantMicroflow_OneValidOnePhantomRole_OnlyValidWritten(t *testing.T) {
 			{Module: "TestModule", Name: "Ghost"},
 		},
 	}
-	err := execGrantMicroflowAccessGen(ctx, stmt)
+	err := execGrantMicroflowAccessGenFn(ctx, stmt, execContextToDeps(ctx))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -785,7 +785,7 @@ func TestGrantMicroflow_BareRoleName_InfersModuleFromMicroflow(t *testing.T) {
 			{Module: "", Name: "User"}, // bare name: no module prefix
 		},
 	}
-	err := execGrantMicroflowAccessGen(ctx, stmt)
+	err := execGrantMicroflowAccessGenFn(ctx, stmt, execContextToDeps(ctx))
 	if err != nil {
 		t.Fatalf("bare role name should not error; got: %v", err)
 	}

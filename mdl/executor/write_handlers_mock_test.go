@@ -170,9 +170,9 @@ func TestExecDropMicroflow_Mock(t *testing.T) {
 		withHierarchy(h),
 		withMicroflowsRepo(mfRepo),
 	)
-	err := execDropMicroflow(ctx, &ast.DropMicroflowStmt{
+	err := execDropMicroflowFn(ctx, &ast.DropMicroflowStmt{
 		Name: ast.QualifiedName{Module: "MyModule", Name: "DoSomething"},
-	})
+	}, execContextToDeps(ctx))
 	assertNoError(t, err)
 	assertContainsStr(t, buf.String(), "Dropped microflow:")
 	if len(mfRepo.Deleted) != 1 || mfRepo.Deleted[0] != model.ID(mf.ID()) {
@@ -297,9 +297,9 @@ func TestExecDropJavaAction_Mock(t *testing.T) {
 	withContainer(h, model.ID(jaGen.ID()), mod.ID)
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
-	err := execDropJavaActionGen(ctx, &ast.DropJavaActionStmt{
+	err := execDropJavaActionGenFn(ctx, &ast.DropJavaActionStmt{
 		Name: ast.QualifiedName{Module: "MyModule", Name: "MyAction"},
-	})
+	}, execContextToDeps(ctx))
 	assertNoError(t, err)
 	assertContainsStr(t, buf.String(), "Dropped java action:")
 	if !called {
@@ -335,10 +335,10 @@ func TestExecDropFolder_Mock(t *testing.T) {
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
-	err := execDropFolder(ctx, &ast.DropFolderStmt{
+	err := execDropFolderFn(ctx, &ast.DropFolderStmt{
 		FolderPath: "Resources",
 		Module:     "MyModule",
-	})
+	}, execContextToDeps(ctx))
 	assertNoError(t, err)
 	assertContainsStr(t, buf.String(), "Dropped folder:")
 	if !called {
@@ -405,9 +405,9 @@ func TestExecDropMicroflow_Mock_NotFound(t *testing.T) {
 	// Stage 3.2.6.5: execDropMicroflow now reads from ctx.Microflows
 	// (modelsdk repo); no repo seeded → empty list → NotFound, which
 	// is the expected error path for this test.
-	assertError(t, execDropMicroflow(ctx, &ast.DropMicroflowStmt{
+	assertError(t, execDropMicroflowFn(ctx, &ast.DropMicroflowStmt{
 		Name: ast.QualifiedName{Module: "MyModule", Name: "NonExistent"},
-	}))
+	}, execContextToDeps(ctx)))
 }
 
 func TestExecDropPage_Mock_NotFound(t *testing.T) {
@@ -527,9 +527,9 @@ func TestDropThenCreatePreservesMicroflowUnitID(t *testing.T) {
 		withMicroflowsRepo(mfRepo),
 	)
 
-	if err := execDropMicroflow(ctx, &ast.DropMicroflowStmt{
+	if err := execDropMicroflowFn(ctx, &ast.DropMicroflowStmt{
 		Name: ast.QualifiedName{Module: "MyModule", Name: "DoSomething"},
-	}); err != nil {
+	}, execContextToDeps(ctx)); err != nil {
 		t.Fatalf("DROP MICROFLOW failed: %v", err)
 	}
 
@@ -547,7 +547,7 @@ func TestDropThenCreatePreservesMicroflowUnitID(t *testing.T) {
 		CreateOrModify: true,
 		Body:           nil, // empty body is fine for this test
 	}
-	if err := execCreateMicroflowGen(ctx, createStmt); err != nil {
+	if err := execCreateMicroflowGenFn(ctx, createStmt, execContextToDeps(ctx)); err != nil {
 		t.Fatalf("CREATE OR MODIFY MICROFLOW failed: %v", err)
 	}
 
@@ -610,10 +610,10 @@ func TestCreateOrModifyMicroflowPreservesAllowedRoles(t *testing.T) {
 		withMicroflowsRepo(mfRepo),
 	)
 
-	if err := execCreateMicroflowGen(ctx, &ast.CreateMicroflowStmt{
+	if err := execCreateMicroflowGenFn(ctx, &ast.CreateMicroflowStmt{
 		Name:           ast.QualifiedName{Module: "MyModule", Name: "DoSomething"},
 		CreateOrModify: true,
-	}); err != nil {
+	}, execContextToDeps(ctx)); err != nil {
 		t.Fatalf("CREATE OR MODIFY MICROFLOW failed: %v", err)
 	}
 

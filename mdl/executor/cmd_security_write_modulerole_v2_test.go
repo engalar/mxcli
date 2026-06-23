@@ -63,7 +63,7 @@ func TestCreateModuleRole_OverwritesAutoProvisioned(t *testing.T) {
 		Description: "Task manager user role",
 	}
 
-	if err := execCreateModuleRoleGen(ctx, stmt); err != nil {
+	if err := execCreateModuleRoleGenFn(ctx, stmt, execContextToDeps(ctx)); err != nil {
 		t.Fatalf("execCreateModuleRoleGen: %v", err)
 	}
 

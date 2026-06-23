@@ -752,7 +752,7 @@ func TestExecCreateWorkflowGen_NewUnit_RoutesThroughCreate(t *testing.T) {
 			},
 		},
 	}
-	if err := execCreateWorkflowGen(ctx, stmt); err != nil {
+	if err := execCreateWorkflowGenFn(ctx, stmt, execContextToDeps(ctx)); err != nil {
 		t.Fatalf("execCreateWorkflowGen: %v", err)
 	}
 	if !createCalled {
@@ -818,7 +818,7 @@ func TestExecCreateWorkflowGen_ExistingWithoutModify_Errors(t *testing.T) {
 	stmt := &ast.CreateWorkflowStmt{
 		Name: ast.QualifiedName{Module: "BPModule", Name: "Approve"},
 	}
-	err := execCreateWorkflowGen(ctx, stmt)
+	err := execCreateWorkflowGenFn(ctx, stmt, execContextToDeps(ctx))
 	if err == nil {
 		t.Fatal("expected error for existing workflow without create-or-modify")
 	}
@@ -851,7 +851,7 @@ func TestExecCreateWorkflowGen_ExistingWithModify_RoutesThroughUpdate(t *testing
 		Name:           ast.QualifiedName{Module: "BPModule", Name: "Approve"},
 		CreateOrModify: true,
 	}
-	if err := execCreateWorkflowGen(ctx, stmt); err != nil {
+	if err := execCreateWorkflowGenFn(ctx, stmt, execContextToDeps(ctx)); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if !updateCalled {
@@ -882,7 +882,7 @@ func TestExecDropWorkflowGen_DeletesByID(t *testing.T) {
 	ctx.Workflows = makeWorkflowsRepo([]*genWf.Workflow{wfGen}, mod.ID)
 
 	stmt := &ast.DropWorkflowStmt{Name: ast.QualifiedName{Module: "BPModule", Name: "Approve"}}
-	if err := execDropWorkflowGen(ctx, stmt); err != nil {
+	if err := execDropWorkflowGenFn(ctx, stmt, execContextToDeps(ctx)); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if !deleted {
@@ -904,9 +904,9 @@ func TestExecDropWorkflowGen_NotFound(t *testing.T) {
 	h := mkHierarchy(mod)
 	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
 
-	err := execDropWorkflowGen(ctx, &ast.DropWorkflowStmt{
+	err := execDropWorkflowGenFn(ctx, &ast.DropWorkflowStmt{
 		Name: ast.QualifiedName{Module: "BPModule", Name: "Missing"},
-	})
+	}, execContextToDeps(ctx))
 	if err == nil {
 		t.Fatal("expected not-found error")
 	}

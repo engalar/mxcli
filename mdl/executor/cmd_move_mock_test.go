@@ -20,10 +20,10 @@ import (
 func TestMove_NotConnected(t *testing.T) {
 	mb := &mock.MockBackend{IsConnectedFunc: func() bool { return false }}
 	ctx, _ := newMockCtx(t, withBackend(mb))
-	err := execMove(ctx, &ast.MoveStmt{
+	err := execMoveFn(ctx, &ast.MoveStmt{
 		DocumentType: ast.DocumentTypePage,
 		Name:         ast.QualifiedName{Module: "MyModule", Name: "MyPage"},
-	})
+	}, execContextToDeps(ctx))
 	assertError(t, err)
 	assertContainsStr(t, err.Error(), "not connected")
 }
@@ -54,11 +54,11 @@ func TestMove_Page_ToFolder(t *testing.T) {
 	h := mkHierarchy(mod)
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
 	ctx.Pages = makePagesRepo([]*genPg.Page{pg}, mod.ID)
-	assertNoError(t, execMove(ctx, &ast.MoveStmt{
+	assertNoError(t, execMoveFn(ctx, &ast.MoveStmt{
 		DocumentType: ast.DocumentTypePage,
 		Name:         ast.QualifiedName{Module: "MyModule", Name: "MyPage"},
 		Folder:       "Admin",
-	}))
+	}, execContextToDeps(ctx)))
 	if movedID == "" {
 		t.Fatal("Expected MovePageGen to be called")
 	}
@@ -82,11 +82,11 @@ func TestMove_Page_NotFound(t *testing.T) {
 	h := mkHierarchy(mod)
 	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
 	ctx.Pages = makePagesRepo(nil, mod.ID)
-	err := execMove(ctx, &ast.MoveStmt{
+	err := execMoveFn(ctx, &ast.MoveStmt{
 		DocumentType: ast.DocumentTypePage,
 		Name:         ast.QualifiedName{Module: "MyModule", Name: "NonExistent"},
 		Folder:       "SomeFolder",
-	})
+	}, execContextToDeps(ctx))
 	assertError(t, err)
 	assertContainsStr(t, err.Error(), "not found")
 }
@@ -114,11 +114,11 @@ func TestMove_Page_CrossModule(t *testing.T) {
 	h := mkHierarchy(srcMod, dstMod)
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
 	ctx.Pages = makePagesRepo([]*genPg.Page{pg}, srcMod.ID)
-	assertNoError(t, execMove(ctx, &ast.MoveStmt{
+	assertNoError(t, execMoveFn(ctx, &ast.MoveStmt{
 		DocumentType: ast.DocumentTypePage,
 		Name:         ast.QualifiedName{Module: "SrcModule", Name: "MyPage"},
 		TargetModule: "DstModule",
-	}))
+	}, execContextToDeps(ctx)))
 	if !moved {
 		t.Fatal("Expected MovePageGen to be called")
 	}
@@ -142,10 +142,10 @@ func TestMove_UnsupportedType(t *testing.T) {
 	}
 	h := mkHierarchy(mod)
 	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
-	err := execMove(ctx, &ast.MoveStmt{
+	err := execMoveFn(ctx, &ast.MoveStmt{
 		DocumentType: "UNKNOWN",
 		Name:         ast.QualifiedName{Module: "MyModule", Name: "Thing"},
-	})
+	}, execContextToDeps(ctx))
 	assertError(t, err)
 	assertContainsStr(t, err.Error(), "unsupported")
 }
@@ -166,10 +166,10 @@ func TestMove_Page_BackendError(t *testing.T) {
 	h := mkHierarchy(mod)
 	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
 	ctx.Pages = makePagesRepo([]*genPg.Page{pg}, mod.ID)
-	err := execMove(ctx, &ast.MoveStmt{
+	err := execMoveFn(ctx, &ast.MoveStmt{
 		DocumentType: ast.DocumentTypePage,
 		Name:         ast.QualifiedName{Module: "MyModule", Name: "MyPage"},
-	})
+	}, execContextToDeps(ctx))
 	assertError(t, err)
 	assertContainsStr(t, err.Error(), "move page")
 }

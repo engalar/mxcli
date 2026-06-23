@@ -73,7 +73,7 @@ func TestExecCreateJavaScriptAction_CreatesFromScratch(t *testing.T) {
 		CreateOrModify: true,
 		UserCode:       "return true;",
 	}
-	if err := execCreateJavaScriptAction(ctx, stmt); err != nil {
+	if err := execCreateJavaScriptActionFn(ctx, stmt, execContextToDeps(ctx)); err != nil {
 		t.Fatalf("expected success (create from scratch), got: %v", err)
 	}
 }
@@ -108,7 +108,7 @@ func TestExecCreateJavaScriptAction_UpdatesPlatform(t *testing.T) {
 		Platform:       "Web",
 		CreateOrModify: true,
 	}
-	if err := execCreateJavaScriptAction(ctx, stmt); err != nil {
+	if err := execCreateJavaScriptActionFn(ctx, stmt, execContextToDeps(ctx)); err != nil {
 		t.Fatalf("execCreateJavaScriptAction: %v", err)
 	}
 	if len(updated) != 1 {

@@ -134,12 +134,12 @@ func TestCreateDataTransformer_OrModify_PreservesID(t *testing.T) {
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
-	err := execCreateDataTransformer(ctx, &ast.CreateDataTransformerStmt{
+	err := execCreateDataTransformerFn(ctx, &ast.CreateDataTransformerStmt{
 		Name:           ast.QualifiedName{Module: "ETL", Name: "LatExtract"},
 		SourceType:     "JSON",
 		SourceJSON:     "{}",
 		CreateOrModify: true,
-	})
+	}, execContextToDeps(ctx))
 	assertNoError(t, err)
 	assertContainsStr(t, buf.String(), "Modified")
 	if updatedID != existingID {
@@ -169,8 +169,8 @@ func TestCreateDataTransformer_AlreadyExists_NoOrModify(t *testing.T) {
 	}
 
 	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
-	err := execCreateDataTransformer(ctx, &ast.CreateDataTransformerStmt{
+	err := execCreateDataTransformerFn(ctx, &ast.CreateDataTransformerStmt{
 		Name: ast.QualifiedName{Module: "ETL", Name: "LatExtract"},
-	})
+	}, execContextToDeps(ctx))
 	assertError(t, err)
 }

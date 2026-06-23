@@ -33,7 +33,7 @@ func TestExecShowStructureGen_Depth2_NonEmpty(t *testing.T) {
 	genCtx := newGenVizContext(t, &genOut)
 	genCtx.Format = FormatTable
 	genCtx.Quiet = true
-	if err := execShowStructureGen(genCtx, &ast.ShowStmt{ObjectType: ast.ShowStructure, Depth: 2}); err != nil {
+	if err := execShowStructureGenFn(genCtx, &ast.ShowStmt{ObjectType: ast.ShowStructure, Depth: 2}, execContextToDeps(genCtx)); err != nil {
 		t.Fatalf("gen execShowStructureGen depth=2: %v", err)
 	}
 	if genOut.Len() == 0 {
@@ -46,7 +46,7 @@ func TestExecShowStructureGen_Depth3_NonEmpty(t *testing.T) {
 	genCtx := newGenVizContext(t, &genOut)
 	genCtx.Format = FormatTable
 	genCtx.Quiet = true
-	if err := execShowStructureGen(genCtx, &ast.ShowStmt{ObjectType: ast.ShowStructure, Depth: 3}); err != nil {
+	if err := execShowStructureGenFn(genCtx, &ast.ShowStmt{ObjectType: ast.ShowStructure, Depth: 3}, execContextToDeps(genCtx)); err != nil {
 		t.Fatalf("gen execShowStructureGen depth=3: %v", err)
 	}
 	if genOut.Len() == 0 {
@@ -61,7 +61,7 @@ func TestExecShowStructureGen_Depth1_DelegatesToLegacy(t *testing.T) {
 	ctx := newGenVizContext(t, &out)
 	ctx.Format = FormatTable
 	ctx.Quiet = true
-	if err := execShowStructureGen(ctx, &ast.ShowStmt{ObjectType: ast.ShowStructure, Depth: 1}); err != nil {
+	if err := execShowStructureGenFn(ctx, &ast.ShowStmt{ObjectType: ast.ShowStructure, Depth: 1}, execContextToDeps(ctx)); err != nil {
 		t.Fatalf("execShowStructureGen depth=1: %v", err)
 	}
 	if out.Len() == 0 {
@@ -212,7 +212,7 @@ func TestExecShowStructureGen_Depth2_ContainsJavaAction(t *testing.T) {
 	ctx.JavaScriptActions = mprrepos.NewJavaScriptActionRepository(w)
 	ctx.ensureCache()
 
-	if err := execShowStructureGen(ctx, &ast.ShowStmt{ObjectType: ast.ShowStructure, Depth: 2}); err != nil {
+	if err := execShowStructureGenFn(ctx, &ast.ShowStmt{ObjectType: ast.ShowStructure, Depth: 2}, execContextToDeps(ctx)); err != nil {
 		t.Fatalf("execShowStructureGen depth=2: %v", err)
 	}
 	output := out.String()

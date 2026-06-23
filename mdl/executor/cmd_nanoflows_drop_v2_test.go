@@ -22,14 +22,14 @@ func TestExecDropNanoflowGen_DropExisting(t *testing.T) {
 	create := &ast.CreateNanoflowStmt{
 		Name: ast.QualifiedName{Module: "MyFirstModule", Name: "NF_DropMe"},
 	}
-	if err := execCreateNanoflowGen(ctx, create); err != nil {
+	if err := execCreateNanoflowGenFn(ctx, create, execContextToDeps(ctx)); err != nil {
 		t.Fatalf("create: %v", err)
 	}
 
 	drop := &ast.DropNanoflowStmt{
 		Name: ast.QualifiedName{Module: "MyFirstModule", Name: "NF_DropMe"},
 	}
-	if err := execDropNanoflowGen(ctx, drop); err != nil {
+	if err := execDropNanoflowGenFn(ctx, drop, execContextToDeps(ctx)); err != nil {
 		t.Fatalf("drop: %v", err)
 	}
 
@@ -47,7 +47,7 @@ func TestExecDropNanoflowGen_DropNonExistent(t *testing.T) {
 	drop := &ast.DropNanoflowStmt{
 		Name: ast.QualifiedName{Module: "MyFirstModule", Name: "NF_NeverExisted"},
 	}
-	err := execDropNanoflowGen(ctx, drop)
+	err := execDropNanoflowGenFn(ctx, drop, execContextToDeps(ctx))
 	if err == nil {
 		t.Fatal("expected NotFound error, got nil")
 	}
@@ -65,7 +65,7 @@ func TestExecDropNanoflowGen_PrintsDroppedToOutput(t *testing.T) {
 	create := &ast.CreateNanoflowStmt{
 		Name: ast.QualifiedName{Module: "MyFirstModule", Name: "NF_DropOutput"},
 	}
-	if err := execCreateNanoflowGen(ctx, create); err != nil {
+	if err := execCreateNanoflowGenFn(ctx, create, execContextToDeps(ctx)); err != nil {
 		t.Fatalf("create: %v", err)
 	}
 
@@ -75,7 +75,7 @@ func TestExecDropNanoflowGen_PrintsDroppedToOutput(t *testing.T) {
 	drop := &ast.DropNanoflowStmt{
 		Name: ast.QualifiedName{Module: "MyFirstModule", Name: "NF_DropOutput"},
 	}
-	if err := execDropNanoflowGen(ctx, drop); err != nil {
+	if err := execDropNanoflowGenFn(ctx, drop, execContextToDeps(ctx)); err != nil {
 		t.Fatalf("drop: %v", err)
 	}
 	if !strings.Contains(buf.String(), "Dropped nanoflow: MyFirstModule.NF_DropOutput") {
@@ -94,7 +94,7 @@ func TestExecDropNanoflowGen_NilRepoGuard(t *testing.T) {
 	drop := &ast.DropNanoflowStmt{
 		Name: ast.QualifiedName{Module: "MyFirstModule", Name: "NF_Anything"},
 	}
-	if err := execDropNanoflowGen(&bare, drop); err == nil {
+	if err := execDropNanoflowGenFn(&bare, drop, execContextToDeps(&bare)); err == nil {
 		t.Error("expected error when ctx.Nanoflows is nil")
 	}
 }

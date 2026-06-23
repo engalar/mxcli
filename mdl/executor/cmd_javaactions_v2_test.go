@@ -507,7 +507,7 @@ func TestExecCreateJavaActionGen_BasicCreate(t *testing.T) {
 		Documentation: "test docs",
 		ReturnType:    ast.DataType{Kind: ast.TypeBoolean},
 	}
-	if err := execCreateJavaActionGen(ctx, stmt); err != nil {
+	if err := execCreateJavaActionGenFn(ctx, stmt, execContextToDeps(ctx)); err != nil {
 		t.Fatalf("execCreateJavaActionGen: %v", err)
 	}
 	if len(*created) != 1 {
@@ -539,7 +539,7 @@ func TestExecCreateJavaActionGen_WithParameters(t *testing.T) {
 		},
 		ReturnType: ast.DataType{Kind: ast.TypeBoolean},
 	}
-	if err := execCreateJavaActionGen(ctx, stmt); err != nil {
+	if err := execCreateJavaActionGenFn(ctx, stmt, execContextToDeps(ctx)); err != nil {
 		t.Fatalf("execCreateJavaActionGen: %v", err)
 	}
 	if len(*created) != 1 {
@@ -591,7 +591,7 @@ func TestExecCreateJavaActionGen_ConcreteEntityReturnType(t *testing.T) {
 			EntityRef: &ast.QualifiedName{Module: "Sales", Name: "Order"},
 		},
 	}
-	if err := execCreateJavaActionGen(ctx, stmt); err != nil {
+	if err := execCreateJavaActionGenFn(ctx, stmt, execContextToDeps(ctx)); err != nil {
 		t.Fatalf("execCreateJavaActionGen: %v", err)
 	}
 	if len(*created) != 1 {
@@ -638,7 +638,7 @@ func TestExecCreateJavaActionGen_AlreadyExists(t *testing.T) {
 		ReturnType:     ast.DataType{Kind: ast.TypeBoolean},
 		CreateOrModify: false,
 	}
-	err := execCreateJavaActionGen(ctx, stmt)
+	err := execCreateJavaActionGenFn(ctx, stmt, execContextToDeps(ctx))
 	if err == nil {
 		t.Fatal("expected error when action already exists, got nil")
 	}
@@ -659,7 +659,7 @@ func TestExecCreateJavaActionGen_ModuleNotFound(t *testing.T) {
 		Name:       ast.QualifiedName{Module: "NoSuchModule", Name: "MyAction"},
 		ReturnType: ast.DataType{Kind: ast.TypeBoolean},
 	}
-	err := execCreateJavaActionGen(ctx, stmt)
+	err := execCreateJavaActionGenFn(ctx, stmt, execContextToDeps(ctx))
 	if err == nil {
 		t.Fatal("expected error when module not found, got nil")
 	}
@@ -699,7 +699,7 @@ func TestExecCreateJavaActionGen_OrModifyOverwrites(t *testing.T) {
 		ReturnType:     ast.DataType{Kind: ast.TypeBoolean},
 		CreateOrModify: true,
 	}
-	if err := execCreateJavaActionGen(ctx, stmt); err != nil {
+	if err := execCreateJavaActionGenFn(ctx, stmt, execContextToDeps(ctx)); err != nil {
 		t.Fatalf("execCreateJavaActionGen: %v", err)
 	}
 	if len(created) != 0 {
