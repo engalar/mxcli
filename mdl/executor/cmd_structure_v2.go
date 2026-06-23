@@ -5,7 +5,7 @@
 // This file is the parallel of legacy `cmd_structure.go`'s
 // microflow/nanoflow rendering paths. The legacy entry point
 // `execShowStructure` is left untouched; this gen entry
-// `execShowStructureGen` reuses every non-microflow helper
+// `execShowStructureGenImpl` reuses every non-microflow helper
 // (`structureEntities`, `structurePages`, `structureSnippets`,
 // `structureWorkflows`, `outputJavaActions`,
 // `structureODataClients/Services/BusinessEventServices`,
@@ -29,6 +29,7 @@
 package executor
 
 import (
+	"context"
 	"fmt"
 	"sort"
 	"strings"
@@ -43,16 +44,36 @@ import (
 	genWf "github.com/mendixlabs/mxcli/modelsdk/gen/workflows"
 )
 
-// ────────────────────────────────────────────────────────
-// Entry point
-// ────────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────
+// Fn (HandlerDeps) entry point — bridges to the implementation
+// ────────────────────────────────────────────────────────────
 
-// execShowStructureGen is the gen-typed parallel of `execShowStructure`.
+func execShowStructureGenFn(ctx context.Context, s *ast.ShowStmt, deps *HandlerDeps) error {
+	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
+		return mdlerrors.NewNotConnected()
+	}
+	tmpCtx := phase3d2bNewExecContext(ctx, deps)
+	return execShowStructureGenImpl(tmpCtx, s)
+}
+
+// ────────────────────────────────────────────────────────────
+// Old ExecContext wrapper
+// ────────────────────────────────────────────────────────────
+
+func execShowStructureGen(ctx *ExecContext, s *ast.ShowStmt) error {
+	return execShowStructureGenFn(ctx, s, execContextToDeps(ctx))
+}
+
+// ────────────────────────────────────────────────────────────
+// Implementation (originally execShowStructureGen — renamed)
+// ────────────────────────────────────────────────────────────
+
+// execShowStructureGenImpl is the gen-typed parallel of `execShowStructure`.
 // Fully delegates depth-1 (catalog/SQL only) to the legacy helpers
 // because nothing on that path touches sdk/microflows; depth-2 and -3
 // are reimplemented to read microflow/nanoflow data via the gen
 // repositories.
-func execShowStructureGen(ctx *ExecContext, s *ast.ShowStmt) error {
+func execShowStructureGenImpl(ctx *ExecContext, s *ast.ShowStmt) error {
 	if !ctx.Connected() {
 		return mdlerrors.NewNotConnected()
 	}
@@ -78,30 +99,26 @@ func execShowStructureGen(ctx *ExecContext, s *ast.ShowStmt) error {
 	}
 
 	if ctx.Format == FormatJSON {
-		// JSON mode counts via SQL/catalog — no sdk types involved,
-		// reuse legacy unchanged.
 		return structureDepth1JSON(ctx, modules)
 	}
 
 	switch depth {
 	case 1:
-		// Depth 1 is purely catalog-driven; legacy helper has no sdk
-		// types in its critical path.
 		return structureDepth1(ctx, modules)
 	case 2:
-		return structureDepth2Gen(ctx, modules)
+		return structureDepth2GenImpl(ctx, modules)
 	case 3:
-		return structureDepth3Gen(ctx, modules)
+		return structureDepth3GenImpl(ctx, modules)
 	default:
-		return structureDepth2Gen(ctx, modules)
+		return structureDepth2GenImpl(ctx, modules)
 	}
 }
 
-// ────────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────
 // Depth 2 — gen-typed
-// ────────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────
 
-func structureDepth2Gen(ctx *ExecContext, modules []structureModule) error {
+func structureDepth2GenImpl(ctx *ExecContext, modules []structureModule) error {
 	h, err := getHierarchy(ctx)
 	if err != nil {
 		return mdlerrors.NewBackend("build hierarchy", err)
@@ -129,7 +146,6 @@ func structureDepth2Gen(ctx *ExecContext, modules []structureModule) error {
 
 		structureEntitiesGen(ctx, m.Name, dmByModule[m.Name], false)
 
-		// Enumerations — unchanged.
 		if enums, ok := enumsByModule[m.Name]; ok {
 			sortEnumerations(enums)
 			for _, enum := range enums {
@@ -141,7 +157,6 @@ func structureDepth2Gen(ctx *ExecContext, modules []structureModule) error {
 			}
 		}
 
-		// Microflows — gen-typed.
 		if mfs, ok := mfByModule[m.Name]; ok {
 			sortGenMicroflows(mfs)
 			for _, mf := range mfs {
@@ -150,7 +165,6 @@ func structureDepth2Gen(ctx *ExecContext, modules []structureModule) error {
 			}
 		}
 
-		// Nanoflows — gen-typed.
 		if nfs, ok := nfByModule[m.Name]; ok {
 			sortGenNanoflows(nfs)
 			for _, nf := range nfs {
@@ -159,8 +173,6 @@ func structureDepth2Gen(ctx *ExecContext, modules []structureModule) error {
 			}
 		}
 
-		// Workflows — unchanged sdk/workflows helper (out of scope for
-		// 3.2.4; tracked under task #3 Stage 3.2.5b).
 		structureWorkflows(ctx, m.Name, wfByModule[m.Name], false)
 
 		structurePages(ctx, m.Name)
@@ -189,11 +201,11 @@ func structureDepth2Gen(ctx *ExecContext, modules []structureModule) error {
 	return nil
 }
 
-// ────────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────
 // Depth 3 — gen-typed (adds withTypes / withDetails to deep helpers)
-// ────────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────
 
-func structureDepth3Gen(ctx *ExecContext, modules []structureModule) error {
+func structureDepth3GenImpl(ctx *ExecContext, modules []structureModule) error {
 	h, err := getHierarchy(ctx)
 	if err != nil {
 		return mdlerrors.NewBackend("build hierarchy", err)
@@ -232,7 +244,6 @@ func structureDepth3Gen(ctx *ExecContext, modules []structureModule) error {
 			}
 		}
 
-		// Microflows with parameter names.
 		if mfs, ok := mfByModule[m.Name]; ok {
 			sortGenMicroflows(mfs)
 			for _, mf := range mfs {
@@ -241,7 +252,6 @@ func structureDepth3Gen(ctx *ExecContext, modules []structureModule) error {
 			}
 		}
 
-		// Nanoflows with parameter names.
 		if nfs, ok := nfByModule[m.Name]; ok {
 			sortGenNanoflows(nfs)
 			for _, nf := range nfs {
@@ -280,15 +290,10 @@ func structureDepth3Gen(ctx *ExecContext, modules []structureModule) error {
 	return nil
 }
 
-// ────────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────
 // Shared data loading (non-microflow) — typed loose helpers
-// ────────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────
 
-// loadStructureSharedDataGen loads everything except microflows and
-// nanoflows. Mirrors the loading block at the top of legacy
-// structureDepth2/Depth3. The returned types match what the unchanged
-// helpers (structureEntities / structureWorkflows / outputJavaActions)
-// already consume, so callers don't have to type-assert.
 func loadStructureSharedDataGen(ctx *ExecContext, h *ContainerHierarchy) (
 	dmByModule structureDmMapGen,
 	enumsByModule structureEnumMapGen,
@@ -333,8 +338,6 @@ func loadStructureSharedDataGen(ctx *ExecContext, h *ContainerHierarchy) (
 		eventsByModule[modName] = append(eventsByModule[modName], ev)
 	}
 
-	// gen JavaAction loses container linkage during BSON roundtrip; use
-	// the cache helper which joins through the MPR Unit table to recover it.
 	jaPairs, _ := listJavaActionsWithContainerGen(ctx)
 	jaByModule = make(structureJaMapGen)
 	for _, p := range jaPairs {
@@ -346,8 +349,6 @@ func loadStructureSharedDataGen(ctx *ExecContext, h *ContainerHierarchy) (
 		jaByModule[modName] = append(jaByModule[modName], p.Elem)
 	}
 
-	// gen Workflow loses container linkage during BSON roundtrip; use
-	// the cache helper which joins through the MPR Unit table to recover it.
 	wfPairs, _ := listWorkflowsWithContainerGen(ctx)
 	wfByModule = make(structureWfMapGen)
 	for _, p := range wfPairs {
@@ -361,10 +362,6 @@ func loadStructureSharedDataGen(ctx *ExecContext, h *ContainerHierarchy) (
 	return
 }
 
-// loadGenMicroflowsByModule fetches every microflow via the gen repo
-// and groups them by their owning module's name. Module resolution
-// uses the SQL-backed container chain (gen objects don't carry
-// container linkage).
 func loadGenMicroflowsByModule(ctx *ExecContext, h *ContainerHierarchy) (map[string][]*genMf.Microflow, error) {
 	if ctx.Microflows == nil {
 		return nil, mdlerrors.NewBackend("microflow repository", fmt.Errorf("ctx.Microflows is nil"))
@@ -381,8 +378,6 @@ func loadGenMicroflowsByModule(ctx *ExecContext, h *ContainerHierarchy) (map[str
 	return out, nil
 }
 
-// loadGenNanoflowsByModule fetches every nanoflow via the gen repo
-// and groups them by their owning module's name.
 func loadGenNanoflowsByModule(ctx *ExecContext, h *ContainerHierarchy) (map[string][]*genMf.Nanoflow, error) {
 	if ctx.Nanoflows == nil {
 		return nil, mdlerrors.NewBackend("nanoflow repository", fmt.Errorf("ctx.Nanoflows is nil"))
@@ -399,14 +394,10 @@ func loadGenNanoflowsByModule(ctx *ExecContext, h *ContainerHierarchy) (map[stri
 	return out, nil
 }
 
-// ────────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────
 // Microflow / Nanoflow signature formatting — gen-typed
-// ────────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────
 
-// formatMicroflowSignatureGen produces the same `(Type, Type) → Ret`
-// shape legacy `formatMicroflowSignature` produces, but reads from
-// the gen Microflow's ObjectCollection (parameters live alongside
-// activities) and from `MicroflowReturnType()`.
 func formatMicroflowSignatureGen(mf *genMf.Microflow, withNames bool) string {
 	if mf == nil {
 		return "()"
@@ -416,7 +407,6 @@ func formatMicroflowSignatureGen(mf *genMf.Microflow, withNames bool) string {
 	return formatGenFlowSignature(params, ret, withNames)
 }
 
-// formatNanoflowSignatureGen — same as above for Nanoflow.
 func formatNanoflowSignatureGen(nf *genMf.Nanoflow, withNames bool) string {
 	if nf == nil {
 		return "()"
@@ -426,8 +416,6 @@ func formatNanoflowSignatureGen(nf *genMf.Nanoflow, withNames bool) string {
 	return formatGenFlowSignature(params, ret, withNames)
 }
 
-// formatGenFlowSignature is the shared signature renderer for
-// microflows + nanoflows. Mirrors legacy `formatMicroflowSignature`.
 func formatGenFlowSignature(params []*genMf.MicroflowParameter, returnType element.Element, withNames bool) string {
 	var paramParts []string
 	for _, p := range params {
@@ -450,9 +438,6 @@ func formatGenFlowSignature(params []*genMf.MicroflowParameter, returnType eleme
 	return sig
 }
 
-// formatGenParameterTypeDisplay extracts a parameter's type display
-// name. Prefers the rich `ParameterType` element (DataType subtype),
-// falling back to the `Type()` short string when it is set.
 func formatGenParameterTypeDisplay(p *genMf.MicroflowParameter) string {
 	if p == nil {
 		return ""
@@ -468,10 +453,6 @@ func formatGenParameterTypeDisplay(p *genMf.MicroflowParameter) string {
 	return ""
 }
 
-// genFlowParameterElems extracts the strongly-typed gen
-// MicroflowParameter elements from an ObjectCollection. Stays
-// stable in declaration order (the order the BSON Objects array
-// stored them).
 func genFlowParameterElems(oc element.Element) []*genMf.MicroflowParameter {
 	col, ok := oc.(*genMf.MicroflowObjectCollection)
 	if !ok || col == nil {
@@ -486,9 +467,9 @@ func genFlowParameterElems(oc element.Element) []*genMf.MicroflowParameter {
 	return out
 }
 
-// ────────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────
 // Sort helpers — gen-typed parallels of sortMicroflows/Nanoflows
-// ────────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────
 
 func sortGenMicroflows(mfs []*genMf.Microflow) {
 	sort.Slice(mfs, func(i, j int) bool {
@@ -502,15 +483,10 @@ func sortGenNanoflows(nfs []*genMf.Nanoflow) {
 	})
 }
 
-// ────────────────────────────────────────────────────────
-// Loose map type aliases (improve readability of the loader signature)
-// ────────────────────────────────────────────────────────
-//
-// These point at the same concrete sdk-typed slices the unchanged
-// legacy helpers (structureEntities / structureWorkflows /
-// outputJavaActions) expect. Stage 3.2.4 migrates only the
-// sdk/microflows surface; sdk/domainmodel, sdk/workflows,
-// sdk/javaactions remain in scope for later stages (#3 / #4).
+// ────────────────────────────────────────────────────────────
+// Loose map type aliases
+// ────────────────────────────────────────────────────────────
+
 type (
 	structureDmMapGen    = map[string]*genDm.DomainModel
 	structureEnumMapGen  = map[string][]*model.Enumeration

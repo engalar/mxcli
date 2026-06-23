@@ -2736,39 +2736,13 @@ func listSupportedLanguagesFuture(ctx context.Context, output io.Writer, format 
 }
 
 // execShowStructureGenFuture is the ExecContext-free version of execShowStructureGen.
-// Uses a bridge pattern: constructs a temporary ExecContext from HandlerDeps to
-// delegate to the existing sub-functions (which are too numerous to migrate in one pass).
 func execShowStructureGenFuture(ctx context.Context, output io.Writer, format OutputFormat, s *ast.ShowStmt, deps *HandlerDeps) error {
 	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnected()
 	}
-
-	tmpCtx := &ExecContext{
-		Context: ctx,
-		ExecIO:  ExecIO{Output: output, Format: format},
-
-		ConnectionManager:    deps.ConnectionManager,
-		ModuleLister:         deps.ModuleLister,
-		MetadataReader:       deps.MetadataReader,
-		FolderManager:        deps.FolderManager,
-		EnumerationReader:    deps.EnumerationReader,
-		ConstantReader:       deps.ConstantReader,
-		ScheduledEventReader: deps.ScheduledEventReader,
-		Backend:              deps.Backend,
-
-		ExecRepos: ExecRepos{
-			Microflows:   deps.MicroflowRepo,
-			Nanoflows:    deps.NanoflowRepo,
-			DomainModels: deps.DomainModels,
-			Workflows:    deps.WorkflowRepo,
-			Pages:        deps.PageRepo,
-			Snippets:     deps.SnippetRepo,
-			JavaActions:  deps.JavaActionRepo,
-			Layouts:      deps.LayoutRepo,
-		},
-	}
-
-	return execShowStructureGen(tmpCtx, s)
+	deps.Output = output
+	deps.Format = format
+	return execShowStructureGenFn(ctx, s, deps)
 }
 
 // ────────────────────────────────────────────────────────────
