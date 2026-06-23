@@ -60,7 +60,7 @@ func TestGoldenFS_ExecAndMxCheck(t *testing.T) {
 	}()
 
 	script := fmt.Sprintf(`connect local '%s';
-create or modify microflow MyFirstModule.ACT_GoldenTest () returns Nothing begin return; end;`, mprPath)
+create or modify microflow MyFirstModule.ACT_GoldenTest () returns Nothing { return; }`, mprPath)
 
 	prog, errs := visitor.Build(script)
 	if len(errs) > 0 {

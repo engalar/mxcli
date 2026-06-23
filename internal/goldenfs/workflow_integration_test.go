@@ -26,15 +26,15 @@ create module role MyFirstModule.Reviewer
 
 create or modify microflow MyFirstModule.ACT_Notify ()
   returns Nothing
-  begin
+  {
     return;
-  end;
+  }
 
 create or modify microflow MyFirstModule.ACT_BoundaryHandler ()
   returns Nothing
-  begin
+  {
     return;
-  end;
+  }
 `
 
 const wfStep1bPages = `
@@ -89,7 +89,7 @@ create or modify workflow MyFirstModule.WF_ComplexApproval
   parameter $ctx: MyFirstModule.WF_Item
   display 'Complex Approval Flow'
   description 'Comprehensive workflow integration test: user task, multi-user task, decision, parallel split, call microflow, wait for notification, jump to'
-begin
+{
   user task InitialReview 'Initial Review'
     page MyFirstModule.Page_WF_InitialReview
     targeting users xpath '[id != 0]'

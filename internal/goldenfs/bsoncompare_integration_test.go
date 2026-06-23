@@ -100,9 +100,9 @@ func TestBsonCompare_CreateMicroflow(t *testing.T) {
 
 	runMDL(t, mountMpr, `create or modify microflow MyFirstModule.ACT_BsonCompareTest ()
   returns Nothing
-  begin
+  {
     return;
-  end;`)
+  }`)
 
 	// A = pristine baseline (read-only via real path)
 	// B = post-mutation FUSE mount (overlay reflects the write)
@@ -212,9 +212,9 @@ func TestBsonCompare_DropMicroflow(t *testing.T) {
 	// Step 1: create the microflow and verify it appears as added.
 	runMDL(t, mountMpr, `create or modify microflow MyFirstModule.ACT_BsonDropTest ()
   returns Nothing
-  begin
+  {
     return;
-  end;`)
+  }`)
 
 	bsoncompare.AssertEqual(t, realMpr, mountMpr, bsoncompare.DefaultOptions(),
 		bsoncompare.ExpectAdded("MyFirstModule.ACT_BsonDropTest"),

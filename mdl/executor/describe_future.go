@@ -813,9 +813,9 @@ func describeMicroflowGenToStringFutureInner(target *genMf.Microflow, mfRepo rep
 		lines = append(lines, fmt.Sprintf("returns %s", returnType))
 	}
 
-	lines = append(lines, "begin")
+	lines = append(lines, "{")
 	lines = append(lines, "  -- TODO: microflow body")
-	lines = append(lines, "end;")
+	lines = append(lines, "}")
 	lines = append(lines, "/")
 
 	return strings.Join(lines, "\n")
@@ -923,9 +923,9 @@ func describeNanoflowGenToStringFutureInner(target *genMf.Nanoflow, nfRepo repos
 		lines = append(lines, fmt.Sprintf("returns %s", returnType))
 	}
 
-	lines = append(lines, "begin")
+	lines = append(lines, "{")
 	lines = append(lines, "  -- TODO: nanoflow body")
-	lines = append(lines, "end;")
+	lines = append(lines, "}")
 	lines = append(lines, "/")
 
 	return strings.Join(lines, "\n")
