@@ -3137,18 +3137,15 @@ func execDescribeContractFromOpenAPIFuture(ctx context.Context, stmt ast.Stateme
 }
 
 func execCreatePublishedRestServiceFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
-	return execCreatePublishedRestService(ectx, stmt.(*ast.CreatePublishedRestServiceStmt))
+	return execCreatePublishedRestServiceFn(ctx, stmt.(*ast.CreatePublishedRestServiceStmt), deps)
 }
 
 func execDropPublishedRestServiceFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
-	return execDropPublishedRestService(ectx, stmt.(*ast.DropPublishedRestServiceStmt))
+	return execDropPublishedRestServiceFn(ctx, stmt.(*ast.DropPublishedRestServiceStmt), deps)
 }
 
 func execAlterPublishedRestServiceFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := phase3d2bNewExecContext(ctx, deps)
-	return execAlterPublishedRestService(ectx, stmt.(*ast.AlterPublishedRestServiceStmt))
+	return execAlterPublishedRestServiceFn(ctx, stmt.(*ast.AlterPublishedRestServiceStmt), deps)
 }
 
 func execCreateExternalEntityFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
