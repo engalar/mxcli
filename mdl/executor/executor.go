@@ -505,8 +505,11 @@ func (e *Executor) BuildGraph() (*graphcatalog.ProjectGraph, error) {
 	if err := buildGraph(ctx); err != nil {
 		return nil, err
 	}
-	e.syncBack(ctx)
-	return e.graphCatalog, nil
+	// Inline syncBack: propagate graph state back to Executor
+	if ctx.Graph != nil {
+		e.graphCatalog = ctx.Graph
+	}
+	return ctx.Graph, nil
 }
 
 // ModuleOverview builds the module overview as JSON.

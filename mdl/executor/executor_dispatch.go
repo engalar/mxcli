@@ -6,55 +6,36 @@ import (
 	"context"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
-	"github.com/mendixlabs/mxcli/mdl/graphcatalog"
 )
 
 // executeInner dispatches a statement to its registered handler.
+// Prefers RegisterFuture (StmtHandlerFunc, no ExecContext). Falls back
+// to deprecated StmtHandler Dispatch (with ExecContext) when no future
+// handler is registered (tests that don't call SetBackend).
 func (e *Executor) executeInner(ctx context.Context, stmt ast.Statement) error {
+	if e.registry.HasFutureHandler(stmt) {
+		return e.registry.DispatchFuture(ctx, stmt)
+	}
 	ectx := e.newExecContext(ctx)
-	err := e.registry.Dispatch(ectx, stmt)
-	if ctx.Err() == nil {
-		e.syncBack(ectx)
-	}
-	return err
-}
-
-// syncBack copies mutated ExecContext fields back to the Executor so that
-// the next newExecContext call picks up handler-side state changes.
-//
-// Fields intentionally NOT synced back (read-only from handler perspective):
-//   - Output, Quiet, Logger — set once at Executor construction
-//   - BackendFactory — set once at Executor construction
-//   - OutputGuard — removed; writeDescribeJSON captures via Output swap only
-//   - ExecuteFn, ExecuteProgramFn, FinalizeFn — bound to Executor methods, immutable
-//
-// Format IS synced back so that `SET format = json` takes effect for all
-// subsequent statements in the same session.
-func (e *Executor) syncBack(ctx *ExecContext) {
-	e.backend = ctx.Backend
-	e.mprPath = ctx.MprPath
-	e.cache = ctx.Cache
-	e.format = ctx.Format
-	if ctx.Graph != nil {
-		e.graphCatalog = ctx.Graph
-	}
+	return e.registry.Dispatch(ectx, stmt)
 }
 
 // newExecContext builds an ExecContext from the current Executor state.
+// Deprecated: only used by autocomplete.go, BuildGraph(), and CLI callers.
 func (e *Executor) newExecContext(ctx context.Context) *ExecContext {
-	// Ensure cache exists (Connect sets it; direct Executor construction may leave it nil).
 	if e.cache == nil {
 		e.cache = &executorCache{}
 	}
-	// Warm name caches from graph if available — O(nodes) vs O(N²) backend scan.
 	if e.graphCatalog != nil {
 		warmCacheFromGraph(e.cache, e.graphCatalog)
 	}
-
 	execCtx := &ExecContext{
 		Context: ctx,
 		Backend: e.backend,
 		Logger:  e.logger,
+		ExecIO: ExecIO{Output: e.output, StatusOutput: e.statusOutput, Format: e.format, Quiet: e.quiet},
+		ExecSession: ExecSession{Fragments: e.fragments, Cache: e.cache},
+		ExecConnection: ExecConnection{MprPath: e.mprPath, Graph: e.graphCatalog, BackendFactory: e.backendFactory},
 		ExecRepos: ExecRepos{
 			Microflows:        extractMicroflowsRepo(e.backend),
 			Nanoflows:         extractNanoflowsRepo(e.backend),
@@ -66,29 +47,6 @@ func (e *Executor) newExecContext(ctx context.Context) *ExecContext {
 			Pages:             extractPagesRepo(e.backend),
 			Layouts:           extractLayoutsRepo(e.backend),
 			Snippets:          extractSnippetsRepo(e.backend),
-		},
-		ExecIO: ExecIO{
-			Output:       e.output,
-			StatusOutput: e.statusOutput,
-			Format:       e.format,
-			Quiet:        e.quiet,
-		},
-		ExecSession: ExecSession{
-			Fragments: e.fragments,
-			Cache:     e.cache,
-		},
-		ExecConnection: ExecConnection{
-			MprPath:        e.mprPath,
-			Graph:          e.graphCatalog,
-			BackendFactory: e.backendFactory,
-		},
-		ExecCallbacks: ExecCallbacks{
-			ExecuteFn:        e.Execute,
-			ExecuteProgramFn: e.ExecuteProgram,
-			FinalizeFn:       e.finalizeProgramExecution,
-			SyncGraph: func(pg *graphcatalog.ProjectGraph) {
-				e.graphCatalog = pg
-			},
 		},
 	}
 	execCtx.initRoles()

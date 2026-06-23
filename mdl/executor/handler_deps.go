@@ -355,7 +355,7 @@ func (e *Executor) registerFutureOverlays() {
 				return describeJavaActionGenFuture(ctx, output, deps.JavaActionRepo, s.Name)
 			})
 		case ast.DescribeJavaScriptAction:
-			ectx := ctx.(*ExecContext)
+			ectx := phase3d2bNewExecContext(ctx, deps)
 			return writeDescribeJSON(ectx, name, entry.label, func() error {
 				return entry.handler(ectx, s)
 			})
@@ -397,7 +397,7 @@ func (e *Executor) registerFutureOverlays() {
 			})
 		default:
 			// Not yet migrated — fall through to old handler.
-			ectx := ctx.(*ExecContext)
+			ectx := phase3d2bNewExecContext(ctx, deps)
 			return writeDescribeJSON(ectx, name, entry.label, func() error {
 				return entry.handler(ectx, s)
 			})

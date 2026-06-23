@@ -2776,7 +2776,15 @@ func execConnectFuture(ctx context.Context, s *ast.ConnectStmt, ex *Executor) er
 		tmpCtx.Cache = ex.cache
 	}
 	err := execConnect(tmpCtx, s)
-	ex.syncBack(tmpCtx)
+	// Inline syncBack for Connect: propagate Executor state
+	if tmpCtx.Backend != nil {
+		ex.backend = tmpCtx.Backend
+	}
+	ex.mprPath = tmpCtx.MprPath
+	ex.cache = tmpCtx.Cache
+	if tmpCtx.Graph != nil {
+		ex.graphCatalog = tmpCtx.Graph
+	}
 	return err
 }
 
@@ -2801,7 +2809,10 @@ func execDisconnectFuture(ctx context.Context, ex *Executor) error {
 		tmpCtx.Cache = ex.cache
 	}
 	err := execDisconnect(tmpCtx)
-	ex.syncBack(tmpCtx)
+	// Inline syncBack for Disconnect
+	ex.mprPath = ""
+	ex.cache = nil
+	ex.backend = nil
 	return err
 }
 
@@ -2860,7 +2871,16 @@ func execExecuteScriptFuture(ctx context.Context, s *ast.ExecuteScriptStmt, deps
 		Logger:                   deps.Logger,
 	}
 	err := execExecuteScript(tmpCtx, s)
-	ex.syncBack(tmpCtx)
+	// Inline syncBack for ExecuteScript
+	if tmpCtx.Backend != nil {
+		ex.backend = tmpCtx.Backend
+	}
+	ex.mprPath = tmpCtx.MprPath
+	ex.cache = tmpCtx.Cache
+	ex.format = tmpCtx.Format
+	if tmpCtx.Graph != nil {
+		ex.graphCatalog = tmpCtx.Graph
+	}
 	return err
 }
 
@@ -2869,13 +2889,14 @@ func execExecuteScriptFuture(ctx context.Context, s *ast.ExecuteScriptStmt, deps
 // ────────────────────────────────────────────────────────────
 
 // phase3d2bNewExecContext builds a temporary *ExecContext from HandlerDeps
-// for Phase 3d-2b handler bridges. Runs initRoles() so all role-specific
-// backend fields are populated.
+// for bridge functions that still call old *ExecContext handlers.
+// Populates role-specific backend fields from deps.Backend.
 func phase3d2bNewExecContext(ctx context.Context, deps *HandlerDeps) *ExecContext {
 	ectx := &ExecContext{
 		Context: ctx,
 		Backend: deps.Backend,
 		ExecIO:  ExecIO{Output: deps.Output},
+		ExecSession: ExecSession{Cache: deps.Cache},
 		ExecRepos: ExecRepos{
 			DomainModels:      deps.DomainModels,
 			Microflows:        deps.MicroflowRepo,
@@ -2889,11 +2910,54 @@ func phase3d2bNewExecContext(ctx context.Context, deps *HandlerDeps) *ExecContex
 			Snippets:          deps.SnippetRepo,
 		},
 	}
-	// Preserve the existing executor cache (critical for mock tests with pre-built hierarchy).
-	if oldCtx, ok := ctx.(*ExecContext); ok {
-		ectx.Cache = oldCtx.Cache
+	// Populate role-specific backend fields from deps.Backend
+	// for old handler functions that still access ctx.XxxReader/Writer/Manager.
+	if deps.Backend != nil {
+		ectx.ModuleLister = deps.Backend
+		ectx.ModuleWriter = deps.Backend
+		ectx.DomainModelReader = deps.Backend
+		ectx.DomainModelWriter = deps.Backend
+		ectx.MicroflowReader = deps.Backend
+		ectx.MicroflowWriter = deps.Backend
+		ectx.WorkflowReader = deps.Backend
+		ectx.WorkflowWriter = deps.Backend
+		ectx.PageReader = deps.Backend
+		ectx.PageWriter = deps.Backend
+		ectx.JavaActionReader = deps.Backend
+		ectx.JavaActionWriter = deps.Backend
+		ectx.JavaScriptActionWriter = deps.Backend
+		ectx.EnumerationReader = deps.Backend
+		ectx.EnumerationWriter = deps.Backend
+		ectx.ConstantReader = deps.Backend
+		ectx.ConstantWriter = deps.Backend
+		ectx.SettingsReader = deps.Backend
+		ectx.SettingsWriter = deps.Backend
+		ectx.MappingReader = deps.Backend
+		ectx.MappingWriter = deps.Backend
+		ectx.UnitReader = deps.Backend
+		ectx.UnitWriter = deps.Backend
+		ectx.NavigationReader = deps.Backend
+		ectx.NavigationWriter = deps.Backend
+		ectx.ImageCollectionWriter = deps.Backend
+		ectx.ScheduledEventReader = deps.Backend
+		ectx.ServiceLister = deps.Backend
+		ectx.ServiceWriter = deps.Backend
+		ectx.MetadataReader = deps.Backend
+		ectx.ConnectionManager = deps.Backend
+		ectx.FolderManager = deps.Backend
+		ectx.ModuleSettingsReader = deps.Backend
+		ectx.ModuleSettingsWriter = deps.Backend
+		ectx.RenameManager = deps.Backend
+		ectx.SecurityProjectManager = deps.Backend
+		ectx.SecurityModuleManager = deps.Backend
+		ectx.SecurityEntityAccessManager = deps.Backend
+		ectx.PageModelAccess = deps.Backend
+		ectx.PageMutationOperator = deps.Backend
+		ectx.WorkflowMutationOperator = deps.Backend
+		ectx.WidgetBuilder = deps.Backend
+		ectx.ScriptTransactionManager = deps.Backend
+		ectx.AgentEditorOperator = deps.Backend
 	}
-	ectx.initRoles()
 	return ectx
 }
 
