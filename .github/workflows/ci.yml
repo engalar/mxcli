@@ -20,6 +20,8 @@ jobs:
   build-test-lint:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v6
+
       - uses: ./.github/actions/setup-go-antlr
 
       - name: Build
@@ -70,6 +72,8 @@ jobs:
       fail-fast: false
     name: test (Mendix ${{ matrix.mendix-version }})
     steps:
+      - uses: actions/checkout@v6
+
       - uses: ./.github/actions/setup-go-antlr
 
       - name: Build
@@ -91,6 +95,8 @@ jobs:
     name: exprcheck round-trip (regression gate)
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v6
+
       - uses: ./.github/actions/setup-go-antlr
 
       - name: Round-trip exprcheck
@@ -103,6 +109,10 @@ jobs:
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
       - uses: ./.github/actions/setup-go-antlr
         with:
           fetch-depth: 0
