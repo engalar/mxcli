@@ -111,10 +111,10 @@ func ExecCreateAssociation(ctx *ExecContext, s *ast.CreateAssociationStmt) error
 				if !ok || ca.Name() != s.Name.Name {
 					continue
 				}
-				ca.SetType(astAssociationTypeStringGen(s))
-				ca.SetOwner(astAssociationOwnerStringGen(s))
-				ca.SetStorageFormat(astAssociationStorageStringGen(s))
-				ca.SetDeleteBehavior(astAssociationDeleteBehaviorGen(s))
+				ca.SetType(AstAssociationTypeStringGen(s))
+				ca.SetOwner(AstAssociationOwnerStringGen(s))
+				ca.SetStorageFormat(AstAssociationStorageStringGen(s))
+				ca.SetDeleteBehavior(AstAssociationDeleteBehaviorGen(s))
 				ca.SetChildQualifiedName(childRef)
 				if doc := associationDocumentation(s); doc != "" {
 					ca.SetDocumentation(doc)
