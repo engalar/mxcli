@@ -15,8 +15,8 @@ import (
 	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 )
 
-// execCreateAssociation handles CREATE ASSOCIATION statements.
-func execCreateAssociation(ctx *ExecContext, s *ast.CreateAssociationStmt) error {
+// ExecCreateAssociation handles CREATE ASSOCIATION statements.
+func ExecCreateAssociation(ctx *ExecContext, s *ast.CreateAssociationStmt) error {
 	if !ctx.Connected() {
 		return mdlerrors.NewNotConnected()
 	}
@@ -229,8 +229,8 @@ func associationDocumentation(s *ast.CreateAssociationStmt) string {
 	return ""
 }
 
-// execAlterAssociation handles ALTER ASSOCIATION statements.
-func execAlterAssociation(ctx *ExecContext, s *ast.AlterAssociationStmt) error {
+// ExecAlterAssociation handles ALTER ASSOCIATION statements.
+func ExecAlterAssociation(ctx *ExecContext, s *ast.AlterAssociationStmt) error {
 	if !ctx.Connected() {
 		return mdlerrors.NewNotConnected()
 	}
@@ -299,8 +299,8 @@ func execAlterAssociation(ctx *ExecContext, s *ast.AlterAssociationStmt) error {
 	return mdlerrors.NewNotFound("association", s.Name.String())
 }
 
-// execDropAssociation handles DROP ASSOCIATION statements.
-func execDropAssociation(ctx *ExecContext, s *ast.DropAssociationStmt) error {
+// ExecDropAssociation handles DROP ASSOCIATION statements.
+func ExecDropAssociation(ctx *ExecContext, s *ast.DropAssociationStmt) error {
 	if !ctx.Connected() {
 		return mdlerrors.NewNotConnected()
 	}

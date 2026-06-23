@@ -17,8 +17,8 @@ import (
 	genPg "github.com/mendixlabs/mxcli/modelsdk/gen/pages"
 )
 
-// execAlterPage handles ALTER PAGE/SNIPPET Module.Name { operations }.
-func execAlterPage(ctx *ExecContext, s *ast.AlterPageStmt) error {
+// ExecAlterPage handles ALTER PAGE/SNIPPET Module.Name { operations }.
+func ExecAlterPage(ctx *ExecContext, s *ast.AlterPageStmt) error {
 	if !ctx.Connected() {
 		return mdlerrors.NewNotConnected()
 	}

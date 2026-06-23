@@ -11,7 +11,7 @@ import (
 	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 )
 
-func execAlterAssociationGen(ctx *ExecContext, s *ast.AlterAssociationStmt) error {
+func ExecAlterAssociationGen(ctx *ExecContext, s *ast.AlterAssociationStmt) error {
 	if !ctx.Connected() {
 		return mdlerrors.NewNotConnected()
 	}

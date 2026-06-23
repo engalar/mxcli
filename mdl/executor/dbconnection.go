@@ -12,8 +12,8 @@ import (
 	"github.com/mendixlabs/mxcli/model"
 )
 
-// createDatabaseConnection handles CREATE DATABASE CONNECTION command.
-func createDatabaseConnection(ctx *ExecContext, stmt *ast.CreateDatabaseConnectionStmt) error {
+// ExecCreateDatabaseConnection handles CREATE DATABASE CONNECTION command.
+func ExecCreateDatabaseConnection(ctx *ExecContext, stmt *ast.CreateDatabaseConnectionStmt) error {
 	if !ctx.ConnectedForWrite() {
 		return mdlerrors.NewNotConnectedWrite()
 	}

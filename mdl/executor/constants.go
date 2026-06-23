@@ -252,8 +252,8 @@ func formatDefaultValue(dt model.ConstantDataType, value string) string {
 	}
 }
 
-// createConstant handles CREATE CONSTANT command.
-func createConstant(ctx *ExecContext, stmt *ast.CreateConstantStmt) error {
+// ExecCreateConstant handles CREATE CONSTANT command.
+func ExecCreateConstant(ctx *ExecContext, stmt *ast.CreateConstantStmt) error {
 	if !ctx.ConnectedForWrite() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
@@ -435,8 +435,8 @@ func listConstantValues(ctx *ExecContext, moduleName string) error {
 	return writeResult(ctx, result)
 }
 
-// dropConstant handles DROP CONSTANT command.
-func dropConstant(ctx *ExecContext, stmt *ast.DropConstantStmt) error {
+// ExecDropConstant handles DROP CONSTANT command.
+func ExecDropConstant(ctx *ExecContext, stmt *ast.DropConstantStmt) error {
 	if !ctx.ConnectedForWrite() {
 		return mdlerrors.NewNotConnectedWrite()
 	}

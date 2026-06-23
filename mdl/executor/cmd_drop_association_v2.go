@@ -11,7 +11,7 @@ import (
 	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 )
 
-func execDropAssociationGen(ctx *ExecContext, s *ast.DropAssociationStmt) error {
+func ExecDropAssociationGen(ctx *ExecContext, s *ast.DropAssociationStmt) error {
 	if !ctx.Connected() {
 		return mdlerrors.NewNotConnected()
 	}

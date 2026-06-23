@@ -17,8 +17,8 @@ import (
 // V3 Page Creation
 // ============================================================================
 
-// execCreatePageV3 handles CREATE PAGE statement with V3 syntax.
-func execCreatePageV3(ctx *ExecContext, s *ast.CreatePageStmtV3) error {
+// ExecCreatePageV3 handles CREATE PAGE statement with V3 syntax.
+func ExecCreatePageV3(ctx *ExecContext, s *ast.CreatePageStmtV3) error {
 	if !ctx.ConnectedForWrite() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
@@ -162,8 +162,8 @@ func execCreatePageV3(ctx *ExecContext, s *ast.CreatePageStmtV3) error {
 	return nil
 }
 
-// execCreateSnippetV3 handles CREATE SNIPPET statement with V3 syntax.
-func execCreateSnippetV3(ctx *ExecContext, s *ast.CreateSnippetStmtV3) error {
+// ExecCreateSnippetV3 handles CREATE SNIPPET statement with V3 syntax.
+func ExecCreateSnippetV3(ctx *ExecContext, s *ast.CreateSnippetStmtV3) error {
 	if !ctx.ConnectedForWrite() {
 		return mdlerrors.NewNotConnectedWrite()
 	}

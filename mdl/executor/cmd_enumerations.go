@@ -14,8 +14,8 @@ import (
 	"github.com/mendixlabs/mxcli/model"
 )
 
-// execCreateEnumeration handles CREATE ENUMERATION statements.
-func execCreateEnumeration(ctx *ExecContext, s *ast.CreateEnumerationStmt) error {
+// ExecCreateEnumeration handles CREATE ENUMERATION statements.
+func ExecCreateEnumeration(ctx *ExecContext, s *ast.CreateEnumerationStmt) error {
 
 	if !ctx.Connected() {
 		return mdlerrors.NewNotConnected()
@@ -114,8 +114,8 @@ func execAlterEnumeration(ctx *ExecContext, s *ast.AlterEnumerationStmt) error {
 	return mdlerrors.NewUnsupported("alter enumeration not yet implemented")
 }
 
-// execDropEnumeration handles DROP ENUMERATION statements.
-func execDropEnumeration(ctx *ExecContext, s *ast.DropEnumerationStmt) error {
+// ExecDropEnumeration handles DROP ENUMERATION statements.
+func ExecDropEnumeration(ctx *ExecContext, s *ast.DropEnumerationStmt) error {
 
 	if !ctx.Connected() {
 		return mdlerrors.NewNotConnected()

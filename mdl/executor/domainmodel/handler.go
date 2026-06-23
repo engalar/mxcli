@@ -24,30 +24,30 @@ func RegisterHandlers(r *executor.Registry, deps *executor.HandlerDeps) {
 		return executor.ExecCreateViewEntity(ectx, stmt.(*ast.CreateViewEntityStmt))
 	})
 	r.RegisterFuture("CreateAssociation", func(ctx context.Context, stmt ast.Statement) error {
-		return executor.ExecCreateAssociationFn(ctx, stmt.(*ast.CreateAssociationStmt), deps)
+		return ExecCreateAssociationFn(ctx, stmt.(*ast.CreateAssociationStmt), deps)
 	})
 	r.RegisterFuture("AlterAssociation", func(ctx context.Context, stmt ast.Statement) error {
-		return executor.ExecAlterAssociationFn(ctx, stmt.(*ast.AlterAssociationStmt), deps)
+		return ExecAlterAssociationFn(ctx, stmt.(*ast.AlterAssociationStmt), deps)
 	})
 	r.RegisterFuture("DropAssociation", func(ctx context.Context, stmt ast.Statement) error {
-		return executor.ExecDropAssociationFn(ctx, stmt.(*ast.DropAssociationStmt), deps)
+		return ExecDropAssociationFn(ctx, stmt.(*ast.DropAssociationStmt), deps)
 	})
 	r.RegisterFuture("CreateEnumeration", func(ctx context.Context, stmt ast.Statement) error {
-		return executor.ExecCreateEnumerationFuture(ctx, stmt, deps)
+		return ExecCreateEnumerationFuture(ctx, stmt, deps)
 	})
 	r.RegisterFuture("AlterEnumeration", func(ctx context.Context, stmt ast.Statement) error {
-		return executor.ExecAlterEnumerationFuture(ctx, deps)
+		return ExecAlterEnumerationFuture(ctx, deps)
 	})
 	r.RegisterFuture("DropEnumeration", func(ctx context.Context, stmt ast.Statement) error {
-		return executor.ExecDropEnumerationFuture(ctx, stmt, deps)
+		return ExecDropEnumerationFuture(ctx, stmt, deps)
 	})
 	r.RegisterFuture("CreateConstant", func(ctx context.Context, stmt ast.Statement) error {
-		return executor.ExecCreateConstantFuture(ctx, stmt, deps)
+		return ExecCreateConstantFuture(ctx, stmt, deps)
 	})
 	r.RegisterFuture("DropConstant", func(ctx context.Context, stmt ast.Statement) error {
-		return executor.ExecDropConstantFuture(ctx, stmt, deps)
+		return ExecDropConstantFuture(ctx, stmt, deps)
 	})
 	r.RegisterFuture("CreateDatabaseConnection", func(ctx context.Context, stmt ast.Statement) error {
-		return executor.ExecCreateDatabaseConnectionFuture(ctx, stmt, deps)
+		return ExecCreateDatabaseConnectionFuture(ctx, stmt, deps)
 	})
 }

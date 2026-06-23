@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 package workflow
 
 import (
@@ -9,13 +11,12 @@ import (
 
 func RegisterHandlers(r *executor.Registry, deps *executor.HandlerDeps) {
 	r.RegisterFuture("CreateWorkflow", func(ctx context.Context, stmt ast.Statement) error {
-		return executor.ExecCreateWorkflowGenFn(ctx, stmt.(*ast.CreateWorkflowStmt), deps)
+		return ExecCreateWorkflowGenFn(ctx, stmt.(*ast.CreateWorkflowStmt), deps)
 	})
 	r.RegisterFuture("DropWorkflow", func(ctx context.Context, stmt ast.Statement) error {
-		return executor.ExecDropWorkflowGenFn(ctx, stmt.(*ast.DropWorkflowStmt), deps)
+		return ExecDropWorkflowGenFn(ctx, stmt.(*ast.DropWorkflowStmt), deps)
 	})
 	r.RegisterFuture("AlterWorkflow", func(ctx context.Context, stmt ast.Statement) error {
-		ectx := executor.NewExecContext(ctx, deps)
-		return executor.ExecAlterWorkflow(ectx, stmt.(*ast.AlterWorkflowStmt))
+		return ExecAlterWorkflowFn(ctx, stmt.(*ast.AlterWorkflowStmt), deps)
 	})
 }

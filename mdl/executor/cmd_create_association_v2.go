@@ -35,7 +35,7 @@ func execCreateAssociationGen(ctx *ExecContext, s *ast.CreateAssociationStmt) er
 	// Keep legacy path for cross-module and OR MODIFY until the gen
 	// write bridge grows CrossAssociation + update support.
 	if s.CreateOrModify || parentModule != childModule {
-		return execCreateAssociation(ctx, s)
+		return ExecCreateAssociation(ctx, s)
 	}
 
 	module, err := findOrCreateModule(ctx, s.Name.Module)

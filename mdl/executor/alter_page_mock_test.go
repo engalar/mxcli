@@ -22,7 +22,7 @@ import (
 func TestAlterPage_NotConnected(t *testing.T) {
 	mb := &mock.MockBackend{IsConnectedFunc: func() bool { return false }}
 	ctx, _ := newMockCtx(t, withBackend(mb))
-	err := execAlterPage(ctx, &ast.AlterPageStmt{
+	err := ExecAlterPage(ctx, &ast.AlterPageStmt{
 		PageName: ast.QualifiedName{Module: "M", Name: "P"},
 	})
 	assertError(t, err)
@@ -43,7 +43,7 @@ func TestAlterPage_PageNotFound(t *testing.T) {
 	h := mkHierarchy(mod)
 	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
 	ctx.Pages = makePagesRepo(nil, mod.ID)
-	err := execAlterPage(ctx, &ast.AlterPageStmt{
+	err := ExecAlterPage(ctx, &ast.AlterPageStmt{
 		PageName: ast.QualifiedName{Module: "MyModule", Name: "Missing"},
 	})
 	assertError(t, err)
@@ -82,7 +82,7 @@ func TestAlterPage_SetProperty_Success(t *testing.T) {
 	h := mkHierarchy(mod)
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
 	ctx.Pages = makePagesRepo([]*genPg.Page{pg}, mod.ID)
-	assertNoError(t, execAlterPage(ctx, &ast.AlterPageStmt{
+	assertNoError(t, ExecAlterPage(ctx, &ast.AlterPageStmt{
 		PageName: ast.QualifiedName{Module: "MyModule", Name: "TestPage"},
 		Operations: []ast.AlterPageOperation{
 			&ast.SetPropertyOp{
@@ -122,7 +122,7 @@ func TestAlterPage_Snippet_Success(t *testing.T) {
 	h := mkHierarchy(mod)
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
 	ctx.Snippets = makeSnippetsRepo([]*genPg.Snippet{snp}, mod.ID)
-	assertNoError(t, execAlterPage(ctx, &ast.AlterPageStmt{
+	assertNoError(t, ExecAlterPage(ctx, &ast.AlterPageStmt{
 		ContainerType: "snippet",
 		PageName:      ast.QualifiedName{Module: "MyModule", Name: "TestSnippet"},
 	}))
@@ -151,7 +151,7 @@ func TestAlterPage_Snippet_UppercaseContainerType_Issue402(t *testing.T) {
 	h := mkHierarchy(mod)
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
 	ctx.Snippets = makeSnippetsRepo([]*genPg.Snippet{snp}, mod.ID)
-	assertNoError(t, execAlterPage(ctx, &ast.AlterPageStmt{
+	assertNoError(t, ExecAlterPage(ctx, &ast.AlterPageStmt{
 		ContainerType: "SNIPPET", // uppercase as produced by the AST visitor
 		PageName:      ast.QualifiedName{Module: "MyModule", Name: "TestSnippet"},
 	}))
@@ -179,7 +179,7 @@ func TestAlterPage_OpenMutatorError(t *testing.T) {
 	h := mkHierarchy(mod)
 	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
 	ctx.Pages = makePagesRepo([]*genPg.Page{pg}, mod.ID)
-	err := execAlterPage(ctx, &ast.AlterPageStmt{
+	err := ExecAlterPage(ctx, &ast.AlterPageStmt{
 		PageName: ast.QualifiedName{Module: "MyModule", Name: "TestPage"},
 	})
 	assertError(t, err)
@@ -206,7 +206,7 @@ func TestAlterPage_SaveError(t *testing.T) {
 	h := mkHierarchy(mod)
 	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
 	ctx.Pages = makePagesRepo([]*genPg.Page{pg}, mod.ID)
-	err := execAlterPage(ctx, &ast.AlterPageStmt{
+	err := ExecAlterPage(ctx, &ast.AlterPageStmt{
 		PageName: ast.QualifiedName{Module: "MyModule", Name: "TestPage"},
 	})
 	assertError(t, err)
@@ -241,7 +241,7 @@ func TestAlterPage_DropWidget_Success(t *testing.T) {
 	h := mkHierarchy(mod)
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
 	ctx.Pages = makePagesRepo([]*genPg.Page{pg}, mod.ID)
-	assertNoError(t, execAlterPage(ctx, &ast.AlterPageStmt{
+	assertNoError(t, ExecAlterPage(ctx, &ast.AlterPageStmt{
 		PageName: ast.QualifiedName{Module: "MyModule", Name: "TestPage"},
 		Operations: []ast.AlterPageOperation{
 			&ast.DropWidgetOp{
@@ -283,7 +283,7 @@ func TestAlterPage_AddVariable_Success(t *testing.T) {
 	h := mkHierarchy(mod)
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
 	ctx.Pages = makePagesRepo([]*genPg.Page{pg}, mod.ID)
-	assertNoError(t, execAlterPage(ctx, &ast.AlterPageStmt{
+	assertNoError(t, ExecAlterPage(ctx, &ast.AlterPageStmt{
 		PageName: ast.QualifiedName{Module: "MyModule", Name: "TestPage"},
 		Operations: []ast.AlterPageOperation{
 			&ast.AddVariableOp{
@@ -315,7 +315,7 @@ func TestAlterPage_SetLayout_Snippet_Unsupported(t *testing.T) {
 	h := mkHierarchy(mod)
 	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
 	ctx.Snippets = makeSnippetsRepo([]*genPg.Snippet{snp}, mod.ID)
-	err := execAlterPage(ctx, &ast.AlterPageStmt{
+	err := ExecAlterPage(ctx, &ast.AlterPageStmt{
 		ContainerType: "snippet",
 		PageName:      ast.QualifiedName{Module: "MyModule", Name: "TestSnippet"},
 		Operations: []ast.AlterPageOperation{
@@ -371,7 +371,7 @@ func TestAlterPage_ReplaceWidget_SameName_Allowed(t *testing.T) {
 	h := mkHierarchy(mod)
 	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
 	ctx.Pages = makePagesRepo([]*genPg.Page{pg}, mod.ID)
-	assertNoError(t, execAlterPage(ctx, &ast.AlterPageStmt{
+	assertNoError(t, ExecAlterPage(ctx, &ast.AlterPageStmt{
 		PageName: ast.QualifiedName{Module: "MyModule", Name: "TestPage"},
 		Operations: []ast.AlterPageOperation{
 			&ast.ReplaceWidgetOp{

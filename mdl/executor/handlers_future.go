@@ -2756,10 +2756,10 @@ func execConnectFuture(ctx context.Context, s *ast.ConnectStmt, ex *Executor) er
 	tmpCtx := &ExecContext{
 		Context: ctx,
 		ExecIO: ExecIO{
-			Output:       ex.output,
-			StatusOutput: ex.statusOutput,
-			Format:       ex.format,
-			Quiet:        ex.quiet,
+			Output:       ex.guard,
+			StatusOutput: ex.guard.status,
+			Format:       ex.guard.format,
+			Quiet:        ex.guard.quiet,
 		},
 		ExecConnection: ExecConnection{
 			BackendFactory: ex.backendFactory,
@@ -2791,14 +2791,14 @@ func execConnectFuture(ctx context.Context, s *ast.ConnectStmt, ex *Executor) er
 // execDisconnectFuture is the ExecContext-free version of execDisconnect.
 func execDisconnectFuture(ctx context.Context, ex *Executor) error {
 	if ex.backend == nil || !ex.backend.IsConnected() {
-		fmt.Fprintln(ex.output, "Not connected")
+		fmt.Fprintln(ex.guard, "Not connected")
 		return nil
 	}
 	tmpCtx := &ExecContext{
 		Context:           ctx,
 		Backend:           ex.backend,
 		ConnectionManager: ex.backend,
-		ExecIO:            ExecIO{Output: ex.output},
+		ExecIO:            ExecIO{Output: ex.guard},
 		ExecConnection:    ExecConnection{MprPath: ex.mprPath},
 		ExecCallbacks: ExecCallbacks{
 			FinalizeFn: ex.finalizeProgramExecution,
@@ -2877,7 +2877,7 @@ func execExecuteScriptFuture(ctx context.Context, s *ast.ExecuteScriptStmt, deps
 	}
 	ex.mprPath = tmpCtx.MprPath
 	ex.cache = tmpCtx.Cache
-	ex.format = tmpCtx.Format
+	ex.guard.format = tmpCtx.Format
 	if tmpCtx.Graph != nil {
 		ex.graphCatalog = tmpCtx.Graph
 	}
@@ -2987,41 +2987,12 @@ func NewExecContext(ctx context.Context, deps *HandlerDeps) *ExecContext {
 }
 
 // ────────────────────────────────────────────────────────────
-// Phase 3d-2e: remaining handler bridges (Enumeration, Constant, Module, etc.)
+// Phase 3d-2e: remaining handler bridges (Module, Java/JS actions, etc.)
 // ────────────────────────────────────────────────────────────
-
-func ExecCreateEnumerationFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := NewExecContext(ctx, deps)
-	return execCreateEnumeration(ectx, stmt.(*ast.CreateEnumerationStmt))
-}
-
-func ExecAlterEnumerationFuture(ctx context.Context, deps *HandlerDeps) error {
-	return mdlerrors.NewUnsupported("alter enumeration not yet implemented")
-}
-
-func ExecDropEnumerationFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := NewExecContext(ctx, deps)
-	return execDropEnumeration(ectx, stmt.(*ast.DropEnumerationStmt))
-}
-
-func ExecCreateConstantFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := NewExecContext(ctx, deps)
-	return createConstant(ectx, stmt.(*ast.CreateConstantStmt))
-}
-
-func ExecDropConstantFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := NewExecContext(ctx, deps)
-	return dropConstant(ectx, stmt.(*ast.DropConstantStmt))
-}
 
 func ExecAlterModuleJarDepFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
 	ectx := NewExecContext(ctx, deps)
 	return execAlterModuleJarDep(ectx, stmt.(*ast.AlterModuleJarDepStmt))
-}
-
-func ExecCreateDatabaseConnectionFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := NewExecContext(ctx, deps)
-	return createDatabaseConnection(ectx, stmt.(*ast.CreateDatabaseConnectionStmt))
 }
 
 func ExecCreateJavaActionFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
@@ -3360,34 +3331,19 @@ func ExecDropModuleFn(ctx context.Context, s *ast.DropModuleStmt, deps *HandlerD
 	return execDropModule(ectx, s)
 }
 
-func ExecCreateAssociationFn(ctx context.Context, s *ast.CreateAssociationStmt, deps *HandlerDeps) error {
-	ectx := NewExecContext(ctx, deps)
-	return execCreateAssociation(ectx, s)
-}
-
-func ExecAlterAssociationFn(ctx context.Context, s *ast.AlterAssociationStmt, deps *HandlerDeps) error {
-	ectx := NewExecContext(ctx, deps)
-	return execAlterAssociationGen(ectx, s)
-}
-
-func ExecDropAssociationFn(ctx context.Context, s *ast.DropAssociationStmt, deps *HandlerDeps) error {
-	ectx := NewExecContext(ctx, deps)
-	return execDropAssociationGen(ectx, s)
-}
-
 func ExecCreatePageV3Fn(ctx context.Context, s *ast.CreatePageStmtV3, deps *HandlerDeps) error {
 	ectx := NewExecContext(ctx, deps)
-	return execCreatePageV3(ectx, s)
+	return ExecCreatePageV3(ectx, s)
 }
 
 func ExecCreateSnippetV3Fn(ctx context.Context, s *ast.CreateSnippetStmtV3, deps *HandlerDeps) error {
 	ectx := NewExecContext(ctx, deps)
-	return execCreateSnippetV3(ectx, s)
+	return ExecCreateSnippetV3(ectx, s)
 }
 
 func ExecAlterPageFn(ctx context.Context, s *ast.AlterPageStmt, deps *HandlerDeps) error {
 	ectx := NewExecContext(ctx, deps)
-	return execAlterPage(ectx, s)
+	return ExecAlterPage(ectx, s)
 }
 
 func listODataClientsFn(ctx context.Context, deps *HandlerDeps, format OutputFormat, moduleName string) error {
