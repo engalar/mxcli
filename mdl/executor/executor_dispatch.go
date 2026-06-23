@@ -48,6 +48,11 @@ func (e *Executor) newExecContext(ctx context.Context) *ExecContext {
 			Layouts:           extractLayoutsRepo(e.backend),
 			Snippets:          extractSnippetsRepo(e.backend),
 		},
+		ExecCallbacks: ExecCallbacks{
+			ExecuteFn:        e.Execute,
+			ExecuteProgramFn: e.ExecuteProgram,
+			FinalizeFn:       e.finalizeProgramExecution,
+		},
 	}
 	execCtx.initRoles()
 	return execCtx
