@@ -38,7 +38,7 @@ type Monitor struct {
 func NewMonitor(t *testing.T, opts ...MonitorOption) *Monitor {
 	m := &Monitor{
 		t:       t,
-		reader:  &procfsReader{},
+		reader:  &ProcfsReader{},
 		startAt: time.Now(),
 	}
 	for _, opt := range opts {
@@ -91,9 +91,9 @@ func (m *Monitor) Done() Profile {
 	return p
 }
 
-type procfsReader struct{}
+type ProcfsReader struct{}
 
-func (r *procfsReader) Read() (ResourceSnapshot, error) {
+func (r *ProcfsReader) Read() (ResourceSnapshot, error) {
 	var snap ResourceSnapshot
 
 	// CPU ticks from /proc/self/stat
