@@ -65,7 +65,7 @@ setup:
 # does not exceed .mx-check-baseline. Catches regressions in cross-session state
 # propagation (entity resolution, return types, parameter caches).
 # Requires: locally-installed mxbuild (run: mxcli setup mxbuild -p testdata/helpdesk-clean-11.6.6/minimal.mpr)
-test-section-check: build install-daemon
+test-section-check: build
 	@./scripts/test-section-check.sh
 
 # Install the locally-built binary to PATH.
@@ -313,7 +313,7 @@ test-integration:
 # Run integration tests with resource profiling and profile-based scheduling.
 # Profiles are saved to coverage/test-profiles/ for later analysis.
 # Scheduling uses historical profiles to assign tests to IO/CPU/Mixed lanes.
-test-integration-profiled: build install-daemon
+test-integration-profiled: build
 	@mkdir -p coverage/test-profiles
 	CGO_ENABLED=0 go test -tags integration -count=1 -timeout 30m \
 		-resource-profile -resource-schedule \
