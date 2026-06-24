@@ -306,8 +306,8 @@ func (e *Executor) registerFutureOverlays() {
 					deps.ImageBackend, deps.NavigationReader)
 			})
 		case ast.DescribeEntity:
-			return writeDescribeJSONFuture(deps.Output, e.format, name, entry.label, func(output io.Writer) error {
-				return describeEntityGenFuture(ctx, output, deps.ModuleLister, deps.DomainModels, deps.Security, s.Name)
+			return writeDescribeJSON(ctx, name, entry.label, deps, func() error {
+				return entry.handler(ctx, s, deps)
 			})
 		case ast.DescribeAssociation:
 			return writeDescribeJSON(ctx, name, entry.label, deps, func() error {
