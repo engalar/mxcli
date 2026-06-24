@@ -81,7 +81,7 @@ create or modify entity MyFirstModule.WF_Item (
 
 const wfStep3Grant = `
 grant MyFirstModule.Reviewer on MyFirstModule.WF_Item
-  (create, delete, read *, write *);
+  (create, delete, read *, write (Title, Description, Count, Total, Amount, IsActive, DueDate, Payload, Status));
 `
 
 const wfStep4Workflow = `
@@ -92,7 +92,7 @@ create or modify workflow MyFirstModule.WF_ComplexApproval
 {
   user task InitialReview 'Initial Review'
     page MyFirstModule.Page_WF_InitialReview
-    targeting users xpath '[id != 0]'
+    targeting users xpath 'System.User[Name != ""]'
     outcomes
       'Submit' {
         decision '$ctx/Amount > 1000'
@@ -100,7 +100,7 @@ create or modify workflow MyFirstModule.WF_ComplexApproval
             true -> {
               multi user task SeniorApproval 'Senior Approval'
                 page MyFirstModule.Page_WF_SeniorApproval
-                targeting groups xpath '[id != 0]'
+                targeting groups xpath 'System.UserRole[Name != ""]'
                 outcomes
                   'Approve' { }
                   'Reject'  { };
@@ -108,7 +108,7 @@ create or modify workflow MyFirstModule.WF_ComplexApproval
             false -> {
               user task StandardApproval 'Standard Approval'
                 page MyFirstModule.Page_WF_StandardApproval
-                targeting users xpath '[id != 0]'
+                targeting users xpath 'System.User[Name != ""]'
                 outcomes
                   'Approve' { }
                   'Reject'  { };
