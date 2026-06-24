@@ -147,12 +147,9 @@ func TestMain(m *testing.M) {
 
 	// Initialize resource registry if any profiling flag is active.
 	if *flagResourceProfile || *flagResourceRecord || *flagResourceCheck {
-		// Resolve profile directory relative to repo root (go test runs from
-		// the package directory, not where go test was invoked).
 		pkgDir, _ := os.Getwd()
 		profileDir := filepath.Join(pkgDir, "..", "..", "coverage", "test-profiles")
 		if _, err := os.Stat(filepath.Join(pkgDir, "..", "..", "go.mod")); err != nil {
-			// Fallback: use CWD as-is if we can't find go.mod
 			profileDir = "coverage/test-profiles"
 		}
 		testRegistry = testresourceregistry.New(profileDir, 2, 4, 500)
@@ -160,7 +157,7 @@ func TestMain(m *testing.M) {
 			profileDir, *flagResourceProfile, *flagResourceRecord, *flagResourceCheck)
 	}
 
-	// 1. Try the committed source project
+	// 1. Try the committed source project (fast path).
 	srcDir, err := filepath.Abs(sourceProject)
 	if err == nil {
 		if _, err := os.Stat(filepath.Join(srcDir, sourceProjectMPR)); err == nil {
@@ -171,10 +168,24 @@ func TestMain(m *testing.M) {
 		}
 	}
 
-	// 2. Create a project once using mx create-project
+	// 2. Fallback: use testdata/helpdesk-clean-11.10.0 (fast, no mx create-project).
+	//    This is a blank 11.10.0 project with Atlas Core pre-installed.
+	pkgDir, err := os.Getwd()
+	if err == nil {
+		candidate := filepath.Join(pkgDir, "..", "..", "testdata", "helpdesk-clean-11.10.0")
+		if _, err := os.Stat(filepath.Join(candidate, "minimal.mpr")); err == nil {
+			sharedSourceProject = candidate
+			sharedSourceMPR = "minimal.mpr"
+			fmt.Fprintf(os.Stderr, "Info: using helpdesk-clean-11.10.0 as shared source project\n")
+			sharedProjectGraph = buildSharedGraph(filepath.Join(sharedSourceProject, sharedSourceMPR))
+			os.Exit(m.Run())
+		}
+	}
+
+	// 3. Last resort: create a project via mx create-project.
 	mxPath := findMxBinary()
 	if mxPath == "" {
-		fmt.Fprintln(os.Stderr, "SKIP: mx binary not available and source project not found at", sourceProject)
+		fmt.Fprintln(os.Stderr, "SKIP: mx binary not available and no source project found")
 		os.Exit(0)
 	}
 
