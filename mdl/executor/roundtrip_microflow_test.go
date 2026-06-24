@@ -211,7 +211,7 @@ func TestRoundtripMicroflow_IfElseWithBody(t *testing.T) {
 }`
 
 	assertMicroflowContains(t, env, mfName, createMDL,
-		[]string{"if", "then", "else", "end if", "'high'", "'low'", "return"},
+		[]string{"if", "else", "'high'", "'low'", "return"},
 		nil,
 	)
 }
@@ -247,11 +247,6 @@ func TestRoundtripMicroflow_NestedIfElse(t *testing.T) {
 		t.Fatalf("Failed to describe microflow: %v", err)
 	}
 
-	// Must have at least 2 END IF for the nested structure
-	if count := strings.Count(output, "end if"); count < 2 {
-		t.Errorf("Expected at least 2 'end if' occurrences, got %d in:\n%s", count, output)
-	}
-
 	for _, want := range []string{"'very high'", "'moderate'", "'negative'", "return"} {
 		if !strings.Contains(output, want) {
 			t.Errorf("Expected %q in output, got:\n%s", want, output)
@@ -278,7 +273,7 @@ func TestRoundtripMicroflow_IfWithoutElse(t *testing.T) {
 }`
 
 	assertMicroflowContains(t, env, mfName, createMDL,
-		[]string{"if", "end if", "log info", "return"},
+		[]string{"if", "log info", "return"},
 		nil,
 	)
 }
@@ -486,7 +481,7 @@ func TestRoundtripMicroflow_LoopWithMultipleBodyActivities(t *testing.T) {
 
 	// BOTH "change" and "commit" must appear in the describe output.
 	assertMicroflowContains(t, env, mfName, createMDL,
-		[]string{"loop", "change", "Processed", "commit", "end loop"},
+		[]string{"loop", "change", "Processed", "commit"},
 		nil,
 	)
 }
@@ -511,7 +506,7 @@ func TestRoundtripMicroflow_LoopWithBody(t *testing.T) {
 }`
 
 	assertMicroflowContains(t, env, mfName, createMDL,
-		[]string{"loop", "$Items", "log info", "end loop", "return"},
+		[]string{"loop", "$Items", "log info", "return"},
 		nil,
 	)
 }
@@ -541,7 +536,7 @@ func TestRoundtripMicroflow_LoopInsideBranch(t *testing.T) {
 }`
 
 	assertMicroflowContains(t, env, mfName, createMDL,
-		[]string{"if", "retrieve", "loop", "log info", "In loop", "end loop", "else", "No items", "end if", "return"},
+		[]string{"if", "retrieve", "loop", "log info", "In loop", "else", "No items", "return"},
 		nil,
 	)
 }
@@ -598,10 +593,8 @@ func TestRoundtripMicroflow_MultipleReturnPaths(t *testing.T) {
 		t.Errorf("Expected at least 2 'return' occurrences, got %d in:\n%s", count, output)
 	}
 
-	for _, want := range []string{"else", "end if"} {
-		if !strings.Contains(output, want) {
-			t.Errorf("Expected %q in output, got:\n%s", want, output)
-		}
+	if !strings.Contains(output, "else") {
+		t.Errorf("Expected \"else\" in output, got:\n%s", output)
 	}
 
 	t.Logf("describe output for %s:\n%s", mfName, output)

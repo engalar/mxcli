@@ -310,16 +310,16 @@ func (e *Executor) registerFutureOverlays() {
 				return describeEntityGenFuture(ctx, output, deps.ModuleLister, deps.DomainModels, deps.Security, s.Name)
 			})
 		case ast.DescribeAssociation:
-			return writeDescribeJSONFuture(deps.Output, e.format, name, entry.label, func(output io.Writer) error {
-				return describeAssociationFuture(ctx, output, deps.ModuleLister, deps.DomainModelReader, s.Name)
+			return writeDescribeJSON(ctx, name, entry.label, deps, func() error {
+				return entry.handler(ctx, s, deps)
 			})
 		case ast.DescribeMicroflow:
-			return writeDescribeJSONFuture(deps.Output, e.format, name, entry.label, func(output io.Writer) error {
-				return describeMicroflowGenFuture(ctx, output, deps.MicroflowRepo, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, s.Name)
+			return writeDescribeJSON(ctx, name, entry.label, deps, func() error {
+				return entry.handler(ctx, s, deps)
 			})
 		case ast.DescribeNanoflow:
-			return writeDescribeJSONFuture(deps.Output, e.format, name, entry.label, func(output io.Writer) error {
-				return describeNanoflowGenFuture(ctx, output, deps.NanoflowRepo, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, s.Name)
+			return writeDescribeJSON(ctx, name, entry.label, deps, func() error {
+				return entry.handler(ctx, s, deps)
 			})
 		case ast.DescribePage:
 			return writeDescribeJSONFuture(deps.Output, e.format, name, entry.label, func(output io.Writer) error {
@@ -330,24 +330,24 @@ func (e *Executor) registerFutureOverlays() {
 				return describeSnippetFuture(ctx, output, deps.SnippetRepo, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, s.Name)
 			})
 		case ast.DescribeLayout:
-			return writeDescribeJSONFuture(deps.Output, e.format, name, entry.label, func(output io.Writer) error {
-				return describeLayoutFuture(ctx, output, deps.LayoutRepo, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, s.Name)
+			return writeDescribeJSON(ctx, name, entry.label, deps, func() error {
+				return entry.handler(ctx, s, deps)
 			})
 		case ast.DescribeWorkflow:
-			return writeDescribeJSONFuture(deps.Output, e.format, name, entry.label, func(output io.Writer) error {
-				return describeWorkflowGenFuture(ctx, output, deps.WorkflowRepo, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, s.Name)
+			return writeDescribeJSON(ctx, name, entry.label, deps, func() error {
+				return entry.handler(ctx, s, deps)
 			})
 		case ast.DescribeJavaAction:
-			return writeDescribeJSONFuture(deps.Output, e.format, name, entry.label, func(output io.Writer) error {
-				return describeJavaActionGenFuture(ctx, output, deps.JavaActionRepo, s.Name)
+			return writeDescribeJSON(ctx, name, entry.label, deps, func() error {
+				return entry.handler(ctx, s, deps)
 			})
 		case ast.DescribeJavaScriptAction:
 			return writeDescribeJSON(ctx, name, entry.label, deps, func() error {
 				return entry.handler(ctx, s, deps)
 			})
 		case ast.DescribeModuleRole:
-			return writeDescribeJSONFuture(deps.Output, e.format, name, entry.label, func(output io.Writer) error {
-				return describeModuleRoleGenFuture(ctx, output, deps.Security, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, s.Name)
+			return writeDescribeJSON(ctx, name, entry.label, deps, func() error {
+				return entry.handler(ctx, s, deps)
 			})
 		case ast.DescribeUserRole:
 			return writeDescribeJSONFuture(deps.Output, e.format, name, entry.label, func(output io.Writer) error {

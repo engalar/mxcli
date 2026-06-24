@@ -26,7 +26,7 @@ func TestRoundtrip_JavaAction_Describe(t *testing.T) {
 	if strings.TrimSpace(mdl) == "" {
 		t.Fatal("expected non-empty output from describe java action")
 	}
-	if !strings.Contains(mdl, "create java action ") {
+	if !strings.Contains(mdl, "create or modify java action ") {
 		t.Errorf("expected 'create java action' keyword in output, got:\n%s", mdl)
 	}
 	if !strings.Contains(mdl, "ExternalCall") {
