@@ -306,7 +306,9 @@ test-showcase: build
 
 # Run integration tests (requires mx binary / mxbuild)
 test-integration:
-	CGO_ENABLED=0 go test -tags integration -count=1 -timeout 30m ./...
+	CGO_ENABLED=0 go test -tags integration -count=1 -timeout 30m \
+		./cmd/... ./internal/... ./mdl/... ./model/... ./modelsdk/... \
+		./sql/... ./tools/... ./generated/... ./scripts/...
 
 # Run integration tests with resource profiling and profile-based scheduling.
 # Profiles are saved to coverage/test-profiles/ for later analysis.
@@ -314,20 +316,26 @@ test-integration:
 test-integration-profiled: build install-daemon
 	@mkdir -p coverage/test-profiles
 	CGO_ENABLED=0 go test -tags integration -count=1 -timeout 30m \
-		-resource-profile -resource-schedule ./...
+		-resource-profile -resource-schedule \
+		./cmd/... ./internal/... ./mdl/... ./model/... ./modelsdk/... \
+		./sql/... ./tools/... ./generated/... ./scripts/...
 
 # Check resource profiles against baselines.
 # Fails if any test exceeds its baseline by >20% in any metric.
 test-profile-check:
 	go test -tags integration -count=1 -run '^TestProfileCheck$$' \
-		-resource-check ./...
+		-resource-check \
+		./cmd/... ./internal/... ./mdl/... ./model/... ./modelsdk/... \
+		./sql/... ./tools/... ./generated/... ./scripts/...
 
 # Record new resource profile baselines (replaces all existing profiles).
 # Run after intentional performance changes to silence the regression gate.
 test-profile-record: build
 	@mkdir -p coverage/test-profiles
 	CGO_ENABLED=0 go test -tags integration -count=1 -timeout 30m \
-		-p 1 -resource-record ./...
+		-p 1 -resource-record \
+		./cmd/... ./internal/... ./mdl/... ./model/... ./modelsdk/... \
+		./sql/... ./tools/... ./generated/... ./scripts/...
 	@echo "Profiles recorded in coverage/test-profiles/"
 
 # Regenerate testdata/helpdesk-golden-11.6.6/ from helpdesk-app.mdl.
