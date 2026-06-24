@@ -202,16 +202,24 @@ test: test-showcase
 	$(_CPU_RUNNER) $(MAKE) _test-inner
 
 _test-inner:
-	CGO_ENABLED=0 go test -timeout $(TEST_TIMEOUT) -p $(TEST_P) -parallel $(TEST_PARALLEL) ./...
+	CGO_ENABLED=0 go test -timeout $(TEST_TIMEOUT) -p $(TEST_P) -parallel $(TEST_PARALLEL) \
+		./cmd/... ./internal/... ./mdl/... ./model/... ./modelsdk/... \
+		./sql/... ./tools/... ./generated/... ./scripts/...
 
 # Run full test suite and generate layered report (terminal + HTML)
 # Output: coverage/report.html, coverage/bench-baseline.json
 report:
 	@mkdir -p coverage
-	CGO_ENABLED=0 go test -v -json -p $(TEST_P) -coverprofile=coverage/coverage.out ./... > coverage/test-results.json 2>&1 || true
+	CGO_ENABLED=0 go test -v -json -p $(TEST_P) -coverprofile=coverage/coverage.out \
+		./cmd/... ./internal/... ./mdl/... ./model/... ./modelsdk/... \
+		./sql/... ./tools/... ./generated/... ./scripts/... \
+		> coverage/test-results.json 2>&1 || true
 	go tool cover -html=coverage/coverage.out -o coverage/coverage.html 2>/dev/null || true
 	@if command -v benchstat >/dev/null 2>&1; then \
-		CGO_ENABLED=0 go test -bench=. -benchmem -count=3 -p $(TEST_P) ./... > coverage/bench-results.txt 2>/dev/null || true; \
+		CGO_ENABLED=0 go test -bench=. -benchmem -count=3 -p $(TEST_P) \
+			./cmd/... ./internal/... ./mdl/... ./model/... ./modelsdk/... \
+			./sql/... ./tools/... ./generated/... ./scripts/... \
+			> coverage/bench-results.txt 2>/dev/null || true; \
 		benchstat coverage/bench-baseline.json coverage/bench-results.txt > coverage/bench-diff.txt 2>/dev/null || true; \
 	fi
 	@if ! command -v benchstat >/dev/null 2>&1; then \
