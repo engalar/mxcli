@@ -17,13 +17,12 @@ import (
 )
 
 // overlayNode represents a file or directory in the overlay.
-// relPath is the slash-separated path relative to the overlay baseDir
-// (empty string = root). The over field provides access to both the
-// base directory path and the dirty layer.
+// relPath is the slash-separated path relative to baseDir (empty string = root).
 type overlayNode struct {
 	fs.Inode
-	over    *fuseOverlay
+	baseDir string
 	relPath string
+	layer   *dirtyLayer
 }
 
 // pathIno generates a stable inode number from a relative path.
@@ -36,9 +35,9 @@ func pathIno(relPath string) uint64 {
 // absBase returns the absolute path of this node in baseDir.
 func (n *overlayNode) absBase() string {
 	if n.relPath == "" {
-		return n.over.baseDir
+		return n.baseDir
 	}
-	return filepath.Join(n.over.baseDir, filepath.FromSlash(n.relPath))
+	return filepath.Join(n.baseDir, filepath.FromSlash(n.relPath))
 }
 
 // childRel returns the relative path of a named child of this node.
@@ -54,22 +53,22 @@ func (n *overlayNode) childRel(name string) string {
 func (n *overlayNode) Lookup(ctx context.Context, name string, out *fuse.EntryOut) (*fs.Inode, syscall.Errno) {
 	rel := n.childRel(name)
 
-	if n.over.layer.isDeleted(rel) {
+	if n.layer.isDeleted(rel) {
 		return nil, syscall.ENOENT
 	}
 
 	// Determine mode: dirty layer takes precedence over base.
 	// mode is in syscall form (S_IFREG/S_IFDIR | perm bits), NOT os.FileMode form.
 	var mode uint32
-	if content := n.over.layer.read(rel); content != nil {
+	if content := n.layer.read(rel); content != nil {
 		mode = syscall.S_IFREG | 0644
 		out.Size = uint64(len(content))
-	} else if n.over.layer.hasDirtyDir(rel) {
+	} else if n.layer.hasDirtyDir(rel) {
 		// Directory created in the dirty layer (e.g. by Mkdir) — not on disk yet.
 		mode = syscall.S_IFDIR | 0755
 		out.Size = 0
 	} else {
-		info, err := os.Lstat(filepath.Join(n.over.baseDir, filepath.FromSlash(rel)))
+		info, err := os.Lstat(filepath.Join(n.baseDir, filepath.FromSlash(rel)))
 		if err != nil {
 			return nil, syscall.ENOENT
 		}
@@ -78,7 +77,7 @@ func (n *overlayNode) Lookup(ctx context.Context, name string, out *fuse.EntryOu
 	}
 
 	out.Mode = mode
-	child := &overlayNode{over: n.over, relPath: rel}
+	child := &overlayNode{baseDir: n.baseDir, relPath: rel, layer: n.layer}
 	// Inode StableAttr only needs the type bits (S_IFDIR/S_IFREG/...) not permissions.
 	stable := fs.StableAttr{Mode: mode & syscall.S_IFMT, Ino: pathIno(rel)}
 	return n.NewInode(ctx, child, stable), 0
@@ -104,7 +103,7 @@ func sysMode(info os.FileInfo) uint32 {
 func (n *overlayNode) Getattr(ctx context.Context, fh fs.FileHandle, out *fuse.AttrOut) syscall.Errno {
 	if n.relPath == "" {
 		// Root directory
-		info, err := os.Stat(n.over.baseDir)
+		info, err := os.Stat(n.baseDir)
 		if err != nil {
 			return syscall.EIO
 		}
@@ -113,18 +112,18 @@ func (n *overlayNode) Getattr(ctx context.Context, fh fs.FileHandle, out *fuse.A
 		return 0
 	}
 
-	if n.over.layer.isDeleted(n.relPath) {
+	if n.layer.isDeleted(n.relPath) {
 		return syscall.ENOENT
 	}
 
-	if content := n.over.layer.read(n.relPath); content != nil {
+	if content := n.layer.read(n.relPath); content != nil {
 		out.Mode = syscall.S_IFREG | 0644
 		out.Size = uint64(len(content))
 		out.Ino = pathIno(n.relPath)
 		return 0
 	}
 
-	if n.over.layer.hasDirtyDir(n.relPath) {
+	if n.layer.hasDirtyDir(n.relPath) {
 		out.Mode = syscall.S_IFDIR | 0755
 		out.Size = 0
 		out.Ino = pathIno(n.relPath)
@@ -150,7 +149,7 @@ func (n *overlayNode) Getattr(ctx context.Context, fh fs.FileHandle, out *fuse.A
 
 func (n *overlayNode) Setattr(ctx context.Context, fh fs.FileHandle, in *fuse.SetAttrIn, out *fuse.AttrOut) syscall.Errno {
 	if size, ok := in.GetSize(); ok {
-		n.over.layer.truncate(n.relPath, n.over.baseDir, int64(size))
+		n.layer.truncate(n.relPath, n.baseDir, int64(size))
 	}
 	// Getattr re-populates out (Size, Mode, Ino) for the kernel's attr cache.
 	return n.Getattr(ctx, fh, out)
@@ -173,7 +172,7 @@ func (n *overlayNode) Readdir(ctx context.Context) (fs.DirStream, syscall.Errno)
 	}
 	for _, e := range baseEntries {
 		rel := prefix + e.Name()
-		if n.over.layer.isDeleted(rel) {
+		if n.layer.isDeleted(rel) {
 			continue
 		}
 		seen[e.Name()] = true
@@ -194,9 +193,9 @@ func (n *overlayNode) Readdir(ctx context.Context) (fs.DirStream, syscall.Errno)
 	//
 	// Direct mu access is safe: overlay and dirtyLayer are in the same package,
 	// and we need atomic iteration over files without a per-entry method call.
-	n.over.layer.mu.RLock()
-	defer n.over.layer.mu.RUnlock()
-	for rel, content := range n.over.layer.files {
+	n.layer.mu.RLock()
+	defer n.layer.mu.RUnlock()
+	for rel, content := range n.layer.files {
 		if content == nil {
 			continue // tombstone
 		}
@@ -249,14 +248,14 @@ func (h *overlayReadHandle) Read(_ context.Context, dest []byte, off int64) (fus
 func (n *overlayNode) Open(ctx context.Context, flags uint32) (fh fs.FileHandle, fuseFlags uint32, errno syscall.Errno) {
 	if flags&(syscall.O_WRONLY|syscall.O_RDWR) != 0 {
 		// Seed dirty map via copy-up, then return write handle.
-		if !n.over.layer.has(n.relPath) {
+		if !n.layer.has(n.relPath) {
 			if b, err := os.ReadFile(n.absBase()); err == nil {
-				n.over.layer.write(n.relPath, 0, b)
+				n.layer.write(n.relPath, 0, b)
 			}
 		}
-		return &overlayWriteHandle{node: n, baseDir: n.over.baseDir}, fuse.FOPEN_DIRECT_IO, 0
+		return &overlayWriteHandle{node: n, baseDir: n.baseDir}, fuse.FOPEN_DIRECT_IO, 0
 	}
-	content := n.over.layer.read(n.relPath)
+	content := n.layer.read(n.relPath)
 	if content == nil {
 		var err error
 		content, err = os.ReadFile(n.absBase())
@@ -275,7 +274,7 @@ type overlayWriteHandle struct {
 }
 
 func (h *overlayWriteHandle) Write(_ context.Context, data []byte, off int64) (uint32, syscall.Errno) {
-	h.node.over.layer.writeWithBase(h.node.relPath, h.baseDir, off, data)
+	h.node.layer.writeWithBase(h.node.relPath, h.baseDir, off, data)
 	return uint32(len(data)), 0
 }
 
@@ -287,7 +286,7 @@ func (h *overlayWriteHandle) Read(_ context.Context, dest []byte, off int64) (fu
 	if off < 0 {
 		return fuse.ReadResultData(nil), syscall.EINVAL
 	}
-	content := h.node.over.layer.read(h.node.relPath)
+	content := h.node.layer.read(h.node.relPath)
 	if content == nil {
 		var err error
 		content, err = os.ReadFile(h.node.absBase())
@@ -317,16 +316,16 @@ func (h *overlayWriteHandle) Fsync(_ context.Context, flags uint32) syscall.Errn
 func (n *overlayNode) Create(ctx context.Context, name string, flags uint32, mode uint32, out *fuse.EntryOut) (*fs.Inode, fs.FileHandle, uint32, syscall.Errno) {
 	rel := n.childRel(name)
 	// Seed the dirty map with an empty file (non-nil empty byte slice).
-	n.over.layer.truncate(rel, n.over.baseDir, 0)
+	n.layer.truncate(rel, n.baseDir, 0)
 
-	child := &overlayNode{over: n.over, relPath: rel}
+	child := &overlayNode{baseDir: n.baseDir, relPath: rel, layer: n.layer}
 	stable := fs.StableAttr{Mode: syscall.S_IFREG, Ino: pathIno(rel)}
 	inode := n.NewInode(ctx, child, stable)
 
 	out.Mode = syscall.S_IFREG | 0644
 	out.Size = 0
 	out.Ino = pathIno(rel)
-	fh := &overlayWriteHandle{node: child, baseDir: n.over.baseDir}
+	fh := &overlayWriteHandle{node: child, baseDir: n.baseDir}
 	return inode, fh, fuse.FOPEN_DIRECT_IO, 0
 }
 
@@ -337,9 +336,9 @@ func (n *overlayNode) Mkdir(ctx context.Context, name string, mode uint32, out *
 	// Store a non-nil sentinel under the new directory so Readdir/Lookup recognise it
 	// as a dirty-layer dir even before any real files are written into it.
 	// (Must be non-nil — a nil entry would be interpreted as a tombstone.)
-	n.over.layer.truncate(rel+"/.keep", n.over.baseDir, 0)
+	n.layer.truncate(rel+"/.keep", n.baseDir, 0)
 
-	child := &overlayNode{over: n.over, relPath: rel}
+	child := &overlayNode{baseDir: n.baseDir, relPath: rel, layer: n.layer}
 	stable := fs.StableAttr{Mode: syscall.S_IFDIR, Ino: pathIno(rel)}
 	out.Mode = syscall.S_IFDIR | 0755
 	out.Size = 0
@@ -351,7 +350,7 @@ func (n *overlayNode) Mkdir(ctx context.Context, name string, mode uint32, out *
 
 func (n *overlayNode) Unlink(ctx context.Context, name string) syscall.Errno {
 	rel := n.childRel(name)
-	n.over.layer.delete(rel)
+	n.layer.delete(rel)
 	return 0
 }
 
@@ -360,7 +359,7 @@ func (n *overlayNode) Unlink(ctx context.Context, name string) syscall.Errno {
 func (n *overlayNode) Rmdir(ctx context.Context, name string) syscall.Errno {
 	rel := n.childRel(name)
 	// Remove the Mkdir sentinel; if the dir was Mkdir-only, hasDirtyDir() now returns false.
-	n.over.layer.delete(rel + "/.keep")
+	n.layer.delete(rel + "/.keep")
 	return 0
 }
 
@@ -376,10 +375,10 @@ func (n *overlayNode) Rename(ctx context.Context, name string, newParent fs.Inod
 	dstRel := newParentNode.childRel(newName)
 
 	// Copy content from dirty or base.
-	content := n.over.layer.read(srcRel)
+	content := n.layer.read(srcRel)
 	if content == nil {
 		var err error
-		content, err = os.ReadFile(filepath.Join(n.over.baseDir, filepath.FromSlash(srcRel)))
+		content, err = os.ReadFile(filepath.Join(n.baseDir, filepath.FromSlash(srcRel)))
 		if err != nil {
 			return syscall.ENOENT
 		}
@@ -389,10 +388,10 @@ func (n *overlayNode) Rename(ctx context.Context, name string, newParent fs.Inod
 	// then overwrite with the new bytes. write() short-circuits on len(data)==0,
 	// so the truncate() pass is what guarantees a 0-byte file lands as a real
 	// (empty) file rather than a tombstone left over from `delete()`.
-	n.over.layer.truncate(dstRel, n.over.baseDir, int64(len(content)))
+	n.layer.truncate(dstRel, n.baseDir, int64(len(content)))
 	if len(content) > 0 {
-		n.over.layer.write(dstRel, 0, content)
+		n.layer.write(dstRel, 0, content)
 	}
-	n.over.layer.delete(srcRel)
+	n.layer.delete(srcRel)
 	return 0
 }

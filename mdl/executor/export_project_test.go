@@ -15,23 +15,6 @@ import (
 	"github.com/mendixlabs/mxcli/model"
 )
 
-// openExportBackend opens an MprBackend over the fixture MPR,
-// preferring a goldenfs FUSE overlay. The backend is cleaned up
-// automatically via t.Cleanup.
-func openExportBackend(t *testing.T) *mprbackend.MprBackend {
-	t.Helper()
-	if be := tryOpenBackendWithOverlay(t); be != nil {
-		return be
-	}
-	dst := copyMPRFixture(t, fixtureMprPath, t.TempDir())
-	be, err := mprbackend.NewFromPath(dst)
-	if err != nil {
-		t.Fatalf("NewFromPath: %v", err)
-	}
-	t.Cleanup(func() { _ = be.Disconnect() })
-	return be
-}
-
 func TestDocumentFilePath_NoFolder(t *testing.T) {
 	got := documentFilePath("/out", "MyModule", "", "MyModule.Customer")
 	want := filepath.Join("/out", "MyModule", "MyModule.Customer.mdl")
@@ -99,7 +82,12 @@ func TestCaptureDescribeFunc_WritesToBuffer(t *testing.T) {
 }
 
 func TestExportProject_ProjectLevelFiles(t *testing.T) {
-	be := openExportBackend(t)
+	dst := copyMPRFixture(t, fixtureMprPath, t.TempDir())
+	be, err := mprbackend.NewFromPath(dst)
+	if err != nil {
+		t.Fatalf("NewFromPath: %v", err)
+	}
+	t.Cleanup(func() { _ = be.Disconnect() })
 
 	outDir := t.TempDir()
 	exec := New(os.Stderr)
@@ -125,7 +113,12 @@ func TestExportProject_ProjectLevelFiles(t *testing.T) {
 }
 
 func TestExportProject_ModuleDocuments(t *testing.T) {
-	be := openExportBackend(t)
+	dst := copyMPRFixture(t, fixtureMprPath, t.TempDir())
+	be, err := mprbackend.NewFromPath(dst)
+	if err != nil {
+		t.Fatalf("NewFromPath: %v", err)
+	}
+	t.Cleanup(func() { _ = be.Disconnect() })
 
 	outDir := t.TempDir()
 	exec := New(os.Stderr)
@@ -216,7 +209,11 @@ func indexOfSuffix(slice []string, suffix string) int {
 }
 
 func TestRoundTrip_ExportThenImport(t *testing.T) {
-	exportBe := openExportBackend(t)
+	exportDst := copyMPRFixture(t, fixtureMprPath, t.TempDir())
+	exportBe, err := mprbackend.NewFromPath(exportDst)
+	if err != nil {
+		t.Fatalf("NewFromPath (export): %v", err)
+	}
 
 	exportDir := t.TempDir()
 	exportExec := New(os.Stderr)
@@ -227,7 +224,11 @@ func TestRoundTrip_ExportThenImport(t *testing.T) {
 	}
 	_ = exportBe.Disconnect()
 
-	origBe := openExportBackend(t)
+	origDst := copyMPRFixture(t, fixtureMprPath, t.TempDir())
+	origBe, err := mprbackend.NewFromPath(origDst)
+	if err != nil {
+		t.Fatalf("NewFromPath (orig): %v", err)
+	}
 	origMods, _ := origBe.ListModules()
 	origCtx := &ExecContext{
 		Backend:     origBe,
@@ -244,7 +245,12 @@ func TestRoundTrip_ExportThenImport(t *testing.T) {
 	}
 	_ = origBe.Disconnect()
 
-	importBe := openExportBackend(t)
+	importDst := copyMPRFixture(t, fixtureMprPath, t.TempDir())
+	importBe, err := mprbackend.NewFromPath(importDst)
+	if err != nil {
+		t.Fatalf("NewFromPath (import): %v", err)
+	}
+	t.Cleanup(func() { _ = importBe.Disconnect() })
 
 	importExec := New(os.Stderr)
 	importExec.backend = importBe
@@ -277,7 +283,12 @@ func TestRoundTrip_ExportThenImport(t *testing.T) {
 }
 
 func TestImportProject_ExecutesFiles(t *testing.T) {
-	be := openExportBackend(t)
+	dst := copyMPRFixture(t, fixtureMprPath, t.TempDir())
+	be, err := mprbackend.NewFromPath(dst)
+	if err != nil {
+		t.Fatalf("NewFromPath: %v", err)
+	}
+	t.Cleanup(func() { _ = be.Disconnect() })
 
 	exportDir := t.TempDir()
 	exportExec := New(os.Stderr)
@@ -288,15 +299,21 @@ func TestImportProject_ExecutesFiles(t *testing.T) {
 	}
 	_ = be.Disconnect()
 
-	be2 := openExportBackend(t)
+	dst2 := copyMPRFixture(t, fixtureMprPath, t.TempDir())
+	be2, err := mprbackend.NewFromPath(dst2)
+	if err != nil {
+		t.Fatalf("NewFromPath dst2: %v", err)
+	}
+	t.Cleanup(func() { _ = be2.Disconnect() })
 
 	importExec := New(os.Stderr)
 	importExec.backend = be2
 	importExec.cache = &executorCache{}
-	if err := importExec.ImportProject(exportDir, ImportOptions{
+	err = importExec.ImportProject(exportDir, ImportOptions{
 		SkipErrors: true,
 		Progress:   func(l string) { t.Log("import:", l) },
-	}); err != nil {
+	})
+	if err != nil {
 		t.Fatalf("ImportProject: %v", err)
 	}
 }

@@ -32,14 +32,8 @@ import (
 const scriptDeadlockTimeout = 30 * time.Second
 
 // openBackendForTest copies the v2 fixture and opens an MprBackend.
-// Uses goldenfs FUSE overlay when available.
 func openBackendForTest(t *testing.T) *mprbackend.MprBackend {
 	t.Helper()
-
-	if be := tryOpenBackendWithOverlay(t); be != nil {
-		return be
-	}
-
 	dst := copyMPRFixture(t, fixtureMprPath, t.TempDir())
 	be, err := mprbackend.NewFromPath(dst)
 	if err != nil {

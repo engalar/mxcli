@@ -22,7 +22,6 @@ import (
 	"testing"
 
 	"github.com/mendixlabs/mxcli/cmd/mxcli/docker"
-	"github.com/mendixlabs/mxcli/internal/goldenfs"
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	"github.com/mendixlabs/mxcli/mdl/backend"
 	mprbackend "github.com/mendixlabs/mxcli/mdl/backend/mpr"
@@ -30,42 +29,71 @@ import (
 	"github.com/pmezard/go-difflib/difflib"
 )
 
-// Legacy aliases for external references.
-// TODO: remove once roundtrip_entity_test.go's benchmark is migrated.
-const sourceProject = testSourceDir
-const sourceProjectMPR = testSourceMPR
+// sourceProject is the committed source project path (fast path).
+const sourceProject = "../../mx-test-projects/test-source-app"
 
-// testSourceDir is the committed empty MPR project used as the base
-// for all roundtrip tests. Contains Atlas Core + DataGrid2 widgets.
-// Two versions are available: helpdesk-clean-11.10.0 and helpdesk-clean-11.6.6.
-// 11.10.0 is preferred for new tests.
-const testSourceDir = "../../testdata/helpdesk-clean-11.10.0"
-
-// testSourceMPR is the MPR filename inside the source project.
-const testSourceMPR = "minimal.mpr"
+// sourceProjectMPR is the MPR filename inside the source project.
+const sourceProjectMPR = "test-source.mpr"
 
 // testModule is the module name used for test entities.
 const testModule = "RoundtripTest"
 
-// sharedSourceProject is the committed empty MPR project directory.
-// All tests use this as a base via FUSE overlay (preferred) or copy (fallback).
+// sharedSourceProject is set once by TestMain to the directory containing the
+// pristine source project. All tests copy from this directory.
 var sharedSourceProject string
 
 // sharedSourceMPR is the MPR filename inside sharedSourceProject.
 var sharedSourceMPR string
 
-// TestMain locates the committed source project once, then runs all tests.
+// TestMain creates or locates the source project once, then runs all tests.
+// This avoids running `mx create-project` per test (~29s each).
 func TestMain(m *testing.M) {
-	cleanupLeakedGoldenFSMounts()
+	// 1. Try the committed source project
+	srcDir, err := filepath.Abs(sourceProject)
+	if err == nil {
+		if _, err := os.Stat(filepath.Join(srcDir, sourceProjectMPR)); err == nil {
+			sharedSourceProject = srcDir
+			sharedSourceMPR = sourceProjectMPR
+			os.Exit(m.Run())
+		}
+	}
 
-	srcDir, err := filepath.Abs(testSourceDir)
-	if err != nil || !dirExists(filepath.Join(srcDir, testSourceMPR)) {
-		fmt.Fprintf(os.Stderr, "SKIP: test source project not found at %s\n", filepath.Join(srcDir, testSourceMPR))
+	// 2. Create a project once using mx create-project
+	mxPath := findMxBinary()
+	if mxPath == "" {
+		fmt.Fprintln(os.Stderr, "SKIP: mx binary not available and source project not found at", sourceProject)
 		os.Exit(0)
 	}
-	sharedSourceProject = srcDir
-	sharedSourceMPR = testSourceMPR
-	os.Exit(m.Run())
+
+	tmpDir, err := os.MkdirTemp("", "roundtrip-source-*")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "FAIL: could not create temp dir: %v\n", err)
+		os.Exit(1)
+	}
+
+	fmt.Fprintf(os.Stderr, "TestMain: creating shared source project with %s ...\n", mxPath)
+	cmd := exec.Command(mxPath, "create-project")
+	cmd.Dir = tmpDir
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		os.RemoveAll(tmpDir)
+		fmt.Fprintf(os.Stderr, "SKIP: mx create-project failed: %v\n%s\n", err, output)
+		os.Exit(0)
+	}
+
+	mprPath := filepath.Join(tmpDir, "App.mpr")
+	if _, err := os.Stat(mprPath); os.IsNotExist(err) {
+		os.RemoveAll(tmpDir)
+		fmt.Fprintf(os.Stderr, "SKIP: mx create-project did not produce App.mpr in %s\n", tmpDir)
+		os.Exit(0)
+	}
+
+	sharedSourceProject = tmpDir
+	sharedSourceMPR = "App.mpr"
+	fmt.Fprintf(os.Stderr, "TestMain: shared source project ready at %s\n", tmpDir)
+	code := m.Run()
+	os.RemoveAll(tmpDir)
+	os.Exit(code)
 }
 
 // testEnv holds the test environment for roundtrip tests.
@@ -142,26 +170,6 @@ func findMxBinary() string {
 	return ""
 }
 
-// dirExists returns true if path is a directory or a regular file exists.
-func dirExists(path string) bool {
-	_, err := os.Stat(path)
-	return err == nil
-}
-
-// cleanupLeakedGoldenFSMounts removes any stale mxcli-golden-* directories
-// left from a previous test run that was killed (e.g. by -timeout).
-// os.RemoveAll is used because killed FUSE sessions can leave real files
-// (mprcontents/ subdirs) inside the mount directory.
-func cleanupLeakedGoldenFSMounts() {
-	entries, err := filepath.Glob(filepath.Join(os.TempDir(), "mxcli-golden-*"))
-	if err != nil || len(entries) == 0 {
-		return
-	}
-	for _, dir := range entries {
-		os.RemoveAll(dir)
-	}
-}
-
 // newestVersionedPath / versionFromPath / parseVersionParts / compareVersionParts
 // used to be duplicated here. They now live as exported helpers in
 // cmd/mxcli/docker (docker.NewestVersionedPath). The integration-test harness
@@ -215,28 +223,11 @@ func copyDir(src, dst string) error {
 	return nil
 }
 
-// setupFUSEProject attempts to create a FUSE-based overlay over the shared
-// source project. Returns the MPR path on success, or "" if FUSE is unavailable
-// (non-Linux, permissions, etc.). Callers should fall back to copyTestProject.
-func setupFUSEProject(t *testing.T) string {
-	t.Helper()
-	overlay, err := goldenfs.Open(sharedSourceProject)
-	if err != nil {
-		return ""
-	}
-	t.Cleanup(func() { overlay.Rollback(); overlay.Close() })
-	return filepath.Join(overlay.MountDir(), sharedSourceMPR)
-}
-
-// setupTestEnv creates a new test environment with a FUSE overlay (preferred)
-// or a fresh copy of the source project (fallback for non-Linux).
+// setupTestEnv creates a new test environment with a fresh copy of the source project.
 func setupTestEnv(t *testing.T) *testEnv {
 	t.Helper()
 
-	projectPath := setupFUSEProject(t)
-	if projectPath == "" {
-		projectPath = copyTestProject(t)
-	}
+	projectPath := copyTestProject(t)
 
 	output := &bytes.Buffer{}
 	exec := New(output)
