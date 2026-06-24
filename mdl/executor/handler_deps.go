@@ -322,8 +322,8 @@ func (e *Executor) registerFutureOverlays() {
 				return entry.handler(ctx, s, deps)
 			})
 		case ast.DescribePage:
-			return writeDescribeJSONFuture(deps.Output, e.format, name, entry.label, func(output io.Writer) error {
-				return describePageFuture(ctx, output, deps.PageRepo, deps.ImageBackend, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, s.Name)
+			return writeDescribeJSON(ctx, name, entry.label, deps, func() error {
+				return entry.handler(ctx, s, deps)
 			})
 		case ast.DescribeSnippet:
 			return writeDescribeJSONFuture(deps.Output, e.format, name, entry.label, func(output io.Writer) error {
