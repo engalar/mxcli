@@ -313,27 +313,32 @@ test-integration:
 # Run integration tests with resource profiling and profile-based scheduling.
 # Profiles are saved to coverage/test-profiles/ for later analysis.
 # Scheduling uses historical profiles to assign tests to IO/CPU/Mixed lanes.
+# Run integration tests with resource profiling and profile-based scheduling.
+# Profiles are saved to coverage/test-profiles/ for later analysis.
+# Scheduling uses historical profiles to assign tests to IO/CPU/Mixed lanes.
+# NOTE: -resource-profile and -resource-schedule flags will be added when
+# test binaries register these flags (currently not defined in any package).
 test-integration-profiled: build
 	@mkdir -p coverage/test-profiles
 	CGO_ENABLED=0 go test -tags integration -count=1 -timeout 30m \
-		-resource-profile -resource-schedule \
 		./cmd/... ./internal/... ./mdl/... ./model/... ./modelsdk/... \
 		./sql/... ./tools/... ./generated/... ./scripts/...
 
 # Check resource profiles against baselines.
 # Fails if any test exceeds its baseline by >20% in any metric.
+# NOTE: -resource-check flag will be added when test binaries register it.
 test-profile-check:
 	go test -tags integration -count=1 -run '^TestProfileCheck$$' \
-		-resource-check \
 		./cmd/... ./internal/... ./mdl/... ./model/... ./modelsdk/... \
 		./sql/... ./tools/... ./generated/... ./scripts/...
 
 # Record new resource profile baselines (replaces all existing profiles).
 # Run after intentional performance changes to silence the regression gate.
+# NOTE: -resource-record flag will be added when test binaries register it.
 test-profile-record: build
 	@mkdir -p coverage/test-profiles
 	CGO_ENABLED=0 go test -tags integration -count=1 -timeout 30m \
-		-p 1 -resource-record \
+		-p 1 \
 		./cmd/... ./internal/... ./mdl/... ./model/... ./modelsdk/... \
 		./sql/... ./tools/... ./generated/... ./scripts/...
 	@echo "Profiles recorded in coverage/test-profiles/"

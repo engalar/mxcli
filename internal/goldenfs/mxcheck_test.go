@@ -28,9 +28,10 @@ func TestGoldenFS_ExecAndMxCheck(t *testing.T) {
 		t.Skip("mx binary not available (set MX_BINARY or install mxbuild)")
 	}
 
-	// Snapshot the testdata before anything else so a base-dir tampering
-	// check later is meaningful.
-	realDir := exprCheckerDir(t)
+	// Use helpdesk-clean MPR: a blank project with Atlas Core that passes
+	// mx check with 0 errors, so any FUSE-corruption signature in the output
+	// is from our new microflow, not pre-existing project issues.
+	realDir := helpdeskBlankDir(t)
 	realMpr := filepath.Join(realDir, "minimal.mpr")
 	origMprStat, err := os.Stat(realMpr)
 	if err != nil {

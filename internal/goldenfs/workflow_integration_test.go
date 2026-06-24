@@ -149,7 +149,10 @@ func TestGoldenFS_WorkflowIntegration(t *testing.T) {
 		t.Skip("mx binary not available (set MX_BINARY or install mxbuild)")
 	}
 
-	realDir := exprCheckerDir(t)
+	// Use helpdesk-clean MPR: a blank project with Atlas Core that passes
+	// mx check with 0 errors, so CE1613 from pre-existing project issues
+	// does not pollute the result.
+	realDir := helpdeskBlankDir(t)
 	realMpr := filepath.Join(realDir, "minimal.mpr")
 	origStat, err := os.Stat(realMpr)
 	if err != nil {
