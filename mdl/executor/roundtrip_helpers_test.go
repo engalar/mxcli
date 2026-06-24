@@ -13,6 +13,7 @@ package executor
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -20,12 +21,17 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/mendixlabs/mxcli/cmd/mxcli/docker"
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	"github.com/mendixlabs/mxcli/mdl/backend"
 	mprbackend "github.com/mendixlabs/mxcli/mdl/backend/mpr"
+	"github.com/mendixlabs/mxcli/mdl/graphcatalog"
 	"github.com/mendixlabs/mxcli/mdl/visitor"
+	"github.com/mendixlabs/mxcli/internal/mxgraph"
+	mpradapter "github.com/mendixlabs/mxcli/internal/mxgraph/adapter/mpr"
+	"github.com/mendixlabs/mxcli/modelsdk"
 	"github.com/pmezard/go-difflib/difflib"
 )
 
@@ -45,6 +51,49 @@ var sharedSourceProject string
 // sharedSourceMPR is the MPR filename inside sharedSourceProject.
 var sharedSourceMPR string
 
+// sharedProjectGraph is built once in TestMain and shared across all
+// integration tests to avoid rebuilding mxgraph per test (~14s each).
+var sharedProjectGraph *graphcatalog.ProjectGraph
+
+// buildSharedGraph constructs the mxgraph index from the source project.
+// Returns nil on any error — tests work without graph acceleration.
+func buildSharedGraph(mprPath string) *graphcatalog.ProjectGraph {
+	m, err := modelsdk.Open(mprPath)
+	if err != nil {
+		return nil
+	}
+	defer m.Close()
+
+	mgr := mxgraph.NewIndexManager()
+	mgr.RegisterAdapter(&mpradapter.DomainModelAdapter{Model: m})
+	mgr.RegisterAdapter(&mpradapter.MicroflowAdapter{Model: m})
+	mgr.RegisterAdapter(&mpradapter.PageAdapter{Model: m})
+	mgr.RegisterAdapter(&mpradapter.SecurityAdapter{Model: m})
+	mgr.RegisterAdapter(&mpradapter.EnumerationAdapter{Model: m})
+	mgr.RegisterAdapter(&mpradapter.WorkflowAdapter{Model: m})
+	docCache := mpradapter.NewBsonDocCache()
+	mgr.RegisterAdapter(&mpradapter.AccessRuleAdapter{Model: m})
+	mgr.RegisterAdapter(&mpradapter.DocumentGrantAdapter{Model: m})
+	mgr.RegisterAdapter(&mpradapter.PageRefAdapter{Model: m, DocCache: docCache})
+	mgr.RegisterAdapter(&mpradapter.NavigationAdapter{
+		Source: &mpradapter.ModelsdkUnitSource{Model: m},
+	})
+	mgr.RegisterAdapter(&mpradapter.DataContainerAdapter{
+		Source:   &mpradapter.ModelsdkUnitSource{Model: m},
+		Model:    m,
+		DocCache: docCache,
+	})
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	if err := mgr.BuildAll(ctx, mgr); err != nil {
+		return nil
+	}
+
+	return graphcatalog.NewProjectGraph(mgr)
+}
+
 // TestMain creates or locates the source project once, then runs all tests.
 // This avoids running `mx create-project` per test (~29s each).
 func TestMain(m *testing.M) {
@@ -54,6 +103,7 @@ func TestMain(m *testing.M) {
 		if _, err := os.Stat(filepath.Join(srcDir, sourceProjectMPR)); err == nil {
 			sharedSourceProject = srcDir
 			sharedSourceMPR = sourceProjectMPR
+			sharedProjectGraph = buildSharedGraph(filepath.Join(sharedSourceProject, sharedSourceMPR))
 			os.Exit(m.Run())
 		}
 	}
@@ -91,6 +141,15 @@ func TestMain(m *testing.M) {
 	sharedSourceProject = tmpDir
 	sharedSourceMPR = "App.mpr"
 	fmt.Fprintf(os.Stderr, "TestMain: shared source project ready at %s\n", tmpDir)
+
+	mprPath = filepath.Join(sharedSourceProject, sharedSourceMPR)
+	sharedProjectGraph = buildSharedGraph(mprPath)
+	if sharedProjectGraph == nil {
+		fmt.Fprintln(os.Stderr, "Note: mxgraph not available — tests will run without graph acceleration")
+	} else {
+		fmt.Fprintln(os.Stderr, "Info: shared mxgraph built successfully")
+	}
+
 	code := m.Run()
 	os.RemoveAll(tmpDir)
 	os.Exit(code)
@@ -249,6 +308,13 @@ func setupTestEnv(t *testing.T) *testEnv {
 		projectPath: projectPath,
 	}
 	env.ensureTestModule()
+
+	// Inject shared mxgraph if available
+	if sharedProjectGraph != nil {
+		if mprB, ok := exec.Backend().(*mprbackend.MprBackend); ok {
+			mprB.SetProjectGraph(sharedProjectGraph)
+		}
+	}
 
 	return env
 }
