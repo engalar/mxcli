@@ -176,8 +176,17 @@ func TestDescribeSanity_Entities(t *testing.T) {
 
 // openMprWriterForFixedPath opens an mmpr.Writer for the given fixture
 // path (copies to a tempdir first to avoid mutating testdata).
+// Uses goldenfs FUSE overlay when available.
 func openMprWriterForFixedPath(t *testing.T, path string) *mmpr.Writer {
 	t.Helper()
+
+	// Prefer goldenfs overlay for the default fixture path.
+	if path == fixtureMprPath {
+		if w := tryOpenWriterWithOverlay(t); w != nil {
+			return w
+		}
+	}
+
 	dst := copyMPRFixture(t, path, t.TempDir())
 	w, err := mmpr.NewWriter(dst)
 	if err != nil {

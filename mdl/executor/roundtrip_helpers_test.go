@@ -56,6 +56,8 @@ var sharedSourceMPR string
 
 // TestMain locates the committed source project once, then runs all tests.
 func TestMain(m *testing.M) {
+	cleanupLeakedGoldenFSMounts()
+
 	srcDir, err := filepath.Abs(testSourceDir)
 	if err != nil || !dirExists(filepath.Join(srcDir, testSourceMPR)) {
 		fmt.Fprintf(os.Stderr, "SKIP: test source project not found at %s\n", filepath.Join(srcDir, testSourceMPR))
@@ -144,6 +146,20 @@ func findMxBinary() string {
 func dirExists(path string) bool {
 	_, err := os.Stat(path)
 	return err == nil
+}
+
+// cleanupLeakedGoldenFSMounts removes any stale mxcli-golden-* directories
+// left from a previous test run that was killed (e.g. by -timeout).
+// os.RemoveAll is used because killed FUSE sessions can leave real files
+// (mprcontents/ subdirs) inside the mount directory.
+func cleanupLeakedGoldenFSMounts() {
+	entries, err := filepath.Glob(filepath.Join(os.TempDir(), "mxcli-golden-*"))
+	if err != nil || len(entries) == 0 {
+		return
+	}
+	for _, dir := range entries {
+		os.RemoveAll(dir)
+	}
 }
 
 // newestVersionedPath / versionFromPath / parseVersionParts / compareVersionParts

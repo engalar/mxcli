@@ -61,7 +61,7 @@ func (s *fuseOverlay) Close() error {
 		s.server.Wait()
 	}
 	s.server = nil
-	return os.Remove(s.mountDir)
+	return os.RemoveAll(s.mountDir)
 }
 
 // DirtyPaths returns the relative paths of all files written or deleted

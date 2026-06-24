@@ -42,12 +42,12 @@ func cleanupOrphanMounts() {
 			continue // owned by this process — never touch it
 		}
 		if !strings.Contains(string(mountData), dir) {
-			os.Remove(dir)
+			os.RemoveAll(dir)
 			continue
 		}
 		// Stale FUSE mount from a crashed process — detach with lazy unmount.
 		if err := exec.Command("fusermount", "-uz", dir).Run(); err == nil {
-			os.Remove(dir)
+			os.RemoveAll(dir)
 		}
 	}
 }
@@ -106,7 +106,7 @@ func Open(baseDir string, opts ...Option) (Committer, error) {
 		activeMountsMu.Lock()
 		delete(activeMounts, mountDir)
 		activeMountsMu.Unlock()
-		os.Remove(mountDir)
+		os.RemoveAll(mountDir)
 		return nil, fmt.Errorf("goldenfs: fuse mount: %w", err)
 	}
 
