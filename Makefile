@@ -196,10 +196,10 @@ release-mxcli: sync-all
 	CGO_ENABLED=0 GOOS=windows GOARCH=arm64 go build $(RELEASE_LDFLAGS) -trimpath -o $(BUILD_DIR)/$(BINARY_NAME)-windows-arm64.exe $(CMD_PATH)
 	@echo "mxcli binaries built in $(BUILD_DIR)/."
 
-# Run tests. CPU is capped at 85% via _CPU_RUNNER (cpulimit or nice -n 15)
-# so the machine stays responsive. TEST_P/TEST_PARALLEL default to 85% nproc.
+# Run tests. TEST_P/TEST_PARALLEL default to 85% nproc.
+# Uses nice(1) — NOT cpulimit(1), whose SIGSTOP/SIGCONT breaks Go's runtime.
 test: test-showcase
-	$(_CPU_RUNNER) $(MAKE) _test-inner
+	nice -n 15 $(MAKE) _test-inner
 
 _test-inner:
 	CGO_ENABLED=0 go test -timeout $(TEST_TIMEOUT) -p $(TEST_P) -parallel $(TEST_PARALLEL) \
