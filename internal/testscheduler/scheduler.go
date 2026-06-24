@@ -46,11 +46,19 @@ func (s *Scheduler) AcquireCPU(ctx context.Context) error {
 }
 
 func (s *Scheduler) ReleaseIO() {
-	s.ioToken <- struct{}{}
+	select {
+	case s.ioToken <- struct{}{}:
+	default:
+		// Bucket full — release would overflow. Safe to drop:
+		// the token was already returned by another path.
+	}
 }
 
 func (s *Scheduler) ReleaseCPU() {
-	s.cpuToken <- struct{}{}
+	select {
+	case s.cpuToken <- struct{}{}:
+	default:
+	}
 }
 
 func (s *Scheduler) Adjust(limits ResourceLimit) {
