@@ -14,6 +14,7 @@ package executor
 import (
 	"bytes"
 	"context"
+	"flag"
 	"fmt"
 	"io"
 	"os"
@@ -31,6 +32,8 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/visitor"
 	"github.com/mendixlabs/mxcli/internal/mxgraph"
 	mpradapter "github.com/mendixlabs/mxcli/internal/mxgraph/adapter/mpr"
+	"github.com/mendixlabs/mxcli/internal/testresource"
+	"github.com/mendixlabs/mxcli/internal/testresourceregistry"
 	"github.com/mendixlabs/mxcli/modelsdk"
 	"github.com/pmezard/go-difflib/difflib"
 )
@@ -54,6 +57,49 @@ var sharedSourceMPR string
 // sharedProjectGraph is built once in TestMain and shared across all
 // integration tests to avoid rebuilding mxgraph per test (~14s each).
 var sharedProjectGraph *graphcatalog.ProjectGraph
+
+// Resource profiling flags. Only checked when the test binary receives them
+// (go test ... -resource-profile). Pass -- to separate go test flags from
+// test binary flags in Go 1.26+.
+var (
+	flagResourceProfile  = flag.Bool("resource-profile", false, "enable per-test resource profiling and profile-based scheduling")
+	flagResourceRecord   = flag.Bool("resource-record", false, "record resource profiles to coverage/test-profiles/")
+	flagResourceCheck    = flag.Bool("resource-check", false, "check profiles against coverage/test-profiles/ baselines (fail on >20% regression)")
+)
+
+// testRegistry is the global resource registry, initialized in TestMain
+// when any -resource-* flag is set.
+var testRegistry *testresourceregistry.Registry
+
+// wrapWithResourceMonitor attaches a resource Monitor to the test via Cleanup,
+// if profiling flags are active. Handles profile recording, regression check,
+// and scheduler token release.
+func wrapWithResourceMonitor(t *testing.T, env *testEnv) {
+	if testRegistry == nil {
+		return
+	}
+	monitor := testresource.NewMonitor(t)
+	t.Cleanup(func() {
+		p := monitor.Done()
+		if *flagResourceProfile || *flagResourceRecord {
+			testRegistry.Record(p)
+		}
+		if *flagResourceCheck {
+			diffs, err := testRegistry.CheckRegressions()
+			if err == nil {
+				for _, d := range diffs {
+					if d.HeapDeltaPct > 20 || d.CPUTimePct > 20 || d.ReadBytesPct > 20 || d.WriteBytesPct > 20 {
+						t.Errorf("resource regression detected: %s heap=%.0f%% cpu=%.0f%% read=%.0f%% write=%.0f%%",
+							d.Name, d.HeapDeltaPct, d.CPUTimePct, d.ReadBytesPct, d.WriteBytesPct)
+					}
+				}
+			}
+		}
+		if *flagResourceProfile {
+			testRegistry.Scheduler().ReleaseIO()
+		}
+	})
+}
 
 // buildSharedGraph constructs the mxgraph index from the source project.
 // Returns nil on any error — tests work without graph acceleration.
@@ -97,6 +143,23 @@ func buildSharedGraph(mprPath string) *graphcatalog.ProjectGraph {
 // TestMain creates or locates the source project once, then runs all tests.
 // This avoids running `mx create-project` per test (~29s each).
 func TestMain(m *testing.M) {
+	flag.Parse()
+
+	// Initialize resource registry if any profiling flag is active.
+	if *flagResourceProfile || *flagResourceRecord || *flagResourceCheck {
+		// Resolve profile directory relative to repo root (go test runs from
+		// the package directory, not where go test was invoked).
+		pkgDir, _ := os.Getwd()
+		profileDir := filepath.Join(pkgDir, "..", "..", "coverage", "test-profiles")
+		if _, err := os.Stat(filepath.Join(pkgDir, "..", "..", "go.mod")); err != nil {
+			// Fallback: use CWD as-is if we can't find go.mod
+			profileDir = "coverage/test-profiles"
+		}
+		testRegistry = testresourceregistry.New(profileDir, 2, 4, 500)
+		fmt.Fprintf(os.Stderr, "Info: resource profiling enabled (dir=%s, profile=%v record=%v check=%v)\n",
+			profileDir, *flagResourceProfile, *flagResourceRecord, *flagResourceCheck)
+	}
+
 	// 1. Try the committed source project
 	srcDir, err := filepath.Abs(sourceProject)
 	if err == nil {
@@ -286,6 +349,14 @@ func copyDir(src, dst string) error {
 func setupTestEnv(t *testing.T) *testEnv {
 	t.Helper()
 
+	// Acquire resource token if scheduling is active.
+	if testRegistry != nil && *flagResourceProfile {
+		ctx := context.Background()
+		if err := testRegistry.Scheduler().AcquireIO(ctx); err != nil {
+			t.Fatalf("acquire IO token: %v", err)
+		}
+	}
+
 	projectPath := copyTestProject(t)
 
 	output := &bytes.Buffer{}
@@ -315,6 +386,9 @@ func setupTestEnv(t *testing.T) *testEnv {
 			mprB.SetProjectGraph(sharedProjectGraph)
 		}
 	}
+
+	// Start resource monitor if profiling is active.
+	wrapWithResourceMonitor(t, env)
 
 	return env
 }
@@ -709,6 +783,15 @@ func copyRoundtripProject(t *testing.T) string {
 // setupRoundtripEnv 创建基于 roundtrip.mpr 的测试环境。
 func setupRoundtripEnv(t *testing.T) *testEnv {
 	t.Helper()
+
+	// Acquire IO token for resource scheduling.
+	if testRegistry != nil && *flagResourceProfile {
+		ctx := context.Background()
+		if err := testRegistry.Scheduler().AcquireIO(ctx); err != nil {
+			t.Fatalf("acquire IO token: %v", err)
+		}
+	}
+
 	projectPath := copyRoundtripProject(t)
 
 	output := &bytes.Buffer{}
@@ -722,12 +805,15 @@ func setupRoundtripEnv(t *testing.T) *testEnv {
 		t.Fatalf("connect to roundtrip MPR: %v", err)
 	}
 
-	return &testEnv{
+	env := &testEnv{
 		t:           t,
 		executor:    exec,
 		output:      output,
 		projectPath: projectPath,
 	}
+
+	wrapWithResourceMonitor(t, env)
+	return env
 }
 
 // snapshotMPR 将当前 MPR 文件复制为 .snap 文件，用于 bsoncompare L3 测试。
@@ -822,10 +908,12 @@ func setupRoundtripEnvFromPath(t *testing.T, mprPath string) *testEnv {
 	if err := exec.Execute(&ast.ConnectStmt{Path: mprPath}); err != nil {
 		t.Fatalf("setupRoundtripEnvFromPath: connect to %s: %v", mprPath, err)
 	}
-	return &testEnv{
+	env := &testEnv{
 		t:           t,
 		executor:    exec,
 		output:      output,
 		projectPath: mprPath,
 	}
+	wrapWithResourceMonitor(t, env)
+	return env
 }
