@@ -316,8 +316,8 @@ test-integration:
 # Profiles are saved to coverage/test-profiles/ for later analysis.
 test-integration-profiled: build
 	@mkdir -p coverage/test-profiles
-	CGO_ENABLED=0 go test -tags integration -count=1 -timeout 30m \
-		./mdl/executor/... \
+	CGO_ENABLED=0 go test -tags integration -count=1 -timeout 30m -v \
+		./mdl/executor/ \
 		-resource-profile
 
 # Check resource profiles against baselines (placeholder — flag registered in mdl/executor).
@@ -337,8 +337,7 @@ test-profile-record: build
 		./sql/... ./tools/... ./generated/... ./scripts/...
 	# Re-run executor tests with record flag
 	CGO_ENABLED=0 go test -tags integration -count=1 -timeout 30m \
-		-p 1 \
-		./mdl/executor/... \
+		-p 1 ./mdl/executor/ \
 		-resource-record
 	@echo "Profiles recorded in coverage/test-profiles/"
 	@echo "Profiles recorded in coverage/test-profiles/"
