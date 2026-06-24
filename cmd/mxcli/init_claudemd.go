@@ -289,6 +289,25 @@ func generateClaudeMD(projectName, mprFile string, inDevcontainer bool) string {
 	w(bt3 + "bash\n./mxcli check script.mdl -p " + mprPath + " --references\n" + bt3 + "\n\n")
 	w("The reference checker is smart - it automatically skips references to objects that are created within the same script.\n\n")
 
+	// ── Build & Run ──────────────────────────────────────────────────
+	w("## Build & Run the App\n\n")
+	w("After making MDL changes, build and run the app locally (no Docker required):\n\n")
+	w(bt3 + "bash\n")
+	w("# Build PAD package (compiles SCSS, runs mxbuild)\n./mxcli build -p " + mprPath + "\n\n")
+	w("# Start the app (HSQLDB embedded)\n./mxcli run -p " + mprPath + " --admin-password MyPassword\n")
+	w(bt3 + "\n\n")
+	w("The app is available at **http://localhost:8080**. Login: " + bt + "MxAdmin" + bt + " / " + bt + "MyPassword" + bt + ".\n\n")
+	w("### Hot Reload\n\n")
+	w("After applying MDL changes while the app is running, use reload (no restart needed):\n\n")
+	w(bt3 + "bash\n")
+	w("./mxcli exec changes.mdl -p " + mprPath + "     # Apply MDL changes\n")
+	w("./mxcli reload -p " + mprPath + "                # Build + hot reload (~55s)\n")
+	w("./mxcli reload -p " + mprPath + " --model-only   # Reload only (~100ms)\n")
+	w(bt3 + "\n\n")
+	w("### Use PostgreSQL (instead of HSQLDB)\n\n")
+	w(bt3 + "bash\n./mxcli run -p " + mprPath + " --db postgres://user:pass@localhost:5432/mendix\n" + bt3 + "\n\n")
+	w("See the " + bt + "run-app" + bt + " skill for Docker-based workflows and detailed options.\n\n")
+
 	// ── Linting ─────────────────────────────────────────────────────
 	w("## Linting\n\n")
 	w("Check your project for common issues:\n\n")

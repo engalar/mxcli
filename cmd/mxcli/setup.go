@@ -285,18 +285,19 @@ Examples:
 
 // setupCompletionsCmd installs shell completion scripts.
 var setupCompletionsCmd = &cobra.Command{
-	Use:       "completions [bash|zsh|fish]",
+	Use:       "completions [bash|zsh|fish|powershell]",
 	Short:     "Install shell completion scripts for bash/zsh/fish/powershell",
 	Args:      cobra.MaximumNArgs(1),
-	ValidArgs: []string{"bash", "zsh", "fish"},
+	ValidArgs: []string{"bash", "zsh", "fish", "powershell"},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		shell := detectShell()
 		if len(args) > 0 {
 			shell = args[0]
 		}
+
 		path := completionPath(shell)
 		if path == "" {
-			return fmt.Errorf("unsupported shell: %s (try: mxcli setup completions bash|zsh|fish, or mxcli completion bash|zsh|fish|powershell)", shell)
+			return fmt.Errorf("unsupported shell: %s (supported: bash, zsh, fish, powershell)", shell)
 		}
 
 		dir := filepath.Dir(path)
@@ -322,6 +323,15 @@ var setupCompletionsCmd = &cobra.Command{
 		case "fish":
 			if err := rootCmd.GenFishCompletion(f, true); err != nil {
 				return err
+			}
+		case "powershell":
+			if err := rootCmd.GenPowerShellCompletionWithDesc(f); err != nil {
+				return err
+			}
+			if msg, err := installPowerShellCompletion(path); err != nil {
+				fmt.Fprintf(os.Stderr, "  Warning: %v\n", err)
+			} else if msg != "" {
+				fmt.Fprint(os.Stdout, msg)
 			}
 		}
 		fmt.Fprintf(os.Stdout, "Shell completions installed: %s\n", path)
@@ -358,8 +368,64 @@ func completionPath(shell string) string {
 		return filepath.Join(home, ".zsh", "completions", "_mxcli")
 	case "fish":
 		return filepath.Join(home, ".config", "fish", "completions", "mxcli.fish")
+	case "powershell":
+		return filepath.Join(home, ".config", "powershell", "completions", "mxcli.ps1")
 	}
 	return ""
+	}
+
+// installPowerShellCompletion adds a dot-source line to the PowerShell profile
+// to load the completion script. Idempotent: skips if the marker already exists.
+func installPowerShellCompletion(completionPath string) (string, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", fmt.Errorf("find home dir: %w", err)
+	}
+
+	// Determine profile path: prefer PowerShell 7, fall back to 5.1 on Windows.
+	profilePaths := []string{
+		filepath.Join(home, ".config", "powershell", "Microsoft.PowerShell_profile.ps1"),
+	}
+	if runtime.GOOS == "windows" {
+		profilePaths = []string{
+			filepath.Join(home, "Documents", "PowerShell", "Microsoft.PowerShell_profile.ps1"),
+			filepath.Join(home, "Documents", "WindowsPowerShell", "Microsoft.PowerShell_profile.ps1"),
+		}
+	}
+
+	dotSourceLine := ". \"" + completionPath + "\""
+	marker := "# mxcli completion"
+
+	for _, profilePath := range profilePaths {
+		// Read existing profile.
+		data, err := os.ReadFile(profilePath)
+		if err != nil {
+			if !os.IsNotExist(err) {
+				continue // permission error, try next path
+			}
+			// Profile doesn't exist — create directory.
+			if err := os.MkdirAll(filepath.Dir(profilePath), 0755); err != nil {
+				continue
+			}
+		} else if strings.Contains(string(data), marker) {
+			// Already installed — skip silently for all paths.
+			return "", nil
+		}
+
+		// Append with marker block.
+		block := "\n" + marker + "\n" + dotSourceLine + "\n# mxcli completion (end)\n"
+		f, err := os.OpenFile(profilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			continue
+		}
+		if _, err := f.WriteString(block); err != nil {
+			f.Close()
+			continue
+		}
+		f.Close()
+		return fmt.Sprintf("  Added to PowerShell profile: %s\n", profilePath), nil
+	}
+	return "", nil
 }
 
 func init() {

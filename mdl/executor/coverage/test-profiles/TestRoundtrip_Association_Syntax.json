@@ -1,0 +1,9 @@
+{
+  "name": "TestRoundtrip_Association_Syntax",
+  "duration_ms": 32.731,
+  "heap_delta_bytes": 7895992,
+  "cpu_time_ms": 90,
+  "read_bytes": 0,
+  "write_bytes": 0,
+  "num_goroutines": -1
+}

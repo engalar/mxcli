@@ -201,7 +201,7 @@ create persistent entity Module.Photo (
 ) extends System.Image;
 ```
 
-**Note:** `mxcli syntax entity` output may show EXTENDS after `)` — this is misleading. Always place EXTENDS before `(`.
+**Note:** EXTENDS must always be placed **before** the opening parenthesis — never after `)`. The `mxcli syntax` reference now correctly shows `[EXTENDS Module.Parent]` in the primary template before `(`.
 
 #### System Attributes (Auditing)
 

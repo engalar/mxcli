@@ -54,7 +54,7 @@ TEST_PARALLEL ?= $(_85PCT)
 # Hard ceiling on how long the full test suite may run.
 TEST_TIMEOUT ?= 180s
 
-.PHONY: build mdlrun build-local install-local build-debug release release-launcher release-daemon release-local-bins clean test _test-inner test-mdl report report-bench report-reset-baseline bench-baseline grammar sync-skills sync-commands sync-lint-rules sync-changelog sync-examples sync-all docs documentation docs-site docs-serve source-tree sbom sbom-report lint lint-go fmt vet update-helpdesk-golden test-helpdesk-regression setup install install-daemon install-global test-section-check update-snapshots validate-snapshots validate-academy-capstone test-integration-profiled test-profile-check test-profile-record
+.PHONY: build mdlrun build-local install-local build-debug release release-mxcli release-win-amd64 release-launcher release-daemon release-local-bins clean test _test-inner test-mdl report report-bench report-reset-baseline bench-baseline grammar sync-skills sync-commands sync-lint-rules sync-changelog sync-examples sync-all docs documentation docs-site docs-serve source-tree sbom sbom-report lint lint-go fmt vet update-helpdesk-golden test-helpdesk-regression setup install install-daemon install-global test-section-check update-snapshots validate-snapshots validate-academy-capstone test-integration-profiled test-profile-check test-profile-record
 
 setup:
 	git config core.hooksPath .githooks
@@ -195,6 +195,12 @@ release-mxcli: sync-all
 	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build $(RELEASE_LDFLAGS) -trimpath -o $(BUILD_DIR)/$(BINARY_NAME)-windows-amd64.exe $(CMD_PATH)
 	CGO_ENABLED=0 GOOS=windows GOARCH=arm64 go build $(RELEASE_LDFLAGS) -trimpath -o $(BUILD_DIR)/$(BINARY_NAME)-windows-arm64.exe $(CMD_PATH)
 	@echo "mxcli binaries built in $(BUILD_DIR)/."
+
+# Build mxcli for Windows amd64 only.
+release-win-amd64: sync-all
+	@mkdir -p $(BUILD_DIR)
+	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build $(RELEASE_LDFLAGS) -trimpath -o $(BUILD_DIR)/$(BINARY_NAME)-windows-amd64.exe $(CMD_PATH)
+	@echo "Built $(BUILD_DIR)/$(BINARY_NAME)-windows-amd64.exe"
 
 # Run tests. TEST_P/TEST_PARALLEL default to 85% nproc.
 # Uses nice(1) — NOT cpulimit(1), whose SIGSTOP/SIGCONT breaks Go's runtime.

@@ -151,6 +151,13 @@ func persistEntityDirectFn(ctx context.Context, s *ast.CreateEntityStmt, dm *gen
 		fmt.Fprintf(d.Output, "Modified entity: %s\n", s.Name)
 	} else {
 		fmt.Fprintf(d.Output, "Created entity: %s\n", s.Name)
+		isPersistent := false
+		if g, ok := gen.Generalization().(*genDm.NoGeneralization); ok {
+			isPersistent = g.Persistable()
+		}
+		if isPersistent && len(gen.AccessRulesItems()) == 0 {
+			fmt.Fprintf(d.Output, "  \u26a0  %s has no access rules — run SHOW PROJECT SECURITY and GRANT to configure entity-level access\n", s.Name)
+		}
 	}
 	d.TrackModifiedDomainModel(module.ID, module.Name)
 	return nil

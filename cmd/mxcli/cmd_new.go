@@ -7,7 +7,10 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"runtime"
+	"sort"
+	"strings"
 
 	"github.com/mendixlabs/mxcli/cmd/mxcli/docker"
 	"github.com/spf13/cobra"
@@ -28,13 +31,26 @@ Examples:
   mxcli new MyApp
   mxcli new MyApp --version 11.8.0
   mxcli new MyApp --version 10.24.0 --output-dir ./projects/my-app
+  mxcli new --list-versions
 `,
-	Args: cobra.ExactArgs(1),
+	Args: cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
+		listVersions, _ := cmd.Flags().GetBool("list-versions")
+		if listVersions {
+			listMendixVersions()
+			return
+		}
+
+		if len(args) < 1 {
+			fmt.Fprintln(os.Stderr, "Error: app name is required")
+			fmt.Fprintln(os.Stderr, "Usage: mxcli new <app-name> [--version X.Y.Z]")
+			os.Exit(1)
+		}
 		appName := args[0]
 		mendixVersion, _ := cmd.Flags().GetString("version")
 		outputDir, _ := cmd.Flags().GetString("output-dir")
 		skipInit, _ := cmd.Flags().GetBool("skip-init")
+		force, _ := cmd.Flags().GetBool("force")
 
 		if mendixVersion == "" {
 			fmt.Fprintln(os.Stderr, "Error: --version is required (e.g., --version 11.8.0)")
@@ -53,8 +69,13 @@ Examples:
 
 		// Check if directory already exists and has content
 		if entries, err := os.ReadDir(absDir); err == nil && len(entries) > 0 {
-			fmt.Fprintf(os.Stderr, "Error: directory %s already exists and is not empty\n", absDir)
-			os.Exit(1)
+			if force {
+				fmt.Printf("  Directory %s is not empty (--force), proceeding...\n", absDir)
+			} else {
+				fmt.Fprintf(os.Stderr, "Error: directory %s already exists and is not empty\n", absDir)
+				fmt.Fprintf(os.Stderr, "  Use --force to override, or choose a different --output-dir\n")
+				os.Exit(1)
+			}
 		}
 
 		// Step 1: Resolve mx binary.
@@ -154,6 +175,96 @@ Examples:
 	},
 }
 
+// listMendixVersions lists available Mendix versions from all sources.
+func listMendixVersions() {
+	all := map[string]string{} // version → source label
+	add := func(version, source string) {
+		if version != "" {
+			all[version] = source
+		}
+	}
+
+	// 1. Cached downloads (~/.mxcli/mxbuild/<version>/)
+	for _, v := range allCachedMxBuildVersions() {
+		add(v, "cached download")
+	}
+
+	// 2. Windows: C:\Program Files\Mendix\<version>\modeler\mxbuild.exe
+	if runtime.GOOS == "windows" {
+		for _, env := range []string{"PROGRAMFILES", "PROGRAMW6432", "PROGRAMFILES(X86)"} {
+			if d := os.Getenv(env); d != "" {
+				entries, _ := os.ReadDir(filepath.Join(d, "Mendix"))
+				for _, e := range entries {
+					if e.IsDir() {
+						if _, err := os.Stat(filepath.Join(d, "Mendix", e.Name(), "modeler", "mxbuild.exe")); err == nil {
+							add(e.Name(), "Studio Pro")
+						}
+					}
+				}
+			}
+		}
+		if sd := os.Getenv("SystemDrive"); sd != "" {
+			root := sd + string(os.PathSeparator)
+			for _, dir := range []string{"Program Files", "Program Files (x86)"} {
+				entries, _ := os.ReadDir(filepath.Join(root, dir, "Mendix"))
+				for _, e := range entries {
+					if e.IsDir() {
+						if _, err := os.Stat(filepath.Join(root, dir, "Mendix", e.Name(), "modeler", "mxbuild.exe")); err == nil {
+							add(e.Name(), "Studio Pro")
+						}
+					}
+				}
+			}
+		}
+	}
+
+	// 3. macOS: /Applications/Mendix Studio Pro *.app
+	if runtime.GOOS == "darwin" {
+		matches, _ := filepath.Glob("/Applications/Mendix Studio Pro *.app")
+		re := regexp.MustCompile(`^Mendix Studio Pro (\d+\.\d+\.\d+)`)
+		for _, match := range matches {
+			base := strings.TrimSuffix(filepath.Base(match), ".app")
+			if m := re.FindStringSubmatch(base); m != nil {
+				add(m[1], "Studio Pro")
+			}
+		}
+	}
+
+	if len(all) == 0 {
+		fmt.Println("No Mendix versions found.")
+		fmt.Println()
+		fmt.Println("To find available Mendix versions, visit:")
+		fmt.Println("  https://docs.mendix.com/releasenotes/studio-pro/")
+		fmt.Println()
+		fmt.Println("Usage:")
+		fmt.Println("  mxcli new MyApp --version X.Y.Z")
+		fmt.Println()
+		fmt.Println("mxcli automatically downloads the required version on first use.")
+		return
+	}
+
+	var versions []string
+	for v := range all {
+		versions = append(versions, v)
+	}
+	sort.Slice(versions, func(i, j int) bool {
+		// Prefer newer versions first (simple semver comparison by string).
+		// This works for X.Y.Z format when all are the same length.
+		return versions[i] > versions[j]
+	})
+
+	fmt.Println("Available Mendix versions:")
+	for _, v := range versions {
+		fmt.Printf("  %-12s  (%s)\n", v, all[v])
+	}
+	fmt.Println()
+	fmt.Println("Usage:")
+	fmt.Println("  mxcli new MyApp --version X.Y.Z")
+	fmt.Println()
+	fmt.Println("Cached downloads are stored in ~/.mxcli/mxbuild/<version>/.")
+	fmt.Println("mxcli automatically downloads the required version on first use.")
+}
+
 // cleanupDuplicateLocaleFiles removes duplicate locale files that mx create-project
 // generates in themesource/atlas_core/. MxBuild crashes when multiple translation.json
 // files map to the same locale key (e.g., "en-US").
@@ -201,9 +312,11 @@ func cleanupDuplicateLocaleFiles(projectDir string) int {
 }
 
 func init() {
+	newCmd.Flags().Bool("list-versions", false, "List cached Mendix versions and show how to find available ones")
 	newCmd.Flags().String("version", "", "Mendix version (e.g., 11.8.0) — required")
 	newCmd.Flags().String("output-dir", "", "Output directory (default: ./<app-name>)")
 	newCmd.Flags().Bool("skip-init", false, "Skip AI tooling initialization (mxcli init)")
+	newCmd.Flags().Bool("force", false, "Allow creating project in a non-empty directory")
 
 	rootCmd.AddCommand(newCmd)
 }

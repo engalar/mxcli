@@ -24,7 +24,7 @@ func init() {
 			"entity", "create entity", "persistent", "non-persistent",
 			"generalization", "extends", "event handler", "attribute",
 		},
-		Syntax:  "CREATE PERSISTENT ENTITY Module.Name (\n  Attr: Type [constraints],\n  ...\n) [INDEX (attr1)] [COMMENT 'text'];\n\nCREATE NON_PERSISTENT ENTITY Module.Name (...);\n\nCREATE PERSISTENT ENTITY Module.Name EXTENDS Module.Parent (...);",
+		Syntax:  "CREATE PERSISTENT ENTITY Module.Name [EXTENDS Module.Parent] (\n  Attr: Type [constraints],\n  ...\n) [INDEX (attr1)] [COMMENT 'text'];\n\nCREATE NON_PERSISTENT ENTITY Module.Name (...);\n\nCREATE PERSISTENT ENTITY Module.Name EXTENDS Module.Parent (...);",
 		Example: "CREATE PERSISTENT ENTITY MyModule.Customer (\n  Name: String(100) NOT NULL ERROR 'Name is required',\n  Email: String(200) UNIQUE,\n  Balance: Decimal DEFAULT 0,\n  IsActive: Boolean DEFAULT true,\n  Status: Enumeration(MyModule.CustomerType)\n)\nINDEX (Email)\nCOMMENT 'Stores customer information';",
 		SeeAlso: []string{"domain-model.entity.create", "domain-model.entity.alter", "domain-model.entity.attributes"},
 	})
@@ -37,7 +37,7 @@ func init() {
 			"non-persistent", "extends", "generalization",
 			"index", "event handler", "before commit", "after commit",
 		},
-		Syntax:  "CREATE PERSISTENT ENTITY Module.Name (\n  Attr: Type [NOT NULL [ERROR 'msg']] [UNIQUE [ERROR 'msg']] [DEFAULT val],\n  ...\n)\n[INDEX (attr1, attr2)]\n[ON BEFORE|AFTER CREATE|COMMIT|DELETE|ROLLBACK CALL Module.MF [RAISE ERROR]]\n[COMMENT 'text'];\n\nCREATE NON_PERSISTENT ENTITY Module.Name (...);\nCREATE PERSISTENT ENTITY Module.Name EXTENDS Module.Parent (...);",
+		Syntax:  "CREATE PERSISTENT ENTITY Module.Name [EXTENDS Module.Parent] (\n  Attr: Type [NOT NULL [ERROR 'msg']] [UNIQUE [ERROR 'msg']] [DEFAULT val],\n  ...\n)\n[INDEX (attr1, attr2)]\n[ON BEFORE|AFTER CREATE|COMMIT|DELETE|ROLLBACK CALL Module.MF [RAISE ERROR]]\n[COMMENT 'text'];\n\nCREATE NON_PERSISTENT ENTITY Module.Name (...);\nCREATE PERSISTENT ENTITY Module.Name EXTENDS Module.Parent (...);",
 		Example: "-- Persistent with constraints and index\nCREATE PERSISTENT ENTITY Shop.Order (\n  OrderNumber: String(20) NOT NULL,\n  Total: Decimal DEFAULT 0,\n  CreatedAt: DateTime\n)\nINDEX (OrderNumber)\nON BEFORE COMMIT CALL Shop.ValidateOrder($currentObject) RAISE ERROR;\n\n-- With generalization\nCREATE PERSISTENT ENTITY Shop.ProductImage EXTENDS System.Image (\n  Caption: String(200)\n);",
 		SeeAlso: []string{"domain-model.entity.alter", "domain-model.entity.attributes"},
 	})
