@@ -56,6 +56,22 @@ jobs:
         run: make test-integration
         timeout-minutes: 30
 
+      - name: Integration tests with profiling
+        run: make test-integration
+        timeout-minutes: 35
+
+      - name: Upload resource profiles
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-profiles-${{ github.sha }}
+          path: coverage/test-profiles/
+          retention-days: 30
+
+      - name: Check resource regressions
+        run: make test-profile-check
+        continue-on-error: true
+
       - name: Lint Go
         run: make lint-go
 

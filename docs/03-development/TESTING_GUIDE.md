@@ -21,6 +21,7 @@ MDL → syntax check → AST parse → visitor → semantic check
 | L5 | Decode | `*_roundtrip_test.go`（在 backend/mpr/ 包） | `mdl/backend/mpr/` | — |
 | L6a | Roundtrip | `roundtrip_*.go`（在 executor/ 包） | `mdl/executor/` | — |
 | L6b | Describe Sanity | `describe_sanity_test.go` | `mdl/executor/` | 需要 Docker |
+| L7 | Resource Profile | `coverage/test-profiles/*.json` | 任意包 | 需要 `-resource-record` flag |
 | Bench | Benchmark | `*_bench_test.go` | 任意包 | `time.Sleep` |
 
 **文件后缀决定层**——`cmd/testreport/` 的分类器读取后缀，无需 build tag（L6a/roundtrip 集成测试除外）。
@@ -175,6 +176,31 @@ func BenchmarkCreateMicroflow_10Activities(b *testing.B) {
 }
 ```
 
+### L7 — Resource Profile（集成测试资源分析）
+
+记录每个集成测试的资源使用量，用于调度和回归检测。
+
+```go
+func TestRoundtrip_Microflow_Basic(t *testing.T) {
+    monitor := testresource.NewMonitor(t)
+    defer monitor.Done() // profile captured at test end
+
+    env := setupTestEnv(t)
+    defer env.teardown()
+    // ... test logic ...
+}
+```
+
+**资源分类阈值：**
+
+| 指标 | IO Heavy | CPU Heavy |
+|------|----------|-----------|
+| ReadBytes | > 10MB | — |
+| WriteBytes | > 1MB | — |
+| CPUTime/Duration | — | > 50% |
+
+**调度规则：** IO Heavy 测试跑在 IO lane（默认 2 并发），CPU Heavy 跑在 CPU lane（默认 nproc 并发）。Mixed 测试跑在单独 lane。每个 lane 按 Duration 降序排列（长测试先启动）。
+
 ## 命名规范
 
 | 类型 | 格式 | 示例 |
@@ -194,6 +220,7 @@ func BenchmarkCreateMicroflow_10Activities(b *testing.B) {
 [ ] L4: shape 断言新字段的 TypeName() 和值（如涉及 BSON 写入）
 [ ] L6b: 新文档类型已加入 describe_sanity_test.go 的 testdataMPRs 批量列表
 [ ] _bench_test.go: 如改动涉及热路径（import、create、encode 操作）
+[ ] L7: 如新增集成测试（roundtrip_*），须包含 `testresource.NewMonitor(t)`（或用 `make test-profile-record` 重新记录 profile）
 [ ] make report 通过，无新增 FAIL
 ```
 

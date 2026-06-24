@@ -54,7 +54,7 @@ TEST_PARALLEL ?= $(_85PCT)
 # Hard ceiling on how long the full test suite may run.
 TEST_TIMEOUT ?= 180s
 
-.PHONY: build mdlrun build-local install-local build-debug release release-launcher release-daemon release-local-bins clean test _test-inner test-mdl report report-bench report-reset-baseline bench-baseline grammar sync-skills sync-commands sync-lint-rules sync-changelog sync-examples sync-all docs documentation docs-site docs-serve source-tree sbom sbom-report lint lint-go fmt vet update-helpdesk-golden test-helpdesk-regression setup install install-daemon install-global test-section-check update-snapshots validate-snapshots validate-academy-capstone
+.PHONY: build mdlrun build-local install-local build-debug release release-launcher release-daemon release-local-bins clean test _test-inner test-mdl report report-bench report-reset-baseline bench-baseline grammar sync-skills sync-commands sync-lint-rules sync-changelog sync-examples sync-all docs documentation docs-site docs-serve source-tree sbom sbom-report lint lint-go fmt vet update-helpdesk-golden test-helpdesk-regression setup install install-daemon install-global test-section-check update-snapshots validate-snapshots validate-academy-capstone test-integration-profiled test-profile-check test-profile-record
 
 setup:
 	git config core.hooksPath .githooks
@@ -299,6 +299,28 @@ test-showcase: build
 # Run integration tests (requires mx binary / mxbuild)
 test-integration:
 	CGO_ENABLED=0 go test -tags integration -count=1 -timeout 30m ./...
+
+# Run integration tests with resource profiling and profile-based scheduling.
+# Profiles are saved to coverage/test-profiles/ for later analysis.
+# Scheduling uses historical profiles to assign tests to IO/CPU/Mixed lanes.
+test-integration-profiled: build install-daemon
+	@mkdir -p coverage/test-profiles
+	CGO_ENABLED=0 go test -tags integration -count=1 -timeout 30m \
+		-resource-profile -resource-schedule ./...
+
+# Check resource profiles against baselines.
+# Fails if any test exceeds its baseline by >20% in any metric.
+test-profile-check:
+	go test -tags integration -count=1 -run '^TestProfileCheck$$' \
+		-resource-check ./...
+
+# Record new resource profile baselines (replaces all existing profiles).
+# Run after intentional performance changes to silence the regression gate.
+test-profile-record: build
+	@mkdir -p coverage/test-profiles
+	CGO_ENABLED=0 go test -tags integration -count=1 -timeout 30m \
+		-p 1 -resource-record ./...
+	@echo "Profiles recorded in coverage/test-profiles/"
 
 # Regenerate testdata/helpdesk-golden-11.6.6/ from helpdesk-app.mdl.
 # Run after intentional changes to helpdesk-app.mdl; then commit the result.
