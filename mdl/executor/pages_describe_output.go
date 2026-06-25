@@ -293,12 +293,16 @@ func outputWidgetMDLV3(ctx *ExecContext, w rawWidget, indent int) {
 		formatWidgetProps(ctx.Output, prefix, header, props, "\n")
 
 	case "Forms$Text", "Pages$Text":
+		header := "statictext"
+		if w.Name != "" {
+			header += " " + w.Name
+		}
 		props := []string{}
 		if w.Content != "" {
 			props = append(props, fmt.Sprintf("content: %s", mdlQuote(w.Content)))
 		}
 		props = appendAppearanceProps(props, w)
-		formatWidgetProps(ctx.Output, prefix, "statictext", props, "\n")
+		formatWidgetProps(ctx.Output, prefix, header, props, "\n")
 
 	case "Forms$Title", "Pages$Title":
 		header := fmt.Sprintf("title %s", w.Name)
@@ -650,7 +654,15 @@ func outputWidgetMDLV3(ctx *ExecContext, w rawWidget, indent int) {
 		fmt.Fprintf(ctx.Output, "%s}\n", prefix)
 
 	case "Forms$Label", "Pages$Label":
-		fmt.Fprintf(ctx.Output, "%sstatictext (Content: %s)\n", prefix, mdlQuote(w.Content))
+		header := "statictext"
+		if w.Name != "" {
+			header += " " + w.Name
+		}
+		props := []string{}
+		if w.Content != "" {
+			props = append(props, fmt.Sprintf("content: %s", mdlQuote(w.Content)))
+		}
+		formatWidgetProps(ctx.Output, prefix, header, props, "\n")
 
 	case "Forms$Gallery", "Pages$Gallery":
 		header := fmt.Sprintf("gallery %s", w.Name)
@@ -1242,14 +1254,15 @@ func extractTextCaption(ctx *ExecContext, w map[string]any) string {
 	if !ok {
 		return ""
 	}
-	items := getBsonArrayElements(caption["Items"])
-	for _, item := range items {
-		itemMap, ok := item.(map[string]any)
-		if !ok {
-			continue
-		}
-		if text, ok := itemMap["Text"].(string); ok {
-			return text
+	// Some BSON captions store text under "Items" (legacy format), others under "Translations"
+	// (genSimpleText format). Check both.
+	for _, arrKey := range []string{"Items", "Translations"} {
+		for _, item := range getBsonArrayElements(caption[arrKey]) {
+			if itemMap, ok := item.(map[string]any); ok {
+				if text, ok := itemMap["Text"].(string); ok && text != "" {
+					return text
+				}
+			}
 		}
 	}
 	return ""

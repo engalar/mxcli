@@ -84,8 +84,8 @@ func parsePublishedRestServiceRaw(unitID, containerID string, contents []byte) (
 	}
 
 	for _, res := range extractBsonArray(raw["Resources"]) {
-		resMap, ok := res.(map[string]any)
-		if !ok {
+		resMap := extractBsonMap(res)
+		if resMap == nil {
 			continue
 		}
 		resource := &model.PublishedRestResource{}
@@ -94,8 +94,8 @@ func parsePublishedRestServiceRaw(unitID, containerID string, contents []byte) (
 		resource.Name = extractString(resMap["Name"])
 
 		for _, op := range extractBsonArray(resMap["Operations"]) {
-			opMap, ok := op.(map[string]any)
-			if !ok {
+			opMap := extractBsonMap(op)
+			if opMap == nil {
 				continue
 			}
 			operation := &model.PublishedRestOperation{}
@@ -143,12 +143,12 @@ func parseConsumedRestServiceRaw(unitID, containerID string, contents []byte) (*
 		}
 	}
 
-	if openApiFile, ok := raw["OpenApiFile"].(map[string]any); ok && openApiFile != nil {
+	if openApiFile := extractBsonMap(raw["OpenApiFile"]); openApiFile != nil {
 		svc.OpenApiContent = extractString(openApiFile["Content"])
 	}
 
 	for _, op := range extractBsonArray(raw["Operations"]) {
-		if opMap, ok := op.(map[string]any); ok {
+		if opMap := extractBsonMap(op); opMap != nil {
 			svc.Operations = append(svc.Operations, parseRestOperation(opMap))
 		}
 	}
@@ -180,7 +180,7 @@ func parseRestOperation(opMap map[string]any) *model.RestClientOperation {
 	}
 
 	for _, h := range extractBsonArray(opMap["Headers"]) {
-		if hMap, ok := h.(map[string]any); ok {
+		if hMap := extractBsonMap(h); hMap != nil {
 			header := &model.RestClientHeader{Name: extractString(hMap["Name"])}
 			if valMap := extractBsonMap(hMap["Value"]); valMap != nil {
 				header.Value = extractString(valMap["Value"])
@@ -190,7 +190,7 @@ func parseRestOperation(opMap map[string]any) *model.RestClientOperation {
 	}
 
 	for _, p := range extractBsonArray(opMap["Parameters"]) {
-		if pMap, ok := p.(map[string]any); ok {
+		if pMap := extractBsonMap(p); pMap != nil {
 			op.Parameters = append(op.Parameters, &model.RestClientParameter{
 				Name:     extractString(pMap["Name"]),
 				DataType: extractRestDataType(pMap["DataType"]),
@@ -199,7 +199,7 @@ func parseRestOperation(opMap map[string]any) *model.RestClientOperation {
 	}
 
 	for _, q := range extractBsonArray(opMap["QueryParameters"]) {
-		if qMap, ok := q.(map[string]any); ok {
+		if qMap := extractBsonMap(q); qMap != nil {
 			op.QueryParameters = append(op.QueryParameters, &model.RestClientParameter{
 				Name:     extractString(qMap["Name"]),
 				DataType: extractRestDataType(qMap["DataType"]),
@@ -263,8 +263,8 @@ func parseMappingChildren(parentMap map[string]any) []*model.RestResponseMapping
 
 	var mappings []*model.RestResponseMapping
 	for _, child := range extractBsonArray(parentMap["Children"]) {
-		childMap, ok := child.(map[string]any)
-		if !ok {
+		childMap := extractBsonMap(child)
+		if childMap == nil {
 			continue
 		}
 		switch extractString(childMap["$Type"]) {
@@ -298,8 +298,8 @@ func parseExportMappingChildren(parentMap map[string]any) []*model.RestResponseM
 
 	var mappings []*model.RestResponseMapping
 	for _, child := range extractBsonArray(parentMap["Children"]) {
-		childMap, ok := child.(map[string]any)
-		if !ok {
+		childMap := extractBsonMap(child)
+		if childMap == nil {
 			continue
 		}
 		switch extractString(childMap["$Type"]) {
