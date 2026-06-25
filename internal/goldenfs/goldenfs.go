@@ -12,6 +12,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/hanwen/go-fuse/v2/fs"
@@ -24,6 +25,7 @@ type Snapshot struct {
 	mountDir string
 	server   *fuse.Server
 	layer    *dirtyLayer
+	lockFile *os.File // flock/BSD lock for cross-process ownership detection
 }
 
 var (
@@ -37,13 +39,27 @@ var (
 	mountMu sync.Mutex
 )
 
+// tryLock checks whether another process holds a flock on the lockfile
+// next to dir. Returns true if the lock is still held (mount is alive).
+func isLocked(dir string) bool {
+	lf, err := os.OpenFile(dir+".lock", os.O_RDONLY, 0)
+	if err != nil {
+		return false // no lockfile → nobody cares about this mount
+	}
+	defer lf.Close()
+	// LOCK_EX|LOCK_NB: if flock succeeds, nobody holds it → not alive.
+	// If it fails with EAGAIN, someone holds it → alive.
+	return syscall.Flock(int(lf.Fd()), syscall.LOCK_EX|syscall.LOCK_NB) != nil
+}
+
 // cleanupOrphanMounts unmounts any stale mxcli-golden-* FUSE mounts left by
 // a previously crashed process. Called once per process by the first Open().
 //
-// To avoid races between concurrent test binaries (each runs its own
-// cleanupOrphanMounts), directories younger than 30 seconds are left
-// untouched — they belong to a concurrently starting process, not a
-// crashed one.
+// Uses flock-based lockfiles for cross-process safety (not mtime heuristics):
+//   - Each process holds LOCK_EX|LOCK_NB on its mountdir.lock
+//   - When a process exits (normally or crash), the OS releases all flocks
+//   - cleanupOrphanMounts probes each lockfile: lock acquired = stale, lock
+//     refused = active
 func cleanupOrphanMounts() {
 	entries, err := filepath.Glob(filepath.Join(os.TempDir(), "mxcli-golden-*"))
 	if err != nil || len(entries) == 0 {
@@ -56,28 +72,27 @@ func cleanupOrphanMounts() {
 	}
 	activeMountsMu.Unlock()
 
-	now := time.Now()
 	mountData, _ := os.ReadFile("/proc/mounts")
 	for _, dir := range entries {
 		if _, live := snap[dir]; live {
 			continue // owned by this process — never touch it
 		}
 
-		// Skip young directories — they belong to a concurrently
-		// starting process, not a crashed one.
-		if fi, err := os.Stat(dir); err == nil {
-			if now.Sub(fi.ModTime()) < 30*time.Second {
-				continue
-			}
+		// Probe lockfile: if another process holds the lock, the mount is
+		// still active — skip it.
+		if isLocked(dir) {
+			continue
 		}
 
 		if !strings.Contains(string(mountData), dir) {
-			os.Remove(dir)
+			os.RemoveAll(dir)
+			os.Remove(dir + ".lock")
 			continue
 		}
 		// Stale FUSE mount from a crashed process — detach with lazy unmount.
 		if err := exec.Command("fusermount", "-uz", dir).Run(); err == nil {
-			os.Remove(dir)
+			os.RemoveAll(dir)
+			os.Remove(dir + ".lock")
 		}
 	}
 }
@@ -94,9 +109,25 @@ func Open(baseDir string) (*Snapshot, error) {
 		return nil, fmt.Errorf("goldenfs: baseDir not found: %w", err)
 	}
 
-	mountDir, err := os.MkdirTemp("", "mxcli-golden-")
+	mountDir, err := os.MkdirTemp("", fmt.Sprintf("mxcli-golden-%d-*", os.Getpid()))
 	if err != nil {
 		return nil, fmt.Errorf("goldenfs: create mountDir: %w", err)
+	}
+
+	// Acquire a non-blocking exclusive flock on the lockfile. The OS
+	// automatically releases this lock when the process exits (even on
+	// SIGKILL), so cleanupOrphanMounts can reliably detect stale mounts.
+	lockPath := mountDir + ".lock"
+	lf, err := os.OpenFile(lockPath, os.O_CREATE|os.O_RDWR, 0o666)
+	if err != nil {
+		os.RemoveAll(mountDir)
+		return nil, fmt.Errorf("goldenfs: create lockfile: %w", err)
+	}
+	if err := syscall.Flock(int(lf.Fd()), syscall.LOCK_EX|syscall.LOCK_NB); err != nil {
+		lf.Close()
+		os.Remove(lockPath)
+		os.RemoveAll(mountDir)
+		return nil, fmt.Errorf("goldenfs: acquire lock: %w", err)
 	}
 
 	// Register before mounting so concurrent Open calls don't mistake this
@@ -132,6 +163,7 @@ func Open(baseDir string) (*Snapshot, error) {
 		mountDir: mountDir,
 		server:   server,
 		layer:    layer,
+		lockFile: lf,
 	}, nil
 }
 
@@ -159,6 +191,12 @@ func (s *Snapshot) Close() error {
 	} else {
 		s.server.Wait()
 	}
+
+	// Release the flock and clean up.  The order matters: flock must be held
+	// for the entire mount lifecycle so cross-process cleanupOrphanMounts
+	// doesn't race us.
+	s.lockFile.Close()
+	os.Remove(s.mountDir + ".lock")
 	return os.Remove(s.mountDir)
 }
 
