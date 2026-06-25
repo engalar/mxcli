@@ -53,6 +53,10 @@ TEST_PARALLEL ?= $(_85PCT)
 # Hard ceiling on how long the full test suite may run.
 TEST_TIMEOUT ?= 180s
 
+# Set TEST_NOCACHE=1 to bypass Go test cache (force fresh runs).
+# Default (empty) uses Go's built-in caching for faster iterations.
+TEST_NOCACHE ?=
+
 .PHONY: build mdlrun build-local install-local build-debug release release-mxcli release-win-amd64 release-launcher release-daemon release-local-bins clean test _test-inner test-mdl report report-bench report-reset-baseline bench-baseline grammar sync-skills sync-commands sync-lint-rules sync-changelog sync-examples sync-all docs documentation docs-site docs-serve source-tree sbom sbom-report lint lint-go fmt vet update-helpdesk-golden test-helpdesk-regression setup install install-daemon install-global test-section-check update-snapshots validate-snapshots validate-academy-capstone test-integration-profiled test-profile-check test-profile-record
 
 setup:
@@ -207,7 +211,7 @@ test: test-showcase
 	nice -n 15 $(MAKE) _test-inner
 
 _test-inner:
-	CGO_ENABLED=0 go test -timeout $(TEST_TIMEOUT) -p $(TEST_P) -parallel $(TEST_PARALLEL) \
+	CGO_ENABLED=0 go test $(if $(TEST_NOCACHE),-count=1) -timeout $(TEST_TIMEOUT) -p $(TEST_P) -parallel $(TEST_PARALLEL) \
 		./cmd/... ./internal/... ./mdl/... ./model/... ./modelsdk/... \
 		./sql/... ./tools/... ./generated/... ./scripts/...
 
