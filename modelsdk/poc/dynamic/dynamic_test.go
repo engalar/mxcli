@@ -1,3 +1,4 @@
+//go:build poc
 package dynamic_test
 
 import (

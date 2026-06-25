@@ -1,3 +1,4 @@
+//go:build poc
 // SPDX-License-Identifier: Apache-2.0
 
 // Package poc_test contains the Stage 1 proof-of-concept tests for the
