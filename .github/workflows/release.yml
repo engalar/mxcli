@@ -59,13 +59,29 @@ jobs:
                     mxcli-windows-amd64.exe mxcli-windows-arm64.exe > SHA256SUMS
           cat SHA256SUMS
 
-      - name: Generate release notes
-        uses: orhun/git-cliff-action@v4
-        with:
-          config: cliff.toml
-          args: --tag-pattern '^v[0-9]' --strip header --tag '${{ github.ref_name }}'
-        env:
-          OUTPUT: release-notes.md
+      - name: Generate release notes from CHANGELOG.md
+        run: |
+          TAG="${{ github.ref_name }}"
+          VER="${TAG#v}"
+          awk -v ver="$VER" '
+            BEGIN { found=0 }
+            /^## \[/ {
+              if (found) { exit }
+              gsub(/^## \[|\].*$/, "", $0)
+              ver_str = $0
+              gsub(/ .*$/, "", ver_str)
+              if (ver_str == ver) { found=1; next }
+            }
+            found { if (/^## \[|^# /) exit; print }
+          ' CHANGELOG.md > release-notes.md
+          if [ ! -s release-notes.md ]; then
+            echo "No CHANGELOG entry found for ${TAG}, falling back to git log"
+            echo "## What's Changed" > release-notes.md
+            git log --oneline "$(git tag --sort=-creatordate | head -2 | tail -1)..HEAD" >> release-notes.md
+            echo "" >> release-notes.md
+          fi
+          echo "" >> release-notes.md
+          echo "**Full changelog**: [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/${TAG}/CHANGELOG.md)" >> release-notes.md
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v3
