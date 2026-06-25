@@ -3,48 +3,25 @@
 package mprbackend
 
 import (
-	"errors"
 	"os"
 	"path/filepath"
 	"runtime"
 	"testing"
 
-	"github.com/mendixlabs/mxcli/internal/goldenfs"
 	"github.com/mendixlabs/mxcli/internal/testfsutil"
 	mmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
 )
 
-const (
-	fixturePath = "../../../testdata/expr-checker/minimal.mpr"
-	fixtureDir  = "../../../testdata/expr-checker"
-)
+const fixturePath = "../../../testdata/expr-checker/minimal.mpr"
 
 var fixtureOpenSem = make(chan struct{}, runtime.GOMAXPROCS(0))
-
-// openFixture returns a writable path to an isolated copy of the fixture.
-// Uses goldenfs (FUSE COW overlay) on Linux, falling back to copyFixture.
-func openFixture(t *testing.T) string {
-	t.Helper()
-
-	snap, err := goldenfs.Open(fixtureDir)
-	if err == nil {
-		t.Cleanup(func() { snap.Close() })
-		return filepath.Join(snap.MountDir(), "minimal.mpr")
-	}
-	if !errors.Is(err, goldenfs.ErrNotSupported) {
-		t.Fatalf("goldenfs.Open: %v", err)
-	}
-
-	// Non-Linux fallback: real filesystem copy.
-	return copyFixture(t, fixturePath, t.TempDir())
-}
 
 func openTestWriter(t *testing.T) *mmpr.Writer {
 	t.Helper()
 	t.Parallel()
 	fixtureOpenSem <- struct{}{}
 	defer func() { <-fixtureOpenSem }()
-	dst := openFixture(t)
+	dst := copyFixture(t, fixturePath, t.TempDir())
 	w, err := mmpr.NewWriter(dst)
 	if err != nil {
 		t.Fatalf("NewWriter(%s): %v", dst, err)
@@ -326,7 +303,7 @@ func TestNewExecutorContext_RepoSmokeImages(t *testing.T) {
 // Stage 2.7: NewExecutorContextWithReferences wires both Cascade
 // (always wired) and References (requires sdk/mpr Writer).
 func TestNewExecutorContextWithReferences_BothServicesWired(t *testing.T) {
-	dst := openFixture(t)
+	dst := copyFixture(t, fixturePath, t.TempDir())
 	mw, err := mmpr.NewWriter(dst)
 	if err != nil {
 		t.Fatalf("mmpr.NewWriter: %v", err)
