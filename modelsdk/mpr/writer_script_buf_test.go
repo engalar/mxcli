@@ -10,6 +10,7 @@ import (
 // This is the regression guard against losing the ~9× script-buffer batching
 // that EXECUTE SCRIPT depends on.
 func TestWriterScriptBuf(t *testing.T) {
+	t.Parallel()
 	w := &Writer{}
 	var insertedID, insertedContainer string
 	var insertedContents []byte
@@ -66,6 +67,7 @@ func TestWriterScriptBuf(t *testing.T) {
 // The subsequent write attempt would fail at database level (nil reader),
 // proving the callback was bypassed.
 func TestWriterScriptBuf_ClearRestoresDirectMode(t *testing.T) {
+	t.Parallel()
 	w := &Writer{}
 	cbCalled := false
 	w.SetScriptBuf(
@@ -94,6 +96,7 @@ func TestWriterScriptBuf_ClearRestoresDirectMode(t *testing.T) {
 // TestWriterScriptBuf_ErrorPropagation verifies that errors from the script
 // buffer callbacks are propagated correctly.
 func TestWriterScriptBuf_ErrorPropagation(t *testing.T) {
+	t.Parallel()
 	w := &Writer{}
 	wantErr := errors.New("script buffer insert error")
 	w.SetScriptBuf(

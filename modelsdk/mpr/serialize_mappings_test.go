@@ -14,6 +14,7 @@ import (
 // element gets ExposedName "Root" and MinOccurs 1 so it binds to the JSON
 // structure root. A blank ExposedName triggers CE0271 in mx check.
 func TestSerializeImportMapping_RootBindsToSource(t *testing.T) {
+	t.Parallel()
 	im := &model.ImportMapping{
 		Name:          "WorkOrderImport_Mapping",
 		JsonStructure: "FT.WorkOrderPayload",
@@ -47,6 +48,7 @@ func TestSerializeImportMapping_RootBindsToSource(t *testing.T) {
 // TestSerializeExportMapping_RootExposedName verifies the export root element
 // gets ExposedName "Root" when blank.
 func TestSerializeExportMapping_RootExposedName(t *testing.T) {
+	t.Parallel()
 	em := &model.ExportMapping{
 		Name:          "DispatchOrder_Export",
 		JsonStructure: "FT.WorkOrderPayload",

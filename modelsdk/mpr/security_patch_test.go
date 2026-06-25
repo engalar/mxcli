@@ -115,7 +115,8 @@ func crossAssocDoc(name, parentID string) bson.D {
 // exits before any work is done, returning 0 changes and leaving the BSON
 // untouched.  After the fix it passes.
 func TestPatchReconcile_EmptyMemberAccesses_AddsAssociation(t *testing.T) {
-	const moduleName = "TestModule"
+	t.Parallel()
+		const moduleName = "TestModule"
 	const entityName = "MySetting"
 	const entityID = "entity-mysetting"
 	const assocName = "MySetting_Account"
@@ -174,7 +175,8 @@ func TestPatchReconcile_EmptyMemberAccesses_AddsAssociation(t *testing.T) {
 // entity already has explicit attribute MemberAccesses the reconciler appends
 // the missing association and reports it in the changes list.
 func TestPatchReconcile_ExistingAttrs_AddsNewAssociation(t *testing.T) {
-	const moduleName = "TestModule"
+	t.Parallel()
+		const moduleName = "TestModule"
 	const entityName = "Attachment"
 	const entityID = "entity-attachment"
 	const attrName = "FileType"
@@ -240,6 +242,7 @@ func TestPatchReconcile_ExistingAttrs_AddsNewAssociation(t *testing.T) {
 // TestPatchReconcile_NoAccessRules_NoChanges ensures entities without any
 // AccessRules are not touched.
 func TestPatchReconcile_NoAccessRules_NoChanges(t *testing.T) {
+	t.Parallel()
 	// Build a DomainModel BSON with no entities that have AccessRules.
 	dm := bson.D{
 		{Key: "$Type", Value: "DomainModels$DomainModel"},
@@ -342,7 +345,8 @@ func patchedBSONContainsMemberAccess(t *testing.T, patched []byte, entityName, r
 // CE0066 in Common_Utils has a different root cause (internal Studio Pro
 // security stamp that mxcli cannot replicate).
 func TestPatchReconcile_CrossAssoc_AddedToMemberAccesses(t *testing.T) {
-	const moduleName = "Common_Utils"
+	t.Parallel()
+		const moduleName = "Common_Utils"
 	const entityName = "MySetting"
 	const entityID = "entity-mysetting"
 	const crossAssocName = "MySetting_Account" // cross-module: FROM MySetting TO Administration.Account

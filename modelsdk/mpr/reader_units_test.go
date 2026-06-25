@@ -130,6 +130,7 @@ func newTestReaderV2ForUnits(t *testing.T, unitFiles map[string]string) *Reader 
 // TestBuildUnitCache_StoresContents ensures buildUnitCache stores Contents
 // in each cachedUnit entry so that listUnitsByTypeV2 can reuse them.
 func TestBuildUnitCache_StoresContents(t *testing.T) {
+	t.Parallel()
 	unitFiles := map[string]string{
 		"11111111-1111-1111-1111-111111111111": "Projects$ModuleImpl",
 		"22222222-2222-2222-2222-222222222222": "DomainModels$ViewEntitySourceDocument",
@@ -161,6 +162,7 @@ func TestBuildUnitCache_StoresContents(t *testing.T) {
 // TestListUnitsByTypeV2_ReusesCachedContents verifies that after buildUnitCache
 // populates the cache with Contents, listUnitsByTypeV2 does NOT re-read files.
 func TestListUnitsByTypeV2_ReusesCachedContents(t *testing.T) {
+	t.Parallel()
 	unitFiles := map[string]string{
 		"11111111-1111-1111-1111-111111111111": "Projects$ModuleImpl",
 		"22222222-2222-2222-2222-222222222222": "DomainModels$ViewEntitySourceDocument",
@@ -197,6 +199,7 @@ func TestListUnitsByTypeV2_ReusesCachedContents(t *testing.T) {
 // TestInvalidateCache_Incremental verifies that after InvalidateCache, only
 // changed units are re-read from disk (not all units).
 func TestInvalidateCache_Incremental(t *testing.T) {
+	t.Parallel()
 	unitFiles := map[string]string{
 		"11111111-1111-1111-1111-111111111111": "Projects$ModuleImpl",
 		"22222222-2222-2222-2222-222222222222": "DomainModels$ViewEntitySourceDocument",
@@ -270,6 +273,7 @@ func TestInvalidateCache_Incremental(t *testing.T) {
 // is enabled, its entries survive InvalidateCache so subsequent reads hit
 // memory instead of disk.
 func TestContentCache_PersistsAcrossInvalidation(t *testing.T) {
+	t.Parallel()
 	unitFiles := map[string]string{
 		"11111111-1111-1111-1111-111111111111": "Projects$ModuleImpl",
 		"22222222-2222-2222-2222-222222222222": "DomainModels$ViewEntitySourceDocument",
@@ -312,6 +316,7 @@ func TestContentCache_PersistsAcrossInvalidation(t *testing.T) {
 // TestContentCache_InsertUpdateInvalidatesOnlyAffected verifies that
 // InvalidateCache clears only the affected entry, not the entire cache.
 func TestContentCache_ReadAfterInsertHitsCache(t *testing.T) {
+	t.Parallel()
 	unitFiles := map[string]string{
 		"11111111-1111-1111-1111-111111111111": "Projects$ModuleImpl",
 	}

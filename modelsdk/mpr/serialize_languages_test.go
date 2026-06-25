@@ -14,6 +14,7 @@ import (
 // ALTER SETTINGS LANGUAGE ADD/DROP write path, which previously lost all
 // languages because serPSLanguageSettings only wrote DefaultLanguageCode.
 func TestSerializeProjectSettings_Languages(t *testing.T) {
+	t.Parallel()
 	ps := &model.ProjectSettings{
 		Language: &model.LanguageSettings{
 			DefaultLanguageCode: "en_US",

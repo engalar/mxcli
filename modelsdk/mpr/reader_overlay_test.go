@@ -50,6 +50,7 @@ func newTestReaderV1WithUnit(t *testing.T, unitID string, diskContents []byte) *
 }
 
 func TestReader_OverlayTakesPrecedenceOverDisk(t *testing.T) {
+	t.Parallel()
 	unitID := "00000000-0000-0000-0000-000000000001"
 	diskData := []byte("disk-data")
 	overlayData := []byte("overlay-data")
@@ -84,6 +85,7 @@ func TestReader_OverlayTakesPrecedenceOverDisk(t *testing.T) {
 }
 
 func TestReader_ClearAllOverlaysDropsEverything(t *testing.T) {
+	t.Parallel()
 	unitID := "00000000-0000-0000-0000-000000000002"
 	diskData := []byte("disk")
 	overlayData := []byte("overlay")
@@ -108,6 +110,7 @@ func TestReader_ClearAllOverlaysDropsEverything(t *testing.T) {
 }
 
 func TestReader_OverlayZeroCostWhenNil(t *testing.T) {
+	t.Parallel()
 	unitID := "00000000-0000-0000-0000-000000000003"
 	diskData := []byte("disk-only")
 

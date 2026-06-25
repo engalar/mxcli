@@ -30,7 +30,7 @@ var (
 	activeMountsMu sync.Mutex
 	activeMounts   = map[string]struct{}{}
 	cleanupOnce    sync.Once
-	mountSem       = make(chan struct{}, 2) // limit concurrent FUSE mounts to prevent go-fuse inode tree races
+	mountSem       = make(chan struct{}, 4) // limit concurrent FUSE mounts to prevent go-fuse inode tree races
 )
 
 // cleanupOrphanMounts unmounts any stale mxcli-golden-* FUSE mounts left by
