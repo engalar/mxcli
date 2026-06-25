@@ -18,14 +18,19 @@ import (
 // data races when the sender callback and the test goroutine accessed it
 // concurrently.
 type msgCollector struct {
-	mu   sync.Mutex
-	msgs []tea.Msg
+	mu       sync.Mutex
+	msgs     []tea.Msg
+	received chan struct{}
 }
 
 func (c *msgCollector) add(msg tea.Msg) {
 	c.mu.Lock()
 	c.msgs = append(c.msgs, msg)
 	c.mu.Unlock()
+	select {
+	case c.received <- struct{}{}:
+	default:
+	}
 }
 
 func (c *msgCollector) snapshot() []tea.Msg {
@@ -42,10 +47,32 @@ func (c *msgCollector) reset() {
 	c.mu.Unlock()
 }
 
+func (c *msgCollector) waitForMsg(t *testing.T, timeout time.Duration) {
+	t.Helper()
+	deadline := time.After(timeout)
+	for {
+		c.mu.Lock()
+		hasMsgs := len(c.msgs) > 0
+		c.mu.Unlock()
+		if hasMsgs {
+			return
+		}
+		select {
+		case <-c.received:
+		case <-deadline:
+			c.mu.Lock()
+			count := len(c.msgs)
+			c.mu.Unlock()
+			t.Fatalf("timed out waiting for message after %v (have %d msgs)", timeout, count)
+		}
+	}
+}
+
 func TestAgentExecEndToEnd(t *testing.T) {
 	sockPath := filepath.Join(t.TempDir(), "agent.sock")
 
 	var collector msgCollector
+	collector.received = make(chan struct{}, 1)
 	listener, err := NewAgentListener(sockPath, collector.add, true)
 	if err != nil {
 		t.Fatalf("NewAgentListener: %v", err)
@@ -67,7 +94,7 @@ func TestAgentExecEndToEnd(t *testing.T) {
 	}
 
 	// Wait for message dispatch
-	time.Sleep(200 * time.Millisecond)
+	collector.waitForMsg(t, 2*time.Second)
 	messages := collector.snapshot()
 	if len(messages) == 0 {
 		t.Fatal("no messages received")
@@ -166,6 +193,7 @@ func TestAgentMultipleActions(t *testing.T) {
 	sockPath := filepath.Join(t.TempDir(), "agent.sock")
 
 	var collector msgCollector
+	collector.received = make(chan struct{}, 1)
 	listener, err := NewAgentListener(sockPath, collector.add, true)
 	if err != nil {
 		t.Fatalf("NewAgentListener: %v", err)
@@ -183,7 +211,7 @@ func TestAgentMultipleActions(t *testing.T) {
 	data, _ := json.Marshal(req)
 	data = append(data, '\n')
 	conn.Write(data)
-	time.Sleep(100 * time.Millisecond)
+	collector.waitForMsg(t, 2*time.Second)
 	messages := collector.snapshot()
 	if len(messages) == 0 {
 		t.Fatal("no state message received")
@@ -206,11 +234,12 @@ func TestAgentMultipleActions(t *testing.T) {
 
 	// Test navigate action
 	collector.reset()
+	collector.received = make(chan struct{}, 1)
 	req = AgentRequest{ID: 2, Action: "navigate", Target: "entity:MyModule.Customer"}
 	data, _ = json.Marshal(req)
 	data = append(data, '\n')
 	conn.Write(data)
-	time.Sleep(100 * time.Millisecond)
+	collector.waitForMsg(t, 2*time.Second)
 	messages = collector.snapshot()
 	if len(messages) == 0 {
 		t.Fatal("no navigate message received")
@@ -237,6 +266,7 @@ func TestAgentDeleteMsg(t *testing.T) {
 	sockPath := filepath.Join(t.TempDir(), "agent.sock")
 
 	var collector msgCollector
+	collector.received = make(chan struct{}, 1)
 	listener, err := NewAgentListener(sockPath, collector.add, false)
 	if err != nil {
 		t.Fatalf("NewAgentListener: %v", err)
@@ -256,7 +286,7 @@ func TestAgentDeleteMsg(t *testing.T) {
 		t.Fatalf("write: %v", err)
 	}
 
-	time.Sleep(200 * time.Millisecond)
+	collector.waitForMsg(t, 2*time.Second)
 	messages := collector.snapshot()
 	if len(messages) == 0 {
 		t.Fatal("no messages received")
@@ -294,6 +324,7 @@ func TestAgentCreateModuleMsg(t *testing.T) {
 	sockPath := filepath.Join(t.TempDir(), "agent.sock")
 
 	var collector msgCollector
+	collector.received = make(chan struct{}, 1)
 	listener, err := NewAgentListener(sockPath, collector.add, false)
 	if err != nil {
 		t.Fatalf("NewAgentListener: %v", err)
@@ -313,7 +344,7 @@ func TestAgentCreateModuleMsg(t *testing.T) {
 		t.Fatalf("write: %v", err)
 	}
 
-	time.Sleep(200 * time.Millisecond)
+	collector.waitForMsg(t, 2*time.Second)
 	messages := collector.snapshot()
 	if len(messages) == 0 {
 		t.Fatal("no messages received")
@@ -400,6 +431,7 @@ func TestAgentDescribeAsync(t *testing.T) {
 	sockPath := filepath.Join(t.TempDir(), "agent.sock")
 
 	var collector msgCollector
+	collector.received = make(chan struct{}, 1)
 	listener, err := NewAgentListener(sockPath, collector.add, false)
 	if err != nil {
 		t.Fatalf("NewAgentListener: %v", err)
@@ -419,7 +451,7 @@ func TestAgentDescribeAsync(t *testing.T) {
 		t.Fatalf("write: %v", err)
 	}
 
-	time.Sleep(200 * time.Millisecond)
+	collector.waitForMsg(t, 2*time.Second)
 	messages := collector.snapshot()
 	if len(messages) == 0 {
 		t.Fatal("no messages received")
@@ -458,6 +490,7 @@ func TestAgentListAsync(t *testing.T) {
 	sockPath := filepath.Join(t.TempDir(), "agent.sock")
 
 	var collector msgCollector
+	collector.received = make(chan struct{}, 1)
 	listener, err := NewAgentListener(sockPath, collector.add, false)
 	if err != nil {
 		t.Fatalf("NewAgentListener: %v", err)
@@ -477,7 +510,7 @@ func TestAgentListAsync(t *testing.T) {
 		t.Fatalf("write: %v", err)
 	}
 
-	time.Sleep(200 * time.Millisecond)
+	collector.waitForMsg(t, 2*time.Second)
 	messages := collector.snapshot()
 	if len(messages) == 0 {
 		t.Fatal("no messages received")
