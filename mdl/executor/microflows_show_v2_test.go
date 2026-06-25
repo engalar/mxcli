@@ -8,6 +8,7 @@
 package executor
 
 import (
+	"errors"
 	"io"
 	"os"
 	"path/filepath"
@@ -15,6 +16,7 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/mendixlabs/mxcli/internal/goldenfs"
 	"github.com/mendixlabs/mxcli/internal/testfsutil"
 	mprbackend "github.com/mendixlabs/mxcli/mdl/backend/mpr"
 	mprrepos "github.com/mendixlabs/mxcli/mdl/backend/mpr/repos"
@@ -500,6 +502,14 @@ func mustNotContain(t *testing.T, haystack string, forbidden ...string) {
 
 func copyMPRFixture(t *testing.T, srcMPR string) string {
 	t.Helper()
+	snap, err := goldenfs.Open(filepath.Dir(srcMPR))
+	if err == nil {
+		t.Cleanup(func() { snap.Close() })
+		return filepath.Join(snap.MountDir(), filepath.Base(srcMPR))
+	}
+	if !errors.Is(err, goldenfs.ErrNotSupported) {
+		t.Fatalf("goldenfs.Open: %v", err)
+	}
 	dstDir := testfsutil.SameFSTempDir(t)
 	dstMPR := filepath.Join(dstDir, filepath.Base(srcMPR))
 	if err := testfsutil.CopyFile(srcMPR, dstMPR); err != nil {

@@ -5,9 +5,14 @@
 package goldenfs
 
 import (
+	"database/sql"
+	"fmt"
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
+
+	_ "modernc.org/sqlite"
 )
 
 // baseFixture creates a minimal temp base directory with a file and a subdir.
@@ -297,5 +302,88 @@ func TestSnapshot_Parallel_Independent(t *testing.T) {
 	orig, _ := os.ReadFile(filepath.Join(base, "hello.txt"))
 	if string(orig) != "world" {
 		t.Errorf("base must remain world, got %q", orig)
+	}
+}
+
+// sqliteFixture creates a directory with a minimal SQLite database file.
+func sqliteFixture(t *testing.T) string {
+	t.Helper()
+	base := t.TempDir()
+	dbPath := filepath.Join(base, "test.db")
+	db, err := sql.Open("sqlite", dbPath)
+	if err != nil {
+		t.Fatalf("open sqlite: %v", err)
+	}
+	defer db.Close()
+	if _, err := db.Exec("CREATE TABLE IF NOT EXISTS t (k INT PRIMARY KEY, v TEXT)"); err != nil {
+		t.Fatalf("create table: %v", err)
+	}
+	if _, err := db.Exec("INSERT INTO t VALUES (1, 'hello'), (2, 'world')"); err != nil {
+		t.Fatalf("insert: %v", err)
+	}
+	return base
+}
+
+// TestSnapshot_ConcurrentSQLite creates N concurrent goldenfs mounts over a
+// SQLite fixture, opens the database through each mount, and verifies all
+// mounts return consistent, independent reads. This guards against the
+// go-fuse inode tree race that caused ECONNABORTED under parallel mounts.
+// The race is probabilistic and reproduces more reliably with high concurrency
+// (N=50 matches the repo's actual parallel test count).
+func TestSnapshot_ConcurrentSQLite(t *testing.T) {
+	const n = 10
+	base := sqliteFixture(t)
+
+	var (
+		mu   sync.Mutex
+		errs []error
+		wg   sync.WaitGroup
+	)
+
+	for i := 0; i < n; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+
+			snap, err := Open(base)
+			if err != nil {
+				mu.Lock()
+				errs = append(errs, fmt.Errorf("Open: %w", err))
+				mu.Unlock()
+				return
+			}
+			defer snap.Close()
+
+			dbPath := filepath.Join(snap.MountDir(), "test.db")
+			db, err := sql.Open("sqlite", dbPath)
+			if err != nil {
+				mu.Lock()
+				errs = append(errs, fmt.Errorf("sql.Open: %w", err))
+				mu.Unlock()
+				return
+			}
+			defer db.Close()
+
+			var v string
+			if err := db.QueryRow("SELECT v FROM t WHERE k = 1").Scan(&v); err != nil {
+				mu.Lock()
+				errs = append(errs, fmt.Errorf("query: %w", err))
+				mu.Unlock()
+				return
+			}
+			if v != "hello" {
+				mu.Lock()
+				errs = append(errs, fmt.Errorf("got %q want hello", v))
+				mu.Unlock()
+			}
+		}()
+	}
+	wg.Wait()
+
+	for _, err := range errs {
+		t.Error(err)
+	}
+	if len(errs) > 0 {
+		t.Fatalf("%d of %d concurrent mounts failed", len(errs), n)
 	}
 }

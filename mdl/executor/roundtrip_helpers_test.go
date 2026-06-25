@@ -14,6 +14,7 @@ package executor
 import (
 	"bytes"
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -25,6 +26,7 @@ import (
 	"time"
 
 	"github.com/mendixlabs/mxcli/cmd/mxcli/docker"
+	"github.com/mendixlabs/mxcli/internal/goldenfs"
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	"github.com/mendixlabs/mxcli/mdl/backend"
 	mprbackend "github.com/mendixlabs/mxcli/mdl/backend/mpr"
@@ -247,14 +249,21 @@ func copyTestProject(t *testing.T) string {
 		t.Fatal("sharedSourceProject not set — TestMain did not run")
 	}
 
+	snap, err := goldenfs.Open(sharedSourceProject)
+	if err == nil {
+		t.Cleanup(func() { snap.Close() })
+		return filepath.Join(snap.MountDir(), sharedSourceMPR)
+	}
+	if !errors.Is(err, goldenfs.ErrNotSupported) {
+		t.Fatalf("goldenfs.Open: %v", err)
+	}
+
 	destDir := testfsutil.SameFSTempDir(t)
 	srcMPR := filepath.Join(sharedSourceProject, sharedSourceMPR)
 	destMPR := filepath.Join(destDir, sharedSourceMPR)
 	if err := copyFile(srcMPR, destMPR); err != nil {
 		t.Fatalf("Failed to copy MPR file: %v", err)
 	}
-
-	// Copy required directories
 	for _, dir := range []string{"mprcontents", "widgets", "themesource", "theme", "javascriptsource"} {
 		srcSub := filepath.Join(sharedSourceProject, dir)
 		if _, err := os.Stat(srcSub); err == nil {
@@ -263,7 +272,6 @@ func copyTestProject(t *testing.T) string {
 			}
 		}
 	}
-
 	return destMPR
 }
 
@@ -774,6 +782,16 @@ func copyRoundtripProject(t *testing.T) string {
 	if _, err := os.Stat(src); err != nil {
 		t.Skipf("roundtrip testdata not found at %s — run testdata/roundtrip/recreate.sh", src)
 	}
+
+	snap, err := goldenfs.Open(roundtripProjectDir)
+	if err == nil {
+		t.Cleanup(func() { snap.Close() })
+		return filepath.Join(snap.MountDir(), roundtripProjectMPR)
+	}
+	if !errors.Is(err, goldenfs.ErrNotSupported) {
+		t.Fatalf("goldenfs.Open: %v", err)
+	}
+
 	destDir := testfsutil.SameFSTempDir(t)
 	destMPR := filepath.Join(destDir, roundtripProjectMPR)
 	if err := copyFile(src, destMPR); err != nil {

@@ -3,11 +3,13 @@
 package mprbackend
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"runtime"
 	"testing"
 
+	"github.com/mendixlabs/mxcli/internal/goldenfs"
 	"github.com/mendixlabs/mxcli/internal/testfsutil"
 	mmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
 )
@@ -339,6 +341,15 @@ func TestNewExecutorContextWithReferences_BothServicesWired(t *testing.T) {
 
 func copyFixture(t *testing.T, srcMPR string) string {
 	t.Helper()
+	snap, err := goldenfs.Open(filepath.Dir(srcMPR))
+	if err == nil {
+		t.Cleanup(func() { snap.Close() })
+		return filepath.Join(snap.MountDir(), filepath.Base(srcMPR))
+	}
+	if !errors.Is(err, goldenfs.ErrNotSupported) {
+		t.Fatalf("goldenfs.Open: %v", err)
+	}
+
 	dstDir := testfsutil.SameFSTempDir(t)
 	dst, err := copyMPRTree(srcMPR, dstDir)
 	if err != nil {
