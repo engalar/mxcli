@@ -211,7 +211,16 @@ func (fb *flowBuilderGen) emitBranchBodyGen(body []ast.MicroflowStatement, split
 			}
 		} else {
 			// Subsequent activities — plain horizontal chain.
-			fb.flows = append(fb.flows, newHorizontalFlowGen(lastID, actID))
+			// Consume nextConnectionCase from compound statements (nested IF/loop
+			// that terminates without a merge, e.g. "if X then return; end if;"
+			// inside a CASE branch — the split→next flow must carry the case label).
+			pendingCase := fb.nextConnectionCase
+			fb.nextConnectionCase = ""
+			if pendingCase != "" {
+				fb.flows = append(fb.flows, newHorizontalFlowWithCaseGen(lastID, actID, pendingCase))
+			} else {
+				fb.flows = append(fb.flows, newHorizontalFlowGen(lastID, actID))
+			}
 		}
 		// Compound statements (nested IF/loop) advertise their merge via
 		// nextConnectionPoint; consume so subsequent flows originate from
