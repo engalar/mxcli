@@ -36,7 +36,7 @@ func openTestWriter(t *testing.T) *mmpr.Writer {
 	t.Parallel()
 	fixtureOpenSem <- struct{}{}
 	defer func() { <-fixtureOpenSem }()
-	dst := copyFixture(t, fixturePath, t.TempDir())
+	dst := copyFixture(t, fixturePath)
 	w, err := mmpr.NewWriter(dst)
 	if err != nil {
 		t.Fatalf("NewWriter(%s): %v", dst, err)
@@ -45,8 +45,9 @@ func openTestWriter(t *testing.T) *mmpr.Writer {
 	return w
 }
 
-func copyFixture(t *testing.T, srcMPR, dstDir string) string {
+func copyFixture(t *testing.T, srcMPR string) string {
 	t.Helper()
+	dstDir := testfsutil.SameFSTempDir(t)
 	dst, err := copyMPRTree(srcMPR, dstDir)
 	if err != nil {
 		t.Fatalf("copy fixture %s -> %s: %v", srcMPR, dstDir, err)

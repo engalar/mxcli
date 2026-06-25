@@ -21,7 +21,7 @@ func openTestWriter(t *testing.T) *mmpr.Writer {
 	t.Parallel()
 	fixtureOpenSem <- struct{}{}
 	defer func() { <-fixtureOpenSem }()
-	dst := copyFixture(t, fixturePath, t.TempDir())
+	dst := copyFixture(t, fixturePath)
 	w, err := mmpr.NewWriter(dst)
 	if err != nil {
 		t.Fatalf("NewWriter(%s): %v", dst, err)
@@ -303,7 +303,7 @@ func TestNewExecutorContext_RepoSmokeImages(t *testing.T) {
 // Stage 2.7: NewExecutorContextWithReferences wires both Cascade
 // (always wired) and References (requires sdk/mpr Writer).
 func TestNewExecutorContextWithReferences_BothServicesWired(t *testing.T) {
-	dst := copyFixture(t, fixturePath, t.TempDir())
+	dst := copyFixture(t, fixturePath)
 	mw, err := mmpr.NewWriter(dst)
 	if err != nil {
 		t.Fatalf("mmpr.NewWriter: %v", err)
@@ -337,8 +337,9 @@ func TestNewExecutorContextWithReferences_BothServicesWired(t *testing.T) {
 
 // --- fixture helpers ---
 
-func copyFixture(t *testing.T, srcMPR, dstDir string) string {
+func copyFixture(t *testing.T, srcMPR string) string {
 	t.Helper()
+	dstDir := testfsutil.SameFSTempDir(t)
 	dst, err := copyMPRTree(srcMPR, dstDir)
 	if err != nil {
 		t.Fatalf("copy fixture %s -> %s: %v", srcMPR, dstDir, err)

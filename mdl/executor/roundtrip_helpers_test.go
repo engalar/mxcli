@@ -32,6 +32,7 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/visitor"
 	"github.com/mendixlabs/mxcli/internal/mxgraph"
 	mpradapter "github.com/mendixlabs/mxcli/internal/mxgraph/adapter/mpr"
+	"github.com/mendixlabs/mxcli/internal/testfsutil"
 	"github.com/mendixlabs/mxcli/internal/testresource"
 	"github.com/mendixlabs/mxcli/internal/testresourceregistry"
 	"github.com/mendixlabs/mxcli/modelsdk"
@@ -246,9 +247,7 @@ func copyTestProject(t *testing.T) string {
 		t.Fatal("sharedSourceProject not set — TestMain did not run")
 	}
 
-	destDir := t.TempDir()
-
-	// Copy the MPR file
+	destDir := testfsutil.SameFSTempDir(t)
 	srcMPR := filepath.Join(sharedSourceProject, sharedSourceMPR)
 	destMPR := filepath.Join(destDir, sharedSourceMPR)
 	if err := copyFile(srcMPR, destMPR); err != nil {
@@ -775,7 +774,7 @@ func copyRoundtripProject(t *testing.T) string {
 	if _, err := os.Stat(src); err != nil {
 		t.Skipf("roundtrip testdata not found at %s — run testdata/roundtrip/recreate.sh", src)
 	}
-	destDir := t.TempDir()
+	destDir := testfsutil.SameFSTempDir(t)
 	destMPR := filepath.Join(destDir, roundtripProjectMPR)
 	if err := copyFile(src, destMPR); err != nil {
 		t.Fatalf("copy roundtrip MPR: %v", err)

@@ -24,7 +24,7 @@ func openMprWriterForTest(t *testing.T) *mmpr.Writer {
 	parallelOnce(t)
 	openFixtureSem <- struct{}{}
 	defer func() { <-openFixtureSem }()
-	dst := copyMPRFixture(t, fixtureMprPath, t.TempDir())
+	dst := copyMPRFixture(t, fixtureMprPath)
 	w, err := mmpr.NewWriter(dst)
 	if err != nil {
 		t.Fatalf("mmpr.NewWriter(%s): %v", dst, err)

@@ -57,7 +57,7 @@ TEST_TIMEOUT ?= 180s
 # Default (empty) uses Go's built-in caching for faster iterations.
 TEST_NOCACHE ?=
 
-.PHONY: build mdlrun build-local install-local build-debug release release-mxcli release-win-amd64 release-launcher release-daemon release-local-bins clean test _test-inner test-mdl report report-bench report-reset-baseline bench-baseline grammar sync-skills sync-commands sync-lint-rules sync-changelog sync-examples sync-all docs documentation docs-site docs-serve source-tree sbom sbom-report lint lint-go fmt vet update-helpdesk-golden test-helpdesk-regression setup install install-daemon install-global test-section-check update-snapshots validate-snapshots validate-academy-capstone test-integration-profiled test-profile-check test-profile-record
+.PHONY: build mdlrun build-local install-local build-debug release release-mxcli release-win-amd64 release-launcher release-daemon release-local-bins clean test test-fresh _test-inner test-mdl report report-bench report-reset-baseline bench-baseline grammar sync-skills sync-commands sync-lint-rules sync-changelog sync-examples sync-all docs documentation docs-site docs-serve source-tree sbom sbom-report lint lint-go fmt vet update-helpdesk-golden test-helpdesk-regression setup install install-daemon install-global test-section-check update-snapshots validate-snapshots validate-academy-capstone test-integration-profiled test-profile-check test-profile-record
 
 setup:
 	git config core.hooksPath .githooks
@@ -209,6 +209,10 @@ release-win-amd64: sync-all
 # Uses nice(1) — NOT cpulimit(1), whose SIGSTOP/SIGCONT breaks Go's runtime.
 test: test-showcase
 	nice -n 15 $(MAKE) _test-inner
+
+# Run tests without Go cache (always fresh).
+test-fresh: test-showcase
+	TEST_NOCACHE=1 nice -n 15 $(MAKE) _test-inner
 
 _test-inner:
 	CGO_ENABLED=0 go test $(if $(TEST_NOCACHE),-count=1) -timeout $(TEST_TIMEOUT) -p $(TEST_P) -parallel $(TEST_PARALLEL) \

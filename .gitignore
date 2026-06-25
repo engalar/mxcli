@@ -78,3 +78,6 @@ tmp/
 vscode-mdl/
 vscode-mdl/*.vsix
 .mxcli
+
+# Test temp dirs on the same filesystem (created by SameFSTempDir)
+.mxcli-tmp-*/

@@ -34,7 +34,7 @@ const scriptDeadlockTimeout = 30 * time.Second
 // openBackendForTest copies the v2 fixture and opens an MprBackend.
 func openBackendForTest(t *testing.T) *mprbackend.MprBackend {
 	t.Helper()
-	dst := copyMPRFixture(t, fixtureMprPath, t.TempDir())
+	dst := copyMPRFixture(t, fixtureMprPath)
 	be, err := mprbackend.NewFromPath(dst)
 	if err != nil {
 		t.Fatalf("NewFromPath: %v", err)

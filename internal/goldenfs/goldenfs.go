@@ -30,7 +30,11 @@ var (
 	activeMountsMu sync.Mutex
 	activeMounts   = map[string]struct{}{}
 	cleanupOnce    sync.Once
-	mountSem       = make(chan struct{}, 4) // limit concurrent FUSE mounts to prevent go-fuse inode tree races
+	// mountMu serialises fs.Mount calls to prevent go-fuse inode tree races.
+	// Unlike mountSem (which limited concurrency), this serialises only the
+	// Mount syscall — once the mount is created, the lock is released and tests
+	// proceed fully in parallel.
+	mountMu sync.Mutex
 )
 
 // cleanupOrphanMounts unmounts any stale mxcli-golden-* FUSE mounts left by
@@ -75,12 +79,8 @@ func Open(baseDir string) (*Snapshot, error) {
 		return nil, fmt.Errorf("goldenfs: baseDir not found: %w", err)
 	}
 
-	// Limit concurrent mounts to prevent go-fuse inode tree races.
-	mountSem <- struct{}{}
-
 	mountDir, err := os.MkdirTemp("", "mxcli-golden-")
 	if err != nil {
-		<-mountSem
 		return nil, fmt.Errorf("goldenfs: create mountDir: %w", err)
 	}
 
@@ -93,10 +93,9 @@ func Open(baseDir string) (*Snapshot, error) {
 	layer := newDirtyLayer()
 	root := &overlayNode{baseDir: abs, relPath: "", layer: layer}
 
-	// EntryTimeout/AttrTimeout = 0 disables kernel dentry+attr caching, so the
-	// dirty layer is always consulted. Without this, a Mkdir/Create followed
-	// by an immediate Stat through the same mount can race the kernel's
-	// 1-second default cache and return stale ENOENT.
+	// Serialise fs.Mount to prevent go-fuse inode tree races on concurrent
+	// mount creation. The lock is released immediately after Mount returns.
+	mountMu.Lock()
 	zero := time.Duration(0)
 	server, err := fs.Mount(mountDir, root, &fs.Options{
 		MountOptions:    fuse.MountOptions{AllowOther: false},
@@ -104,12 +103,12 @@ func Open(baseDir string) (*Snapshot, error) {
 		AttrTimeout:     &zero,
 		NegativeTimeout: &zero,
 	})
+	mountMu.Unlock()
 	if err != nil {
 		activeMountsMu.Lock()
 		delete(activeMounts, mountDir)
 		activeMountsMu.Unlock()
 		os.Remove(mountDir)
-		<-mountSem
 		return nil, fmt.Errorf("goldenfs: fuse mount: %w", err)
 	}
 
@@ -145,7 +144,6 @@ func (s *Snapshot) Close() error {
 	} else {
 		s.server.Wait()
 	}
-	<-mountSem
 	return os.Remove(s.mountDir)
 }
 

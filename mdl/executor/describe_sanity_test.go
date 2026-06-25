@@ -178,7 +178,7 @@ func TestDescribeSanity_Entities(t *testing.T) {
 // path (copies to a tempdir first to avoid mutating testdata).
 func openMprWriterForFixedPath(t *testing.T, path string) *mmpr.Writer {
 	t.Helper()
-	dst := copyMPRFixture(t, path, t.TempDir())
+	dst := copyMPRFixture(t, path)
 	w, err := mmpr.NewWriter(dst)
 	if err != nil {
 		t.Fatalf("mmpr.NewWriter(%s): %v", path, err)

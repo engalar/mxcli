@@ -498,8 +498,9 @@ func mustNotContain(t *testing.T, haystack string, forbidden ...string) {
 
 // --- fixture copy helpers ---
 
-func copyMPRFixture(t *testing.T, srcMPR, dstDir string) string {
+func copyMPRFixture(t *testing.T, srcMPR string) string {
 	t.Helper()
+	dstDir := testfsutil.SameFSTempDir(t)
 	dstMPR := filepath.Join(dstDir, filepath.Base(srcMPR))
 	if err := testfsutil.CopyFile(srcMPR, dstMPR); err != nil {
 		t.Fatalf("copy mpr: %v", err)

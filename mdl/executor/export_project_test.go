@@ -82,7 +82,7 @@ func TestCaptureDescribeFunc_WritesToBuffer(t *testing.T) {
 }
 
 func TestExportProject_ProjectLevelFiles(t *testing.T) {
-	dst := copyMPRFixture(t, fixtureMprPath, t.TempDir())
+	dst := copyMPRFixture(t, fixtureMprPath)
 	be, err := mprbackend.NewFromPath(dst)
 	if err != nil {
 		t.Fatalf("NewFromPath: %v", err)
@@ -113,7 +113,7 @@ func TestExportProject_ProjectLevelFiles(t *testing.T) {
 }
 
 func TestExportProject_ModuleDocuments(t *testing.T) {
-	dst := copyMPRFixture(t, fixtureMprPath, t.TempDir())
+	dst := copyMPRFixture(t, fixtureMprPath)
 	be, err := mprbackend.NewFromPath(dst)
 	if err != nil {
 		t.Fatalf("NewFromPath: %v", err)
@@ -209,7 +209,7 @@ func indexOfSuffix(slice []string, suffix string) int {
 }
 
 func TestRoundTrip_ExportThenImport(t *testing.T) {
-	exportDst := copyMPRFixture(t, fixtureMprPath, t.TempDir())
+	exportDst := copyMPRFixture(t, fixtureMprPath)
 	exportBe, err := mprbackend.NewFromPath(exportDst)
 	if err != nil {
 		t.Fatalf("NewFromPath (export): %v", err)
@@ -224,7 +224,7 @@ func TestRoundTrip_ExportThenImport(t *testing.T) {
 	}
 	_ = exportBe.Disconnect()
 
-	origDst := copyMPRFixture(t, fixtureMprPath, t.TempDir())
+	origDst := copyMPRFixture(t, fixtureMprPath)
 	origBe, err := mprbackend.NewFromPath(origDst)
 	if err != nil {
 		t.Fatalf("NewFromPath (orig): %v", err)
@@ -245,7 +245,7 @@ func TestRoundTrip_ExportThenImport(t *testing.T) {
 	}
 	_ = origBe.Disconnect()
 
-	importDst := copyMPRFixture(t, fixtureMprPath, t.TempDir())
+	importDst := copyMPRFixture(t, fixtureMprPath)
 	importBe, err := mprbackend.NewFromPath(importDst)
 	if err != nil {
 		t.Fatalf("NewFromPath (import): %v", err)
@@ -283,7 +283,7 @@ func TestRoundTrip_ExportThenImport(t *testing.T) {
 }
 
 func TestImportProject_ExecutesFiles(t *testing.T) {
-	dst := copyMPRFixture(t, fixtureMprPath, t.TempDir())
+	dst := copyMPRFixture(t, fixtureMprPath)
 	be, err := mprbackend.NewFromPath(dst)
 	if err != nil {
 		t.Fatalf("NewFromPath: %v", err)
@@ -299,7 +299,7 @@ func TestImportProject_ExecutesFiles(t *testing.T) {
 	}
 	_ = be.Disconnect()
 
-	dst2 := copyMPRFixture(t, fixtureMprPath, t.TempDir())
+	dst2 := copyMPRFixture(t, fixtureMprPath)
 	be2, err := mprbackend.NewFromPath(dst2)
 	if err != nil {
 		t.Fatalf("NewFromPath dst2: %v", err)
