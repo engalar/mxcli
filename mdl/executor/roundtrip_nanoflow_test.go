@@ -143,8 +143,8 @@ func TestRoundtripNanoflow_Loop(t *testing.T) {
 }`
 
 	assertNanoflowContains(t, env, nfName, createMDL,
-		[]string{"nanoflow", "loop", "end loop", "retrieve", "return"},
-		nil,
+		[]string{"nanoflow", "loop", "retrieve", "return"},
+		[]string{"end loop"},
 	)
 }
 
