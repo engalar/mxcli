@@ -14,7 +14,6 @@ package executor
 import (
 	"bytes"
 	"context"
-	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -26,7 +25,6 @@ import (
 	"time"
 
 	"github.com/mendixlabs/mxcli/cmd/mxcli/docker"
-	"github.com/mendixlabs/mxcli/internal/goldenfs"
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	"github.com/mendixlabs/mxcli/mdl/backend"
 	mprbackend "github.com/mendixlabs/mxcli/mdl/backend/mpr"
@@ -239,8 +237,8 @@ type testEnv struct {
 	projectPath string // path to the copied MPR file
 }
 
-// copyTestProject returns an isolated writable path to the shared source project.
-// Uses goldenfs (FUSE COW overlay) on Linux, falling back to a real filesystem copy.
+// copyTestProject copies the shared source project to a temp directory and returns the MPR path.
+// The temp directory is automatically cleaned up when the test finishes.
 func copyTestProject(t *testing.T) string {
 	t.Helper()
 
@@ -248,22 +246,16 @@ func copyTestProject(t *testing.T) string {
 		t.Fatal("sharedSourceProject not set — TestMain did not run")
 	}
 
-	snap, err := goldenfs.Open(sharedSourceProject)
-	if err == nil {
-		t.Cleanup(func() { snap.Close() })
-		return filepath.Join(snap.MountDir(), sharedSourceMPR)
-	}
-	if !errors.Is(err, goldenfs.ErrNotSupported) {
-		t.Fatalf("goldenfs.Open: %v", err)
-	}
-
-	// Non-Linux / non-FUSE fallback: real filesystem copy.
 	destDir := t.TempDir()
+
+	// Copy the MPR file
 	srcMPR := filepath.Join(sharedSourceProject, sharedSourceMPR)
 	destMPR := filepath.Join(destDir, sharedSourceMPR)
 	if err := copyFile(srcMPR, destMPR); err != nil {
 		t.Fatalf("Failed to copy MPR file: %v", err)
 	}
+
+	// Copy required directories
 	for _, dir := range []string{"mprcontents", "widgets", "themesource", "theme", "javascriptsource"} {
 		srcSub := filepath.Join(sharedSourceProject, dir)
 		if _, err := os.Stat(srcSub); err == nil {
@@ -272,6 +264,7 @@ func copyTestProject(t *testing.T) string {
 			}
 		}
 	}
+
 	return destMPR
 }
 
@@ -775,25 +768,13 @@ func containsProperty(mdl, property string) bool {
 const roundtripProjectDir = "../../testdata/roundtrip"
 const roundtripProjectMPR = "roundtrip.mpr"
 
-// copyRoundtripProject returns an isolated writable path to the roundtrip test MPR.
-// Uses goldenfs (FUSE COW overlay) on Linux, falling back to a real filesystem copy.
+// copyRoundtripProject 将 testdata/roundtrip/roundtrip.mpr 复制到临时目录并返回路径。
 func copyRoundtripProject(t *testing.T) string {
 	t.Helper()
-	if _, err := os.Stat(filepath.Join(roundtripProjectDir, roundtripProjectMPR)); err != nil {
-		t.Skipf("roundtrip testdata not found at %s — run testdata/roundtrip/recreate.sh", filepath.Join(roundtripProjectDir, roundtripProjectMPR))
-	}
-
-	snap, err := goldenfs.Open(roundtripProjectDir)
-	if err == nil {
-		t.Cleanup(func() { snap.Close() })
-		return filepath.Join(snap.MountDir(), roundtripProjectMPR)
-	}
-	if !errors.Is(err, goldenfs.ErrNotSupported) {
-		t.Fatalf("goldenfs.Open: %v", err)
-	}
-
-	// Non-Linux / non-FUSE fallback.
 	src := filepath.Join(roundtripProjectDir, roundtripProjectMPR)
+	if _, err := os.Stat(src); err != nil {
+		t.Skipf("roundtrip testdata not found at %s — run testdata/roundtrip/recreate.sh", src)
+	}
 	destDir := t.TempDir()
 	destMPR := filepath.Join(destDir, roundtripProjectMPR)
 	if err := copyFile(src, destMPR); err != nil {
