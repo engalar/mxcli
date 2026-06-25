@@ -114,8 +114,8 @@ func TestRoundtripNanoflow_IfElse(t *testing.T) {
 }`
 
 	assertNanoflowContains(t, env, nfName, createMDL,
-		[]string{"if", "then", "else", "end if", "'positive'", "return"},
-		nil,
+		[]string{"if", "else", "'positive'", "return"},
+		[]string{"then", "end if"},
 	)
 }
 
