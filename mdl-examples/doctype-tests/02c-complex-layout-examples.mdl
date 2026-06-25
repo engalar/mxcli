@@ -151,108 +151,108 @@ returns boolean as $IsValid
   declare $ErrorCount  integer = 0;
 
   -- Field 1: Name (required, at least 3 characters)
-  if $Factory/Name = empty then
+  if $Factory/Name = empty {
     validation feedback $Factory/Name message 'Factory name is required';
     set $IsValid    = false;
     set $ErrorCount = $ErrorCount + 1;
-  else
-    if length($Factory/Name) < 3 then
+  } else {
+    if length($Factory/Name) < 3 {
       validation feedback $Factory/Name message 'Factory name must be at least 3 characters';
       set $IsValid    = false;
       set $ErrorCount = $ErrorCount + 1;
-    end if;
-  end if;
+    }
+  }
 
   -- Field 2: Latitude (required, -90 to 90)
-  if $Factory/Latitude = empty then
+  if $Factory/Latitude = empty {
     validation feedback $Factory/Latitude message 'Latitude is required';
     set $IsValid    = false;
     set $ErrorCount = $ErrorCount + 1;
-  else
-    if $Factory/Latitude < -90 then
+  } else {
+    if $Factory/Latitude < -90 {
       validation feedback $Factory/Latitude message 'Latitude must be at least -90';
       set $IsValid    = false;
       set $ErrorCount = $ErrorCount + 1;
-    else
-      if $Factory/Latitude > 90 then
+    } else {
+      if $Factory/Latitude > 90 {
         validation feedback $Factory/Latitude message 'Latitude must be at most 90';
         set $IsValid    = false;
         set $ErrorCount = $ErrorCount + 1;
-      end if;
-    end if;
-  end if;
+      }
+    }
+  }
 
   -- Field 3: Longitude (required, -180 to 180)
-  if $Factory/Longitude = empty then
+  if $Factory/Longitude = empty {
     validation feedback $Factory/Longitude message 'Longitude is required';
     set $IsValid    = false;
     set $ErrorCount = $ErrorCount + 1;
-  else
-    if $Factory/Longitude < -180 then
+  } else {
+    if $Factory/Longitude < -180 {
       validation feedback $Factory/Longitude message 'Longitude must be at least -180';
       set $IsValid    = false;
       set $ErrorCount = $ErrorCount + 1;
-    else
-      if $Factory/Longitude > 180 then
+    } else {
+      if $Factory/Longitude > 180 {
         validation feedback $Factory/Longitude message 'Longitude must be at most 180';
         set $IsValid    = false;
         set $ErrorCount = $ErrorCount + 1;
-      end if;
-    end if;
-  end if;
+      }
+    }
+  }
 
   -- Field 4: Availability (0–100)
-  if $Factory/Availability < 0 then
+  if $Factory/Availability < 0 {
     validation feedback $Factory/Availability message 'Availability must be at least 0';
     set $IsValid    = false;
     set $ErrorCount = $ErrorCount + 1;
-  else
-    if $Factory/Availability > 100 then
+  } else {
+    if $Factory/Availability > 100 {
       validation feedback $Factory/Availability message 'Availability cannot exceed 100';
       set $IsValid    = false;
       set $ErrorCount = $ErrorCount + 1;
-    end if;
-  end if;
+    }
+  }
 
   -- Field 5: Performance (0–100)
-  if $Factory/Performance < 0 then
+  if $Factory/Performance < 0 {
     validation feedback $Factory/Performance message 'Performance must be at least 0';
     set $IsValid    = false;
     set $ErrorCount = $ErrorCount + 1;
-  else
-    if $Factory/Performance > 100 then
+  } else {
+    if $Factory/Performance > 100 {
       validation feedback $Factory/Performance message 'Performance cannot exceed 100';
       set $IsValid    = false;
       set $ErrorCount = $ErrorCount + 1;
-    end if;
-  end if;
+    }
+  }
 
   -- Field 6: Quality (0–100)
-  if $Factory/Quality < 0 then
+  if $Factory/Quality < 0 {
     validation feedback $Factory/Quality message 'Quality must be at least 0';
     set $IsValid    = false;
     set $ErrorCount = $ErrorCount + 1;
-  else
-    if $Factory/Quality > 100 then
+  } else {
+    if $Factory/Quality > 100 {
       validation feedback $Factory/Quality message 'Quality cannot exceed 100';
       set $IsValid    = false;
       set $ErrorCount = $ErrorCount + 1;
-    end if;
-  end if;
+    }
+  }
 
   -- Field 7: Status (required when factory is active)
-  if $Factory/IsActive = true then
-    if $Factory/Status = empty then
+  if $Factory/IsActive = true {
+    if $Factory/Status = empty {
       validation feedback $Factory/Status message 'Status is required for active factories';
       set $IsValid    = false;
       set $ErrorCount = $ErrorCount + 1;
-    end if;
-  end if;
+    }
+  }
 
-  if $ErrorCount > 0 then
+  if $ErrorCount > 0 {
     log warning node 'Validation' 'Factory validation failed: '
       + toString($ErrorCount) + ' error(s) on ' + $Factory/Name;
-  end if;
+  }
 
   return $IsValid;
 }
@@ -289,42 +289,42 @@ returns string as $ResponseBody
   declare $ResponseBody string = empty;
 
   -- Guard 1: required inputs present
-  if $TrackerId = empty or $AnswerJson = empty then
+  if $TrackerId = empty or $AnswerJson = empty {
     log warning node 'Survey' 'Missing required parameters';
     set $ResponseBody = '{"status":"error","code":400,"message":"Missing required parameters"}';
     return $ResponseBody;
-  end if;
+  }
 
   -- Guard 2: survey tracker must exist
   retrieve $Tracker from CxLayout.SurveyTracker
     where TrackerId = $TrackerId
     limit 1;
 
-  if $Tracker = empty then
+  if $Tracker = empty {
     log warning node 'Survey' 'Tracker not found: ' + $TrackerId;
     set $ResponseBody = '{"status":"error","code":404,"message":"Survey not found"}';
     return $ResponseBody;
-  end if;
+  }
 
   -- Guard 3: tracker must still be active
-  if $Tracker/IsActive = false then
+  if $Tracker/IsActive = false {
     log info node 'Survey' 'Tracker expired: ' + $TrackerId;
     set $ResponseBody = '{"status":"error","code":410,"message":"Survey is no longer active"}';
     return $ResponseBody;
-  end if;
+  }
 
   -- Guard 4: check for an existing submission
   retrieve $ExistingSubmission from CxLayout.SurveySubmission
     where TrackerId = $TrackerId
     limit 1;
 
-  if $ExistingSubmission != empty then
+  if $ExistingSubmission != empty {
     -- Guard 4a: already completed?
-    if $ExistingSubmission/IsFinished = true then
+    if $ExistingSubmission/IsFinished = true {
       log info node 'Survey' 'Survey already completed: ' + $TrackerId;
       set $ResponseBody = '{"status":"error","code":409,"message":"Survey already submitted"}';
       return $ResponseBody;
-    else
+    } else {
       -- Guard 4b: update the in-progress submission
       change $ExistingSubmission (
         AnswerJson   = $AnswerJson,
@@ -334,8 +334,8 @@ returns string as $ResponseBody
       log info node 'Survey' 'Submission updated: ' + $TrackerId;
       set $ResponseBody = '{"status":"ok","code":200,"message":"Submission updated"}';
       return $ResponseBody;
-    end if;
-  end if;
+    }
+  }
 
   -- All guards passed: create new submission
   $NewSubmission = create CxLayout.SurveySubmission (
@@ -390,16 +390,16 @@ returns boolean as $Success
   declare $Success boolean = false;
 
   -- Guard: authorization code required
-  if $AuthCode = empty then
+  if $AuthCode = empty {
     log error node 'Auth' 'Authorization code is empty';
     return false;
-  end if;
+  }
 
   -- Guard: client credentials required
-  if $ClientId = empty or $ClientSecret = empty then
+  if $ClientId = empty or $ClientSecret = empty {
     log error node 'Auth' 'Client credentials are missing for: ' + $ClientId;
     return false;
-  end if;
+  }
 
   -- Route by authentication method
   case $AuthMethod
@@ -417,16 +417,16 @@ returns boolean as $Success
         return false;
       };
 
-      if $PostResponse = empty then
+      if $PostResponse = empty {
         log error node 'Auth' 'Empty token response (client_secret_post): ' + $ClientId;
         return false;
-      end if;
+      }
 
       retrieve $PostToken from CxLayout.AuthToken
         where ClientId = $ClientId
         limit 1;
 
-      if $PostToken = empty then
+      if $PostToken = empty {
         $NewPostToken = create CxLayout.AuthToken (
           ClientId    = $ClientId,
           AuthMethod  = CxLayout.AuthMethod.ClientSecretPost,
@@ -435,14 +435,14 @@ returns boolean as $Success
         );
         commit $NewPostToken with events;
         log info node 'Auth' 'Token stored (post): ' + $ClientId;
-      else
+      } else {
         change $PostToken (
           RawResponse = $PostResponse,
           IssuedAt = [%CurrentDateTime%]
         );
         commit $PostToken with events;
         log info node 'Auth' 'Token refreshed (post): ' + $ClientId;
-      end if;
+      }
 
       set $Success = true;
 
@@ -459,16 +459,16 @@ returns boolean as $Success
         return false;
       };
 
-      if $BasicResponse = empty then
+      if $BasicResponse = empty {
         log error node 'Auth' 'Empty token response (client_secret_basic): ' + $ClientId;
         return false;
-      end if;
+      }
 
       retrieve $BasicToken from CxLayout.AuthToken
         where ClientId = $ClientId
         limit 1;
 
-      if $BasicToken = empty then
+      if $BasicToken = empty {
         $NewBasicToken = create CxLayout.AuthToken (
           ClientId    = $ClientId,
           AuthMethod  = CxLayout.AuthMethod.ClientSecretBasic,
@@ -477,14 +477,14 @@ returns boolean as $Success
         );
         commit $NewBasicToken with events;
         log info node 'Auth' 'Token stored (basic): ' + $ClientId;
-      else
+      } else {
         change $BasicToken (
           RawResponse = $BasicResponse,
           IssuedAt = [%CurrentDateTime%]
         );
         commit $BasicToken with events;
         log info node 'Auth' 'Token refreshed (basic): ' + $ClientId;
-      end if;
+      }
 
       set $Success = true;
 
@@ -529,73 +529,73 @@ returns boolean as $IsValid
   declare $IsValid boolean = true;
 
   -- Field 1: From (required + must contain @)
-  if $Template/FromAddress = empty then
+  if $Template/FromAddress = empty {
     validation feedback $Template/FromAddress message 'From address is required';
     set $IsValid = false;
-  else
-    if contains($Template/FromAddress, '@') = false then
+  } else {
+    if contains($Template/FromAddress, '@') = false {
       validation feedback $Template/FromAddress message 'From address must contain @';
       set $IsValid = false;
-    end if;
-  end if;
+    }
+  }
 
   -- Field 2: To (required — multiple addresses are comma-separated)
-  if $Template/ToAddresses = empty then
+  if $Template/ToAddresses = empty {
     validation feedback $Template/ToAddresses message 'At least one recipient address is required';
     set $IsValid = false;
-  end if;
+  }
 
   -- Field 3: ReplyTo (optional — format-checked only when present)
-  if $Template/ReplyTo != empty then
-    if contains($Template/ReplyTo, '@') = false then
+  if $Template/ReplyTo != empty {
+    if contains($Template/ReplyTo, '@') = false {
       validation feedback $Template/ReplyTo message 'Reply-to address must contain @';
       set $IsValid = false;
-    end if;
-  end if;
+    }
+  }
 
   -- Field 4: CC (optional — format-checked only when present)
-  if $Template/CC != empty then
-    if contains($Template/CC, '@') = false then
+  if $Template/CC != empty {
+    if contains($Template/CC, '@') = false {
       validation feedback $Template/CC message 'CC address must contain @';
       set $IsValid = false;
-    end if;
-  end if;
+    }
+  }
 
   -- Field 5: BCC (optional — format-checked only when present)
-  if $Template/BCC != empty then
-    if contains($Template/BCC, '@') = false then
+  if $Template/BCC != empty {
+    if contains($Template/BCC, '@') = false {
       validation feedback $Template/BCC message 'BCC address must contain @';
       set $IsValid = false;
-    end if;
-  end if;
+    }
+  }
 
   -- Field 6: Subject (required, max 998 characters per RFC 5322)
-  if $Template/Subject = empty then
+  if $Template/Subject = empty {
     validation feedback $Template/Subject message 'Subject is required';
     set $IsValid = false;
-  else
-    if length($Template/Subject) > 998 then
+  } else {
+    if length($Template/Subject) > 998 {
       validation feedback $Template/Subject message 'Subject must not exceed 998 characters';
       set $IsValid = false;
-    end if;
-  end if;
+    }
+  }
 
   -- Field 7: Body — two separate validation paths driven by UseOnlyPlainText
-  if $Template/UseOnlyPlainText = true then
+  if $Template/UseOnlyPlainText = true {
     -- Plain-text only: HTML body is ignored, plain text is required
-    if $Template/PlainTextBody = empty then
+    if $Template/PlainTextBody = empty {
       validation feedback $Template/PlainTextBody message 'Plain text body is required when HTML is disabled';
       set $IsValid = false;
-    end if;
-  else
+    }
+  } else {
     -- HTML mode: HTML body is required; plain text fallback is optional but must be present if HTML is empty
-    if $Template/HtmlBody = empty then
-      if $Template/PlainTextBody = empty then
+    if $Template/HtmlBody = empty {
+      if $Template/PlainTextBody = empty {
         validation feedback $Template/HtmlBody message 'Provide at least an HTML body or a plain text body';
         set $IsValid = false;
-      end if;
-    end if;
-  end if;
+      }
+    }
+  }
 
   return $IsValid;
 }
@@ -645,22 +645,22 @@ returns integer as $ProcessedCount
 
       when Maintenance then
         -- Promote back to Active when availability recovers above threshold
-        if $Factory/Availability > 80 then
+        if $Factory/Availability > 80 {
           change $Factory (
             Status       = CxLayout.FactoryStatus.Active,
             LastModified = [%CurrentDateTime%]
           );
           commit $Factory with events on error rollback;
           log info node 'Batch' 'Factory returned to active: ' + $Factory/Name;
-        else
+        } else {
           log info node 'Batch' 'Factory still in maintenance: ' + $Factory/Name;
-        end if;
+        }
         set $ProcessedCount = $ProcessedCount + 1;
 
       when Offline then
-        if $Factory/Performance > 0 then
+        if $Factory/Performance > 0 {
           log warning node 'Batch' 'Unexpected performance on offline factory: ' + $Factory/Name;
-        end if;
+        }
         set $SkippedCount = $SkippedCount + 1;
 
       when Decommissioned then
@@ -672,7 +672,7 @@ returns integer as $ProcessedCount
         set $SkippedCount = $SkippedCount + 1;
 
     end case;
-  end loop;
+  }
 
   log info node 'Batch' 'Batch complete — processed: ' + toString($ProcessedCount)
     + ', skipped: ' + toString($SkippedCount)

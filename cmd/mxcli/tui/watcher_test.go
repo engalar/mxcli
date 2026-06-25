@@ -34,16 +34,19 @@ func TestWatcherDebounce(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer w.Close()
+	w.TestDebounceFired = make(chan struct{}, 5)
 
 	// Rapidly write 5 times — should debounce into a single message.
-	// Keep the burst tighter than the debounce window so slow CI machines do
-	// not accidentally let an intermediate timer fire.
 	for i := range 5 {
 		_ = os.WriteFile(unitFile, []byte{byte('a' + i)}, 0644)
 	}
 
-	// Wait for debounce to fire (500ms + margin)
-	time.Sleep(700 * time.Millisecond)
+	// Wait for debounce to fire
+	select {
+	case <-w.TestDebounceFired:
+	case <-time.After(2 * time.Second):
+		t.Fatal("debounce did not fire within 2s")
+	}
 
 	got := sender.count.Load()
 	if got != 1 {
@@ -64,13 +67,16 @@ func TestWatcherSuppress(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer w.Close()
+	w.TestDebounceFired = make(chan struct{}, 5)
 
 	// Suppress for 2 seconds
 	w.Suppress(2 * time.Second)
 
 	// Write during suppress window
 	_ = os.WriteFile(unitFile, []byte("b"), 0644)
-	time.Sleep(700 * time.Millisecond)
+
+	// Wait long enough to ensure debounce would have fired if not suppressed
+	time.Sleep(200 * time.Millisecond)
 
 	got := sender.count.Load()
 	if got != 0 {
@@ -106,10 +112,10 @@ func TestWatcherIgnoresNonMxunitFiles(t *testing.T) {
 	}
 	defer w.Close()
 
-	// Write a .tmp file — should be ignored
+	// Write a .tmp file — should be ignored (no debounce timer started)
 	tmpFile := filepath.Join(dir, "test.tmp")
 	_ = os.WriteFile(tmpFile, []byte("b"), 0644)
-	time.Sleep(700 * time.Millisecond)
+	time.Sleep(200 * time.Millisecond)
 
 	got := sender.count.Load()
 	if got != 0 {

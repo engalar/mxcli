@@ -6,7 +6,6 @@ import (
 	"net"
 	"os"
 	"path/filepath"
-	"sync"
 	"testing"
 	"time"
 
@@ -29,15 +28,10 @@ func shortSockPath(t *testing.T) string {
 func TestAgentListenerAcceptsConnection(t *testing.T) {
 	sockPath := shortSockPath(t)
 
-	var mu sync.Mutex
-	var received []tea.Msg
-	sender := func(msg tea.Msg) {
-		mu.Lock()
-		received = append(received, msg)
-		mu.Unlock()
-	}
+	var collector msgCollector
+	collector.received = make(chan struct{}, 1)
 
-	listener, err := NewAgentListener(sockPath, sender, false)
+	listener, err := NewAgentListener(sockPath, collector.add, false)
 	if err != nil {
 		t.Fatalf("NewAgentListener: %v", err)
 	}
@@ -57,18 +51,13 @@ func TestAgentListenerAcceptsConnection(t *testing.T) {
 	}
 
 	// Wait for message to arrive
-	time.Sleep(100 * time.Millisecond)
+	collector.waitForMsg(t, 2*time.Second)
 
-	mu.Lock()
-	count := len(received)
-	mu.Unlock()
-	if count == 0 {
+	msgs := collector.snapshot()
+	if len(msgs) == 0 {
 		t.Fatal("expected at least one message")
 	}
-
-	mu.Lock()
-	msg := received[0]
-	mu.Unlock()
+	msg := msgs[0]
 
 	stateMsg, ok := msg.(AgentStateMsg)
 	if !ok {

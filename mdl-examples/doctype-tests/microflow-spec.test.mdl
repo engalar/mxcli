@@ -5,88 +5,88 @@
 -- Run with: mxcli test microflow-spec.test.mdl -p app.mpr
 -- ============================================================================
 
-/**
- * @test Basic return value
- * @expect $result = true
- */
+--
+-- @test Basic return value
+-- @expect $result = true
+--
 $result = call microflow MfTest.M001_HelloWorld();
 /
 
-/**
- * @test Basic arithmetic (10 * 5)
- * @expect $result = 50
- */
+--
+-- @test Basic arithmetic (10 * 5)
+-- @expect $result = 50
+--
 $result = call microflow MfTest.M002_BasicVariables();
 /
 
-/**
- * @test String concatenation
- * @expect $result = 'John Doe'
- */
+--
+-- @test String concatenation
+-- @expect $result = 'John Doe'
+--
 $result = call microflow MfTest.M003_StringOperations(
   FirstName = 'John', LastName = 'Doe'
 );
 /
 
-/**
- * @test Boolean AND logic
- * @expect $result = true
- */
+--
+-- @test Boolean AND logic
+-- @expect $result = true
+--
 $result = call microflow MfTest.M004_BooleanLogic(
   IsActive = true, IsValid = true
 );
 /
 
-/**
- * @test Simple IF condition (20 > 10)
- * @expect $result = 'Value is greater than 10'
- */
+--
+-- @test Simple IF condition (20 > 10)
+-- @expect $result = 'Value is greater than 10'
+--
 $result = call microflow MfTest.M006_SimpleIf(value = 20);
 /
 
-/**
- * @test IF/ELSE condition (200 > 100)
- * @expect $result = 'High'
- */
+--
+-- @test IF/ELSE condition (200 > 100)
+-- @expect $result = 'High'
+--
 $result = call microflow MfTest.M007_IfElse(value = 200);
 /
 
-/**
- * @test Nested IF grading (score 85)
- * @expect $result = 'B'
- */
+--
+-- @test Nested IF grading (score 85)
+-- @expect $result = 'B'
+--
 $result = call microflow MfTest.M008_NestedIf(Score = 85);
 /
 
-/**
- * @test Logging microflow completes
- */
+--
+-- @test Logging microflow completes
+--
 $result = call microflow MfTest.M009_Logging(OrderNumber = 'ORD-TEST-001');
 /
 
-/**
- * @test Division arithmetic (100 / 4)
- * @expect $result = 25.0
- */
+--
+-- @test Division arithmetic (100 / 4)
+-- @expect $result = 25.0
+--
 $result = call microflow MfTest.M010_ArithmeticOperations(
   Total = 100.0, count = 4
 );
 /
 
-/**
- * @test Entity creation
- * @expect $product/Name = 'TestProduct'
- */
+--
+-- @test Entity creation
+-- @expect $product/Name = 'TestProduct'
+--
 $product = call microflow MfTest.M012_CreateEntity(
   Name = 'TestProduct', Code = 'TP-001'
 );
 commit $product;
 /
 
-/**
- * @test Entity update
- * @expect $result = true
- */
+--
+-- @test Entity update
+-- @expect $result = true
+--
 $product = call microflow MfTest.M012_CreateEntity(
   Name = 'ToUpdate', Code = 'TP-002'
 );
@@ -96,31 +96,31 @@ $result = call microflow MfTest.M015_UpdateEntity(
 );
 /
 
-/**
- * @test Multiple return paths - negative
- * @expect $result = 'negative'
- */
+--
+-- @test Multiple return paths - negative
+-- @expect $result = 'negative'
+--
 $result = call microflow MfTest.M035_MultipleReturnPaths(value = -5);
 /
 
-/**
- * @test Multiple return paths - zero
- * @expect $result = 'zero'
- */
+--
+-- @test Multiple return paths - zero
+-- @expect $result = 'zero'
+--
 $result = call microflow MfTest.M035_MultipleReturnPaths(value = 0);
 /
 
-/**
- * @test Multiple return paths - positive
- * @expect $result = 'positive'
- */
+--
+-- @test Multiple return paths - positive
+-- @expect $result = 'positive'
+--
 $result = call microflow MfTest.M035_MultipleReturnPaths(value = 42);
 /
 
-/**
- * @test Sub-microflow call chain
- * @expect $result = true
- */
+--
+-- @test Sub-microflow call chain
+-- @expect $result = true
+--
 $result = call microflow MfTest.M038_1_TestCallWithResult();
 /
 
@@ -128,38 +128,38 @@ $result = call microflow MfTest.M038_1_TestCallWithResult();
 -- Math / Logic (no entity data needed)
 -- ============================================================================
 
-/**
- * @test Complex math - simple interest (1000 * 5% * 2)
- * @expect $result = 100.0
- */
+--
+-- @test Complex math - simple interest (1000 * 5% * 2)
+-- @expect $result = 100.0
+--
 $result = call microflow MfTest.M011_ComplexMath(
   Principal = 1000.0, Rate = 5.0, Time = 2
 );
 /
 
-/**
- * @test Empty value checks - both non-empty
- * @expect $valid = true
- */
+--
+-- @test Empty value checks - both non-empty
+-- @expect $valid = true
+--
 $p = call microflow MfTest.M012_CreateEntity(Name = 'ValidProduct', Code = 'EV-001');
 $valid = call microflow MfTest.M036_EmptyValueChecks(
   Product = $p, ProductCode = 'EV-001'
 );
 /
 
-/**
- * @test Complex boolean logic - all true
- * @expect $result = true
- */
+--
+-- @test Complex boolean logic - all true
+-- @expect $result = true
+--
 $result = call microflow MfTest.M037_ComplexBooleanLogic(
   IsActive = true, IsValid = true, HasStock = true
 );
 /
 
-/**
- * @test Complex boolean logic - one false
- * @expect $result = false
- */
+--
+-- @test Complex boolean logic - one false
+-- @expect $result = false
+--
 $result = call microflow MfTest.M037_ComplexBooleanLogic(
   IsActive = true, IsValid = false, HasStock = true
 );
@@ -169,10 +169,10 @@ $result = call microflow MfTest.M037_ComplexBooleanLogic(
 -- Sub-microflow calls
 -- ============================================================================
 
-/**
- * @test Call with params and result
- * @expect $result = true
- */
+--
+-- @test Call with params and result
+-- @expect $result = true
+--
 $result = call microflow MfTest.M038_2_TestCallWithParsAndResult();
 /
 
@@ -180,18 +180,18 @@ $result = call microflow MfTest.M038_2_TestCallWithParsAndResult();
 -- Entity CRUD
 -- ============================================================================
 
-/**
- * @test Save entity (commit)
- * @expect $result = true
- */
+--
+-- @test Save entity (commit)
+-- @expect $result = true
+--
 $p = call microflow MfTest.M012_CreateEntity(Name = 'SaveTest', Code = 'SE-001');
 $result = call microflow MfTest.M013_SaveEntity(Product = $p);
 /
 
-/**
- * @test Create then update entity
- * @expect $product/Name = 'TestChanged'
- */
+--
+-- @test Create then update entity
+-- @expect $product/Name = 'TestChanged'
+--
 $product = call microflow MfTest.M015_2_CreateUpdateEntity(
   Name = 'Test', Code = 'CU-001'
 );
@@ -201,10 +201,10 @@ $product = call microflow MfTest.M015_2_CreateUpdateEntity(
 -- Loops (build list inline, pass to microflow)
 -- ============================================================================
 
-/**
- * @test Simple loop - count 3 items
- * @expect $count = 3
- */
+--
+-- @test Simple loop - count 3 items
+-- @expect $count = 3
+--
 $p1 = call microflow MfTest.M012_CreateEntity(Name = 'L1', Code = 'SL-001');
 $p2 = call microflow MfTest.M012_CreateEntity(Name = 'L2', Code = 'SL-002');
 $p3 = call microflow MfTest.M012_CreateEntity(Name = 'L3', Code = 'SL-003');
@@ -215,10 +215,10 @@ add $p3 to $list;
 $count = call microflow MfTest.M021_SimpleLoop(ProductList = $list);
 /
 
-/**
- * @test Loop with change - updates 2 items
- * @expect $count = 2
- */
+--
+-- @test Loop with change - updates 2 items
+-- @expect $count = 2
+--
 $p1 = call microflow MfTest.M012_CreateEntity(Name = 'LC1', Code = 'LC-001');
 $p2 = call microflow MfTest.M012_CreateEntity(Name = 'LC2', Code = 'LC-002');
 commit $p1;
@@ -233,36 +233,36 @@ $count = call microflow MfTest.M022_LoopWithChange(ProductList = $list);
 -- RETRIEVE (needs committed entities)
 -- ============================================================================
 
-/**
- * @test Simple retrieve completes
- */
+--
+-- @test Simple retrieve completes
+--
 $p = call microflow MfTest.M012_CreateEntity(Name = 'RetrieveAll', Code = 'RA-001');
 commit $p;
 $list = call microflow MfTest.M025_SimpleRetrieve();
 /
 
-/**
- * @test Retrieve with WHERE filter
- * @expect $found/Code = 'RW-UNIQUE'
- */
+--
+-- @test Retrieve with WHERE filter
+-- @expect $found/Code = 'RW-UNIQUE'
+--
 $p = call microflow MfTest.M012_CreateEntity(Name = 'RetrieveWhere', Code = 'RW-UNIQUE');
 commit $p;
 $list = call microflow MfTest.M026_RetrieveWithWhere(SearchCode = 'RW-UNIQUE');
 $found = call microflow MfTest.M040_ListHead(ProductList = $list);
 /
 
-/**
- * @test Retrieve single object
- * @expect $found/Code = 'RS-UNIQUE'
- */
+--
+-- @test Retrieve single object
+-- @expect $found/Code = 'RS-UNIQUE'
+--
 $p = call microflow MfTest.M012_CreateEntity(Name = 'RetrieveSingle', Code = 'RS-UNIQUE');
 commit $p;
 $found = call microflow MfTest.M028_RetrieveSingleObject(ProductCode = 'RS-UNIQUE');
 /
 
-/**
- * @test DataForm Getter 2 - LIMIT/OFFSET retrieve
- */
+--
+-- @test DataForm Getter 2 - LIMIT/OFFSET retrieve
+--
 $c1 = create MfTest.Customer (Name = 'alpha1', Code = 'DG2-001');
 commit $c1;
 $c2 = create MfTest.Customer (Name = 'alpha2', Code = 'DG2-002');
@@ -276,9 +276,9 @@ commit $c5;
 $result = call microflow MfTest.M028_DataForm_Getter_2();
 /
 
-/**
- * @test DataForm Getter 3 - SORT BY with expression LIMIT/OFFSET
- */
+--
+-- @test DataForm Getter 3 - SORT BY with expression LIMIT/OFFSET
+--
 $c1 = create MfTest.Customer (Name = 'able1', Code = 'DG3-001');
 commit $c1;
 $c2 = create MfTest.Customer (Name = 'able2', Code = 'DG3-002');
@@ -300,9 +300,9 @@ commit $c9;
 $result = call microflow MfTest.M028_DataForm_Getter_3();
 /
 
-/**
- * @test DataForm Getter 4 - variable LIMIT/OFFSET
- */
+--
+-- @test DataForm Getter 4 - variable LIMIT/OFFSET
+--
 $c1 = create MfTest.Customer (Name = 'acme1', Code = 'DG4-001');
 commit $c1;
 $c2 = create MfTest.Customer (Name = 'acme2', Code = 'DG4-002');
@@ -326,10 +326,10 @@ $result = call microflow MfTest.M028_DataForm_Getter_4();
 -- List operations (build lists inline)
 -- ============================================================================
 
-/**
- * @test List HEAD operation
- * @expect $first/Name = 'Alpha'
- */
+--
+-- @test List HEAD operation
+-- @expect $first/Name = 'Alpha'
+--
 $p1 = call microflow MfTest.M012_CreateEntity(Name = 'Alpha', Code = 'LH-001');
 $p2 = call microflow MfTest.M012_CreateEntity(Name = 'Beta', Code = 'LH-002');
 $list = create list of MfTest.Product;
@@ -338,10 +338,10 @@ add $p2 to $list;
 $first = call microflow MfTest.M040_ListHead(ProductList = $list);
 /
 
-/**
- * @test List TAIL operation
- * @expect $count = 1
- */
+--
+-- @test List TAIL operation
+-- @expect $count = 1
+--
 $p1 = call microflow MfTest.M012_CreateEntity(Name = 'First', Code = 'LT-001');
 $p2 = call microflow MfTest.M012_CreateEntity(Name = 'Second', Code = 'LT-002');
 $list = create list of MfTest.Product;
@@ -351,10 +351,10 @@ $tail = call microflow MfTest.M041_ListTail(ProductList = $list);
 $count = call microflow MfTest.M051_AggregateCount(ProductList = $tail);
 /
 
-/**
- * @test List FIND by code
- * @expect $found/Code = 'LF-002'
- */
+--
+-- @test List FIND by code
+-- @expect $found/Code = 'LF-002'
+--
 $p1 = call microflow MfTest.M012_CreateEntity(Name = 'FindA', Code = 'LF-001');
 $p2 = call microflow MfTest.M012_CreateEntity(Name = 'FindB', Code = 'LF-002');
 $list = create list of MfTest.Product;
@@ -365,10 +365,10 @@ $found = call microflow MfTest.M042_ListFind(
 );
 /
 
-/**
- * @test List FILTER by IsActive
- * @expect $count = 1
- */
+--
+-- @test List FILTER by IsActive
+-- @expect $count = 1
+--
 $p1 = call microflow MfTest.M012_CreateEntity(Name = 'Active', Code = 'FI-001');
 $p2 = call microflow MfTest.M012_CreateEntity(Name = 'Inactive', Code = 'FI-002');
 change $p2 (IsActive = false);
@@ -379,10 +379,10 @@ $filtered = call microflow MfTest.M043_ListFilter(ProductList = $list);
 $count = call microflow MfTest.M051_AggregateCount(ProductList = $filtered);
 /
 
-/**
- * @test List SORT by Name ascending
- * @expect $first/Name = 'Apple'
- */
+--
+-- @test List SORT by Name ascending
+-- @expect $first/Name = 'Apple'
+--
 $p1 = call microflow MfTest.M012_CreateEntity(Name = 'Banana', Code = 'LS-001');
 $p2 = call microflow MfTest.M012_CreateEntity(Name = 'Apple', Code = 'LS-002');
 $list = create list of MfTest.Product;
@@ -392,10 +392,10 @@ $sorted = call microflow MfTest.M044_ListSort(ProductList = $list);
 $first = call microflow MfTest.M040_ListHead(ProductList = $sorted);
 /
 
-/**
- * @test List CONTAINS - item in list
- * @expect $result = true
- */
+--
+-- @test List CONTAINS - item in list
+-- @expect $result = true
+--
 $p1 = call microflow MfTest.M012_CreateEntity(Name = 'InList', Code = 'LC-001');
 $p2 = call microflow MfTest.M012_CreateEntity(Name = 'AlsoInList', Code = 'LC-002');
 $list = create list of MfTest.Product;
@@ -406,10 +406,10 @@ $result = call microflow MfTest.M049_ListContains(
 );
 /
 
-/**
- * @test List EQUALS - identical lists
- * @expect $result = true
- */
+--
+-- @test List EQUALS - identical lists
+-- @expect $result = true
+--
 $p1 = call microflow MfTest.M012_CreateEntity(Name = 'Eq1', Code = 'LE-001');
 $p2 = call microflow MfTest.M012_CreateEntity(Name = 'Eq2', Code = 'LE-002');
 $list1 = create list of MfTest.Product;
@@ -423,10 +423,10 @@ $result = call microflow MfTest.M050_ListEquals(
 );
 /
 
-/**
- * @test Create empty list
- * @expect $count = 0
- */
+--
+-- @test Create empty list
+-- @expect $count = 0
+--
 $emptyList = call microflow MfTest.M057_CreateList();
 $count = call microflow MfTest.M051_AggregateCount(ProductList = $emptyList);
 /
@@ -435,10 +435,10 @@ $count = call microflow MfTest.M051_AggregateCount(ProductList = $emptyList);
 -- Aggregate operations (build lists with known values)
 -- ============================================================================
 
-/**
- * @test Aggregate COUNT of 3-element list
- * @expect $count = 3
- */
+--
+-- @test Aggregate COUNT of 3-element list
+-- @expect $count = 3
+--
 $p1 = call microflow MfTest.M012_CreateEntity(Name = 'C1', Code = 'AC-001');
 $p2 = call microflow MfTest.M012_CreateEntity(Name = 'C2', Code = 'AC-002');
 $p3 = call microflow MfTest.M012_CreateEntity(Name = 'C3', Code = 'AC-003');
@@ -449,10 +449,10 @@ add $p3 to $list;
 $count = call microflow MfTest.M051_AggregateCount(ProductList = $list);
 /
 
-/**
- * @test Aggregate SUM of prices
- * @expect $total = 60.0
- */
+--
+-- @test Aggregate SUM of prices
+-- @expect $total = 60.0
+--
 $p1 = call microflow MfTest.M012_CreateEntity(Name = 'S1', Code = 'AS-001');
 change $p1 (Price = 10.0);
 $p2 = call microflow MfTest.M012_CreateEntity(Name = 'S2', Code = 'AS-002');
@@ -466,10 +466,10 @@ add $p3 to $list;
 $total = call microflow MfTest.M052_AggregateSum(ProductList = $list);
 /
 
-/**
- * @test Aggregate AVERAGE of prices
- * @expect $avg = 15.0
- */
+--
+-- @test Aggregate AVERAGE of prices
+-- @expect $avg = 15.0
+--
 $p1 = call microflow MfTest.M012_CreateEntity(Name = 'A1', Code = 'AA-001');
 change $p1 (Price = 10.0);
 $p2 = call microflow MfTest.M012_CreateEntity(Name = 'A2', Code = 'AA-002');

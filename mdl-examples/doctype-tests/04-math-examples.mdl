@@ -34,22 +34,22 @@ create microflow MathTest.IsPrime (
 folder 'Math'
 {
   -- Edge Case 1: Handle numbers <= 1
-  if $Number <= 1 then
+  if $Number <= 1 {
     log info node 'Math' 'Number is less than or equal to 1, not prime';
     return false;
-  end if;
+  }
 
   -- Edge Case 2: Handle the number 2 (only even prime)
-  if $Number = 2 then
+  if $Number = 2 {
     log info node 'Math' 'Number is 2, which is prime';
     return true;
-  end if;
+  }
 
   -- Edge Case 3: Eliminate even numbers > 2
-  if $Number mod 2 = 0 then
+  if $Number mod 2 = 0 {
     log info node 'Math' 'Number is even and greater than 2, not prime';
     return false;
-  end if;
+  }
 
   -- Initialize trial division variables
   -- Start checking odd divisors from 3
@@ -66,18 +66,18 @@ folder 'Math'
   while $Divisor <= $MaxDivisor and $IsPrime
 {
     -- Test if current divisor divides the number evenly
-    if $Number mod $Divisor = 0 then
+    if $Number mod $Divisor = 0 {
       log info node 'Math' 'Found divisor: {1}, not prime' with ({1} = toString($Divisor));
       set $IsPrime = false;
-    end if;
+    }
 
     -- Increment by 2 to skip even numbers (optimization)
     set $Divisor = $Divisor + 2;
-  end while;
+  }
 
-  if $IsPrime then
+  if $IsPrime {
     log info node 'Math' 'Number {1} is prime' with ({1} = toString($Number));
-  end if;
+  }
 
   return $IsPrime;
 }
@@ -103,22 +103,22 @@ create microflow MathTest.Fibonacci (
 folder 'Math'
 {
   -- Validation: Check for negative input
-  if $N < 0 then
+  if $N < 0 {
     log error node 'Math' 'Fibonacci is not defined for negative numbers';
     return 0;
-  end if;
+  }
 
   -- Base Case 1: F(0) = 0
-  if $N = 0 then
+  if $N = 0 {
     log info node 'Math' 'Fibonacci(0) = 0';
     return 0;
-  end if;
+  }
 
   -- Base Case 2: F(1) = 1
-  if $N = 1 then
+  if $N = 1 {
     log info node 'Math' 'Fibonacci(1) = 1';
     return 1;
-  end if;
+  }
 
   -- Initialize sliding window variables for iterative calculation
   -- Previous two values: F(i-2) and F(i-1)
@@ -141,7 +141,7 @@ folder 'Math'
     set $Previous2 = $Previous1;
     set $Previous1 = $Current;
     set $Counter = $Counter + 1;
-  end while;
+  }
 
   -- Store final result and return
   set $Result = $Current;

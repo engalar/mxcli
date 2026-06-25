@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
+//go:build integration
+
 // Integration tests simulating the PayerBilling2 CE1613 scenario:
 // Common_Utils.GET_Message_ById was redefined without $Locale,
 // leaving 28+ callers with broken MicroflowCallParameterMapping refs.

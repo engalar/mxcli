@@ -284,9 +284,9 @@ returns string as $message
 {
   declare $message string = 'Unknown';
 
-  if $value > 10 then
+  if $value > 10 {
     set $message = 'Value is greater than 10';
-  end if;
+  }
 
   return $message;
 }
@@ -304,11 +304,11 @@ returns string as $Category
 {
   declare $Category string = empty;
 
-  if $value > 100 then
+  if $value > 100 {
     set $Category = 'High';
-  else
+  } else {
     set $Category = 'Low';
-  end if;
+  }
 
   return $Category;
 }
@@ -329,19 +329,19 @@ returns string as $Grade
 {
   declare $Grade string = 'F';
 
-  if $Score >= 90 then
+  if $Score >= 90 {
     set $Grade = 'A';
-  else
-    if $Score >= 80 then
+  } else {
+    if $Score >= 80 {
       set $Grade = 'B';
-    else
-      if $Score >= 70 then
+    } else {
+      if $Score >= 70 {
         set $Grade = 'C';
-      else
+      } else {
         set $Grade = 'F';
-      end if;
-    end if;
-  end if;
+      }
+    }
+  }
 
   return $Grade;
 }
@@ -663,9 +663,9 @@ returns integer as $count
   declare $count integer = 0;
 
   loop $Product in $ProductList
-  };
+  {
     set $count = $count + 1;
-  end loop;
+  }
 
   return $count;
 }
@@ -685,9 +685,9 @@ returns integer as $count
 
   @caption 'Process products'
   loop $Product in $ProductList
-  };
+  {
     set $count = $count + 1;
-  end loop;
+  }
 
   return $count;
 }
@@ -706,11 +706,11 @@ returns integer as $UpdatedCount
   declare $UpdatedCount integer = 0;
 
   loop $Product in $ProductList
-  };
+  {
     change $Product (IsActive = true);
     commit $Product;
     set $UpdatedCount = $UpdatedCount + 1;
-  end loop;
+  }
 
   return $UpdatedCount;
 }
@@ -729,12 +729,12 @@ returns integer as $ActiveCount
   declare $ActiveCount integer = 0;
 
   loop $Product in $ProductList
-  };
-    if $Product/IsActive then
+  {
+    if $Product/IsActive {
       set $ActiveCount = $ActiveCount + 1;
       log info node 'Test' 'Found active product';
-    end if;
-  end loop;
+    }
+  }
 
   return $ActiveCount;
 }
@@ -753,16 +753,16 @@ returns integer as $TotalLineItems
   declare $TotalLineItems integer = 0;
 
   loop $Order in $OrderList
-  };
+  {
     log info node 'Test' 'Processing order';
     retrieve $CustomerList from MfTest.Customer
     where MfTest.Order_Customer = $Order;
     loop $Customer in $CustomerList
-    };
+    {
       log info node 'Test' 'Processing Customer';
-    end loop;
+    }
     set $TotalLineItems = $TotalLineItems + 1;
-  end loop;
+  }
 
   return $TotalLineItems;
 }
@@ -782,12 +782,12 @@ returns decimal as $TotalDiscounted
   declare $TotalDiscounted decimal = 0;
 
   loop $Product in $ProductList
-  };
+  {
     declare $OriginalPrice decimal = $Product/Price;
     declare $Discount decimal = $OriginalPrice * 0.1;
     declare $DiscountedPrice decimal = $OriginalPrice - $Discount;
     set $TotalDiscounted = $TotalDiscounted + $DiscountedPrice;
-  end loop;
+  }
 
   return $TotalDiscounted;
 }
@@ -809,10 +809,10 @@ returns integer as $sum
   declare $sum integer = 0;
 
   while $Counter < $N
-  };
+  {
     set $Counter = $Counter + 1;
     set $sum = $sum + $Counter;
-  end while;
+  }
 
   return $sum;
 }
@@ -830,20 +830,20 @@ create microflow MfTest.M024_4_WhileWithCondition (
 )
 returns boolean as $IsPrime
 {
-  if $Number <= 1 then
+  if $Number <= 1 {
     return false;
-  end if;
+  }
 
   declare $Divisor integer = 2;
   declare $IsPrime boolean = true;
 
   while $Divisor * $Divisor <= $Number and $IsPrime
-  };
-    if $Number mod $Divisor = 0 then
+  {
+    if $Number mod $Divisor = 0 {
       set $IsPrime = false;
-    end if;
+    }
     set $Divisor = $Divisor + 1;
-  end while;
+  }
 
   return $IsPrime;
 }
@@ -1011,9 +1011,9 @@ returns Void
   retrieve $Orders from $Customer/MfTest.Order_Customer;
 
   loop $Order in $Orders
-  };
+  {
     log info node 'Assoc' 'Order: ' + $Order/OrderNumber;
-  end loop;
+  }
 
   return;
 }
@@ -1037,13 +1037,13 @@ returns integer
   declare $ValidCount integer = 0;
 
   loop $row in $Rows
-  };
-    if $row/IsValid then
+  {
+    if $row/IsValid {
       set $ValidCount = $ValidCount + 1;
-    else
+    } else {
       log warning node 'Import' 'Row ' + toString($row/RowNumber) + ' invalid: ' + $row/ErrorMessage;
-    end if;
-  end loop;
+    }
+  }
 
   return $ValidCount;
 }
@@ -1073,10 +1073,10 @@ returns boolean as $success
     limit 1;
 
   -- Validate order exists
-  if $Order = empty then
+  if $Order = empty {
     log warning node 'OrderService' 'Order not found: ' + $OrderNumber;
     return false;
-  end if;
+  }
 
   -- Update order status
   change $Order (
@@ -1107,7 +1107,7 @@ returns integer as $ProcessedCount
 
   -- Process each product
   loop $Product in $ProductList
-  };
+  {
     -- Update last processed date
     change $Product (LastProcessedDate = [%CurrentDateTime%]);
     commit $Product;
@@ -1116,10 +1116,10 @@ returns integer as $ProcessedCount
     set $ProcessedCount = $ProcessedCount + 1;
 
     -- Log progress
-    if $ProcessedCount > 0 then
+    if $ProcessedCount > 0 {
       log info node 'BatchService' 'Processed product count: ' + toString($ProcessedCount);
-    end if;
-  end loop;
+    }
+  }
 
   return $ProcessedCount;
 }
@@ -1178,20 +1178,20 @@ returns MfTest.Order as $NewOrder
     where Code = $CustomerCode
     limit 1;
 
-  if $Customer = empty then
+  if $Customer = empty {
     log error node 'OrderService' 'Customer not found: ' + $CustomerCode;
     return empty;
-  end if;
+  }
 
   -- Step 2: Find product
   retrieve $Product from MfTest.Product
     where Code = $ProductCode
     limit 1;
 
-  if $Product = empty then
+  if $Product = empty {
     log error node 'OrderService' 'Product not found: ' + $ProductCode;
     return empty;
-  end if;
+  }
 
   -- Step 3: Calculate total
   set $TotalPrice = $Product/Price * $Quantity;
@@ -1237,15 +1237,15 @@ returns boolean as $success
 
   -- Calculate metrics
   loop $Product in $ProductList
-  };
+  {
     set $TotalProducts = $TotalProducts + 1;
     set $TotalValue = $TotalValue + $Product/Price;
-  end loop;
+  }
 
   -- Calculate average
-  if $TotalProducts > 0 then
+  if $TotalProducts > 0 {
     set $AveragePrice = $TotalValue div $TotalProducts;
-  end if;
+  }
 
   -- Log results
   log info node 'ReportService' 'Total products: ' + toString($TotalProducts);
@@ -1272,14 +1272,14 @@ returns integer as $count
 {
   declare $count integer = 0;
 
-  if $ProductList != empty then
+  if $ProductList != empty {
     loop $Product in $ProductList
-    };
+    {
       set $count = $count + 1;
-    end loop;
-  else
+    }
+  } else {
     log warning 'Product list is empty';
-  end if;
+  }
 
   return $count;
 }
@@ -1297,15 +1297,15 @@ returns string as $Result
 {
   declare $Result string = 'default';
 
-  if $value < 0 then
+  if $value < 0 {
     set $Result = 'negative';
     return $Result;
-  end if;
+  }
 
-  if $value = 0 then
+  if $value = 0 {
     set $Result = 'zero';
     return $Result;
-  end if;
+  }
 
   set $Result = 'positive';
   return $Result;
@@ -1325,17 +1325,17 @@ returns boolean as $IsValid
 {
   declare $IsValid boolean = true;
 
-  if $Product = empty then
+  if $Product = empty {
     set $IsValid = false;
     log warning 'Product is empty';
     return false;
-  end if;
+  }
 
-  if $ProductCode = empty then
+  if $ProductCode = empty {
     set $IsValid = false;
     log warning 'Product code is empty';
     return false;
-  end if;
+  }
 
   return $IsValid;
 }
@@ -1356,9 +1356,9 @@ returns boolean as $CanProcess
   declare $CanProcess boolean = false;
 
   -- Complex condition
-  if $IsActive and $IsValid and $HasStock then
+  if $IsActive and $IsValid and $HasStock {
     set $CanProcess = true;
-  end if;
+  }
 
   return $CanProcess;
 }
@@ -1814,15 +1814,15 @@ returns boolean as $IsValid
   -- SET $IsValid = true;
   declare $IsValid boolean = true;
 
-  if $Product/Code = empty then
+  if $Product/Code = empty {
     validation feedback $Product/Code message 'Product code is required';
     set $IsValid = false;
-  end if;
+  }
 
-  if $Product/Name = empty then
+  if $Product/Name = empty {
     validation feedback $Product/Name message 'Product name is required';
     set $IsValid = false;
-  end if;
+  }
 
   return $IsValid;
 }
@@ -1840,15 +1840,15 @@ returns boolean as $IsValid
 {
   declare $IsValid boolean = true;
 
-  if $Product/Price < 0 then
+  if $Product/Price < 0 {
     validation feedback $Product/Price message 'Price cannot be negative';
     set $IsValid = false;
-  end if;
+  }
 
-  if $Product/Price = 0 and $Product/IsActive = true then
+  if $Product/Price = 0 and $Product/IsActive = true {
     validation feedback $Product/Price message 'Active products must have a price greater than zero';
     set $IsValid = false;
-  end if;
+  }
 
   return $IsValid;
 }
@@ -1885,11 +1885,11 @@ returns boolean as $success
     where Code = $ProductCode
     limit 1;
 
-  if $Product != empty then
+  if $Product != empty {
     -- This call will continue even if the submicroflow fails
     call microflow MfTest.M013_SaveEntity(Product = $Product) on error continue;
     log info node 'ErrorHandling' 'Attempted to save product';
-  end if;
+  }
 
   set $success = true;
   return $success;
@@ -1935,7 +1935,7 @@ returns MfTest.Product as $Result
     where Code = $ProductCode
     limit 1;
 
-  if $Product != empty then
+  if $Product != empty {
     -- Call external service with custom error handling
     $Result = call microflow MfTest.M012_CreateEntity(
       Name = $Product/Name,
@@ -1945,9 +1945,9 @@ returns MfTest.Product as $Result
       return empty;
     };
     return $Result;
-  else
+  } else {
     return $Product;
-  end if;
+  }
 }
 /
 
@@ -1965,11 +1965,11 @@ returns integer as $ProcessedCount
   declare $ErrorCount integer = 0;
 
   loop $Product in $ProductList
-  };
+  {
     -- Try to save each product, continue if one fails
     commit $Product on error rollback;
     set $ProcessedCount = $ProcessedCount + 1;
-  end loop;
+  }
 
   log info node 'BatchProcess' 'Processed: ' + toString($ProcessedCount) + ' products';
   return $ProcessedCount;
@@ -2417,13 +2417,13 @@ returns string as $label
 {
   declare $label string = 'Unknown';
 
-  if $Country = MfTest.Country.US then
+  if $Country = MfTest.Country.US {
     set $label = 'United States';
-  else
-    if $Country = MfTest.Country.NL then
+  } else {
+    if $Country = MfTest.Country.NL {
       set $label = 'Netherlands';
-    end if;
-  end if;
+    }
+  }
 
   return $label;
 }
@@ -2440,9 +2440,9 @@ create microflow MfTest.M094_IsEuropean (
 returns boolean as $IsEU
 {
   declare $IsEU boolean = false;
-  if $Country = MfTest.Country.NL or $Country = MfTest.Country.DE or $Country = MfTest.Country.FR then
+  if $Country = MfTest.Country.NL or $Country = MfTest.Country.DE or $Country = MfTest.Country.FR {
     set $IsEU = true;
-  end if;
+  }
   return $IsEU;
 }
 /
@@ -2703,20 +2703,20 @@ create microflow MfTest.M091_AnnotatedValidationFeedback (
 returns boolean as $IsValid
 {
   declare $IsValid boolean = true;
-  if $Product/Name = empty then
+  if $Product/Name = empty {
     @position(400, 100)
     @caption 'Name is required'
     @color Red
     validation feedback $Product/Name message 'Product name cannot be empty';
     set $IsValid = false;
-  end if;
-  if $Product/Price < 0 then
+  }
+  if $Product/Price < 0 {
     @position(400, 300)
     @color Red
     @annotation 'Negative prices are not allowed'
     validation feedback $Product/Price message 'Price must be zero or greater';
     set $IsValid = false;
-  end if;
+  }
   return $IsValid;
 }
 /

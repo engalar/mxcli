@@ -1,3 +1,4 @@
+//go:build poc
 // SPDX-License-Identifier: Apache-2.0
 
 package poc_test

@@ -31,6 +31,10 @@ type Watcher struct {
 	closeOnce   sync.Once
 	mu          sync.Mutex
 	suppressEnd time.Time
+
+	// TestDebounceFired is a test hook — non-nil only in tests.
+	// The watcher sends on this channel each time the debounce timer fires.
+	TestDebounceFired chan struct{}
 }
 
 const watchDebounce = 500 * time.Millisecond
@@ -118,6 +122,12 @@ func (w *Watcher) run(sender MsgSender) {
 					return
 				}
 				sender.Send(MprChangedMsg{})
+				if w.TestDebounceFired != nil {
+					select {
+					case w.TestDebounceFired <- struct{}{}:
+					default:
+					}
+				}
 			})
 
 		case watchErr, ok := <-w.fsw.Errors:

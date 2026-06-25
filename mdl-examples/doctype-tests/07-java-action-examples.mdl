@@ -644,22 +644,22 @@ returns boolean as $MF20_Success
   declare $MF20_Success boolean = false;
 
   -- Validate before sending
-  if $Email/Recipient != empty then
+  if $Email/Recipient != empty {
     $SendResult = call java action JaTest.SendEmail(
       EmailMsg = $Email
     );
 
     -- Update status based on result
-    if $SendResult then
+    if $SendResult {
       change $Email (
         EmailStatus = 'Sent',
         SentDate = [%CurrentDateTime%]
       );
       set $MF20_Success = true;
-    else
+    } else {
       change $Email (EmailStatus = 'Failed');
-    end if;
-  end if;
+    }
+  }
 
   return $MF20_Success;
 }
@@ -879,34 +879,34 @@ returns boolean as $MF50_Success
     EmailAddress = $Email/Recipient
   );
 
-  if $MF50_ValidationResult then
+  if $MF50_ValidationResult {
     -- Step 2: Send the email
     $MF50_SendResult = call java action JaTest.SendEmail(
       EmailMsg = $Email
     );
 
     -- Step 3: Log the result
-    if $MF50_SendResult then
+    if $MF50_SendResult {
       $MF50_InfoLog = call java action JaTest.CreateLogEntry(
         level = 'INFO',
         Msg = 'Email sent successfully',
         LogSource ='M050_ProcessAndNotify'
       );
       set $MF50_Success = true;
-    else
+    } else {
       $MF50_ErrorLog = call java action JaTest.CreateLogEntry(
         level = 'ERROR',
         Msg = 'Failed to send email',
         LogSource ='M050_ProcessAndNotify'
       );
-    end if;
-  else
+    }
+  } else {
     $MF50_WarnLog = call java action JaTest.CreateLogEntry(
       level = 'WARNING',
       Msg = 'Invalid email address',
       LogSource ='M050_ProcessAndNotify'
     );
-  end if;
+  }
 
   return $MF50_Success;
 }
@@ -935,19 +935,19 @@ returns JaTest.ProcessResult as $MF51_Result
       EmailMsg = $MF51_CurrentEmail
     );
 
-    if $MF51_SendResult then
+    if $MF51_SendResult {
       change $MF51_CurrentEmail (EmailStatus = 'Sent', SentDate = [%CurrentDateTime%]);
       set $MF51_SuccessCount = $MF51_SuccessCount + 1;
-    else
+    } else {
       change $MF51_CurrentEmail (EmailStatus = 'Failed');
       set $MF51_FailCount = $MF51_FailCount + 1;
-    end if;
-  end loop;
+    }
+  }
 
   -- Create result summary
-  if $MF51_FailCount = 0 then
+  if $MF51_FailCount = 0 {
     set $MF51_AllSuccess = true;
-  end if;
+  }
 
   $MF51_Result = create JaTest.ProcessResult (
     IsSuccess = $MF51_AllSuccess,
@@ -977,20 +977,20 @@ returns boolean as $MF52_Success
     FileDoc = $FileDoc
   );
 
-  if $MF52_ProcessResult then
+  if $MF52_ProcessResult {
     $MF52_InfoLog = call java action JaTest.CreateLogEntry(
       level = 'INFO',
       Msg = 'Successfully processed file',
       LogSource ='M052_SafeFileProcess'
     );
     set $MF52_Success = true;
-  else
+  } else {
     $MF52_ErrorLog = call java action JaTest.CreateLogEntry(
       level = 'ERROR',
       Msg = 'Failed to process file',
       LogSource ='M052_SafeFileProcess'
     );
-  end if;
+  }
 
   return $MF52_Success;
 }
@@ -1009,25 +1009,25 @@ returns boolean as $MF53_Success
 {
   declare $MF53_Success boolean = false;
 
-  if $Priority = 'HIGH' then
+  if $Priority = 'HIGH' {
     -- Use priority sending service
     $UrgentResult = call java action JaTest.SendUrgent(
       EmailMsg = $Email
     );
     set $MF53_Success = $UrgentResult;
-  elsif $Priority = 'BULK' then
+  } elsif $Priority = 'BULK'  {
     -- Use bulk sending service
     $QueueResult = call java action JaTest.QueueForSending(
       EmailMsg = $Email
     );
     set $MF53_Success = $QueueResult;
-  else
+  } else {
     -- Standard sending
     $StandardResult = call java action JaTest.SendEmail(
       EmailMsg = $Email
     );
     set $MF53_Success = $StandardResult;
-  end if;
+  }
 
   return $MF53_Success;
 }
