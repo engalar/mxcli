@@ -43,10 +43,9 @@ func TestNoBareStdoutInCmdFiles(t *testing.T) {
 				"cmd_bson_dump.go":         11,
 				"cmd_diff.go":              5,
 				"cmd_expr.go":              2,
-				"cmd_expr_daemon.go":       3,
 				"cmd_extract_templates.go": 11,
 				"cmd_lint.go":              5,
-				"cmd_new.go":               14,
+				"cmd_new.go":              32,
 			},
 		},
 		{

@@ -7,7 +7,7 @@ import (
 )
 
 func TestScriptBuffer_AddUpdate_VisibleInOverlay(t *testing.T) {
-	dst := copyFixture(t, fixturePath, t.TempDir())
+	dst := openFixture(t)
 	b := New()
 	if err := b.Connect(dst); err != nil {
 		t.Fatalf("Connect: %v", err)
@@ -33,7 +33,7 @@ func TestScriptBuffer_AddUpdate_VisibleInOverlay(t *testing.T) {
 }
 
 func TestScriptBuffer_AddInsert_VisibleInInsertList(t *testing.T) {
-	dst := copyFixture(t, fixturePath, t.TempDir())
+	dst := openFixture(t)
 	b := New()
 	if err := b.Connect(dst); err != nil {
 		t.Fatalf("Connect: %v", err)
@@ -59,7 +59,7 @@ func TestScriptBuffer_AddInsert_VisibleInInsertList(t *testing.T) {
 }
 
 func TestBeginScriptTransaction_NoDBBegin(t *testing.T) {
-	dst := copyFixture(t, fixturePath, t.TempDir())
+	dst := openFixture(t)
 	b := New()
 	if err := b.Connect(dst); err != nil {
 		t.Fatalf("Connect: %v", err)
@@ -80,7 +80,7 @@ func TestBeginScriptTransaction_NoDBBegin(t *testing.T) {
 }
 
 func TestScriptBuffer_Rollback_ClearsOverlay(t *testing.T) {
-	dst := copyFixture(t, fixturePath, t.TempDir())
+	dst := openFixture(t)
 	b := New()
 	if err := b.Connect(dst); err != nil {
 		t.Fatalf("Connect: %v", err)

@@ -29,6 +29,8 @@ type Snapshot struct {
 var (
 	activeMountsMu sync.Mutex
 	activeMounts   = map[string]struct{}{}
+	cleanupOnce    sync.Once
+	mountSem       = make(chan struct{}, 2) // limit concurrent FUSE mounts to prevent go-fuse inode tree races
 )
 
 // cleanupOrphanMounts unmounts any stale mxcli-golden-* FUSE mounts left by
@@ -64,7 +66,7 @@ func cleanupOrphanMounts() {
 // Open mounts a FUSE overlay over baseDir.
 // The caller must call Close() when done.
 func Open(baseDir string) (*Snapshot, error) {
-	cleanupOrphanMounts()
+	cleanupOnce.Do(cleanupOrphanMounts)
 	abs, err := filepath.Abs(baseDir)
 	if err != nil {
 		return nil, fmt.Errorf("goldenfs: resolve baseDir: %w", err)
@@ -73,8 +75,12 @@ func Open(baseDir string) (*Snapshot, error) {
 		return nil, fmt.Errorf("goldenfs: baseDir not found: %w", err)
 	}
 
+	// Limit concurrent mounts to prevent go-fuse inode tree races.
+	mountSem <- struct{}{}
+
 	mountDir, err := os.MkdirTemp("", "mxcli-golden-")
 	if err != nil {
+		<-mountSem
 		return nil, fmt.Errorf("goldenfs: create mountDir: %w", err)
 	}
 
@@ -103,6 +109,7 @@ func Open(baseDir string) (*Snapshot, error) {
 		delete(activeMounts, mountDir)
 		activeMountsMu.Unlock()
 		os.Remove(mountDir)
+		<-mountSem
 		return nil, fmt.Errorf("goldenfs: fuse mount: %w", err)
 	}
 
@@ -138,6 +145,7 @@ func (s *Snapshot) Close() error {
 	} else {
 		s.server.Wait()
 	}
+	<-mountSem
 	return os.Remove(s.mountDir)
 }
 

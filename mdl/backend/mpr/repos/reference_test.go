@@ -13,7 +13,7 @@ import (
 // The scanner is backed by a modelsdk/mpr reader.
 func openWriterAt(t *testing.T) (*mmpr.Writer, types.BSONScanner) {
 	t.Helper()
-	dst := copyFixture(t, fixturePath, t.TempDir())
+	dst := openFixture(t)
 	mw, err := mmpr.NewWriter(dst)
 	if err != nil {
 		t.Fatalf("mmpr.NewWriter: %v", err)

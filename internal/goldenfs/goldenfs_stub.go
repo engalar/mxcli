@@ -4,11 +4,6 @@
 
 package goldenfs
 
-import "errors"
-
-// ErrNotSupported is returned on non-Linux platforms where FUSE is unavailable.
-var ErrNotSupported = errors.New("goldenfs: FUSE overlay requires Linux")
-
 // Snapshot is a no-op placeholder on non-Linux platforms.
 type Snapshot struct{}
 

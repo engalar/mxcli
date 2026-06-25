@@ -12,6 +12,11 @@
 //   var c goldenfs.Committer   // + Commit
 package goldenfs
 
+import "errors"
+
+// ErrNotSupported is returned on non-Linux platforms where FUSE is unavailable.
+var ErrNotSupported = errors.New("goldenfs: FUSE overlay requires Linux")
+
 // Overlay is a copy-on-write view of a base directory.
 // All writes go to an in-memory layer that can be discarded.
 type Overlay interface {

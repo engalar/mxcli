@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/mendixlabs/mxcli/internal/expr/daemon"
 	"github.com/mendixlabs/mxcli/internal/expr/parse"
 	"github.com/mendixlabs/mxcli/internal/expr/repair"
 	"github.com/mendixlabs/mxcli/internal/expr/report"
@@ -23,7 +22,6 @@ var exprFilterType string
 var exprFormat string
 var exprSeverity string
 var exprSummary bool
-var exprNoDaemon bool
 
 // ── root: mxcli expr ─────────────────────────────────────────────────────────
 
@@ -32,17 +30,17 @@ var exprCmd = &cobra.Command{
 	Short: "Mendix expression miner, parser, validator and repair suggester",
 	Long: `Collect, parse, validate and repair Mendix expressions from mprcontents/ directories.
 
-Five sub-commands implement the MEMV pipeline:
-  scan      – collect raw expressions from BSON .mxunit files  (Layer 2)
-  parse     – parse each expression with the exprcheck parser  (Layer 3)
-  validate  – apply SYN/hint rules to parsed results           (Layer 4)
-  repair    – suggest ranked fixes for validation issues        (Layer 5)
-  report    – full pipeline → HTML/JSON/text summary            (All layers)
+Sub-commands:
+  scan      – collect raw expressions from BSON .mxunit files
+  parse     – parse each expression with the exprcheck parser
+  validate  – apply SYN/SEM validation rules
+  repair    – suggest ranked fixes for validation issues
+  report    – full pipeline → HTML/JSON/text summary
 
 Examples:
   mxcli expr scan   mendix-app/mprcontents --summary
   mxcli expr report mendix-app/mprcontents --format html > report.html
-  mxcli expr validate mendix-app/mprcontents --severity ERROR`,
+  mxcli expr validate -p app.mpr --severity ERROR`,
 }
 
 // ── mxcli expr scan ──────────────────────────────────────────────────────────
@@ -96,32 +94,24 @@ var exprParseCmd = &cobra.Command{
 
 var exprValidateCmd = &cobra.Command{
 	Use:   "validate",
-	Short: "Apply SYN/SEM validation rules (daemon mode: + semantic; --no-daemon: syntax only)",
+	Short: "Apply SYN/SEM validation rules to expressions in a project",
 	Args:  cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		mprPath, _ := cmd.Root().PersistentFlags().GetString("project")
-
-		if exprNoDaemon || os.Getenv("MXCLI_NO_DAEMON") == "1" {
-			if mprPath == "" {
-				return fmt.Errorf("--no-daemon mode requires -p project.mpr")
-			}
-			return runExprValidateNoDaemon(scan.MprContentsPath(mprPath))
-		}
-
 		if mprPath == "" {
 			return fmt.Errorf("requires -p project.mpr")
 		}
-		return runExprValidateWithDaemon(mprPath)
+		return runExprValidate(scan.MprContentsPath(mprPath))
 	},
 }
 
-func runExprValidateNoDaemon(mprContentsPath string) error {
+func runExprValidate(mprContentsPath string) error {
 	records, err := scan.ScanMprcontents(mprContentsPath, scan.Options{FilterType: exprFilterType})
 	if err != nil {
 		return err
 	}
 	parsed := parse.BatchParse(records)
-	checker := typecheck.NewChecker(nil) // nil index: structural checks also skipped without index
+	checker := typecheck.NewChecker(nil) // nil index: structural checks skipped without index
 	var issues []validate.ValidationResult
 	for _, pr := range parsed {
 		issues = append(issues, validate.ValidateSyntax(pr)...)
@@ -136,46 +126,7 @@ func runExprValidateNoDaemon(mprContentsPath string) error {
 	return err
 }
 
-func runExprValidateWithDaemon(mprPath string) error {
-	client := daemon.NewClient(daemon.ClientOptions{MprPath: mprPath})
-	if err := client.StartIfNeeded(); err != nil {
-		return fmt.Errorf("daemon: %w", err)
-	}
 
-	resp, err := client.Validate(daemon.ValidateRequest{
-		MprPath:  mprPath,
-		Filter:   exprFilterType,
-		Severity: exprSeverity,
-	})
-	if err != nil {
-		return err
-	}
-	if resp.Error != "" {
-		return fmt.Errorf("daemon error: %s", resp.Error)
-	}
-
-	issues := make([]validate.ValidationResult, 0, len(resp.Results))
-	for _, item := range resp.Results {
-		issues = append(issues, validate.ValidationResult{
-			UnitID:   item.UnitID,
-			UnitType: item.UnitType,
-			UnitPath: item.UnitPath,
-			Location: item.Location,
-			Field:    item.Field,
-			Raw:      item.Raw,
-			RuleID:   item.RuleID,
-			Severity: item.Severity,
-			Message:  item.Message,
-			Fix:      item.Fix,
-		})
-	}
-	out, err := report.Render(issues, report.Options{Format: exprFormat, Severity: exprSeverity})
-	if err != nil {
-		return err
-	}
-	_, err = os.Stdout.Write(out)
-	return err
-}
 
 // ── mxcli expr repair ────────────────────────────────────────────────────────
 
@@ -284,8 +235,6 @@ func init() {
 		cmd.Flags().StringVar(&exprFormat, "format", "json", "Output format: json | html | text")
 	}
 	exprScanCmd.Flags().BoolVar(&exprSummary, "summary", false, "Print human-readable stats instead of JSONL")
-	exprValidateCmd.Flags().BoolVar(&exprNoDaemon, "no-daemon", false,
-		"Skip daemon, syntax validation only (no MPR loading, faster)")
 
 	exprCmd.AddCommand(exprScanCmd)
 	exprCmd.AddCommand(exprParseCmd)
