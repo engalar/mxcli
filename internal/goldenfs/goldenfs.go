@@ -38,7 +38,12 @@ var (
 )
 
 // cleanupOrphanMounts unmounts any stale mxcli-golden-* FUSE mounts left by
-// a previously crashed process. Called automatically by Open.
+// a previously crashed process. Called once per process by the first Open().
+//
+// To avoid races between concurrent test binaries (each runs its own
+// cleanupOrphanMounts), directories younger than 30 seconds are left
+// untouched — they belong to a concurrently starting process, not a
+// crashed one.
 func cleanupOrphanMounts() {
 	entries, err := filepath.Glob(filepath.Join(os.TempDir(), "mxcli-golden-*"))
 	if err != nil || len(entries) == 0 {
@@ -51,11 +56,21 @@ func cleanupOrphanMounts() {
 	}
 	activeMountsMu.Unlock()
 
+	now := time.Now()
 	mountData, _ := os.ReadFile("/proc/mounts")
 	for _, dir := range entries {
 		if _, live := snap[dir]; live {
 			continue // owned by this process — never touch it
 		}
+
+		// Skip young directories — they belong to a concurrently
+		// starting process, not a crashed one.
+		if fi, err := os.Stat(dir); err == nil {
+			if now.Sub(fi.ModTime()) < 30*time.Second {
+				continue
+			}
+		}
+
 		if !strings.Contains(string(mountData), dir) {
 			os.Remove(dir)
 			continue
