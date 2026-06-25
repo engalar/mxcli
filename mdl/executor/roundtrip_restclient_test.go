@@ -377,6 +377,7 @@ func TestMxCheck_RestClient_SimpleGet(t *testing.T) {
 	if !mxCheckAvailable() {
 		t.Skip("mx command not available")
 	}
+	t.Parallel()
 
 	env := setupTestEnv(t)
 	defer env.teardown()
@@ -410,6 +411,7 @@ func TestMxCheck_RestClient_PostWithBody(t *testing.T) {
 	if !mxCheckAvailable() {
 		t.Skip("mx command not available")
 	}
+	t.Parallel()
 
 	env := setupTestEnv(t)
 	defer env.teardown()
@@ -461,6 +463,7 @@ func TestMxCheck_RestClient_BasicAuth(t *testing.T) {
 	if !mxCheckAvailable() {
 		t.Skip("mx command not available")
 	}
+	t.Parallel()
 
 	env := setupTestEnv(t)
 	defer env.teardown()
@@ -493,6 +496,7 @@ func TestMxCheck_RestClient_MultipleOperations(t *testing.T) {
 	if !mxCheckAvailable() {
 		t.Skip("mx command not available")
 	}
+	t.Parallel()
 
 	env := setupTestEnv(t)
 	defer env.teardown()

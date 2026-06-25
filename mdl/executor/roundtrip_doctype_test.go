@@ -109,6 +109,7 @@ func TestMxCheck_DoctypeScripts(t *testing.T) {
 	if !mxCheckAvailable() {
 		t.Skip("mx command not available")
 	}
+	t.Parallel()
 
 	// Locate doctype-tests directory
 	doctypeDir, err := filepath.Abs("../../mdl-examples/doctype-tests")

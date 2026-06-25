@@ -52,6 +52,7 @@ func TestMxCheck_Entity(t *testing.T) {
 	if !mxCheckAvailable() {
 		t.Skip("mx command not available")
 	}
+	t.Parallel()
 
 	env := setupTestEnv(t)
 	defer env.teardown()
@@ -92,6 +93,7 @@ func TestMxCheck_Enumeration(t *testing.T) {
 	if !mxCheckAvailable() {
 		t.Skip("mx command not available")
 	}
+	t.Parallel()
 
 	env := setupTestEnv(t)
 	defer env.teardown()
@@ -133,6 +135,7 @@ func TestMxCheck_RetrieveWithLimit(t *testing.T) {
 	if !mxCheckAvailable() {
 		t.Skip("mx command not available")
 	}
+	t.Parallel()
 
 	env := setupTestEnv(t)
 	defer env.teardown()
@@ -176,6 +179,7 @@ func TestMxCheck_RetrieveWithLimitOffset(t *testing.T) {
 	if !mxCheckAvailable() {
 		t.Skip("mx command not available")
 	}
+	t.Parallel()
 
 	env := setupTestEnv(t)
 	defer env.teardown()
@@ -220,6 +224,7 @@ func TestMxCheck_RetrieveWithSortBy(t *testing.T) {
 	if !mxCheckAvailable() {
 		t.Skip("mx command not available")
 	}
+	t.Parallel()
 
 	env := setupTestEnv(t)
 	defer env.teardown()
@@ -263,6 +268,7 @@ func TestMxCheck_RetrieveWithWhereSortLimitOffset(t *testing.T) {
 	if !mxCheckAvailable() {
 		t.Skip("mx command not available")
 	}
+	t.Parallel()
 
 	env := setupTestEnv(t)
 	defer env.teardown()
@@ -435,39 +441,40 @@ func TestMxCheck_CE0066_Scenarios(t *testing.T) {
 		},
 	}
 
+	// Share a single env + single mx check across all scenarios for performance
+	// (each mx check takes ~8s, running 10 separately = 80s).
+	env := setupTestEnv(t)
+	defer env.teardown()
+
+	var allErrs []string
 	for _, sc := range scenarios {
-		t.Run(sc.name, func(t *testing.T) {
-			env := setupTestEnv(t)
-			defer env.teardown()
+		allMDL := strings.Join(sc.steps, "\n")
+		prog, errs := visitor.Build(allMDL)
+		if len(errs) > 0 {
+			allErrs = append(allErrs, fmt.Sprintf("[%s] Parse failed: %v\nMDL:\n%s", sc.name, errs[0], allMDL))
+			continue
+		}
+		if err := env.executor.ExecuteProgram(prog); err != nil {
+			allErrs = append(allErrs, fmt.Sprintf("[%s] ExecuteProgram failed: %v\nMDL:\n%s", sc.name, err, allMDL))
+		}
+	}
+	if len(allErrs) > 0 {
+		t.Fatal(strings.Join(allErrs, "\n"))
+	}
 
-			// Combine all steps into a single script so ExecuteProgram
-			// runs finalizeProgramExecution (ReconcileMemberAccesses).
-			allMDL := strings.Join(sc.steps, "\n")
-			prog, errs := visitor.Build(allMDL)
-			if len(errs) > 0 {
-				t.Fatalf("Parse failed: %v\nMDL:\n%s", errs[0], allMDL)
-			}
-			if err := env.executor.ExecuteProgram(prog); err != nil {
-				if !strings.Contains(err.Error(), "already exists") {
-					t.Fatalf("ExecuteProgram failed: %v\nMDL:\n%s", err, allMDL)
-				}
-			}
+	env.executor.Execute(&ast.DisconnectStmt{})
 
-			env.executor.Execute(&ast.DisconnectStmt{})
-
-			output, err := runMxCheck(t, env.projectPath)
-			if err != nil {
-				if strings.Contains(output, "CE0066") || strings.Contains(output, "out of date") {
-					t.Errorf("CE0066 entity access out of date:\n%s", output)
-				} else if strings.Contains(output, "error") || strings.Contains(output, "Error") {
-					t.Errorf("mx check found errors:\n%s", output)
-				} else {
-					t.Logf("mx check output (non-zero exit but no errors):\n%s", output)
-				}
-			} else {
-				t.Logf("mx check passed")
-			}
-		})
+	output, err := runMxCheck(t, env.projectPath)
+	if err != nil {
+		if strings.Contains(output, "CE0066") || strings.Contains(output, "out of date") {
+			t.Errorf("CE0066 entity access out of date:\n%s", output)
+		} else if strings.Contains(output, "error") || strings.Contains(output, "Error") {
+			t.Errorf("mx check found errors:\n%s", output)
+		} else {
+			t.Logf("mx check output (non-zero exit but no errors):\n%s", output)
+		}
+	} else {
+		t.Logf("mx check passed")
 	}
 }
 
@@ -479,6 +486,7 @@ func TestMxCheck_DropAddEnumAttribute(t *testing.T) {
 	if !mxCheckAvailable() {
 		t.Skip("mx command not available")
 	}
+	t.Parallel()
 
 	env := setupTestEnv(t)
 	defer env.teardown()
@@ -540,6 +548,7 @@ func TestMxCheck_RetrieveWithDateTimeToken(t *testing.T) {
 	if !mxCheckAvailable() {
 		t.Skip("mx command not available")
 	}
+	t.Parallel()
 
 	env := setupTestEnv(t)
 	defer env.teardown()
@@ -584,6 +593,7 @@ func TestMxCheck_MicroflowWithCallParams(t *testing.T) {
 	if !mxCheckAvailable() {
 		t.Skip("mx command not available")
 	}
+	t.Parallel()
 
 	env := setupTestEnv(t)
 	defer env.teardown()
@@ -637,6 +647,7 @@ func TestMxCheck_ViewEntitySimple(t *testing.T) {
 	if !mxCheckAvailable() {
 		t.Skip("mx command not available")
 	}
+	t.Parallel()
 
 	env := setupTestEnv(t)
 	defer env.teardown()
@@ -692,6 +703,7 @@ func TestMxCheck_ViewEntityWithAggregates(t *testing.T) {
 	if !mxCheckAvailable() {
 		t.Skip("mx command not available")
 	}
+	t.Parallel()
 
 	env := setupTestEnv(t)
 	defer env.teardown()
@@ -760,6 +772,7 @@ func TestMxCheck_ComboBoxWithAssociation(t *testing.T) {
 	if !mxCheckAvailable() {
 		t.Skip("mx command not available")
 	}
+	t.Parallel()
 
 	env := setupTestEnv(t)
 	defer env.teardown()
@@ -868,6 +881,7 @@ func TestMxCheck_WhileLoop(t *testing.T) {
 	if !mxCheckAvailable() {
 		t.Skip("mx command not available")
 	}
+	t.Parallel()
 
 	env := setupTestEnv(t)
 	defer env.teardown()
@@ -913,6 +927,7 @@ func TestMxCheck_DropModuleCleansUserRoles(t *testing.T) {
 	if !mxCheckAvailable() {
 		t.Skip("mx command not available")
 	}
+	t.Parallel()
 
 	env := setupTestEnv(t)
 	defer env.teardown()

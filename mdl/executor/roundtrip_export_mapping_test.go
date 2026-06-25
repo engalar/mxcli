@@ -168,6 +168,7 @@ func TestMxCheck_ExportMapping_Basic(t *testing.T) {
 	if !mxCheckAvailable() {
 		t.Skip("mx command not available")
 	}
+	t.Parallel()
 
 	env := setupTestEnv(t)
 	defer env.teardown()

@@ -19,6 +19,7 @@ func TestMxCheck_DataGridPage(t *testing.T) {
 	if !mxCheckAvailable() {
 		t.Skip("mx command not available")
 	}
+	t.Parallel()
 
 	env := setupTestEnv(t)
 	defer env.teardown()
@@ -85,6 +86,7 @@ func TestMxCheck_DataGridNoColumns(t *testing.T) {
 	if !mxCheckAvailable() {
 		t.Skip("mx command not available")
 	}
+	t.Parallel()
 
 	env := setupTestEnv(t)
 	defer env.teardown()
@@ -144,6 +146,7 @@ func TestMxCheck_GalleryPage(t *testing.T) {
 	if !mxCheckAvailable() {
 		t.Skip("mx command not available")
 	}
+	t.Parallel()
 
 	env := setupTestEnv(t)
 	defer env.teardown()
