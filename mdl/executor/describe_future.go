@@ -1099,6 +1099,7 @@ func describeSnippetFuture(ctx context.Context, output io.Writer, snpRepo repos.
 		fmt.Fprintf(output, " (%s)", strings.Join(snippetProps, ", "))
 	}
 
+	fmt.Fprint(output, " { }")
 	fmt.Fprint(output, "\n")
 	return nil
 }

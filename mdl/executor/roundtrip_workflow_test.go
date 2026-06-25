@@ -61,7 +61,7 @@ func TestRoundtripWorkflow_Comprehensive(t *testing.T) {
     page ` + mod + `.SubPage
     targeting xpath '[%CurrentUser%]'
     outcomes 'Done' { };
-end workflow;`); err != nil {
+}`); err != nil {
 		t.Fatalf("create SubApprovalFlow: %v", err)
 	}
 
@@ -115,7 +115,7 @@ end workflow;`); err != nil {
 
   annotation 'End of flow';
 
-end workflow;`
+}`
 
 	if err := env.executeMDL(createMDL); err != nil {
 		t.Fatalf("create ComprehensiveFlow: %v", err)
@@ -181,7 +181,7 @@ func TestRoundtripWorkflow_BoundaryEventInterrupting(t *testing.T) {
     outcomes 'Approve' { }
     boundary event interrupting timer '${PT1H}'
     ;
-end workflow;`
+}`
 
 	if err := env.executeMDL(`create or modify persistent entity ` + testModule + `.TestEntitySimple (Name: String(100));`); err != nil {
 		t.Fatalf("Failed to create entity: %v", err)
@@ -214,7 +214,7 @@ func TestRoundtripWorkflow_BoundaryEventNonInterrupting(t *testing.T) {
     outcomes 'Approve' { }
     boundary event non interrupting timer '${PT2H}'
     ;
-end workflow;`
+}`
 
 	if err := env.executeMDL(`create or modify persistent entity ` + testModule + `.TestEntitySimple2 (Name: String(100));`); err != nil {
 		t.Fatalf("Failed to create entity: %v", err)
@@ -246,7 +246,7 @@ func TestRoundtripWorkflow_MultiUserTask(t *testing.T) {
     targeting xpath '[%CurrentUser%]'
     outcomes 'Approve' { }
     ;
-end workflow;`
+}`
 
 	if err := env.executeMDL(`create or modify persistent entity ` + testModule + `.TestEntityMulti (Name: String(100));`); err != nil {
 		t.Fatalf("Failed to create entity: %v", err)
@@ -274,7 +274,7 @@ func TestRoundtripWorkflow_AnnotationActivity(t *testing.T) {
   parameter $WorkflowContext: ` + testModule + `.TestEntityAnnot
 {
   annotation 'This is a workflow note';
-end workflow;`
+}`
 
 	if err := env.executeMDL(`create or modify persistent entity ` + testModule + `.TestEntityAnnot (Name: String(100));`); err != nil {
 		t.Fatalf("Failed to create entity: %v", err)
@@ -328,7 +328,7 @@ func TestRoundtripWorkflow_AnnotationBeforeActivity(t *testing.T) {
 {
   annotation 'I am a note';
   wait for timer 'addDays([%CurrentDateTime%], 1)' comment 'Timer';
-end workflow;`
+}`
 
 	if err := env.executeMDL(`create or modify persistent entity ` + testModule + `.TestEntityAnnotTimer (Name: String(100));`); err != nil {
 		t.Fatalf("Failed to create entity: %v", err)
@@ -364,7 +364,7 @@ func TestRoundtripWorkflow_CallMicroflowWithParams(t *testing.T) {
 {
   call microflow ` + testModule + `.SomeMicroflow with (Amount = '$WorkflowContext/Amount')
     outcomes true -> { } false -> { };
-end workflow;`
+}`
 
 	if err := env.executeMDL(`create or modify persistent entity ` + testModule + `.TestEntityCallMf (Amount: Decimal);`); err != nil {
 		t.Fatalf("Failed to create entity: %v", err)

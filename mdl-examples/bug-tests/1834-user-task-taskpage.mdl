@@ -8,10 +8,10 @@ create page BugTest1834.ApprovalPage (layout: PopupLayout) { };
 
 create workflow BugTest1834.WF_CE1834_Test
   parameter $WfCtx: BugTest1834.WfCtx
-begin
+{
   user task ApproveStep 'Approve'
     page BugTest1834.ApprovalPage
     targeting xpath '[%CurrentUser%]'
     outcomes
       'Done' { };
-end workflow
+}

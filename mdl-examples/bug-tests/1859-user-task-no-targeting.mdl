@@ -10,8 +10,8 @@ create or modify persistent entity BugTest1859.WfCtx (Id: Integer);
 -- This should fail: no targeting clause
 create workflow BugTest1859.WF_CE1859_Test
   parameter $WfCtx: BugTest1859.WfCtx
-begin
+{
   user task ApproveStep 'Approve'
     outcomes
       'Done' { };
-end workflow
+}

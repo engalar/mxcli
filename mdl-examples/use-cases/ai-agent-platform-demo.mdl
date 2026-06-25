@@ -288,7 +288,7 @@ create workflow AICustSupport.CaseResolution
   parameter $WorkflowContext: AICustSupport.SupportCase
   display 'Case Resolution'
   description 'AI-assisted support case resolution with human review checkpoint'
-begin
+{
   -- Step 1: AI generates a response (with RAG + MCP), stores conversation
   --         history, and runs the guardrail check
   call microflow AICustSupport.ACT_AIOrchestrate;
@@ -305,7 +305,7 @@ begin
 
   -- Step 3: Monitoring — log the completed interaction to the audit trail
   call microflow AICustSupport.LOG_AIInteraction;
-end workflow;
+}
 
 -- Boundary timer: if the agent task sits unreviewed for 4 hours → auto-escalate
 alter workflow AICustSupport.CaseResolution

@@ -271,6 +271,8 @@ func describeSnippet(ctx *ExecContext, name ast.QualifiedName) error {
 			outputWidgetMDLV3(ctx, w, 1)
 		}
 		fmt.Fprint(ctx.Output, "}")
+	} else {
+		fmt.Fprint(ctx.Output, " { }")
 	}
 
 	fmt.Fprint(ctx.Output, "\n")
