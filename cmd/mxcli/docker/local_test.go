@@ -30,10 +30,13 @@ func (c *CaptureStarter) Run(cmd *exec.Cmd) error {
 func TestStartLocal_ExecsCorrectScript(t *testing.T) {
 	pad := testfixtures.NewFakePAD(t)
 	cs := &CaptureStarter{}
+	appPort, adminPort := docker.FindAvailablePorts(8080, 8090)
 
 	err := docker.StartLocal(docker.LocalRunOptions{
-		PadDir:  pad.Dir,
-		Starter: cs,
+		PadDir:    pad.Dir,
+		Starter:   cs,
+		AppPort:   appPort,
+		AdminPort: adminPort,
 	})
 	if err != nil {
 		t.Fatalf("StartLocal: %v", err)
@@ -88,11 +91,14 @@ func TestParseDBURL_InvalidScheme(t *testing.T) {
 func TestStartLocal_InjectsDBEnv(t *testing.T) {
 	pad := testfixtures.NewFakePAD(t)
 	cs := &CaptureStarter{}
+	appPort, adminPort := docker.FindAvailablePorts(8080, 8090)
 
 	err := docker.StartLocal(docker.LocalRunOptions{
-		PadDir:  pad.Dir,
-		DB:      "postgres://bob:pw@localhost:5432/mendix",
-		Starter: cs,
+		PadDir:    pad.Dir,
+		DB:        "postgres://bob:pw@localhost:5432/mendix",
+		Starter:   cs,
+		AppPort:   appPort,
+		AdminPort: adminPort,
 	})
 	if err != nil {
 		t.Fatalf("StartLocal: %v", err)
@@ -334,8 +340,9 @@ func TestStartLocal_PADLayout_DefaultPorts_NoOverrideConf(t *testing.T) {
 	cs := &CaptureStarter{}
 
 	err := docker.StartLocal(docker.LocalRunOptions{
-		PadDir:  pad.Dir,
-		Starter: cs,
+		PadDir:        pad.Dir,
+		Starter:       cs,
+		SkipPortCheck: true,
 	})
 	if err != nil {
 		t.Fatalf("StartLocal: %v", err)

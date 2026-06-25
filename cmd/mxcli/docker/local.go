@@ -75,6 +75,10 @@ type LocalRunOptions struct {
 	CmdHint string
 	// Starter is the process runner. Nil = RealStarter (exec.Cmd.Run).
 	Starter ProcessStarter
+
+	// SkipPortCheck skips the preflight port-binding check.
+	// Used by tests that capture the command without running it.
+	SkipPortCheck bool
 }
 
 func (o *LocalRunOptions) appPort() int {
@@ -107,8 +111,10 @@ func StartLocal(opts LocalRunOptions) error {
 
 	// Deploy layout: Studio Pro --target=deploy output (no ZIP, no start.bat).
 	if isDeployLayout(opts.PadDir) {
-		if err := preflightLocal(opts.PadDir, stderr, true, opts.appPort(), opts.adminPort(), opts.CmdHint); err != nil {
-			return err
+		if !opts.SkipPortCheck {
+			if err := preflightLocal(opts.PadDir, stderr, true, opts.appPort(), opts.adminPort(), opts.CmdHint); err != nil {
+				return err
+			}
 		}
 		return startFromDeployLayout(opts, stdout, stderr)
 	}
@@ -117,8 +123,10 @@ func StartLocal(opts LocalRunOptions) error {
 	if !hasExtractedPADLayout(opts.PadDir) {
 		return fmt.Errorf("no PAD found at %s — run 'mxcli local build -p app.mpr' first", opts.PadDir)
 	}
-	if err := preflightLocal(opts.PadDir, stderr, false, opts.appPort(), opts.adminPort(), opts.CmdHint); err != nil {
-		return err
+	if !opts.SkipPortCheck {
+		if err := preflightLocal(opts.PadDir, stderr, false, opts.appPort(), opts.adminPort(), opts.CmdHint); err != nil {
+			return err
+		}
 	}
 	return startFromPADLayout(opts, stdout, stderr)
 }
