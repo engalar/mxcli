@@ -118,7 +118,7 @@ jobs:
       - uses: ./.github/actions/setup-go-antlr
 
       - name: Round-trip exprcheck
-        run: make roundtrip
+        run: make roundtrip-integration
         timeout-minutes: 5
 
   # ── Nightly: publish pre-release ───────────────────────────────────────────

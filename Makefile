@@ -465,10 +465,10 @@ mine-exprgrammar:
 # roundtrip — exprcheck round-trip CI gate over testdata/expr-checker/minimal.mpr.
 # Walks every microflow, regenerates MDL via DescribeMicroflowToString, parses
 # every expression with the robust parser, asserts 0 hints. Failures reveal
-# grammar gaps. Build tag 'roundtrip' keeps it out of the default suite.
-.PHONY: roundtrip
-roundtrip:
-	GOPROXY=https://goproxy.cn,direct go test -tags=roundtrip ./mdl/exprcheck/ -run TestRoundTrip -count=1 -timeout 5m
+# grammar gaps. Merged into 'integration' tag.
+.PHONY: roundtrip-integration
+roundtrip-integration:
+	GOPROXY=https://goproxy.cn,direct go test -tags=integration ./mdl/exprcheck/ -run TestRoundTrip -count=1 -timeout 5m
 
 # release-audit — 检查三个发布项目自上一个 tag 以来的代码变更。
 # 用法: make release-audit [REF=<ref>]

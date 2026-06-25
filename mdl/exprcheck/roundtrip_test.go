@@ -1,4 +1,4 @@
-//go:build roundtrip
+//go:build integration
 
 // SPDX-License-Identifier: Apache-2.0
 
@@ -19,6 +19,9 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/executor"
 	"github.com/mendixlabs/mxcli/mdl/exprcheck"
 	"github.com/mendixlabs/mxcli/mdl/visitor"
+	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
+	mmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
+	"github.com/mendixlabs/mxcli/modelsdk/mprread"
 )
 
 // TestRoundTrip_DescribeProducesZeroHints walks every microflow in the
@@ -27,16 +30,22 @@ import (
 // known-good source. Failures reveal grammar gaps (missing parsePrimary
 // branch, missing funcTable entry, missing slot constraint).
 //
-// Build tag `roundtrip` keeps it out of the default suite — the fixture
+// Build tag `integration` keeps it out of the default suite — the fixture
 // requires a real .mpr on disk.
 func TestRoundTrip_DescribeProducesZeroHints(t *testing.T) {
 	mprPath, err := filepath.Abs("../../testdata/expr-checker/minimal.mpr")
 	if err != nil {
 		t.Fatalf("abs path: %v", err)
 	}
+	reader, err := mmpr.Open(mprPath)
+	if err != nil {
+		t.Skipf("fixture MPR not available at %s: %v", mprPath, err)
+	}
+	defer reader.Close()
+
 	be := mprbackend.New()
 	if err := be.Connect(mprPath); err != nil {
-		t.Skipf("fixture MPR not available at %s: %v", mprPath, err)
+		t.Skipf("backend connect: %v", err)
 	}
 	defer be.Disconnect()
 
@@ -52,7 +61,7 @@ func TestRoundTrip_DescribeProducesZeroHints(t *testing.T) {
 	if err != nil {
 		t.Fatalf("hierarchy: %v", err)
 	}
-	mfs, err := be.ListMicroflows()
+	mfUnits, err := mprread.ListUnitsWithContainer[*genMf.Microflow](reader)
 	if err != nil {
 		t.Fatalf("list microflows: %v", err)
 	}
@@ -60,13 +69,14 @@ func TestRoundTrip_DescribeProducesZeroHints(t *testing.T) {
 	resolver := exprcheck.DefaultSlotResolver()
 
 	var totalSlots, totalHints int
-	for _, mf := range mfs {
-		modID := h.FindModuleID(mf.ContainerID)
+	for _, mfu := range mfUnits {
+		mf := mfu.Element
+		modID := h.FindModuleID(mfu.ContainerID)
 		modName := h.GetModuleName(modID)
-		if modName == "" || mf.Name == "" {
+		if modName == "" || mf.Name() == "" {
 			continue
 		}
-		qn := ast.QualifiedName{Module: modName, Name: mf.Name}
+		qn := ast.QualifiedName{Module: modName, Name: mf.Name()}
 		mdl, err := executor.DescribeMicroflowToString(ctx, qn)
 		if err != nil {
 			continue
@@ -100,7 +110,7 @@ func TestRoundTrip_DescribeProducesZeroHints(t *testing.T) {
 			})
 		}
 	}
-	t.Logf("round-trip: %d microflow(s), %d expression slot(s), %d hint(s)", len(mfs), totalSlots, totalHints)
+	t.Logf("round-trip: %d microflow(s), %d expression slot(s), %d hint(s)", len(mfUnits), totalSlots, totalHints)
 }
 
 func exprSource(e ast.Expression) string {

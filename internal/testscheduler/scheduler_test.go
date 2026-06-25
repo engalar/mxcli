@@ -63,7 +63,6 @@ func TestScheduler_ConcurrentIOAndCPU(t *testing.T) {
 				s.AcquireCPU(ctx)
 				defer s.ReleaseCPU()
 			}
-			time.Sleep(10 * time.Millisecond)
 		}(i)
 	}
 	wg.Wait()
