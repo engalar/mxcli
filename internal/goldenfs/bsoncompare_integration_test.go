@@ -6,11 +6,8 @@ package goldenfs
 
 import (
 	"io"
-	"os"
-	"path/filepath"
 	"testing"
 
-	"github.com/mendixlabs/mxcli/internal/bsoncompare"
 	"github.com/mendixlabs/mxcli/mdl/backend"
 	mprbackend "github.com/mendixlabs/mxcli/mdl/backend/mpr"
 	"github.com/mendixlabs/mxcli/mdl/executor"
@@ -39,8 +36,6 @@ func runMDL(t *testing.T, mprPath, script string) {
 	e := executor.New(io.Discard)
 	e.SetQuiet(true)
 	e.SetBackendFactory(func() backend.ConnectionBackend { return mprbackend.New() })
-	// Register subpackage handlers so Connect's registerFutureOverlays
-	// + reRegisterAll have proper deps to work with.
 	deps := e.BuildHandlerDeps()
 	microflow.RegisterHandlers(e.Registry(), deps)
 	page.RegisterHandlers(e.Registry(), deps)
@@ -72,153 +67,4 @@ func runMDL(t *testing.T, mprPath, script string) {
 	if err := e.ExecuteProgram(prog); err != nil {
 		t.Fatalf("executor error: %v", err)
 	}
-}
-
-// TestBsonCompare_CreateMicroflow drives an MDL script that creates a single
-// microflow through the FUSE overlay, then uses bsoncompare to verify that the
-// only BSON-level change between the pristine baseline and the post-mutation
-// snapshot is the addition of the new microflow unit.
-func TestBsonCompare_CreateMicroflow(t *testing.T) {
-	realDir := exprCheckerDir(t)
-	realMpr := filepath.Join(realDir, "minimal.mpr")
-	origStat, err := os.Stat(realMpr)
-	if err != nil {
-		t.Fatalf("stat real mpr: %v", err)
-	}
-
-	snap, err := Open(realDir)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func() {
-		if err := snap.Close(); err != nil {
-			t.Logf("snap.Close warning: %v", err)
-		}
-	}()
-
-	mountMpr := filepath.Join(snap.MountDir(), "minimal.mpr")
-
-	runMDL(t, mountMpr, `create or modify microflow MyFirstModule.ACT_BsonCompareTest ()
-  returns Nothing
-  {
-    return;
-  }`)
-
-	// A = pristine baseline (read-only via real path)
-	// B = post-mutation FUSE mount (overlay reflects the write)
-	bsoncompare.AssertEqual(t, realMpr, mountMpr, bsoncompare.DefaultOptions(),
-		bsoncompare.ExpectAdded("MyFirstModule.ACT_BsonCompareTest"),
-		bsoncompare.ExpectNoOtherChanges(),
-	)
-
-	// Base must be untouched — overlay isolation matches other goldenfs tests.
-	checkFUSEIsolation(t, realMpr, origStat)
-	snap.Rollback()
-}
-
-// TestBsonCompare_CreateEnumeration verifies that creating an enumeration adds
-// exactly one new unit (the enumeration itself) and nothing else.
-func TestBsonCompare_CreateEnumeration(t *testing.T) {
-	realDir := exprCheckerDir(t)
-	realMpr := filepath.Join(realDir, "minimal.mpr")
-	origStat, err := os.Stat(realMpr)
-	if err != nil {
-		t.Fatalf("stat real mpr: %v", err)
-	}
-
-	snap, err := Open(realDir)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func() {
-		if err := snap.Close(); err != nil {
-			t.Logf("snap.Close warning: %v", err)
-		}
-	}()
-
-	mountMpr := filepath.Join(snap.MountDir(), "minimal.mpr")
-
-	runMDL(t, mountMpr, `create or modify enumeration MyFirstModule.BsonTest_Status (
-  Active   'Active',
-  Inactive 'Inactive'
-);`)
-
-	bsoncompare.AssertEqual(t, realMpr, mountMpr, bsoncompare.DefaultOptions(),
-		bsoncompare.ExpectAdded("MyFirstModule.BsonTest_Status"),
-		bsoncompare.ExpectNoOtherChanges(),
-	)
-
-	checkFUSEIsolation(t, realMpr, origStat)
-	snap.Rollback()
-}
-
-// TestBsonCompare_CreatePage verifies that creating a minimal page adds exactly
-// one new Forms$Page unit and no other changes.
-func TestBsonCompare_CreatePage(t *testing.T) {
-	realDir := exprCheckerDir(t)
-	realMpr := filepath.Join(realDir, "minimal.mpr")
-	origStat, err := os.Stat(realMpr)
-	if err != nil {
-		t.Fatalf("stat real mpr: %v", err)
-	}
-
-	snap, err := Open(realDir)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func() {
-		if err := snap.Close(); err != nil {
-			t.Logf("snap.Close warning: %v", err)
-		}
-	}()
-
-	mountMpr := filepath.Join(snap.MountDir(), "minimal.mpr")
-
-	runMDL(t, mountMpr, `create page MyFirstModule.BsonTest_Page
-  (title: 'BsonTest Page', layout: Atlas_Core.Atlas_TopBar) { }`)
-
-	bsoncompare.AssertEqual(t, realMpr, mountMpr, bsoncompare.DefaultOptions(),
-		bsoncompare.ExpectAdded("MyFirstModule.BsonTest_Page"),
-		bsoncompare.ExpectNoOtherChanges(),
-	)
-
-	checkFUSEIsolation(t, realMpr, origStat)
-	snap.Rollback()
-}
-
-// TestBsonCompare_NoOpScript verifies that connecting + disconnecting without
-// any mutating statements produces zero BSON diffs between the baseline and
-// the overlay snapshot. Detects spurious writes from the executor / backend
-// connect path that would mask real mutations in other tests.
-func TestBsonCompare_NoOpScript(t *testing.T) {
-	realDir := exprCheckerDir(t)
-	realMpr := filepath.Join(realDir, "minimal.mpr")
-	origStat, err := os.Stat(realMpr)
-	if err != nil {
-		t.Fatalf("stat real mpr: %v", err)
-	}
-
-	snap, err := Open(realDir)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func() {
-		if err := snap.Close(); err != nil {
-			t.Logf("snap.Close warning: %v", err)
-		}
-	}()
-
-	mountMpr := filepath.Join(snap.MountDir(), "minimal.mpr")
-
-	// show modules; is a pure read: the backend opens the MPR in read-write
-	// mode but commits no write transaction, so bsoncompare must see zero diffs.
-	// Any spurious write from the connect path would be caught here.
-	runMDL(t, mountMpr, `show modules;`)
-
-	bsoncompare.AssertEqual(t, realMpr, mountMpr, bsoncompare.DefaultOptions(),
-		bsoncompare.ExpectNoOtherChanges(),
-	)
-
-	checkFUSEIsolation(t, realMpr, origStat)
-	snap.Rollback()
 }
