@@ -97,6 +97,41 @@ func categoryOf(unitType string) string {
 	return "other"
 }
 
+// rawDoc is a thin wrapper around bson.Raw for zero-alloc field extraction.
+// It is the reusable capability extracted from the old bson.M-based decoding:
+// instead of fully materialising the BSON tree into heap-allocated maps,
+// rawDoc uses field-level byte scans (bson.Raw.LookupErr).
+type rawDoc struct{ raw bson.Raw }
+
+func newRawDoc(data []byte) rawDoc { return rawDoc{bson.Raw(data)} }
+
+func (d rawDoc) str(field string) string {
+	v, err := d.raw.LookupErr(field)
+	if err != nil {
+		return ""
+	}
+	if v.Type == bson.TypeString {
+		return v.StringValue()
+	}
+	return ""
+}
+
+func (d rawDoc) hexID() string {
+	v, err := d.raw.LookupErr("$ID")
+	if err != nil {
+		return ""
+	}
+	switch v.Type {
+	case bson.TypeBinary:
+		if _, data, ok := v.BinaryOK(); ok {
+			return hex.EncodeToString(data)
+		}
+	case bson.TypeString:
+		return v.StringValue()
+	}
+	return ""
+}
+
 // ScanMprcontents walks a mprcontents/ directory and returns all expression records.
 func ScanMprcontents(mprcontentsPath string, opts Options) ([]ExprRecord, error) {
 	abs, err := filepath.Abs(mprcontentsPath)
@@ -114,80 +149,105 @@ func ScanMprcontents(mprcontentsPath string, opts Options) ([]ExprRecord, error)
 		if readErr != nil {
 			return nil // skip unreadable files silently
 		}
-		var doc bson.M
-		if bsonErr := bson.Unmarshal(data, &doc); bsonErr != nil {
-			return nil // skip malformed BSON
-		}
 		relPath, _ := filepath.Rel(abs, path)
-		scanObj(doc, project, relPath, opts, &results)
+		extractAll(data, project, relPath, opts, &results)
 		return nil
 	})
 	return results, err
 }
 
-func scanObj(v interface{}, project, relPath string, opts Options, out *[]ExprRecord) {
-	switch val := v.(type) {
-	case bson.M:
-		unitType, _ := val["$Type"].(string)
-		if fields, ok := exprFields[unitType]; ok {
-			if opts.FilterType == "" || strings.Contains(
-				strings.ToLower(unitType), strings.ToLower(opts.FilterType)) {
-				uid := extractID(val["$ID"])
-				for _, field := range fields {
-					raw, _ := val[field].(string)
-					raw = strings.TrimSpace(raw)
-					// Exclude empty values and URLs (not expressions)
-					if raw == "" || strings.HasPrefix(raw, "https://") || strings.HasPrefix(raw, "http://") {
-						continue
-					}
-					rec := ExprRecord{
-						UnitID:   uid,
-						Project:  project,
-						UnitType: unitType,
-						Field:    field,
-						Raw:      raw,
-						Category: categoryOf(unitType),
-						UnitPath: relPath,
-					}
-					// Populate type-checking context fields.
-					switch unitType {
-					case "Microflows$ChangeActionItem":
-						rec.TargetAttrQN, _ = val["Attribute"].(string)
-					case "Microflows$MicroflowCallParameterMapping",
-						"Mappings$MicroflowCallParameterMappingImpl",
-						"Workflows$MicroflowCallParameterMapping":
-						// "Parameter" field contains "Module.MFName.ParamName" (3-part).
-						// There is no separate "Microflow" BSON field.
-						if paramQN, _ := val["Parameter"].(string); paramQN != "" {
-							if last := strings.LastIndex(paramQN, "."); last > 0 {
-								rec.CalleeQN = paramQN[:last]    // "Module.MFName"
-								rec.ParamName = paramQN[last+1:] // "ParamName"
-							}
+// extractAll recursively extracts ExprRecords from raw BSON bytes.
+// Uses field-level bson.Raw operations instead of full tree materialisation.
+func extractAll(data []byte, project, relPath string, opts Options, out *[]ExprRecord) {
+	doc := newRawDoc(data)
+	unitType := doc.str("$Type")
+	if unitType == "" {
+		return
+	}
+
+	// Check if this document type carries expressions.
+	if fields, ok := exprFields[unitType]; ok {
+		if opts.FilterType == "" || strings.Contains(
+			strings.ToLower(unitType), strings.ToLower(opts.FilterType)) {
+
+			uid := doc.hexID()
+			if uid == "" {
+				uid, _ = uuidFromPath(relPath)
+			}
+
+			for _, field := range fields {
+				raw := strings.TrimSpace(doc.str(field))
+				if raw == "" || strings.HasPrefix(raw, "https://") || strings.HasPrefix(raw, "http://") {
+					continue
+				}
+				rec := ExprRecord{
+					UnitID:   uid,
+					Project:  project,
+					UnitType: unitType,
+					Field:    field,
+					Raw:      raw,
+					Category: categoryOf(unitType),
+					UnitPath: relPath,
+				}
+				switch unitType {
+				case "Microflows$ChangeActionItem":
+					rec.TargetAttrQN = doc.str("Attribute")
+				case "Microflows$MicroflowCallParameterMapping",
+					"Mappings$MicroflowCallParameterMappingImpl",
+					"Workflows$MicroflowCallParameterMapping":
+					if paramQN := doc.str("Parameter"); paramQN != "" {
+						if last := strings.LastIndex(paramQN, "."); last > 0 {
+							rec.CalleeQN = paramQN[:last]
+							rec.ParamName = paramQN[last+1:]
 						}
-					case "Microflows$ChangeVariableAction":
-						rec.TargetVarName, _ = val["ChangeVariableName"].(string)
-					case "Microflows$CreateVariableAction":
-						rec.TargetVarName, _ = val["VariableName"].(string)
 					}
-					*out = append(*out, rec)
+				case "Microflows$ChangeVariableAction":
+					rec.TargetVarName = doc.str("ChangeVariableName")
+				case "Microflows$CreateVariableAction":
+					rec.TargetVarName = doc.str("VariableName")
+				}
+				*out = append(*out, rec)
+			}
+		}
+	}
+
+	// Recurse into embedded documents and arrays to find sub-documents
+	// with expression-carrying $Type values (e.g. activities inside a microflow).
+	elems, err := doc.raw.Elements()
+	if err != nil {
+		return
+	}
+	for _, elem := range elems {
+		val := elem.Value()
+		switch val.Type {
+		case bson.TypeEmbeddedDocument:
+			if sub, ok := val.DocumentOK(); ok {
+				extractAll(sub, project, relPath, opts, out)
+			}
+		case bson.TypeArray:
+			if arr, ok := val.ArrayOK(); ok {
+				items, iErr := bson.Raw(arr).Elements()
+				if iErr != nil {
+					continue
+				}
+				for _, item := range items {
+					iv := item.Value()
+					if iv.Type == bson.TypeEmbeddedDocument {
+						if sub, ok := iv.DocumentOK(); ok {
+							extractAll(sub, project, relPath, opts, out)
+						}
+					}
 				}
 			}
 		}
-		for _, child := range val {
-			scanObj(child, project, relPath, opts, out)
-		}
-	case bson.D:
-		// v2: nested docs inside bson.M decode as bson.D (ordered slice), not bson.M.
-		m := make(map[string]any, len(val))
-		for _, e := range val {
-			m[e.Key] = e.Value
-		}
-		scanObj(bson.M(m), project, relPath, opts, out)
-	case bson.A:
-		for _, item := range val {
-			scanObj(item, project, relPath, opts, out)
-		}
 	}
+}
+
+// uuidFromPath extracts a UUID from a .mxunit relpath like "ab/cd/uuid.mxunit".
+func uuidFromPath(relPath string) (string, error) {
+	ext := filepath.Ext(relPath)
+	base := filepath.Base(relPath)
+	return strings.TrimSuffix(base, ext), nil
 }
 
 // MprContentsPath converts a .mpr file path to its sibling mprcontents/ directory.
@@ -221,49 +281,26 @@ func ScanMPR(mprPath string, opts Options) ([]ExprRecord, error) {
 		if err := rows.Scan(&contents); err != nil {
 			continue
 		}
-		var doc bson.M
-		if bsonErr := bson.Unmarshal(contents, &doc); bsonErr != nil {
-			continue
-		}
 		// For v1 MPR (SQLite), derive UnitPath from the $ID so it matches the
 		// mprcontents/ path format that the meta index uses as its lookup key.
-		// Without this, VarTypeKind always returns KindUnknown for v1 projects.
-		relPath := unitPathFromBSON(doc)
-		scanObj(doc, project, relPath, opts, &results)
+		relPath := unitPathFromBSON(contents)
+		extractAll(contents, project, relPath, opts, &results)
 	}
 	return results, rows.Err()
 }
 
-// unitPathFromBSON extracts the $ID from a BSON document and converts it to the
-// mprcontents/ relative path format (ab/cd/abcd1234-...-....mxunit).  This
-// mirrors meta.unitPathFromID so that ScanMPR (v1) and ScanMprcontents (v2)
-// produce the same UnitPath key that the meta index uses for VarTypeKind lookup.
-func unitPathFromBSON(doc bson.M) string {
-	raw := doc["$ID"]
-	if raw == nil {
-		return ""
-	}
-	id := extractID(raw)
+// unitPathFromBSON extracts the $ID from raw BSON bytes and converts it to the
+// mprcontents/ relative path format (ab/cd/abcd1234-...-....mxunit).
+func unitPathFromBSON(data []byte) string {
+	doc := newRawDoc(data)
+	id := doc.hexID()
 	if id == "" {
 		return ""
 	}
-	// Convert raw hex (no dashes) to standard UUID with dashes.
 	clean := strings.ReplaceAll(id, "-", "")
 	if len(clean) != 32 {
 		return id + ".mxunit"
 	}
 	uuid := clean[0:8] + "-" + clean[8:12] + "-" + clean[12:16] + "-" + clean[16:20] + "-" + clean[20:32]
 	return clean[0:2] + "/" + clean[2:4] + "/" + uuid + ".mxunit"
-}
-
-func extractID(raw interface{}) string {
-	switch v := raw.(type) {
-	case bson.Binary:
-		return hex.EncodeToString(v.Data)
-	case []byte:
-		return hex.EncodeToString(v)
-	case string:
-		return v
-	}
-	return ""
 }
