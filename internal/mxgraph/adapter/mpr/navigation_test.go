@@ -9,6 +9,7 @@ import (
 )
 
 func TestNavigationAdapter_Schema(t *testing.T) {
+	t.Parallel()
 	a := &NavigationAdapter{}
 	s := a.Schema()
 	if s == nil {
@@ -35,12 +36,14 @@ func TestNavigationAdapter_Schema(t *testing.T) {
 }
 
 func TestNavigationAdapter_Name(t *testing.T) {
+	t.Parallel()
 	if (&NavigationAdapter{}).Name() != "navigation" {
 		t.Errorf("Name() = %q, want navigation", (&NavigationAdapter{}).Name())
 	}
 }
 
 func TestNavigationAdapter_BuildRealMPR(t *testing.T) {
+	t.Parallel()
 	mprPath := findTestMPR(t)
 	if mprPath == "" {
 		t.Skip("no test MPR found")

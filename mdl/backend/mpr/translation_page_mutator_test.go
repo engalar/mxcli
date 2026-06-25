@@ -22,6 +22,7 @@ func mkTextsDoc(translations ...bson.D) bson.D {
 }
 
 func TestSetVersionedTranslation_UpdateExisting(t *testing.T) {
+	t.Parallel()
 	doc := mkTextsDoc(bson.D{
 		{Key: "$Type", Value: "Texts$Translation"},
 		{Key: "LanguageCode", Value: "en_US"},
@@ -43,6 +44,7 @@ func TestSetVersionedTranslation_UpdateExisting(t *testing.T) {
 }
 
 func TestSetVersionedTranslation_AddNew(t *testing.T) {
+	t.Parallel()
 	doc := mkTextsDoc(bson.D{
 		{Key: "$Type", Value: "Texts$Translation"},
 		{Key: "LanguageCode", Value: "en_US"},
@@ -75,6 +77,7 @@ func TestSetVersionedTranslation_AddNew(t *testing.T) {
 }
 
 func TestLocateWidgetTextsDoc_Caption(t *testing.T) {
+	t.Parallel()
 	widget := bson.D{
 		{Key: "Caption", Value: mkTextsDoc()},
 	}
@@ -87,6 +90,7 @@ func TestLocateWidgetTextsDoc_Caption(t *testing.T) {
 }
 
 func TestLocateWidgetTextsDoc_LabelCaption(t *testing.T) {
+	t.Parallel()
 	widget := bson.D{
 		{Key: "Label", Value: bson.D{
 			{Key: "Caption", Value: mkTextsDoc()},

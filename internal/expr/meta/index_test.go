@@ -73,6 +73,7 @@ func requireSharedIdx(t *testing.T) *meta.Index {
 }
 
 func TestBuildFromBackend_EntityAttrs(t *testing.T) {
+	t.Parallel()
 	idx := requireSharedIdx(t)
 
 	// 验证已知存在的实体属性（来自真实 MPR）
@@ -86,6 +87,7 @@ func TestBuildFromBackend_EntityAttrs(t *testing.T) {
 }
 
 func TestBuildFromBackend_EnumValues(t *testing.T) {
+	t.Parallel()
 	idx := requireSharedIdx(t)
 
 	assert.Greater(t, idx.EnumCount(), 0, "应该索引到至少一个枚举")
@@ -97,6 +99,7 @@ func TestBuildFromBackend_EnumValues(t *testing.T) {
 }
 
 func TestBuildFromBackend_Constants(t *testing.T) {
+	t.Parallel()
 	idx := requireSharedIdx(t)
 
 	assert.Greater(t, idx.ConstantsCount(), 0, "应有常量记录")
@@ -106,6 +109,7 @@ func TestBuildFromBackend_Constants(t *testing.T) {
 }
 
 func TestBuildFromBackend_MissingEnum(t *testing.T) {
+	t.Parallel()
 	idx := requireSharedIdx(t)
 
 	_, ok := idx.EnumCases("NonExistent.Module.FakeEnum")
@@ -113,6 +117,7 @@ func TestBuildFromBackend_MissingEnum(t *testing.T) {
 }
 
 func TestIndex_ImplementsCatalogReader(t *testing.T) {
+	t.Parallel()
 	idx := requireSharedIdx(t)
 
 	var _ exprcheck.CatalogReader = idx
@@ -121,6 +126,7 @@ func TestIndex_ImplementsCatalogReader(t *testing.T) {
 }
 
 func TestMockIndex_Basics(t *testing.T) {
+	t.Parallel()
 	m := meta.NewMockIndex(map[string][]string{
 		"M.E": {"A", "B"},
 	})
@@ -143,6 +149,7 @@ func TestMockIndex_Basics(t *testing.T) {
 }
 
 func TestBuildFromBackend_SystemEntity(t *testing.T) {
+	t.Parallel()
 	idx := requireSharedIdx(t)
 
 	_, ok := idx.AttributeKind("System.User", "Name")

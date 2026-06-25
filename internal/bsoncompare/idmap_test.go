@@ -24,6 +24,7 @@ func TestBuildIDMap_CorpusB(t *testing.T) {
 }
 
 func TestBuildIDMap_Empty(t *testing.T) {
+	t.Parallel()
 	m := bsoncompare.BuildIDMap(nil)
 	if len(m) != 0 {
 		t.Errorf("expected empty map, got %d entries", len(m))

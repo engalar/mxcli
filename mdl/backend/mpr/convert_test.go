@@ -18,6 +18,7 @@ import (
 // same Go types as mdl/types. If these assignments compile, the types are
 // identical — which is precisely what the conversion functions rely on.
 func TestTypeAliasesAreIdentical(t *testing.T) {
+	t.Parallel()
 	// Each assignment proves the alias: types.X == types.X
 	var _ *types.JavaAction = new(types.JavaAction)
 	// types.JavaScriptAction was retired in Stage 3.3.2.C1.
@@ -46,6 +47,7 @@ func TestTypeAliasesAreIdentical(t *testing.T) {
 // TestFolderInfoSlicePassthrough verifies that a []*types.FolderInfo value can
 // be used where []*types.FolderInfo is expected, because they are the same type.
 func TestFolderInfoSlicePassthrough(t *testing.T) {
+	t.Parallel()
 	folders := []*types.FolderInfo{
 		{ID: model.ID("f1"), ContainerID: model.ID("c1"), Name: "Module"},
 		{ID: model.ID("f2"), ContainerID: model.ID("c2"), Name: "Resources"},
@@ -64,6 +66,7 @@ func TestFolderInfoSlicePassthrough(t *testing.T) {
 // TestNavigationDocumentFieldPreservation verifies that all fields survive
 // when a NavigationDocument created via mpr alias is accessed via types.
 func TestNavigationDocumentFieldPreservation(t *testing.T) {
+	t.Parallel()
 	doc := &types.NavigationDocument{
 		ContainerID: model.ID("c1"),
 		Name:        "Navigation",
@@ -115,6 +118,7 @@ func TestNavigationDocumentFieldPreservation(t *testing.T) {
 // TestJsonStructureFieldPreservation verifies JsonStructure + recursive
 // JsonElement children survive alias crossing.
 func TestJsonStructureFieldPreservation(t *testing.T) {
+	t.Parallel()
 	js := &types.JsonStructure{
 		ContainerID:   model.ID("m1"),
 		Name:          "MyJson",
@@ -161,6 +165,7 @@ func TestJsonStructureFieldPreservation(t *testing.T) {
 
 // TestImageCollectionFieldPreservation verifies ImageCollection + Image.
 func TestImageCollectionFieldPreservation(t *testing.T) {
+	t.Parallel()
 	ic := &types.ImageCollection{
 		ContainerID: model.ID("m1"),
 		Name:        "Images",

@@ -5,6 +5,7 @@ import (
 )
 
 func TestAccessRuleAdapter_Name(t *testing.T) {
+	t.Parallel()
 	a := &AccessRuleAdapter{}
 	if a.Name() != "accessrule" {
 		t.Errorf("Name() = %q, want accessrule", a.Name())
@@ -12,6 +13,7 @@ func TestAccessRuleAdapter_Name(t *testing.T) {
 }
 
 func TestAccessRuleAdapter_Schema(t *testing.T) {
+	t.Parallel()
 	a := &AccessRuleAdapter{}
 	s := a.Schema()
 	if s == nil {
@@ -40,6 +42,7 @@ func TestAccessRuleAdapter_Schema(t *testing.T) {
 }
 
 func TestParseAccessRuleRights(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		rights              string
 		wantRead, wantWrite bool

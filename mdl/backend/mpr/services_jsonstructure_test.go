@@ -16,6 +16,7 @@ import (
 // element tree, an import/export mapping referencing the structure fails mx check
 // with CE0271 "The selected source is not valid."
 func TestCreateJsonStructureGen_WritesElementTree(t *testing.T) {
+	t.Parallel()
 	// Seed an existing unit so the test MPR has a valid container blob (all-zeros).
 	const seedID = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
 	seed := makeBSONUnit(t, seedID, "JsonStructures$JsonStructure", bson.D{

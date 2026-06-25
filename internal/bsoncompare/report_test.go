@@ -8,6 +8,7 @@ import (
 )
 
 func TestFormatDiff_Changed(t *testing.T) {
+	t.Parallel()
 	diffs := []bsoncompare.UnitDiff{
 		{
 			QualifiedName: "MyFirstModule.ACT_Test",
@@ -31,6 +32,7 @@ func TestFormatDiff_Changed(t *testing.T) {
 }
 
 func TestFormatDiff_Added(t *testing.T) {
+	t.Parallel()
 	diffs := []bsoncompare.UnitDiff{
 		{QualifiedName: "MyFirstModule.NewMF", UnitType: "Microflows$Microflow", Kind: bsoncompare.DiffAdded},
 	}
@@ -41,6 +43,7 @@ func TestFormatDiff_Added(t *testing.T) {
 }
 
 func TestFormatDiff_Empty(t *testing.T) {
+	t.Parallel()
 	out := bsoncompare.FormatDiff(nil)
 	if out != "" {
 		t.Errorf("expected empty string for nil diffs, got %q", out)

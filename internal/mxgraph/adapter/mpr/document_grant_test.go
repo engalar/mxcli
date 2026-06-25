@@ -5,6 +5,7 @@ import (
 )
 
 func TestDocumentGrantAdapter_Name(t *testing.T) {
+	t.Parallel()
 	a := &DocumentGrantAdapter{}
 	if a.Name() != "documentgrant" {
 		t.Errorf("Name() = %q, want documentgrant", a.Name())
@@ -12,6 +13,7 @@ func TestDocumentGrantAdapter_Name(t *testing.T) {
 }
 
 func TestDocumentGrantAdapter_Schema(t *testing.T) {
+	t.Parallel()
 	a := &DocumentGrantAdapter{}
 	s := a.Schema()
 	if s == nil {

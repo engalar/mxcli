@@ -13,6 +13,7 @@ import (
 )
 
 func TestFormatOQLTable(t *testing.T) {
+	t.Parallel()
 	result := &OQLResult{
 		Columns: []string{"Name", "Age", "City"},
 		Rows: [][]any{
@@ -52,6 +53,7 @@ func TestFormatOQLTable(t *testing.T) {
 }
 
 func TestFormatOQLTableEmpty(t *testing.T) {
+	t.Parallel()
 	result := &OQLResult{
 		Columns: []string{"Name"},
 		Rows:    nil,
@@ -72,6 +74,7 @@ func TestFormatOQLTableEmpty(t *testing.T) {
 }
 
 func TestFormatOQLTableNoColumns(t *testing.T) {
+	t.Parallel()
 	result := &OQLResult{}
 
 	var buf bytes.Buffer
@@ -82,6 +85,7 @@ func TestFormatOQLTableNoColumns(t *testing.T) {
 }
 
 func TestFormatOQLJSON(t *testing.T) {
+	t.Parallel()
 	result := &OQLResult{
 		Columns: []string{"Name", "Count"},
 		Rows: [][]any{
@@ -112,6 +116,7 @@ func TestFormatOQLJSON(t *testing.T) {
 }
 
 func TestFormatOQLJSONEmpty(t *testing.T) {
+	t.Parallel()
 	result := &OQLResult{
 		Columns: []string{"Name"},
 		Rows:    nil,
@@ -132,6 +137,7 @@ func TestFormatOQLJSONEmpty(t *testing.T) {
 }
 
 func TestExecuteOQL_Success(t *testing.T) {
+	t.Parallel()
 	expectedAuth := m2eeAuthHeader("testpass")
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Verify request
@@ -185,6 +191,7 @@ func TestExecuteOQL_Success(t *testing.T) {
 }
 
 func TestExecuteOQL_OQLError(t *testing.T) {
+	t.Parallel()
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		resp := map[string]any{
 			"result": 1,
@@ -213,6 +220,7 @@ func TestExecuteOQL_OQLError(t *testing.T) {
 }
 
 func TestExecuteOQL_AuthFailure(t *testing.T) {
+	t.Parallel()
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusUnauthorized)
 	}))
@@ -237,6 +245,7 @@ func TestExecuteOQL_AuthFailure(t *testing.T) {
 }
 
 func TestExecuteOQL_EmptyResult(t *testing.T) {
+	t.Parallel()
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.Write([]byte(`{"result":0,"feedback":{"data":[]}}`))
@@ -265,6 +274,7 @@ func TestExecuteOQL_EmptyResult(t *testing.T) {
 }
 
 func TestExecuteOQL_ColumnOrder(t *testing.T) {
+	t.Parallel()
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Return JSON with specific key order — using raw JSON to preserve order
 		w.Header().Set("Content-Type", "application/json")

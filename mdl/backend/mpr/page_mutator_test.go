@@ -50,6 +50,7 @@ func makeContainerWidget(name string, children ...bson.D) bson.D {
 }
 
 func TestFindBsonWidget_TopLevel(t *testing.T) {
+	t.Parallel()
 	w1 := makeWidget("txtName", "Pages$TextBox")
 	w2 := makeWidget("txtEmail", "Pages$TextBox")
 	rawData := makeRawPage(w1, w2)
@@ -67,6 +68,7 @@ func TestFindBsonWidget_TopLevel(t *testing.T) {
 }
 
 func TestFindBsonWidget_Nested(t *testing.T) {
+	t.Parallel()
 	inner := makeWidget("txtInner", "Pages$TextBox")
 	container := makeContainerWidget("ctn1", inner)
 	rawData := makeRawPage(container)
@@ -81,6 +83,7 @@ func TestFindBsonWidget_Nested(t *testing.T) {
 }
 
 func TestFindBsonWidget_NotFound(t *testing.T) {
+	t.Parallel()
 	w1 := makeWidget("txtName", "Pages$TextBox")
 	rawData := makeRawPage(w1)
 
@@ -91,6 +94,7 @@ func TestFindBsonWidget_NotFound(t *testing.T) {
 }
 
 func TestDropWidget_Single(t *testing.T) {
+	t.Parallel()
 	w1 := makeWidget("txtName", "Pages$TextBox")
 	w2 := makeWidget("txtEmail", "Pages$TextBox")
 	w3 := makeWidget("txtPhone", "Pages$TextBox")
@@ -123,6 +127,7 @@ func TestDropWidget_Single(t *testing.T) {
 }
 
 func TestDropWidget_Multiple(t *testing.T) {
+	t.Parallel()
 	w1 := makeWidget("a", "Pages$TextBox")
 	w2 := makeWidget("b", "Pages$TextBox")
 	w3 := makeWidget("c", "Pages$TextBox")
@@ -150,6 +155,7 @@ func TestDropWidget_Multiple(t *testing.T) {
 }
 
 func TestDropWidget_NotFound(t *testing.T) {
+	t.Parallel()
 	w1 := makeWidget("txtName", "Pages$TextBox")
 	rawData := makeRawPage(w1)
 
@@ -162,6 +168,7 @@ func TestDropWidget_NotFound(t *testing.T) {
 }
 
 func TestDropWidget_Nested(t *testing.T) {
+	t.Parallel()
 	inner1 := makeWidget("txtInner1", "Pages$TextBox")
 	inner2 := makeWidget("txtInner2", "Pages$TextBox")
 	container := makeContainerWidget("ctn1", inner1, inner2)
@@ -187,6 +194,7 @@ func TestDropWidget_Nested(t *testing.T) {
 }
 
 func TestSetWidgetProperty_Name(t *testing.T) {
+	t.Parallel()
 	w1 := makeWidget("txtOld", "Pages$TextBox")
 	rawData := makeRawPage(w1)
 
@@ -203,6 +211,7 @@ func TestSetWidgetProperty_Name(t *testing.T) {
 }
 
 func TestSetWidgetProperty_ButtonStyle(t *testing.T) {
+	t.Parallel()
 	w1 := bson.D{
 		{Key: "$Type", Value: "Pages$ActionButton"},
 		{Key: "Name", Value: "btnSave"},
@@ -225,6 +234,7 @@ func TestSetWidgetProperty_ButtonStyle(t *testing.T) {
 }
 
 func TestSetWidgetProperty_WidgetNotFound(t *testing.T) {
+	t.Parallel()
 	w1 := makeWidget("txtName", "Pages$TextBox")
 	rawData := makeRawPage(w1)
 
@@ -236,6 +246,7 @@ func TestSetWidgetProperty_WidgetNotFound(t *testing.T) {
 }
 
 func TestSetWidgetProperty_PluggableWidget(t *testing.T) {
+	t.Parallel()
 	propTypeID := bson.Binary{Subtype: 0x04, Data: []byte{0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10}}
 	w1 := bson.D{
 		{Key: "$Type", Value: "CustomWidgets$CustomWidget"},
@@ -285,6 +296,7 @@ func TestSetWidgetProperty_PluggableWidget(t *testing.T) {
 }
 
 func TestDSetArray_PreservesMarker(t *testing.T) {
+	t.Parallel()
 	parent := bson.D{
 		{Key: "Widgets", Value: bson.A{int32(2), "a", "b"}},
 	}
@@ -303,6 +315,7 @@ func TestDSetArray_PreservesMarker(t *testing.T) {
 }
 
 func TestDSetArray_NoMarker(t *testing.T) {
+	t.Parallel()
 	parent := bson.D{
 		{Key: "Widgets", Value: bson.A{"a", "b"}},
 	}
@@ -318,6 +331,7 @@ func TestDSetArray_NoMarker(t *testing.T) {
 }
 
 func TestFindBsonWidget_LayoutGrid(t *testing.T) {
+	t.Parallel()
 	inner := makeWidget("txtInGrid", "Pages$TextBox")
 	rawData := bson.D{
 		{Key: "FormCall", Value: bson.D{
@@ -380,6 +394,7 @@ func makeRawSnippetMxcli(widgets ...bson.D) bson.D {
 }
 
 func TestFindBsonWidgetInSnippet_TopLevel(t *testing.T) {
+	t.Parallel()
 	w1 := makeWidget("txtName", "Pages$TextBox")
 	w2 := makeWidget("txtEmail", "Pages$TextBox")
 	rawData := makeRawSnippet(w1, w2)
@@ -394,6 +409,7 @@ func TestFindBsonWidgetInSnippet_TopLevel(t *testing.T) {
 }
 
 func TestFindBsonWidgetInSnippet_MxcliFormat(t *testing.T) {
+	t.Parallel()
 	w1 := makeWidget("txtName", "Pages$TextBox")
 	rawData := makeRawSnippetMxcli(w1)
 
@@ -404,6 +420,7 @@ func TestFindBsonWidgetInSnippet_MxcliFormat(t *testing.T) {
 }
 
 func TestFindBsonWidgetInSnippet_Nested(t *testing.T) {
+	t.Parallel()
 	inner := makeWidget("txtInner", "Pages$TextBox")
 	container := makeContainerWidget("ctn1", inner)
 	rawData := makeRawSnippet(container)
@@ -415,6 +432,7 @@ func TestFindBsonWidgetInSnippet_Nested(t *testing.T) {
 }
 
 func TestFindBsonWidgetInSnippet_NotFound(t *testing.T) {
+	t.Parallel()
 	w1 := makeWidget("txtName", "Pages$TextBox")
 	rawData := makeRawSnippet(w1)
 
@@ -425,6 +443,7 @@ func TestFindBsonWidgetInSnippet_NotFound(t *testing.T) {
 }
 
 func TestDropWidget_Snippet(t *testing.T) {
+	t.Parallel()
 	w1 := makeWidget("txtName", "Pages$TextBox")
 	w2 := makeWidget("txtEmail", "Pages$TextBox")
 	rawData := makeRawSnippet(w1, w2)
@@ -447,6 +466,7 @@ func TestDropWidget_Snippet(t *testing.T) {
 }
 
 func TestSetWidgetProperty_Snippet(t *testing.T) {
+	t.Parallel()
 	w1 := bson.D{
 		{Key: "$Type", Value: "Pages$ActionButton"},
 		{Key: "Name", Value: "btnAction"},
@@ -469,6 +489,7 @@ func TestSetWidgetProperty_Snippet(t *testing.T) {
 }
 
 func TestFindBsonWidget_DataViewFooter(t *testing.T) {
+	t.Parallel()
 	footer := makeWidget("btnFooter", "Pages$ActionButton")
 	rawData := bson.D{
 		{Key: "FormCall", Value: bson.D{
@@ -514,6 +535,7 @@ func makeBsonID(b byte) bson.Binary {
 }
 
 func TestExtractPageParamsFromBSON_EntityParams(t *testing.T) {
+	t.Parallel()
 	rawData := bson.D{
 		{Key: "Parameters", Value: bson.A{
 			int32(2),
@@ -557,6 +579,7 @@ func TestExtractPageParamsFromBSON_EntityParams(t *testing.T) {
 }
 
 func TestExtractPageParamsFromBSON_SkipsPrimitiveParams(t *testing.T) {
+	t.Parallel()
 	rawData := bson.D{
 		{Key: "Parameters", Value: bson.A{
 			int32(2),
@@ -583,6 +606,7 @@ func TestExtractPageParamsFromBSON_SkipsPrimitiveParams(t *testing.T) {
 }
 
 func TestExtractPageParamsFromBSON_Nil(t *testing.T) {
+	t.Parallel()
 	paramScope, paramEntityNames := extractPageParamsFromBSON(nil)
 	if len(paramScope) != 0 || len(paramEntityNames) != 0 {
 		t.Error("Expected empty maps for nil input")
@@ -590,6 +614,7 @@ func TestExtractPageParamsFromBSON_Nil(t *testing.T) {
 }
 
 func TestExtractWidgetScopeFromBSON_PageFormat(t *testing.T) {
+	t.Parallel()
 	id1 := makeBsonID(0x10)
 	id2 := makeBsonID(0x20)
 	rawData := bson.D{
@@ -621,6 +646,7 @@ func TestExtractWidgetScopeFromBSON_PageFormat(t *testing.T) {
 }
 
 func TestExtractWidgetScopeFromBSON_NestedWidgets(t *testing.T) {
+	t.Parallel()
 	idDv := makeBsonID(0x10)
 	idInner := makeBsonID(0x20)
 	rawData := bson.D{
@@ -656,6 +682,7 @@ func TestExtractWidgetScopeFromBSON_NestedWidgets(t *testing.T) {
 }
 
 func TestExtractWidgetScopeFromBSON_SnippetFormat(t *testing.T) {
+	t.Parallel()
 	idW := makeBsonID(0x10)
 	rawData := bson.D{
 		{Key: "Widgets", Value: bson.A{
@@ -672,6 +699,7 @@ func TestExtractWidgetScopeFromBSON_SnippetFormat(t *testing.T) {
 }
 
 func TestExtractWidgetScopeFromBSON_Nil(t *testing.T) {
+	t.Parallel()
 	scope := extractWidgetScopeFromBSON(nil)
 	if len(scope) != 0 {
 		t.Error("Expected empty scope for nil input")
@@ -679,6 +707,7 @@ func TestExtractWidgetScopeFromBSON_Nil(t *testing.T) {
 }
 
 func TestFindWidget(t *testing.T) {
+	t.Parallel()
 	w1 := makeWidget("txtName", "Pages$TextBox")
 	rawData := makeRawPage(w1)
 
@@ -692,6 +721,7 @@ func TestFindWidget(t *testing.T) {
 }
 
 func TestParamScope(t *testing.T) {
+	t.Parallel()
 	rawData := bson.D{
 		{Key: "Parameters", Value: bson.A{
 			int32(2),
@@ -753,6 +783,7 @@ func makePageMutator(rawData bson.D) *mprPageMutator {
 }
 
 func TestSetLayout_Basic(t *testing.T) {
+	t.Parallel()
 	page := makePageWithLayout("MyModule.OldLayout", "Content", "Header")
 	m := makePageMutator(page)
 
@@ -777,6 +808,7 @@ func TestSetLayout_Basic(t *testing.T) {
 }
 
 func TestSetLayout_WithParamMappings(t *testing.T) {
+	t.Parallel()
 	page := makePageWithLayout("MyModule.OldLayout", "Content", "Header")
 	m := makePageMutator(page)
 
@@ -804,6 +836,7 @@ func TestSetLayout_WithParamMappings(t *testing.T) {
 }
 
 func TestSetLayout_SameLayout_Noop(t *testing.T) {
+	t.Parallel()
 	page := makePageWithLayout("MyModule.SameLayout", "Content")
 	m := makePageMutator(page)
 
@@ -819,6 +852,7 @@ func TestSetLayout_SameLayout_Noop(t *testing.T) {
 }
 
 func TestSetLayout_Snippet_Error(t *testing.T) {
+	t.Parallel()
 	page := makePageWithLayout("MyModule.Layout", "Content")
 	m := &mprPageMutator{rawData: page, containerType: "snippet", widgetFinder: findBsonWidget}
 
@@ -832,6 +866,7 @@ func TestSetLayout_Snippet_Error(t *testing.T) {
 }
 
 func TestSetLayout_NoFormCall_Error(t *testing.T) {
+	t.Parallel()
 	page := bson.D{
 		{Key: "$ID", Value: bson.Binary{Subtype: 0x04, Data: make([]byte, 16)}},
 		{Key: "$Type", Value: "Pages$Page"},
@@ -845,6 +880,7 @@ func TestSetLayout_NoFormCall_Error(t *testing.T) {
 }
 
 func TestSetLayout_EmptyForm_Error(t *testing.T) {
+	t.Parallel()
 	page := bson.D{
 		{Key: "FormCall", Value: bson.D{
 			{Key: "Form", Value: ""},
@@ -870,6 +906,7 @@ func makePropTypeID116(b byte) bson.Binary {
 }
 
 func TestDeriveColumnNameBson_AttributeBinding(t *testing.T) {
+	t.Parallel()
 	typeID := makePropTypeID116(0x01)
 	propKeyMap := map[string]string{extractBinaryIDFromDoc(typeID): "attribute"}
 
@@ -892,6 +929,7 @@ func TestDeriveColumnNameBson_AttributeBinding(t *testing.T) {
 }
 
 func TestDeriveColumnNameBson_CaptionFallback(t *testing.T) {
+	t.Parallel()
 	typeID := makePropTypeID116(0x02)
 	propKeyMap := map[string]string{extractBinaryIDFromDoc(typeID): "header"}
 
@@ -921,6 +959,7 @@ func TestDeriveColumnNameBson_CaptionFallback(t *testing.T) {
 }
 
 func TestDeriveColumnNameBson_AllSpecialCharCaptionFallsBackToColN(t *testing.T) {
+	t.Parallel()
 	typeID := makePropTypeID116(0x03)
 	propKeyMap := map[string]string{extractBinaryIDFromDoc(typeID): "header"}
 
@@ -950,6 +989,7 @@ func TestDeriveColumnNameBson_AllSpecialCharCaptionFallsBackToColN(t *testing.T)
 }
 
 func TestDeriveColumnNameBson_IndexFallback(t *testing.T) {
+	t.Parallel()
 	colDoc := bson.D{{Key: "Properties", Value: bson.A{int32(2)}}}
 	got := deriveColumnNameBson(colDoc, map[string]string{}, 2)
 	if got != "col3" {
@@ -958,6 +998,7 @@ func TestDeriveColumnNameBson_IndexFallback(t *testing.T) {
 }
 
 func TestSanitizeColumnName(t *testing.T) {
+	t.Parallel()
 	cases := []struct {
 		input string
 		want  string
@@ -979,6 +1020,7 @@ func TestSanitizeColumnName(t *testing.T) {
 }
 
 func TestSetWidgetProperty_LowercasePropName(t *testing.T) {
+	t.Parallel()
 	captionDoc := bson.D{
 		{Key: "Items", Value: bson.A{int32(2), bson.D{{Key: "Text", Value: "Old"}}}},
 	}
@@ -994,6 +1036,7 @@ func TestSetWidgetProperty_LowercasePropName(t *testing.T) {
 }
 
 func TestSetWidgetProperty_ContentClearsContentParams(t *testing.T) {
+	t.Parallel()
 	templateDoc := bson.D{
 		{Key: "Items", Value: bson.A{int32(2), bson.D{{Key: "Text", Value: "{1}"}}}},
 	}

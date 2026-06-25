@@ -24,6 +24,7 @@ func makeJavaFilesBackend(t *testing.T) (*MprBackend, string) {
 }
 
 func TestWriteJavaSourceFileViaPathGen(t *testing.T) {
+	t.Parallel()
 	b, projectRoot := makeJavaFilesBackend(t)
 
 	// nil params + nil return type exercises the empty-params + Boolean
@@ -40,6 +41,7 @@ func TestWriteJavaSourceFileViaPathGen(t *testing.T) {
 }
 
 func TestDeleteJavaSourceFileViaPath_NotExist(t *testing.T) {
+	t.Parallel()
 	b, _ := makeJavaFilesBackend(t)
 
 	// Deleting non-existent file should not error
@@ -49,6 +51,7 @@ func TestDeleteJavaSourceFileViaPath_NotExist(t *testing.T) {
 }
 
 func TestDeleteJavaSourceFileViaPath_Exists(t *testing.T) {
+	t.Parallel()
 	b, projectRoot := makeJavaFilesBackend(t)
 
 	// Create the file first
@@ -70,6 +73,7 @@ func TestDeleteJavaSourceFileViaPath_Exists(t *testing.T) {
 }
 
 func TestRenameJavaSourceFileViaPath(t *testing.T) {
+	t.Parallel()
 	b, projectRoot := makeJavaFilesBackend(t)
 
 	dir := filepath.Join(projectRoot, "javasource", "mymodule", "actions")
@@ -95,6 +99,7 @@ func TestRenameJavaSourceFileViaPath(t *testing.T) {
 }
 
 func TestReadJavaSourceFileViaPath(t *testing.T) {
+	t.Parallel()
 	b, projectRoot := makeJavaFilesBackend(t)
 
 	dir := filepath.Join(projectRoot, "javasource", "mymodule", "actions")
@@ -120,6 +125,7 @@ func TestReadJavaSourceFileViaPath(t *testing.T) {
 // =============================================================================
 
 func TestUpdateRawUnit_ReturnsErrorWhenMsdkWriterNil(t *testing.T) {
+	t.Parallel()
 	b := &MprBackend{} // msdkWriter is nil, writer is nil
 	err := b.UpdateRawUnit("some-unit-id", []byte("data"))
 	if err == nil {
@@ -128,6 +134,7 @@ func TestUpdateRawUnit_ReturnsErrorWhenMsdkWriterNil(t *testing.T) {
 }
 
 func TestUpdateJavaSourceSections_CodeOnly(t *testing.T) {
+	t.Parallel()
 	b, projectRoot := makeJavaFilesBackend(t)
 
 	dir := filepath.Join(projectRoot, "javasource", "mymodule", "actions")
@@ -157,6 +164,7 @@ func TestUpdateJavaSourceSections_CodeOnly(t *testing.T) {
 }
 
 func TestUpdateJavaSourceSections_ImportsMerge(t *testing.T) {
+	t.Parallel()
 	b, projectRoot := makeJavaFilesBackend(t)
 
 	dir := filepath.Join(projectRoot, "javasource", "mymodule", "actions")
@@ -189,6 +197,7 @@ func TestUpdateJavaSourceSections_ImportsMerge(t *testing.T) {
 }
 
 func TestUpdateJavaSourceSections_ExtraReplace(t *testing.T) {
+	t.Parallel()
 	b, projectRoot := makeJavaFilesBackend(t)
 
 	dir := filepath.Join(projectRoot, "javasource", "mymodule", "actions")

@@ -17,6 +17,7 @@ func makeID(b byte) bson.Binary {
 }
 
 func TestNormalize_SelfIDOmitted(t *testing.T) {
+	t.Parallel()
 	m := bsoncompare.IDMap{}
 	doc := bson.D{{Key: "$ID", Value: makeID(0xAA)}, {Key: "Name", Value: "Foo"}}
 	n := bsoncompare.Normalize(doc, m, bsoncompare.DefaultOptions())
@@ -29,6 +30,7 @@ func TestNormalize_SelfIDOmitted(t *testing.T) {
 }
 
 func TestNormalize_PointerResolved(t *testing.T) {
+	t.Parallel()
 	id := makeID(0xBB)
 	m := bsoncompare.IDMap{bsoncompare.HexOf(id.Data): "Microflow:ACT_Save"}
 	doc := bson.D{{Key: "TargetPointer", Value: id}}
@@ -39,6 +41,7 @@ func TestNormalize_PointerResolved(t *testing.T) {
 }
 
 func TestNormalize_UnknownPointer(t *testing.T) {
+	t.Parallel()
 	m := bsoncompare.IDMap{}
 	doc := bson.D{{Key: "TargetPointer", Value: makeID(0xCC)}}
 	n := bsoncompare.Normalize(doc, m, bsoncompare.DefaultOptions())
@@ -48,6 +51,7 @@ func TestNormalize_UnknownPointer(t *testing.T) {
 }
 
 func TestNormalize_StableIdOmitted(t *testing.T) {
+	t.Parallel()
 	m := bsoncompare.IDMap{}
 	doc := bson.D{{Key: "StableId", Value: makeID(0xDD)}, {Key: "Name", Value: "X"}}
 	n := bsoncompare.Normalize(doc, m, bsoncompare.DefaultOptions())
@@ -57,6 +61,7 @@ func TestNormalize_StableIdOmitted(t *testing.T) {
 }
 
 func TestNormalize_LayoutFieldsOmitted(t *testing.T) {
+	t.Parallel()
 	m := bsoncompare.IDMap{}
 	doc := bson.D{
 		{Key: "CanvasHeight", Value: int64(600)},
@@ -76,6 +81,7 @@ func TestNormalize_LayoutFieldsOmitted(t *testing.T) {
 }
 
 func TestNormalize_DocumentationOmitted(t *testing.T) {
+	t.Parallel()
 	m := bsoncompare.IDMap{}
 	doc := bson.D{{Key: "Documentation", Value: "some docs"}, {Key: "Name", Value: "Y"}}
 	n := bsoncompare.Normalize(doc, m, bsoncompare.DefaultOptions())
@@ -85,6 +91,7 @@ func TestNormalize_DocumentationOmitted(t *testing.T) {
 }
 
 func TestNormalize_VersionedArrayPrefixSkipped(t *testing.T) {
+	t.Parallel()
 	m := bsoncompare.IDMap{}
 	doc := bson.D{{Key: "Items", Value: bson.A{int32(2), "hello", "world"}}}
 	n := bsoncompare.Normalize(doc, m, bsoncompare.DefaultOptions())

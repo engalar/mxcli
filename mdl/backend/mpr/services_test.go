@@ -91,6 +91,7 @@ func makeBSONUnit(t *testing.T, unitIDStr, bsonType string, extra bson.D) []byte
 }
 
 func TestUpdateJsonStructureViaModelsdk(t *testing.T) {
+	t.Parallel()
 	const unitID = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
 	contents := makeBSONUnit(t, unitID, "JsonStructures$JsonStructure", bson.D{
 		{Key: "Name", Value: "OldName"},
@@ -130,6 +131,7 @@ func TestUpdateJsonStructureViaModelsdk(t *testing.T) {
 }
 
 func TestUpdateBusinessEventServiceViaModelsdk(t *testing.T) {
+	t.Parallel()
 	const unitID = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
 	contents := makeBSONUnit(t, unitID, "BusinessEvents$BusinessEventService", bson.D{
 		{Key: "Name", Value: "OldService"},
@@ -170,6 +172,7 @@ func TestUpdateBusinessEventServiceViaModelsdk(t *testing.T) {
 }
 
 func TestUpdateImportMappingViaModelsdk(t *testing.T) {
+	t.Parallel()
 	const unitID = "cccccccc-cccc-cccc-cccc-cccccccccccc"
 	contents := makeBSONUnit(t, unitID, "ImportMappings$ImportMapping", bson.D{
 		{Key: "Name", Value: "OldMapping"},
@@ -212,6 +215,7 @@ func TestUpdateImportMappingViaModelsdk(t *testing.T) {
 }
 
 func TestUpdateExportMappingViaModelsdk(t *testing.T) {
+	t.Parallel()
 	const unitID = "dddddddd-dddd-dddd-dddd-dddddddddddd"
 	contents := makeBSONUnit(t, unitID, "ExportMappings$ExportMapping", bson.D{
 		{Key: "Name", Value: "OldExport"},
@@ -246,6 +250,7 @@ func TestUpdateExportMappingViaModelsdk(t *testing.T) {
 }
 
 func TestUpdateDataTransformerViaModelsdk(t *testing.T) {
+	t.Parallel()
 	const unitID = "eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee"
 	contents := makeBSONUnit(t, unitID, "DataTransformers$DataTransformer", bson.D{
 		{Key: "Name", Value: "OldTransformer"},
@@ -281,6 +286,7 @@ func TestUpdateDataTransformerViaModelsdk(t *testing.T) {
 }
 
 func TestUpdateDatabaseConnectionViaModelsdk(t *testing.T) {
+	t.Parallel()
 	const unitID = "ffffffff-ffff-ffff-ffff-ffffffffffff"
 	contents := makeBSONUnit(t, unitID, "DatabaseConnector$DatabaseConnection", bson.D{
 		{Key: "Name", Value: "OldConn"},
@@ -326,6 +332,7 @@ func TestUpdateDatabaseConnectionViaModelsdk(t *testing.T) {
 }
 
 func TestUpdateConsumedRestServiceViaModelsdk(t *testing.T) {
+	t.Parallel()
 	const unitID = "11111111-2222-2222-2222-222222222222"
 	contents := makeBSONUnit(t, unitID, "Rest$ConsumedRestService", bson.D{
 		{Key: "Name", Value: "OldRest"},
@@ -363,6 +370,7 @@ func TestUpdateConsumedRestServiceViaModelsdk(t *testing.T) {
 }
 
 func TestUpdatePublishedRestServiceViaModelsdk(t *testing.T) {
+	t.Parallel()
 	const unitID = "11111111-3333-3333-3333-333333333333"
 	contents := makeBSONUnit(t, unitID, "Rest$PublishedRestService", bson.D{
 		{Key: "Name", Value: "OldPub"},
@@ -403,6 +411,7 @@ func TestUpdatePublishedRestServiceViaModelsdk(t *testing.T) {
 }
 
 func TestUpdateAllowedRolesViaModelsdk_Microflow(t *testing.T) {
+	t.Parallel()
 	const unitID = "44444444-4444-4444-4444-444444444444"
 	contents := makeBSONUnit(t, unitID, "Microflows$Microflow", bson.D{
 		{Key: "Name", Value: "TestMF"},
@@ -447,6 +456,7 @@ func TestUpdateAllowedRolesViaModelsdk_Microflow(t *testing.T) {
 }
 
 func TestUpdateAllowedRolesViaModelsdk_Page(t *testing.T) {
+	t.Parallel()
 	const unitID = "55555555-5555-5555-5555-555555555555"
 	contents := makeBSONUnit(t, unitID, "Forms$Page", bson.D{
 		{Key: "Name", Value: "TestPage"},
@@ -493,6 +503,7 @@ func TestUpdateAllowedRolesViaModelsdk_Page(t *testing.T) {
 }
 
 func TestRemoveFromAllowedRolesViaModelsdk_Microflow(t *testing.T) {
+	t.Parallel()
 	const unitID = "44444444-5555-5555-5555-555555555555"
 	contents := makeBSONUnit(t, unitID, "Microflows$Microflow", bson.D{
 		{Key: "Name", Value: "TestMF"},
@@ -532,6 +543,7 @@ func TestRemoveFromAllowedRolesViaModelsdk_Microflow(t *testing.T) {
 }
 
 func TestUpdatePublishedRestServiceRolesViaModelsdk(t *testing.T) {
+	t.Parallel()
 	const unitID = "66666666-6666-6666-6666-666666666666"
 	contents := makeBSONUnit(t, unitID, "Rest$PublishedRestService", bson.D{
 		{Key: "Name", Value: "TestREST"},
@@ -568,6 +580,7 @@ func TestUpdatePublishedRestServiceRolesViaModelsdk(t *testing.T) {
 }
 
 func TestUpdateJavaActionGen(t *testing.T) {
+	t.Parallel()
 	const unitID = "11111111-4444-4444-4444-444444444444"
 	contents := makeBSONUnit(t, unitID, "JavaActions$JavaAction", bson.D{
 		{Key: "Name", Value: "OldAction"},
@@ -615,6 +628,7 @@ func TestUpdateJavaActionGen(t *testing.T) {
 }
 
 func TestUpdateConsumedODataServiceViaModelsdk(t *testing.T) {
+	t.Parallel()
 	const unitID = "11111111-5555-5555-5555-555555555555"
 	contents := makeBSONUnit(t, unitID, "Rest$ConsumedODataService", bson.D{
 		{Key: "Name", Value: "OldOData"},
@@ -656,6 +670,7 @@ func TestUpdateConsumedODataServiceViaModelsdk(t *testing.T) {
 }
 
 func TestUpdatePublishedODataServiceViaModelsdk(t *testing.T) {
+	t.Parallel()
 	const unitID = "11111111-6666-6666-6666-666666666666"
 	contents := makeBSONUnit(t, unitID, "ODataPublish$PublishedODataService2", bson.D{
 		{Key: "Name", Value: "OldPubOData"},

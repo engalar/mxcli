@@ -18,6 +18,7 @@ import (
 var errTest = errors.New("test error")
 
 func TestConvertRawCustomWidgetTypePtr(t *testing.T) {
+	t.Parallel()
 	in := &types.RawCustomWidgetType{
 		WidgetID: "w1", RawType: bson.D{{Key: "k", Value: "v"}}, RawObject: bson.D{{Key: "k2", Value: "v2"}},
 		UnitID: "u1", UnitName: "Unit", WidgetName: "Widget",
@@ -32,6 +33,7 @@ func TestConvertRawCustomWidgetTypePtr(t *testing.T) {
 }
 
 func TestConvertRawCustomWidgetTypePtr_Error(t *testing.T) {
+	t.Parallel()
 	out, err := convertRawCustomWidgetTypePtr(nil, errTest)
 	if out != nil || err != errTest {
 		t.Errorf("expected nil/errTest, got out=%v err=%v", out, err)
@@ -39,6 +41,7 @@ func TestConvertRawCustomWidgetTypePtr_Error(t *testing.T) {
 }
 
 func TestConvertRawCustomWidgetTypeSlice(t *testing.T) {
+	t.Parallel()
 	in := []*types.RawCustomWidgetType{
 		{WidgetID: "w1", UnitName: "U1"},
 		{WidgetID: "w2", UnitName: "U2"},
@@ -56,6 +59,7 @@ func TestConvertRawCustomWidgetTypeSlice(t *testing.T) {
 // and types.* definitions stay aligned. If a struct gains a field, update
 // both sides (they should be identical since they're type aliases).
 func TestFieldCountDrift(t *testing.T) {
+	t.Parallel()
 	assertFieldCount(t, "types.FolderInfo", types.FolderInfo{}, 3)
 	assertFieldCount(t, "types.FolderInfo", types.FolderInfo{}, 3)
 	assertFieldCount(t, "types.UnitInfo", types.UnitInfo{}, 4)

@@ -13,6 +13,7 @@ import (
 // TestWidgetToBSON_Container verifies a Container WidgetNode encodes to a
 // Forms$DivContainer BSON doc with Name, Appearance, and Widgets fields.
 func TestWidgetToBSON_Container(t *testing.T) {
+	t.Parallel()
 	node := &types.WidgetNode{
 		Kind: types.WidgetContainer,
 		Name: "mainBox",
@@ -36,6 +37,7 @@ func TestWidgetToBSON_Container(t *testing.T) {
 // TestWidgetToBSON_RoundTrip verifies widgetToBSON → widgetNodeFromBSON
 // returns an equivalent WidgetNode for a button with caption.
 func TestWidgetToBSON_RoundTrip(t *testing.T) {
+	t.Parallel()
 	orig := &types.WidgetNode{
 		Kind:    types.WidgetButton,
 		Name:    "btn",
@@ -63,6 +65,7 @@ func TestWidgetToBSON_RoundTrip(t *testing.T) {
 // TestBsonVersionedArray verifies the int32(1) prefix is prepended to a
 // slice of bson.D documents.
 func TestBsonVersionedArray(t *testing.T) {
+	t.Parallel()
 	docs := []bson.D{
 		{{Key: "Name", Value: "a"}},
 		{{Key: "Name", Value: "b"}},
@@ -81,6 +84,7 @@ func TestBsonVersionedArray(t *testing.T) {
 // written as "Weight" (not "DesktopWeight") to match Mendix's BSON schema.
 // CE0535 "column weights must sum to 12" occurs when the key is wrong.
 func TestWidgetToBSON_LayoutGridColumnWeight(t *testing.T) {
+	t.Parallel()
 	col := &types.WidgetNode{
 		Kind: types.WidgetLayoutCol,
 		Name: "cMain",
@@ -109,6 +113,7 @@ func TestWidgetToBSON_LayoutGridColumnWeight(t *testing.T) {
 // TestExtractColWidth_UsesWeightKey verifies extractColWidth reads from "Weight"
 // not "DesktopWeight" — matching how Mendix Studio Pro serialises the column.
 func TestExtractColWidth_UsesWeightKey(t *testing.T) {
+	t.Parallel()
 	doc := bson.D{
 		{Key: "Weight", Value: int32(8)},
 		{Key: "TabletWeight", Value: int32(6)},
@@ -129,6 +134,7 @@ func TestExtractColWidth_UsesWeightKey(t *testing.T) {
 // TestLayoutGridColumn_RoundTrip verifies widgetToBSON→extractColWidth roundtrip
 // preserves the column width correctly.
 func TestLayoutGridColumn_RoundTrip(t *testing.T) {
+	t.Parallel()
 	orig := &types.WidgetNode{
 		Kind:     types.WidgetLayoutCol,
 		Name:     "col",
@@ -146,6 +152,7 @@ func TestLayoutGridColumn_RoundTrip(t *testing.T) {
 // display namespace). Writing a Pages$ type into the unit BSON triggers
 // TypeCacheUnknownTypeException when Studio Pro / mx check loads the page.
 func TestKindToBSONType_AllKinds(t *testing.T) {
+	t.Parallel()
 	cases := map[types.WidgetKind]string{
 		types.WidgetContainer:    "Forms$DivContainer",
 		types.WidgetButton:       "Forms$ActionButton",

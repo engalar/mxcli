@@ -18,6 +18,7 @@ import (
 )
 
 func TestSemantic_FullPipeline_Macnica(t *testing.T) {
+	t.Parallel()
 	corpusAMPR := testutil.FindMPR(t, "CORPUS_A_MPR", "testdata/corpus-a/app.mpr")
 	b, err := mprbackend.NewFromPath(corpusAMPR)
 	require.NoError(t, err)
@@ -55,6 +56,7 @@ func TestSemantic_FullPipeline_Macnica(t *testing.T) {
 }
 
 func TestSemantic_NoDaemon_SkipsSEM(t *testing.T) {
+	t.Parallel()
 	corpusAMPR := testutil.FindMPR(t, "CORPUS_A_MPR", "testdata/corpus-a/app.mpr")
 	records := scanProject(t, corpusAMPR, scan.Options{})
 

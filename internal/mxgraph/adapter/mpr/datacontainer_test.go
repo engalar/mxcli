@@ -9,6 +9,7 @@ import (
 )
 
 func TestDataContainerAdapter_Schema(t *testing.T) {
+	t.Parallel()
 	a := &DataContainerAdapter{}
 	s := a.Schema()
 	if s == nil {
@@ -33,12 +34,14 @@ func TestDataContainerAdapter_Schema(t *testing.T) {
 }
 
 func TestDataContainerAdapter_Name(t *testing.T) {
+	t.Parallel()
 	if (&DataContainerAdapter{}).Name() != "datacontainer" {
 		t.Errorf("Name() = %q, want datacontainer", (&DataContainerAdapter{}).Name())
 	}
 }
 
 func TestDataContainerAdapter_BuildRealMPR(t *testing.T) {
+	t.Parallel()
 	mprPath := findTestMPR(t)
 	if mprPath == "" {
 		t.Skip("no test MPR found")

@@ -7,6 +7,7 @@ import (
 )
 
 func TestDomainModelAdapter_Schema(t *testing.T) {
+	t.Parallel()
 	a := &DomainModelAdapter{}
 	s := a.Schema()
 	if s == nil {
@@ -24,6 +25,7 @@ func TestDomainModelAdapter_Schema(t *testing.T) {
 }
 
 func TestDomainModelAdapter_Name(t *testing.T) {
+	t.Parallel()
 	a := &DomainModelAdapter{}
 	if a.Name() != "domainmodel" {
 		t.Errorf("Name() = %q, want domainmodel", a.Name())

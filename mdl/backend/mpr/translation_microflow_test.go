@@ -46,6 +46,7 @@ func mkMicroflowDoc(activities ...bson.D) bson.D {
 }
 
 func TestSetMicroflowActionTranslation_FirstShowMessage(t *testing.T) {
+	t.Parallel()
 	doc := mkMicroflowDoc(
 		mkShowMessageActivity("First"),
 		mkShowMessageActivity("Second"),
@@ -80,6 +81,7 @@ func TestSetMicroflowActionTranslation_FirstShowMessage(t *testing.T) {
 }
 
 func TestSetMicroflowActionTranslation_SecondShowMessage(t *testing.T) {
+	t.Parallel()
 	doc := mkMicroflowDoc(
 		mkShowMessageActivity("First"),
 		mkShowMessageActivity("Second"),
@@ -103,6 +105,7 @@ func TestSetMicroflowActionTranslation_SecondShowMessage(t *testing.T) {
 }
 
 func TestSetMicroflowActionTranslation_IndexOutOfRange(t *testing.T) {
+	t.Parallel()
 	doc := mkMicroflowDoc(mkShowMessageActivity("Only"))
 	if setMicroflowActionTranslationBSON(doc, "Microflows$ShowMessageAction", 5, "message", "zh_CN", "x") {
 		t.Error("expected false for out-of-range index")
@@ -110,6 +113,7 @@ func TestSetMicroflowActionTranslation_IndexOutOfRange(t *testing.T) {
 }
 
 func TestSetMicroflowActionTranslation_UnknownType(t *testing.T) {
+	t.Parallel()
 	doc := mkMicroflowDoc(mkShowMessageActivity("Only"))
 	if setMicroflowActionTranslationBSON(doc, "Microflows$LogMessageAction", 0, "message", "zh_CN", "x") {
 		t.Error("expected false when no action of that type exists")

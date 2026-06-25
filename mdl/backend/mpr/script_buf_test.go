@@ -7,6 +7,7 @@ import (
 )
 
 func TestScriptBuffer_AddUpdate_VisibleInOverlay(t *testing.T) {
+	t.Parallel()
 	dst := copyFixture(t, fixturePath)
 	b := New()
 	if err := b.Connect(dst); err != nil {
@@ -33,6 +34,7 @@ func TestScriptBuffer_AddUpdate_VisibleInOverlay(t *testing.T) {
 }
 
 func TestScriptBuffer_AddInsert_VisibleInInsertList(t *testing.T) {
+	t.Parallel()
 	dst := copyFixture(t, fixturePath)
 	b := New()
 	if err := b.Connect(dst); err != nil {
@@ -59,6 +61,7 @@ func TestScriptBuffer_AddInsert_VisibleInInsertList(t *testing.T) {
 }
 
 func TestBeginScriptTransaction_NoDBBegin(t *testing.T) {
+	t.Parallel()
 	dst := copyFixture(t, fixturePath)
 	b := New()
 	if err := b.Connect(dst); err != nil {
@@ -80,6 +83,7 @@ func TestBeginScriptTransaction_NoDBBegin(t *testing.T) {
 }
 
 func TestScriptBuffer_Rollback_ClearsOverlay(t *testing.T) {
+	t.Parallel()
 	dst := copyFixture(t, fixturePath)
 	b := New()
 	if err := b.Connect(dst); err != nil {

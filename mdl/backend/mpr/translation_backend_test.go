@@ -25,6 +25,7 @@ func textsNode(lang, text string) bson.D {
 }
 
 func TestCollectTranslationNodes_EnumValues(t *testing.T) {
+	t.Parallel()
 	enumDoc := bson.D{
 		{Key: "$Type", Value: "Enumerations$Enumeration"},
 		{Key: "Name", Value: "Status"},
@@ -64,6 +65,7 @@ func TestCollectTranslationNodes_EnumValues(t *testing.T) {
 }
 
 func TestCollectTranslationNodes_PageTitleNoOwner(t *testing.T) {
+	t.Parallel()
 	// A Texts$Text directly under the root (no named ancestor between) yields a
 	// bare property path such as a page-level title.
 	pageDoc := bson.D{
@@ -83,6 +85,7 @@ func TestCollectTranslationNodes_PageTitleNoOwner(t *testing.T) {
 }
 
 func TestDocTypeLabelFromBsonType(t *testing.T) {
+	t.Parallel()
 	cases := map[string]string{
 		"Enumerations$Enumeration": "ENUMERATION",
 		"Forms$Form":               "PAGE",

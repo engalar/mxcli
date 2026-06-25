@@ -9,6 +9,7 @@ import (
 )
 
 func TestMicroflowAdapter_Schema(t *testing.T) {
+	t.Parallel()
 	a := &MicroflowAdapter{}
 	s := a.Schema()
 	if s == nil {
@@ -35,6 +36,7 @@ func TestMicroflowAdapter_Schema(t *testing.T) {
 }
 
 func TestMicroflowAdapter_Name(t *testing.T) {
+	t.Parallel()
 	a := &MicroflowAdapter{}
 	if a.Name() != "microflow" {
 		t.Errorf("Name() = %q, want microflow", a.Name())
@@ -44,6 +46,7 @@ func TestMicroflowAdapter_Name(t *testing.T) {
 // TestMicroflowAdapter_BuildRealMPR verifies the nested BSON traversal against a
 // real project: it must produce Microflow nodes and at least one reference edge.
 func TestMicroflowAdapter_BuildRealMPR(t *testing.T) {
+	t.Parallel()
 	mprPath := findTestMPR(t)
 	if mprPath == "" {
 		t.Skip("no test MPR found")

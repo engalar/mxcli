@@ -7,6 +7,7 @@ import (
 )
 
 func TestDefaultOptions(t *testing.T) {
+	t.Parallel()
 	opts := bsoncompare.DefaultOptions()
 	if !opts.IgnoreDocumentation {
 		t.Error("IgnoreDocumentation must default to true")

@@ -10,6 +10,7 @@ import (
 )
 
 func TestPageAdapter_Schema(t *testing.T) {
+	t.Parallel()
 	a := &PageAdapter{}
 	s := a.Schema()
 	labels := map[mxgraph.Label]bool{}
@@ -24,12 +25,14 @@ func TestPageAdapter_Schema(t *testing.T) {
 }
 
 func TestPageAdapter_Name(t *testing.T) {
+	t.Parallel()
 	if (&PageAdapter{}).Name() != "page" {
 		t.Errorf("PageAdapter.Name() = %q, want page", (&PageAdapter{}).Name())
 	}
 }
 
 func TestSecurityAdapter_Schema(t *testing.T) {
+	t.Parallel()
 	a := &SecurityAdapter{}
 	s := a.Schema()
 	labels := map[mxgraph.Label]bool{}
@@ -44,12 +47,14 @@ func TestSecurityAdapter_Schema(t *testing.T) {
 }
 
 func TestSecurityAdapter_Name(t *testing.T) {
+	t.Parallel()
 	if (&SecurityAdapter{}).Name() != "security" {
 		t.Errorf("SecurityAdapter.Name() = %q, want security", (&SecurityAdapter{}).Name())
 	}
 }
 
 func TestEnumerationAdapter_Schema(t *testing.T) {
+	t.Parallel()
 	a := &EnumerationAdapter{}
 	s := a.Schema()
 	labels := map[mxgraph.Label]bool{}
@@ -64,6 +69,7 @@ func TestEnumerationAdapter_Schema(t *testing.T) {
 }
 
 func TestEnumerationAdapter_Name(t *testing.T) {
+	t.Parallel()
 	if (&EnumerationAdapter{}).Name() != "enumeration" {
 		t.Errorf("EnumerationAdapter.Name() = %q, want enumeration", (&EnumerationAdapter{}).Name())
 	}
@@ -72,6 +78,7 @@ func TestEnumerationAdapter_Name(t *testing.T) {
 // TestPageEnumAdapters_BuildRealMPR verifies the page and enumeration adapters
 // produce nodes (and page layout edges) against a real project.
 func TestPageEnumAdapters_BuildRealMPR(t *testing.T) {
+	t.Parallel()
 	mprPath := findTestMPR(t)
 	if mprPath == "" {
 		t.Skip("no test MPR found")
@@ -120,6 +127,7 @@ func TestPageEnumAdapters_BuildRealMPR(t *testing.T) {
 // from a real MPR carry the derived Module and QualifiedName props that
 // graphcatalog's FindNodes filters depend on.
 func TestDomainModelAdapter_EntityHasModuleAndQN(t *testing.T) {
+	t.Parallel()
 	mprPath := findTestMPR(t)
 	if mprPath == "" {
 		t.Skip("no test MPR found")

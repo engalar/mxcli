@@ -5,6 +5,7 @@ import (
 )
 
 func TestPageRefAdapter_Name(t *testing.T) {
+	t.Parallel()
 	a := &PageRefAdapter{}
 	if a.Name() != "pageref" {
 		t.Errorf("Name() = %q, want pageref", a.Name())
@@ -12,6 +13,7 @@ func TestPageRefAdapter_Name(t *testing.T) {
 }
 
 func TestPageRefAdapter_Schema(t *testing.T) {
+	t.Parallel()
 	a := &PageRefAdapter{}
 	s := a.Schema()
 	if s == nil {
@@ -30,6 +32,7 @@ func TestPageRefAdapter_Schema(t *testing.T) {
 }
 
 func TestQualifyName(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name, module, want string
 	}{

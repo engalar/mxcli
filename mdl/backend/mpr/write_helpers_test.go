@@ -13,6 +13,7 @@ import (
 // bytes via the modelsdk WriteTransaction and that the reader cache is
 // invalidated so the next read returns the new bytes.
 func TestWriteUnitContents_RoundTrip(t *testing.T) {
+	t.Parallel()
 	mprPath, unitID := makeSecurityTestMPR(t)
 
 	b := New()
@@ -69,6 +70,7 @@ func TestWriteUnitContents_RoundTrip(t *testing.T) {
 // helpful error when the modelsdk writer has not been initialized (i.e. the
 // backend was never Connect()ed).
 func TestWriteUnitContents_NilWriter(t *testing.T) {
+	t.Parallel()
 	b := New()
 	// Do not call Connect — msdkWriter stays nil.
 

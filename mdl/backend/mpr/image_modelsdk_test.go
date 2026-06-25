@@ -12,6 +12,7 @@ import (
 // where the codec decoder correctly populates Image (BinaryPrimitive) and
 // Images (PartList) from raw BSON produced by SerializeImageCollection.
 func TestParseImageCollectionViaModelsdk_RoundTrip(t *testing.T) {
+	t.Parallel()
 	src := &types.ImageCollection{
 		Name:        "Icons",
 		ExportLevel: "Hidden",

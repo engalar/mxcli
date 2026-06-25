@@ -15,6 +15,7 @@ import (
 )
 
 func TestGetProjectSecurityGen_ReturnsSingleton(t *testing.T) {
+	t.Parallel()
 	mprPath, _ := makeSecurityTestMPR(t)
 
 	b := New()
@@ -131,6 +132,7 @@ func secTestUUIDBlob(uuid string) []byte {
 //
 // This is a regression guard: if the test fails, DemoUsers are broken at runtime.
 func TestAddDemoUser_PreservesVersionPrefix2(t *testing.T) {
+	t.Parallel()
 	// Build a minimal ProjectSecurity fixture that already has one Studio-Pro-
 	// style DemoUsers array (prefix=2, one existing user).
 	dir := t.TempDir()
@@ -242,6 +244,7 @@ func TestAddDemoUser_PreservesVersionPrefix2(t *testing.T) {
 // each rebuild, causing runtime System.UserRole churn and silent failure when
 // assigning demo-user roles on startup.
 func TestAddUserRole_WritesStableGUID(t *testing.T) {
+	t.Parallel()
 	mprPath, unitID := makeSecurityTestMPR(t)
 
 	b := New()
@@ -315,6 +318,7 @@ func TestAddUserRole_WritesStableGUID(t *testing.T) {
 // create-or-modify run), so mxbuild emits the same UUID in metadata.json
 // every time. This is the root fix for random-UUID churn.
 func TestAddUserRole_GUIDStableAcrossBuilds(t *testing.T) {
+	t.Parallel()
 	mprPath, unitID := makeSecurityTestMPR(t)
 
 	b := New()
@@ -387,6 +391,7 @@ func TestAddUserRole_GUIDStableAcrossBuilds(t *testing.T) {
 }
 
 func TestIdempotentModify_FixesStalePrefix3(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	mprPath := filepath.Join(dir, "stale.mpr")
 
@@ -484,6 +489,7 @@ func TestIdempotentModify_FixesStalePrefix3(t *testing.T) {
 }
 
 func TestSetProjectSecurityLevel_ViaModelsdk(t *testing.T) {
+	t.Parallel()
 	mprPath, unitID := makeSecurityTestMPR(t)
 
 	b := New()
@@ -521,6 +527,7 @@ func TestSetProjectSecurityLevel_ViaModelsdk(t *testing.T) {
 // (used by "create or modify user role" when the role already exists) backfills
 // a binary GUID for roles that were created by old mxcli without one.
 func TestAlterUserRole_BackfillsMissingGUID(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	mprPath := filepath.Join(dir, "alter.mpr")
 

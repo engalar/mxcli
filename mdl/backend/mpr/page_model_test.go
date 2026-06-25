@@ -14,6 +14,7 @@ import (
 // extracts a ScrollContainer with a Placeholder from a Forms$WebLayoutContent
 // document — the structure used by Responsive/Phone/Tablet layouts.
 func TestLayoutDocToModel_WebLayout(t *testing.T) {
+	t.Parallel()
 	placeholderDoc := bson.D{
 		{Key: "$Type", Value: "Forms$Placeholder"},
 		{Key: "Name", Value: "Main"},
@@ -65,6 +66,7 @@ func TestLayoutDocToModel_WebLayout(t *testing.T) {
 // TestLayoutDocToModel_NativeLayout verifies that layoutDocToModel handles the
 // Forms$NativeLayoutContent BSON structure used by native mobile layouts.
 func TestLayoutDocToModel_NativeLayout(t *testing.T) {
+	t.Parallel()
 	contentDoc := bson.D{
 		{Key: "$Type", Value: "Forms$NativeLayoutContent"},
 		{Key: "LayoutType", Value: "Default"},
@@ -101,6 +103,7 @@ func TestLayoutDocToModel_NativeLayout(t *testing.T) {
 // a single Forms$DivContainer named "mainBox" and verifies pageDocToModel
 // extracts the container as a WidgetNode with Kind=container.
 func TestPageDocToModel_Container(t *testing.T) {
+	t.Parallel()
 	doc := bson.D{
 		{Key: "FormCall", Value: bson.D{
 			{Key: "Arguments", Value: bson.A{
@@ -137,6 +140,7 @@ func TestPageDocToModel_Container(t *testing.T) {
 // TestPageDocToModel_ButtonCaption verifies extractTextFromTemplate picks up
 // the en_US translation of a button caption stored as a translatable template.
 func TestPageDocToModel_ButtonCaption(t *testing.T) {
+	t.Parallel()
 	doc := bson.D{
 		{Key: "FormCall", Value: bson.D{
 			{Key: "Arguments", Value: bson.A{
@@ -189,6 +193,7 @@ func makeFooterBSON(footerName string) bson.D {
 }
 
 func TestWidgetNodeFromBSON_DataView_ExtractsFooter(t *testing.T) {
+	t.Parallel()
 	footerBSON := makeFooterBSON("footer1")
 	dvBSON := bson.D{
 		{Key: "$ID", Value: types.UUIDToBlob(types.GenerateID())},
@@ -215,6 +220,7 @@ func TestWidgetNodeFromBSON_DataView_ExtractsFooter(t *testing.T) {
 }
 
 func TestWidgetToBSON_DataView_WritesFooter(t *testing.T) {
+	t.Parallel()
 	footerNode := &types.WidgetNode{
 		Kind: types.WidgetContainer,
 		Name: "footer1",
@@ -242,6 +248,7 @@ func TestWidgetToBSON_DataView_WritesFooter(t *testing.T) {
 }
 
 func TestWidgetToBSON_DataView_NoFooterWhenEmpty(t *testing.T) {
+	t.Parallel()
 	dvNode := &types.WidgetNode{
 		Kind:   types.WidgetDataView,
 		Name:   "dvMain",

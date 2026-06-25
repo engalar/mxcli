@@ -33,6 +33,7 @@ import (
 //  2. commitScriptBuffer BatchWrite overwrites the SQLite writes with the
 //     stale ScriptBuffer content, wiping all GRANTs.
 func TestMsdkWrite_ScriptTransaction_CumulativeGrants(t *testing.T) {
+	t.Parallel()
 	// Create a bare MPR (no entity yet) so we can add the entity inside the tx.
 	mprPath, dmID := makeDomainModelTestMPR(t)
 	b := New()

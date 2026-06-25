@@ -9,6 +9,7 @@ import (
 )
 
 func TestResolveDockerDir_FindsDir(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	mprPath := filepath.Join(dir, "app.mpr")
 	os.WriteFile(mprPath, []byte(""), 0644)
@@ -28,6 +29,7 @@ func TestResolveDockerDir_FindsDir(t *testing.T) {
 }
 
 func TestResolveDockerDir_ErrorsWhenNoCompose(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	mprPath := filepath.Join(dir, "app.mpr")
 	os.WriteFile(mprPath, []byte(""), 0644)
@@ -40,6 +42,7 @@ func TestResolveDockerDir_ErrorsWhenNoCompose(t *testing.T) {
 }
 
 func TestResolveDockerDir_UsesExplicitDir(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	customDir := filepath.Join(dir, "custom")
 	os.MkdirAll(customDir, 0755)
@@ -59,6 +62,7 @@ func TestResolveDockerDir_UsesExplicitDir(t *testing.T) {
 }
 
 func TestResolveDockerDir_ErrorsWhenExplicitDirMissesCompose(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	customDir := filepath.Join(dir, "empty")
 	os.MkdirAll(customDir, 0755)

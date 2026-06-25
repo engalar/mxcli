@@ -36,6 +36,7 @@ import (
 // ---------------------------------------------------------------------------
 
 func TestSerializeElementToBsonD_TextBoxShape(t *testing.T) {
+	t.Parallel()
 	tb := genPages.NewTextBox()
 	tb.SetID(element.ID(mmpr.GenerateID()))
 	tb.SetName("txtFoo")
@@ -58,6 +59,7 @@ func TestSerializeElementToBsonD_TextBoxShape(t *testing.T) {
 }
 
 func TestSerializeElementToBsonD_NilInput(t *testing.T) {
+	t.Parallel()
 	_, err := serializeElementToBsonD(nil)
 	if err == nil {
 		t.Error("expected error for nil element")
@@ -69,6 +71,7 @@ func TestSerializeElementToBsonD_NilInput(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestPageMutator_InsertWidgetGen_StitchesIntoTree(t *testing.T) {
+	t.Parallel()
 	// Build a raw page with one existing TextBox widget.
 	existing := makeWidget("txtExisting", "Forms$TextBox")
 	rawPage := makeRawPage(existing)
@@ -116,6 +119,7 @@ func TestPageMutator_InsertWidgetGen_StitchesIntoTree(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestPageMutator_ReplaceWidgetGen_ReplacesTarget(t *testing.T) {
+	t.Parallel()
 	existing := makeWidget("txtOld", "Forms$TextBox")
 	rawPage := makeRawPage(existing)
 
@@ -150,6 +154,7 @@ func TestPageMutator_ReplaceWidgetGen_ReplacesTarget(t *testing.T) {
 // the executor's pageBuilder.registerWidgetName via widgetScope), but pin
 // the behaviour here so a future tightening doesn't regress the fix.
 func TestPageMutator_ReplaceWidgetGen_SameName(t *testing.T) {
+	t.Parallel()
 	existing := makeWidget("txtLabel", "Forms$TextBox")
 	rawPage := makeRawPage(existing)
 
@@ -178,6 +183,7 @@ func TestPageMutator_ReplaceWidgetGen_SameName(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestPageMutator_SetWidgetDataSourceGen_SetsDataSource(t *testing.T) {
+	t.Parallel()
 	// Build a DataView widget that includes a pre-existing nil DataSource slot,
 	// matching how real Mendix pages store DataViews. dSet only updates existing
 	// keys, so the slot must be present for the assignment to take effect.
@@ -226,6 +232,7 @@ func TestPageMutator_SetWidgetDataSourceGen_SetsDataSource(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestPageMutator_InsertWidgetGen_WidgetNotFound(t *testing.T) {
+	t.Parallel()
 	rawPage := makeRawPage(makeWidget("txtExisting", "Forms$TextBox"))
 	m := &mprPageMutator{rawData: rawPage, widgetFinder: findBsonWidget}
 
@@ -242,6 +249,7 @@ func TestPageMutator_InsertWidgetGen_WidgetNotFound(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestMockPageMutator_InsertWidgetGenNotConfigured(t *testing.T) {
+	t.Parallel()
 	m := &mock.MockPageMutator{}
 	err := m.InsertWidgetGen("w", "", backend.InsertAfter, nil)
 	if err == nil {
@@ -253,6 +261,7 @@ func TestMockPageMutator_InsertWidgetGenNotConfigured(t *testing.T) {
 }
 
 func TestMockPageMutator_ReplaceWidgetGenNotConfigured(t *testing.T) {
+	t.Parallel()
 	m := &mock.MockPageMutator{}
 	err := m.ReplaceWidgetGen("w", "", nil)
 	if err == nil {
@@ -264,6 +273,7 @@ func TestMockPageMutator_ReplaceWidgetGenNotConfigured(t *testing.T) {
 }
 
 func TestMockPageMutator_SetWidgetDataSourceGenNotConfigured(t *testing.T) {
+	t.Parallel()
 	m := &mock.MockPageMutator{}
 	err := m.SetWidgetDataSourceGen("w", nil)
 	if err == nil {

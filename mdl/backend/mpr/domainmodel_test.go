@@ -191,6 +191,7 @@ func makeDomainModelTestMPR(t *testing.T) (mprPath string, dmID model.ID) {
 
 // TestCreateEntityGen verifies CreateEntityGen persists a new entity.
 func TestCreateEntityGen(t *testing.T) {
+	t.Parallel()
 	mprPath, dmID := makeDomainModelTestMPR(t)
 
 	b := New()
@@ -228,6 +229,7 @@ func TestCreateEntityGen(t *testing.T) {
 }
 
 func TestUpdateEnumerationRefsInAllDomainModels_NoChange(t *testing.T) {
+	t.Parallel()
 	mprPath, _ := makeEnumRefMPR(t, "OldModule.StatusEnum")
 
 	b := New()
@@ -243,6 +245,7 @@ func TestUpdateEnumerationRefsInAllDomainModels_NoChange(t *testing.T) {
 }
 
 func TestUpdateEnumerationRefsInAllDomainModels_UpdatesRef(t *testing.T) {
+	t.Parallel()
 	mprPath, dmID := makeEnumRefMPR(t, "OldModule.StatusEnum")
 
 	b := New()
@@ -373,6 +376,7 @@ func makeEntityAccessTestMPR(t *testing.T) (mprPath string, dmID model.ID) {
 // Note: this test verifies the BSON key is "AllowedModuleRoles" (not
 // "ModuleRoles"), confirming the Patch* helper's encode path is preserved.
 func TestAddEntityAccessRuleViaModelsdk(t *testing.T) {
+	t.Parallel()
 	mprPath, dmID := makeEntityAccessTestMPR(t)
 
 	b := New()
@@ -498,6 +502,7 @@ func bsonFieldBool(doc bson.D, key string) (bool, bool) {
 // as BSON string "" — Mendix's GetGuidFromBson then threw InvalidCastException
 // (String→Byte[]).
 func TestCreateEntityGen_WithIndex_AttributePointerIsBinary(t *testing.T) {
+	t.Parallel()
 	mprPath, dmID := makeDomainModelTestMPR(t)
 
 	b := New()
@@ -638,6 +643,7 @@ func bsonDocToMap(v any) map[string]any {
 // but not yet committed), so entity N overwrites entity N-1 in the DM write.
 // The cache ensures all mutations accumulate in one in-memory DM object.
 func TestUpdateEntityGen_ScriptTransaction_BatchesAllUpdates(t *testing.T) {
+	t.Parallel()
 	mprPath, dmID := makeDomainModelTestMPR(t)
 
 	b := New()

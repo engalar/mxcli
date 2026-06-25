@@ -28,6 +28,7 @@ func TestReadAllUnits_CorpusB(t *testing.T) {
 }
 
 func TestReadAllUnits_MissingPath(t *testing.T) {
+	t.Parallel()
 	_, err := bsoncompare.ReadAllUnits("/nonexistent/path.mpr")
 	if err == nil {
 		t.Error("expected error for missing path")

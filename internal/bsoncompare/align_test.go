@@ -7,6 +7,7 @@ import (
 )
 
 func TestDiffArray_SetDiff_AddedRef(t *testing.T) {
+	t.Parallel()
 	golden := []any{"<ref:ModuleRole:Admin>", "<ref:ModuleRole:User>"}
 	actual := []any{"<ref:ModuleRole:Admin>", "<ref:ModuleRole:Manager>"}
 	var diffs []bsoncompare.FieldDiff
@@ -17,6 +18,7 @@ func TestDiffArray_SetDiff_AddedRef(t *testing.T) {
 }
 
 func TestDiffArray_SetDiff_NoChange(t *testing.T) {
+	t.Parallel()
 	golden := []any{"<ref:ModuleRole:Admin>", "<ref:ModuleRole:User>"}
 	actual := []any{"<ref:ModuleRole:User>", "<ref:ModuleRole:Admin>"}
 	var diffs []bsoncompare.FieldDiff
@@ -27,6 +29,7 @@ func TestDiffArray_SetDiff_NoChange(t *testing.T) {
 }
 
 func TestDiffArray_ByName_Changed(t *testing.T) {
+	t.Parallel()
 	golden := []any{
 		map[string]any{"Name": "Param1", "Type": "String"},
 		map[string]any{"Name": "Param2", "Type": "Integer"},
@@ -46,6 +49,7 @@ func TestDiffArray_ByName_Changed(t *testing.T) {
 }
 
 func TestDiffArray_ByName_Added(t *testing.T) {
+	t.Parallel()
 	golden := []any{map[string]any{"Name": "P1", "Type": "String"}}
 	actual := []any{
 		map[string]any{"Name": "P1", "Type": "String"},
@@ -62,6 +66,7 @@ func TestDiffArray_ByName_Added(t *testing.T) {
 }
 
 func TestDiffArray_ByPosition_LengthOnly(t *testing.T) {
+	t.Parallel()
 	golden := []any{"x", "y"}
 	actual := []any{"x", "y", "z"}
 	var diffs []bsoncompare.FieldDiff

@@ -13,6 +13,7 @@ import (
 )
 
 func TestReload_CSSOnly(t *testing.T) {
+	t.Parallel()
 	var receivedAction string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var body map[string]any
@@ -47,6 +48,7 @@ func TestReload_CSSOnly(t *testing.T) {
 }
 
 func TestReload_ModelOnly(t *testing.T) {
+	t.Parallel()
 	var actions []string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var body map[string]any
@@ -87,6 +89,7 @@ func TestReload_ModelOnly(t *testing.T) {
 }
 
 func TestReload_ParseDuration(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		feedback map[string]any
@@ -142,6 +145,7 @@ func TestReload_ParseDuration(t *testing.T) {
 }
 
 func TestReload_ModelOnly_WithDuration(t *testing.T) {
+	t.Parallel()
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var body map[string]any
 		json.NewDecoder(r.Body).Decode(&body)
@@ -175,6 +179,7 @@ func TestReload_ModelOnly_WithDuration(t *testing.T) {
 }
 
 func TestReload_CSSOnly_Error(t *testing.T) {
+	t.Parallel()
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.Write([]byte(`{"result":1,"cause":"runtime not running"}`))
@@ -200,6 +205,7 @@ func TestReload_CSSOnly_Error(t *testing.T) {
 }
 
 func TestReload_ModelOnly_PendingDDL(t *testing.T) {
+	t.Parallel()
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var body map[string]any
 		json.NewDecoder(r.Body).Decode(&body)
@@ -240,6 +246,7 @@ func TestReload_ModelOnly_PendingDDL(t *testing.T) {
 }
 
 func TestReload_ModelOnly_ReloadError(t *testing.T) {
+	t.Parallel()
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.Write([]byte(`{"result":1,"cause":"model contains errors"}`))
@@ -265,6 +272,7 @@ func TestReload_ModelOnly_ReloadError(t *testing.T) {
 }
 
 func TestReload_Frontend_SkipsWhenNoRollupConfig(t *testing.T) {
+	t.Parallel()
 	// When --frontend is set but no rollup.config.mjs exists, Reload should
 	// complete normally without running frontend build.
 	var actions []string

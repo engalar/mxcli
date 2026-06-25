@@ -20,6 +20,7 @@ func newTestZipWriter(f *os.File) *zip.Writer {
 }
 
 func TestPatchStartPermissions_Applied(t *testing.T) {
+	t.Parallel()
 	if runtime.GOOS == "windows" {
 		t.Skip("chmod not supported on Windows")
 	}
@@ -40,6 +41,7 @@ func TestPatchStartPermissions_Applied(t *testing.T) {
 }
 
 func TestPatchStartPermissions_Skipped_AlreadyExecutable(t *testing.T) {
+	t.Parallel()
 	if runtime.GOOS == "windows" {
 		t.Skip("chmod not supported on Windows")
 	}
@@ -55,6 +57,7 @@ func TestPatchStartPermissions_Skipped_AlreadyExecutable(t *testing.T) {
 }
 
 func TestPatchStartPermissions_Skipped_NoFile(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	result := patchStartPermissions(dir)
 	if result.Status != "skipped" {
@@ -63,6 +66,7 @@ func TestPatchStartPermissions_Skipped_NoFile(t *testing.T) {
 }
 
 func TestPatchDockerfileCMD_Applied(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	dockerfile := `FROM openjdk:21
 WORKDIR /mendix
@@ -85,6 +89,7 @@ CMD ["./bin/start.sh", "etc/Default"]
 }
 
 func TestPatchDockerfileCMD_Skipped_AlreadyFixed(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	dockerfile := `FROM openjdk:21
 CMD ["./bin/start", "etc/Default"]
@@ -98,6 +103,7 @@ CMD ["./bin/start", "etc/Default"]
 }
 
 func TestPatchDockerfileCMD_Idempotent(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	dockerfile := `FROM openjdk:21
 CMD ["./bin/start.sh", "etc/Default"]
@@ -112,6 +118,7 @@ CMD ["./bin/start.sh", "etc/Default"]
 }
 
 func TestPatchBaseImage_Applied_Openjdk21(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	dockerfile := `FROM openjdk:21
 WORKDIR /mendix
@@ -133,6 +140,7 @@ WORKDIR /mendix
 }
 
 func TestPatchBaseImage_Applied_Openjdk21Jdk(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	dockerfile := `FROM openjdk:21-jdk
 WORKDIR /mendix
@@ -151,6 +159,7 @@ WORKDIR /mendix
 }
 
 func TestPatchBaseImage_Applied_Openjdk21Slim(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	dockerfile := `FROM openjdk:21-slim
 WORKDIR /mendix
@@ -169,6 +178,7 @@ WORKDIR /mendix
 }
 
 func TestPatchBaseImage_Skipped_AlreadyPatched(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	dockerfile := `FROM eclipse-temurin:21-jre
 WORKDIR /mendix
@@ -182,6 +192,7 @@ WORKDIR /mendix
 }
 
 func TestPatchBaseImage_Idempotent(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	dockerfile := `FROM openjdk:21
 WORKDIR /mendix
@@ -196,6 +207,7 @@ WORKDIR /mendix
 }
 
 func TestPatchHealthcheck_Applied(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	dockerfile := `FROM openjdk:21
 WORKDIR /mendix
@@ -223,6 +235,7 @@ CMD ["./bin/start", "etc/Default"]
 }
 
 func TestPatchHealthcheck_Skipped_AlreadyPresent(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	dockerfile := `FROM openjdk:21
 HEALTHCHECK --interval=15s CMD curl -f http://localhost:8080/ || exit 1
@@ -237,6 +250,7 @@ CMD ["./bin/start", "etc/Default"]
 }
 
 func TestPatchHealthcheck_Idempotent(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	dockerfile := `FROM openjdk:21
 CMD ["./bin/start", "etc/Default"]
@@ -251,6 +265,7 @@ CMD ["./bin/start", "etc/Default"]
 }
 
 func TestPatchAdminAddresses_Applied(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	etcDir := filepath.Join(dir, "etc")
 	os.MkdirAll(etcDir, 0755)
@@ -272,6 +287,7 @@ func TestPatchAdminAddresses_Applied(t *testing.T) {
 }
 
 func TestPatchAdminAddresses_Skipped_AlreadyPatched(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	etcDir := filepath.Join(dir, "etc")
 	os.MkdirAll(etcDir, 0755)
@@ -284,6 +300,7 @@ func TestPatchAdminAddresses_Skipped_AlreadyPatched(t *testing.T) {
 }
 
 func TestPatchAdminAddresses_Skipped_NoConfigFile(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	result := patchAdminAddresses(dir)
 	if result.Status != "skipped" {
@@ -292,6 +309,7 @@ func TestPatchAdminAddresses_Skipped_NoConfigFile(t *testing.T) {
 }
 
 func TestApplyPatches_116x_Gets6Patches(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 
 	// Create bin/start without execute permission
@@ -335,6 +353,7 @@ CMD ["./bin/start.sh", "etc/Default"]
 }
 
 func TestApplyPatches_12x_Gets5Patches(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 
 	// Create bin/start without execute permission
@@ -368,6 +387,7 @@ CMD ["./bin/start", "etc/Default"]
 }
 
 func TestFindPADDir_InRoot(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	os.WriteFile(filepath.Join(dir, "Dockerfile"), []byte("FROM test"), 0644)
 
@@ -381,6 +401,7 @@ func TestFindPADDir_InRoot(t *testing.T) {
 }
 
 func TestFindPADDir_InSubdir(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	subdir := filepath.Join(dir, "MyApp-portable")
 	os.MkdirAll(subdir, 0755)
@@ -396,6 +417,7 @@ func TestFindPADDir_InSubdir(t *testing.T) {
 }
 
 func TestFindPADDir_NotFound(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 
 	_, err := findPADDir(dir)
@@ -405,6 +427,7 @@ func TestFindPADDir_NotFound(t *testing.T) {
 }
 
 func TestFindPADDir_DockerCompose_InRoot(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	composeDir := filepath.Join(dir, "docker_compose")
 	os.MkdirAll(composeDir, 0755)
@@ -420,6 +443,7 @@ func TestFindPADDir_DockerCompose_InRoot(t *testing.T) {
 }
 
 func TestFindPADDir_DockerCompose_InSubdir(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	subdir := filepath.Join(dir, "MyApp-portable")
 	composeDir := filepath.Join(subdir, "docker_compose")
@@ -436,6 +460,7 @@ func TestFindPADDir_DockerCompose_InSubdir(t *testing.T) {
 }
 
 func TestFindPADDir_ExtractedLayoutInRoot(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	for _, subdir := range []string{
 		filepath.Join(dir, "app"),
@@ -464,6 +489,7 @@ func TestFindPADDir_ExtractedLayoutInRoot(t *testing.T) {
 }
 
 func TestFindPADDir_PrefersDockerfile(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	// Both Dockerfile and docker_compose exist — Dockerfile wins
 	os.WriteFile(filepath.Join(dir, "Dockerfile"), []byte("FROM test"), 0644)
@@ -481,6 +507,7 @@ func TestFindPADDir_PrefersDockerfile(t *testing.T) {
 }
 
 func TestGenerateDockerfile_CreatesWhenMissing(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 
 	err := generateDockerfile(dir)
@@ -506,6 +533,7 @@ func TestGenerateDockerfile_CreatesWhenMissing(t *testing.T) {
 }
 
 func TestGenerateDockerfile_SkipsWhenExists(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	existing := "FROM custom:image\n"
 	os.WriteFile(filepath.Join(dir, "Dockerfile"), []byte(existing), 0644)
@@ -522,6 +550,7 @@ func TestGenerateDockerfile_SkipsWhenExists(t *testing.T) {
 }
 
 func TestInjectRuntime_SkipsWhenPresent(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	// Create a fake runtime launcher jar
 	launcherDir := filepath.Join(dir, "lib", "runtime", "launcher")
@@ -539,6 +568,7 @@ func TestInjectRuntime_SkipsWhenPresent(t *testing.T) {
 }
 
 func TestExtractPADZip_ExtractsZip(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 
 	// Create a test ZIP with a docker_compose/Default.yaml inside a subdirectory
@@ -564,6 +594,7 @@ func TestExtractPADZip_ExtractsZip(t *testing.T) {
 }
 
 func TestExtractPADZip_ExtractsEvenWhenPADExists(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 
 	// Create already-extracted PAD content from a previous build
@@ -600,6 +631,7 @@ func TestExtractPADZip_ExtractsEvenWhenPADExists(t *testing.T) {
 }
 
 func TestExtractPADZip_NoOpWhenNoZip(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	var buf strings.Builder
 	err := extractPADZip(dir, &buf)
@@ -609,6 +641,7 @@ func TestExtractPADZip_NoOpWhenNoZip(t *testing.T) {
 }
 
 func TestPatchDockerfileCMDConfigArg_Applied(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	dockerfile := `FROM eclipse-temurin:21-jre
 WORKDIR /mendix
@@ -632,6 +665,7 @@ CMD ["./bin/start", "etc/Default"]
 }
 
 func TestPatchDockerfileCMDConfigArg_Skipped_NoConfigArg(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	dockerfile := `FROM eclipse-temurin:21-jre
 CMD ["./bin/start"]
@@ -645,6 +679,7 @@ CMD ["./bin/start"]
 }
 
 func TestPatchDockerfileCMDConfigArg_Idempotent(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	dockerfile := `FROM eclipse-temurin:21-jre
 CMD ["./bin/start", "etc/Default"]
@@ -684,6 +719,7 @@ func createTestZip(t *testing.T, zipPath string, files map[string]string) {
 }
 
 func TestFlattenPADDir_MovesContents(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	subdir := filepath.Join(dir, "MyApp-portable")
 	os.MkdirAll(filepath.Join(subdir, "bin"), 0755)
@@ -715,6 +751,7 @@ func TestFlattenPADDir_MovesContents(t *testing.T) {
 }
 
 func TestFlattenPADDir_OverwritesOldContents(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 
 	// Old build contents at top level
@@ -738,6 +775,7 @@ func TestFlattenPADDir_OverwritesOldContents(t *testing.T) {
 }
 
 func TestDescribePatches_116x(t *testing.T) {
+	t.Parallel()
 	pv := &types.ProjectVersion{MajorVersion: 11, MinorVersion: 6, PatchVersion: 1}
 	patches := DescribePatches(pv)
 	if len(patches) != 6 {
@@ -746,6 +784,7 @@ func TestDescribePatches_116x(t *testing.T) {
 }
 
 func TestDescribePatches_12x(t *testing.T) {
+	t.Parallel()
 	pv := &types.ProjectVersion{MajorVersion: 12, MinorVersion: 0, PatchVersion: 0}
 	patches := DescribePatches(pv)
 	if len(patches) != 5 {
@@ -754,6 +793,7 @@ func TestDescribePatches_12x(t *testing.T) {
 }
 
 func TestBuild_FrontendStep_SkippedWhenNoRollupConfig(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	// No web/rollup.config.mjs created
 	if RollupConfigExists(dir) {
@@ -762,6 +802,7 @@ func TestBuild_FrontendStep_SkippedWhenNoRollupConfig(t *testing.T) {
 }
 
 func TestBuild_FrontendStep_DetectedWhenRollupConfigPresent(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	webDir := filepath.Join(dir, "web")
 	os.MkdirAll(webDir, 0755)
@@ -773,6 +814,7 @@ func TestBuild_FrontendStep_DetectedWhenRollupConfigPresent(t *testing.T) {
 }
 
 func TestWriteDeployConfigJSON_CreatesFile(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	modelDir := filepath.Join(dir, "model")
 	os.MkdirAll(modelDir, 0755)
@@ -799,6 +841,7 @@ func TestWriteDeployConfigJSON_CreatesFile(t *testing.T) {
 }
 
 func TestWriteDeployConfigJSON_SkipsIfExists(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	modelDir := filepath.Join(dir, "model")
 	os.MkdirAll(modelDir, 0755)

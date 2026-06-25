@@ -23,6 +23,7 @@ import (
 )
 
 func TestSerializeWorkflowActivityGen_NilInput(t *testing.T) {
+	t.Parallel()
 	b := &MprBackend{}
 	_, err := b.SerializeWorkflowActivityGen(nil)
 	if err == nil {
@@ -31,6 +32,7 @@ func TestSerializeWorkflowActivityGen_NilInput(t *testing.T) {
 }
 
 func TestSerializeWorkflowActivityGen_JumpToShape(t *testing.T) {
+	t.Parallel()
 	b := &MprBackend{}
 	jt := genWf.NewJumpToActivity()
 	jt.SetID(element.ID(mmpr.GenerateID()))
@@ -70,6 +72,7 @@ func TestSerializeWorkflowActivityGen_JumpToShape(t *testing.T) {
 }
 
 func TestSerializeWorkflowActivityGen_CallMicroflowShape(t *testing.T) {
+	t.Parallel()
 	b := &MprBackend{}
 	cm := genWf.NewCallMicroflowActivity()
 	cm.SetID(element.ID(mmpr.GenerateID()))
@@ -98,6 +101,7 @@ func TestSerializeWorkflowActivityGen_CallMicroflowShape(t *testing.T) {
 }
 
 func TestSerializeWorkflowActivityGen_RoundTripIsStable(t *testing.T) {
+	t.Parallel()
 	// Encoding a fresh gen activity twice (same ID) must yield byte-
 	// identical output — the codec is deterministic, the BSON shape
 	// is stable. We use mmpr.GenerateID() so the ID encodes to the same

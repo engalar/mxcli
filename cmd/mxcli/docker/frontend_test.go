@@ -12,6 +12,7 @@ import (
 )
 
 func TestRollupConfigExists_Present(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	webDir := filepath.Join(dir, "web")
 	os.MkdirAll(webDir, 0755)
@@ -23,6 +24,7 @@ func TestRollupConfigExists_Present(t *testing.T) {
 }
 
 func TestRollupConfigExists_Absent(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	if RollupConfigExists(dir) {
 		t.Error("expected RollupConfigExists to return false when rollup.config.mjs absent")
@@ -30,6 +32,7 @@ func TestRollupConfigExists_Absent(t *testing.T) {
 }
 
 func TestResolveNodeExeForPlatform(t *testing.T) {
+	t.Parallel()
 	base := "/mxbuild/modeler"
 	tests := []struct {
 		goos   string
@@ -55,6 +58,7 @@ func TestResolveNodeExeForPlatform(t *testing.T) {
 }
 
 func TestResolveNodeExeForPlatform_Unknown(t *testing.T) {
+	t.Parallel()
 	got := resolveNodeExeForPlatform("/base", "plan9", "arm")
 	if got != "" {
 		t.Errorf("expected empty string for unknown platform, got %q", got)
@@ -62,6 +66,7 @@ func TestResolveNodeExeForPlatform_Unknown(t *testing.T) {
 }
 
 func TestBuildFrontend_NodeExeNotFound(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	webDir := filepath.Join(dir, "web")
 	os.MkdirAll(webDir, 0755)
@@ -82,6 +87,7 @@ func TestBuildFrontend_NodeExeNotFound(t *testing.T) {
 }
 
 func TestBuildFrontend_Success(t *testing.T) {
+	t.Parallel()
 	if runtime.GOOS == "windows" {
 		t.Skip("shell-script fake node not supported on Windows in unit tests")
 	}

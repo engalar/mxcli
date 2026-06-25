@@ -120,6 +120,7 @@ func ruleField(t *testing.T, rule bson.D, key string) interface{} {
 // key, AllowCreate/AllowDelete bools, DefaultMemberAccessRights, XPathConstraint,
 // MemberAccesses array) so the gen-native rewrite cannot silently regress.
 func TestAddEntityAccessRuleViaModelsdk_GenNative(t *testing.T) {
+	t.Parallel()
 	b, dmID := seedEntityForAccessTest(t)
 
 	memberAccesses := []types.EntityMemberAccess{
@@ -213,6 +214,7 @@ func allIDsAreBinary(doc bson.D, prefix string) []string {
 // BSON Binary — not as an empty string that causes InvalidCastException in
 // Studio Pro / mx check.
 func TestAddEntityAccessRuleViaModelsdk_BinaryID(t *testing.T) {
+	t.Parallel()
 	b, dmID := seedEntityForAccessTest(t)
 
 	if err := b.addEntityAccessRuleViaModelsdk(
@@ -245,6 +247,7 @@ func TestAddEntityAccessRuleViaModelsdk_BinaryID(t *testing.T) {
 // removal semantics: only rules whose AllowedModuleRoles equal the input
 // (order-independent) are removed.
 func TestRemoveEntityAccessRuleViaModelsdk_GenNative(t *testing.T) {
+	t.Parallel()
 	b, dmID := seedEntityForAccessTest(t)
 
 	if err := b.addEntityAccessRuleViaModelsdk(
@@ -289,6 +292,7 @@ func TestRemoveEntityAccessRuleViaModelsdk_GenNative(t *testing.T) {
 // rule's AllowedModuleRoles list, and the count returned matches the number of
 // rules touched.
 func TestRemoveRoleFromAllEntitiesViaModelsdk_GenNative(t *testing.T) {
+	t.Parallel()
 	b, dmID := seedEntityForAccessTest(t)
 
 	if err := b.addEntityAccessRuleViaModelsdk(
@@ -332,6 +336,7 @@ func TestRemoveRoleFromAllEntitiesViaModelsdk_GenNative(t *testing.T) {
 // revoke semantics: matching rules have their flags downgraded according to
 // the EntityAccessRevocation struct.
 func TestRevokeEntityMemberAccessViaModelsdk_GenNative(t *testing.T) {
+	t.Parallel()
 	b, dmID := seedEntityForAccessTest(t)
 
 	if err := b.addEntityAccessRuleViaModelsdk(

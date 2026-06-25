@@ -58,6 +58,7 @@ func runSEM03(t *testing.T, mprPath string) []typecheck.Result {
 }
 
 func TestSEM03_Macnica_HasDetections(t *testing.T) {
+	t.Parallel()
 	mprPath := testutil.FindMPR(t, "CORPUS_A_MPR", "testdata/corpus-a/app.mpr")
 	results := runSEM03(t, mprPath)
 	sem03 := 0
@@ -73,6 +74,7 @@ func TestSEM03_Macnica_HasDetections(t *testing.T) {
 }
 
 func TestSEM03_CorpusB_NoFalsePositives(t *testing.T) {
+	t.Parallel()
 	mprPath := testutil.FindMPR(t, "CORPUS_B_MPR", "testdata/corpus-b/app.mpr")
 	results := runSEM03(t, mprPath)
 	for _, r := range results {

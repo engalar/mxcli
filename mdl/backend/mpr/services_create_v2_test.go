@@ -18,6 +18,7 @@ import (
 // unit, call TryGetIcon on an IBusinessEventService with a nil Definition,
 // and crash with "System.InvalidOperationException: unsupported document type".
 func TestCreateBusinessEventServiceGen_WritesDefinition(t *testing.T) {
+	t.Parallel()
 	const containerID = "00000001-0000-0000-0000-000000000001"
 	const svcID = "00000002-0000-0000-0000-000000000002"
 
@@ -98,6 +99,7 @@ func TestCreateBusinessEventServiceGen_WritesDefinition(t *testing.T) {
 // NOT a DataTypes$*Type.  Mendix refuses to load the MPR if the wrong type
 // family is used ("cannot be converted to type AttributeTypeBase").
 func TestCreateBusinessEventServiceGen_AttributeTypeUsesDomainModels(t *testing.T) {
+	t.Parallel()
 	const containerID = "00000005-0000-0000-0000-000000000005"
 	const svcID = "00000006-0000-0000-0000-000000000006"
 
@@ -241,6 +243,7 @@ func TestCreateBusinessEventServiceGen_AttributeTypeUsesDomainModels(t *testing.
 // ServiceOperation.Entity is persisted as a qualified-name reference so that
 // Studio Pro can display the linked entity in the service editor.
 func TestCreateBusinessEventServiceGen_OperationEntityIsWritten(t *testing.T) {
+	t.Parallel()
 	const containerID = "00000003-0000-0000-0000-000000000003"
 	const svcID = "00000004-0000-0000-0000-000000000004"
 

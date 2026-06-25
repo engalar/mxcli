@@ -62,6 +62,7 @@ func parseConn(t *testing.T, conn string) (x, y int) {
 // TestUpdateAssociationConnections_SingleAssoc verifies direction is correct
 // for a simple left→right pair.
 func TestUpdateAssociationConnections_SingleAssoc(t *testing.T) {
+	t.Parallel()
 	eA := makeTestEntity(t, "A", "id-a")
 	eB := makeTestEntity(t, "B", "id-b")
 	assoc := makeTestAssoc(t, "A_B", "id-a", "id-b")
@@ -86,6 +87,7 @@ func TestUpdateAssociationConnections_SingleAssoc(t *testing.T) {
 // TestUpdateAssociationConnections_MultipleAssocsSameSide verifies that
 // when multiple associations exit from the same side, Y coordinates are distinct.
 func TestUpdateAssociationConnections_MultipleAssocsSameSide(t *testing.T) {
+	t.Parallel()
 	eA := makeTestEntity(t, "A", "id-a")
 	eB := makeTestEntity(t, "B", "id-b")
 	eC := makeTestEntity(t, "C", "id-c")
@@ -145,6 +147,7 @@ func TestUpdateAssociationConnections_MultipleAssocsSameSide(t *testing.T) {
 // The assocs are created in reverse order (D first) so non-sorted output
 // would assign the smallest Y to A_D and the largest to A_B — crossing every line.
 func TestUpdateAssociationConnections_NoCrossings(t *testing.T) {
+	t.Parallel()
 	eA := makeTestEntity(t, "A", "id-a")
 	eB := makeTestEntity(t, "B", "id-b")
 	eC := makeTestEntity(t, "C", "id-c")
@@ -195,6 +198,7 @@ func TestUpdateAssociationConnections_NoCrossings(t *testing.T) {
 // multiple associations enter the SAME entity's left side from sources at
 // different Y positions, the entry Y values are ordered to avoid crossings.
 func TestUpdateAssociationConnections_NoCrossings_EntryOrdering(t *testing.T) {
+	t.Parallel()
 	// B, C, D (left column) all connect to Hub (right column).
 	// Assocs created in reverse Y order to expose ordering bugs.
 	eHub := makeTestEntity(t, "Hub", "id-hub")
@@ -234,6 +238,7 @@ func TestUpdateAssociationConnections_NoCrossings_EntryOrdering(t *testing.T) {
 // TestUpdateAssociationConnections_SpreadRange verifies that for N associations
 // sharing a side, Y values are strictly spread (no duplicates, no corners).
 func TestUpdateAssociationConnections_SpreadRange(t *testing.T) {
+	t.Parallel()
 	names := []string{"B", "C", "D", "E"}
 	eA := makeTestEntity(t, "A", "id-a")
 	entities := []*genDm.Entity{eA}

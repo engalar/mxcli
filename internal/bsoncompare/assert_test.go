@@ -33,6 +33,7 @@ func TestAssertEqual_SelfComparePasses(t *testing.T) {
 }
 
 func TestExpectAdded_Matches(t *testing.T) {
+	t.Parallel()
 	diffs := []bsoncompare.UnitDiff{
 		{QualifiedName: "MyFirstModule.ACT_New", Kind: bsoncompare.DiffAdded},
 	}
@@ -44,6 +45,7 @@ func TestExpectAdded_Matches(t *testing.T) {
 }
 
 func TestExpectAdded_NotFound(t *testing.T) {
+	t.Parallel()
 	diffs := []bsoncompare.UnitDiff{}
 	claimed := map[string]bool{}
 	matcher := bsoncompare.ExpectAdded("MyFirstModule.ACT_New")
@@ -53,6 +55,7 @@ func TestExpectAdded_NotFound(t *testing.T) {
 }
 
 func TestExpectRemoved_Matches(t *testing.T) {
+	t.Parallel()
 	diffs := []bsoncompare.UnitDiff{
 		{QualifiedName: "MyFirstModule.ACT_Old", Kind: bsoncompare.DiffRemoved},
 	}
@@ -63,6 +66,7 @@ func TestExpectRemoved_Matches(t *testing.T) {
 }
 
 func TestExpectRemoved_NotFound(t *testing.T) {
+	t.Parallel()
 	diffs := []bsoncompare.UnitDiff{}
 	claimed := map[string]bool{}
 	if err := bsoncompare.ExpectRemoved("MyFirstModule.ACT_Old").Match(diffs, claimed); err == nil {
@@ -71,6 +75,7 @@ func TestExpectRemoved_NotFound(t *testing.T) {
 }
 
 func TestExpectChanged_Matches(t *testing.T) {
+	t.Parallel()
 	diffs := []bsoncompare.UnitDiff{
 		{QualifiedName: "MyFirstModule.SomeUnit", Kind: bsoncompare.DiffChanged},
 	}
@@ -81,6 +86,7 @@ func TestExpectChanged_Matches(t *testing.T) {
 }
 
 func TestExpectChanged_NotFound(t *testing.T) {
+	t.Parallel()
 	diffs := []bsoncompare.UnitDiff{}
 	claimed := map[string]bool{}
 	if err := bsoncompare.ExpectChanged("MyFirstModule.SomeUnit").Match(diffs, claimed); err == nil {
@@ -89,6 +95,7 @@ func TestExpectChanged_NotFound(t *testing.T) {
 }
 
 func TestExpectNoOtherChanges_ExtraUnit(t *testing.T) {
+	t.Parallel()
 	diffs := []bsoncompare.UnitDiff{
 		{QualifiedName: "MyFirstModule.ACT_New", Kind: bsoncompare.DiffAdded},
 		{QualifiedName: "MyFirstModule.ACT_Unexpected", Kind: bsoncompare.DiffChanged},

@@ -11,6 +11,7 @@ import (
 )
 
 func TestSingleConnection_SharedDB(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	mprPath := filepath.Join(dir, "test.mpr")
 

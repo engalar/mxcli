@@ -20,6 +20,7 @@ import (
 // in the same page BSON document. The correct deduplication approach requires a
 // page-level type registry — a separate architectural change to the column-filter format.
 func TestFilterWidgets_EachInstanceHasUniqueTypeID(t *testing.T) {
+	t.Parallel()
 	b := &MprBackend{}
 
 	w1 := b.buildFilterWidgetBSON(backend.FilterWidgetSpec{
@@ -47,6 +48,7 @@ func TestFilterWidgets_EachInstanceHasUniqueTypeID(t *testing.T) {
 // TestFilterWidgets_DifferentTypesHaveDifferentTypeSchemas verifies that filter widgets
 // of different widgetIDs each retain their own CustomWidgetType schema.
 func TestFilterWidgets_DifferentTypesHaveDifferentTypeSchemas(t *testing.T) {
+	t.Parallel()
 	b := &MprBackend{}
 
 	wText := b.buildFilterWidgetBSON(backend.FilterWidgetSpec{
@@ -70,6 +72,7 @@ func TestFilterWidgets_DifferentTypesHaveDifferentTypeSchemas(t *testing.T) {
 // TestFilterWidgets_BeginEndPageBuildIsNoOp verifies that BeginPageBuild/EndPageBuild
 // exist and do not break widget construction (reserved for future type-registry work).
 func TestFilterWidgets_BeginEndPageBuildIsNoOp(t *testing.T) {
+	t.Parallel()
 	b := &MprBackend{}
 	b.BeginPageBuild()
 	defer b.EndPageBuild()
@@ -84,6 +87,7 @@ func TestFilterWidgets_BeginEndPageBuildIsNoOp(t *testing.T) {
 }
 
 func TestDeepCloneWithNewIDs_RegeneratesAllIDs(t *testing.T) {
+	t.Parallel()
 	origID1 := bsonutil.NewIDBsonBinary()
 	origID2 := bsonutil.NewIDBsonBinary()
 	origID3 := bsonutil.NewIDBsonBinary()
@@ -144,6 +148,7 @@ func TestDeepCloneWithNewIDs_RegeneratesAllIDs(t *testing.T) {
 }
 
 func TestDeepCloneWithNewIDs_HandlesArrays(t *testing.T) {
+	t.Parallel()
 	origID := bsonutil.NewIDBsonBinary()
 	innerID := bsonutil.NewIDBsonBinary()
 
@@ -175,6 +180,7 @@ func TestDeepCloneWithNewIDs_HandlesArrays(t *testing.T) {
 }
 
 func TestDeepCloneWithNewIDs_PreservesNil(t *testing.T) {
+	t.Parallel()
 	origID := bsonutil.NewIDBsonBinary()
 
 	doc := bson.D{

@@ -14,12 +14,14 @@ import (
 // ── compatible() tests ────────────────────────────────────────────────────────
 
 func TestCompatible_SameKind(t *testing.T) {
+	t.Parallel()
 	if !typecheck.Compatible(exprcheck.KindString, exprcheck.KindString) {
 		t.Error("same kind should be compatible")
 	}
 }
 
 func TestCompatible_UnknownSkips(t *testing.T) {
+	t.Parallel()
 	if !typecheck.Compatible(exprcheck.KindUnknown, exprcheck.KindString) {
 		t.Error("KindUnknown actual should skip (return true)")
 	}
@@ -29,6 +31,7 @@ func TestCompatible_UnknownSkips(t *testing.T) {
 }
 
 func TestCompatible_NumericCompat(t *testing.T) {
+	t.Parallel()
 	// All numeric types are mutually compatible — Mendix runtime handles conversions.
 	if !typecheck.Compatible(exprcheck.KindInteger, exprcheck.KindLong) {
 		t.Error("Integer should be compatible with Long")
@@ -42,6 +45,7 @@ func TestCompatible_NumericCompat(t *testing.T) {
 }
 
 func TestCompatible_EmptyIsNull(t *testing.T) {
+	t.Parallel()
 	// KindEmpty is Mendix null — compatible with any slot type.
 	if !typecheck.Compatible(exprcheck.KindEmpty, exprcheck.KindObject) {
 		t.Error("Empty should be compatible with Object slot")
@@ -55,6 +59,7 @@ func TestCompatible_EmptyIsNull(t *testing.T) {
 }
 
 func TestCompatible_StringVsInteger(t *testing.T) {
+	t.Parallel()
 	if typecheck.Compatible(exprcheck.KindString, exprcheck.KindInteger) {
 		t.Error("String should NOT be compatible with Integer slot")
 	}
@@ -63,6 +68,7 @@ func TestCompatible_StringVsInteger(t *testing.T) {
 // ── FuncReg tests ─────────────────────────────────────────────────────────────
 
 func TestFuncReg_DateTimeExtractionFunctions(t *testing.T) {
+	t.Parallel()
 	reg := typecheck.NewFuncReg()
 	fns := []string{"year", "month", "dayOfYear", "dayOfMonth",
 		"weekOfYear", "dayOfWeek", "hour", "minute", "second", "millisecond"}
@@ -79,6 +85,7 @@ func TestFuncReg_DateTimeExtractionFunctions(t *testing.T) {
 }
 
 func TestFuncReg_KnownStringFunctions(t *testing.T) {
+	t.Parallel()
 	reg := typecheck.NewFuncReg()
 	cases := map[string]exprcheck.TypeKind{
 		"toString":    exprcheck.KindString,
@@ -101,6 +108,7 @@ func TestFuncReg_KnownStringFunctions(t *testing.T) {
 }
 
 func TestFuncReg_Unknown(t *testing.T) {
+	t.Parallel()
 	reg := typecheck.NewFuncReg()
 	_, ok := reg.ReturnType("notAFunction")
 	if ok {
@@ -156,6 +164,7 @@ func (m *mockIdx) MicroflowReturnKind(_ string) (exprcheck.TypeKind, bool) {
 }
 
 func TestSlotResolver_StaticSlots(t *testing.T) {
+	t.Parallel()
 	idx := &mockIdx{}
 	cat := &mockCat{}
 	resolver := typecheck.NewSlotResolver(idx)
@@ -185,6 +194,7 @@ func TestSlotResolver_StaticSlots(t *testing.T) {
 }
 
 func TestSlotResolver_AttrTarget(t *testing.T) {
+	t.Parallel()
 	idx := &mockIdx{}
 	cat := &mockCat{
 		attrs: map[string]exprcheck.TypeKind{
@@ -208,6 +218,7 @@ func TestSlotResolver_AttrTarget(t *testing.T) {
 }
 
 func TestSlotResolver_CallArgTarget(t *testing.T) {
+	t.Parallel()
 	idx := &mockIdx{
 		paramKinds: map[string]map[string]exprcheck.TypeKind{
 			"SUB_AdvanceStepStatus": {
@@ -234,6 +245,7 @@ func TestSlotResolver_CallArgTarget(t *testing.T) {
 }
 
 func TestSlotResolver_UnknownSlot(t *testing.T) {
+	t.Parallel()
 	idx := &mockIdx{}
 	cat := &mockCat{}
 	resolver := typecheck.NewSlotResolver(idx)
@@ -257,6 +269,7 @@ func (m *mockScope) TypeOf(name string) exprcheck.TypeKind {
 }
 
 func TestInferrer_Literals(t *testing.T) {
+	t.Parallel()
 	inf := typecheck.NewInferrer()
 	scope := &mockScope{}
 	cat := &mockCat{}
@@ -285,6 +298,7 @@ func TestInferrer_Literals(t *testing.T) {
 }
 
 func TestInferrer_VariableExpr(t *testing.T) {
+	t.Parallel()
 	inf := typecheck.NewInferrer()
 	scope := &mockScope{kinds: map[string]exprcheck.TypeKind{"MyVar": exprcheck.KindString}}
 	cat := &mockCat{}
@@ -299,6 +313,7 @@ func TestInferrer_VariableExpr(t *testing.T) {
 }
 
 func TestInferrer_FunctionCall(t *testing.T) {
+	t.Parallel()
 	inf := typecheck.NewInferrer()
 	scope := &mockScope{}
 	cat := &mockCat{}
@@ -324,6 +339,7 @@ func TestInferrer_FunctionCall(t *testing.T) {
 }
 
 func TestInferrer_AttrPath_SingleHop(t *testing.T) {
+	t.Parallel()
 	inf := typecheck.NewInferrer()
 	scope := &mockScope{}
 	cat := &mockCat{
@@ -341,6 +357,7 @@ func TestInferrer_AttrPath_SingleHop(t *testing.T) {
 }
 
 func TestInferrer_BooleanComparison(t *testing.T) {
+	t.Parallel()
 	inf := typecheck.NewInferrer()
 	scope := &mockScope{}
 	cat := &mockCat{}
@@ -355,6 +372,7 @@ func TestInferrer_BooleanComparison(t *testing.T) {
 }
 
 func TestInferrer_RecoveredExprIsUnknown(t *testing.T) {
+	t.Parallel()
 	inf := typecheck.NewInferrer()
 	scope := &mockScope{}
 	cat := &mockCat{}
@@ -368,6 +386,7 @@ func TestInferrer_RecoveredExprIsUnknown(t *testing.T) {
 }
 
 func TestInferToken_NewTokens(t *testing.T) {
+	t.Parallel()
 	inf := typecheck.NewInferrer()
 	scope := &mockScope{}
 	cat := &mockCat{}

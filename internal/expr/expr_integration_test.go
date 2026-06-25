@@ -37,6 +37,7 @@ func scanProject(t *testing.T, mprPath string, opts scan.Options) []scan.ExprRec
 }
 
 func TestFullPipeline_Macnica(t *testing.T) {
+	t.Parallel()
 	corpusAMPR := testutil.FindMPR(t, "CORPUS_A_MPR", "testdata/corpus-a/app.mpr")
 	// Layer 2: scan
 	recs := scanProject(t, corpusAMPR, scan.Options{})
@@ -90,6 +91,7 @@ func TestFullPipeline_Macnica(t *testing.T) {
 }
 
 func TestFullPipeline_BothProjects(t *testing.T) {
+	t.Parallel()
 	corpusAMPR := testutil.FindMPR(t, "CORPUS_A_MPR", "testdata/corpus-a/app.mpr")
 	corpusBMPR := testutil.FindMPR(t, "CORPUS_B_MPR", "testdata/corpus-b/app.mpr")
 	var allRecs []scan.ExprRecord

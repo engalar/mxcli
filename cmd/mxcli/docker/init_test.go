@@ -11,6 +11,7 @@ import (
 )
 
 func TestInit_CreatesDockerDir(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	mprPath := filepath.Join(dir, "app.mpr")
 	os.WriteFile(mprPath, []byte(""), 0644)
@@ -51,6 +52,7 @@ func TestInit_CreatesDockerDir(t *testing.T) {
 }
 
 func TestInit_CustomOutputDir(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	mprPath := filepath.Join(dir, "app.mpr")
 	os.WriteFile(mprPath, []byte(""), 0644)
@@ -74,6 +76,7 @@ func TestInit_CustomOutputDir(t *testing.T) {
 }
 
 func TestInit_SkipsExistingEnv(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	mprPath := filepath.Join(dir, "app.mpr")
 	os.WriteFile(mprPath, []byte(""), 0644)
@@ -103,6 +106,7 @@ func TestInit_SkipsExistingEnv(t *testing.T) {
 }
 
 func TestInit_ForceOverwritesExistingFiles(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	mprPath := filepath.Join(dir, "app.mpr")
 	os.WriteFile(mprPath, []byte(""), 0644)
@@ -139,6 +143,7 @@ func TestInit_ForceOverwritesExistingFiles(t *testing.T) {
 }
 
 func TestInit_SkipsExistingComposeWithoutForce(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	mprPath := filepath.Join(dir, "app.mpr")
 	os.WriteFile(mprPath, []byte(""), 0644)
@@ -169,6 +174,7 @@ func TestInit_SkipsExistingComposeWithoutForce(t *testing.T) {
 }
 
 func TestInit_PortOffset(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	mprPath := filepath.Join(dir, "app.mpr")
 	os.WriteFile(mprPath, []byte(""), 0644)
@@ -209,6 +215,7 @@ func TestInit_PortOffset(t *testing.T) {
 }
 
 func TestInit_DetectsExistingBuildDir(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	mprPath := filepath.Join(dir, "app.mpr")
 	os.WriteFile(mprPath, []byte(""), 0644)

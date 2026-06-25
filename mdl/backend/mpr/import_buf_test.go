@@ -9,6 +9,7 @@ import (
 )
 
 func TestEnableImportBuffer_GenTypeWriteGoesToBuffer(t *testing.T) {
+	t.Parallel()
 	mprPath := filepath.Join("..", "..", "..", "testdata", "roundtrip", "roundtrip.mpr")
 	be, err := mprbackend.NewFromPath(mprPath)
 	if err != nil {
@@ -41,6 +42,7 @@ func TestEnableImportBuffer_GenTypeWriteGoesToBuffer(t *testing.T) {
 }
 
 func TestDisableImportBuffer_ClearsBufAndOverlay(t *testing.T) {
+	t.Parallel()
 	mprPath := filepath.Join("..", "..", "..", "testdata", "roundtrip", "roundtrip.mpr")
 	be, err := mprbackend.NewFromPath(mprPath)
 	if err != nil {

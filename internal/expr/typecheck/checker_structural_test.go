@@ -45,6 +45,7 @@ func makeStructuralPR(raw string, ast exprcheck.RobustExpr) parse.ParseResult {
 // object variable raises SEM-L02 (id is a reserved Mendix system attribute,
 // not readable in microflow expressions).
 func TestCheckStructural_SEML02_FlagsIdAccess(t *testing.T) {
+	t.Parallel()
 	tc := typecheck.NewChecker(stubIndex{})
 	pr := makeStructuralPR("$WorkHistory/id", &exprcheck.AttributePathExpr{
 		Variable: "WorkHistory",
@@ -74,6 +75,7 @@ func TestCheckStructural_SEML02_FlagsIdAccess(t *testing.T) {
 // TestCheckStructural_SEML02_DeepPath verifies SEM-L02 fires when /id appears
 // anywhere in a multi-segment path (e.g. $Obj/Association/id).
 func TestCheckStructural_SEML02_DeepPath(t *testing.T) {
+	t.Parallel()
 	tc := typecheck.NewChecker(stubIndex{})
 	pr := makeStructuralPR("$Obj/Association/id", &exprcheck.AttributePathExpr{
 		Variable: "Obj",
@@ -91,6 +93,7 @@ func TestCheckStructural_SEML02_DeepPath(t *testing.T) {
 // TestCheckStructural_SEML02_NoFalsePositive verifies that a regular attribute
 // access ($WorkHistory/Content) does NOT trigger SEM-L02.
 func TestCheckStructural_SEML02_NoFalsePositive(t *testing.T) {
+	t.Parallel()
 	tc := typecheck.NewChecker(stubIndex{})
 	pr := makeStructuralPR("$WorkHistory/Content", &exprcheck.AttributePathExpr{
 		Variable: "WorkHistory",
@@ -105,6 +108,7 @@ func TestCheckStructural_SEML02_NoFalsePositive(t *testing.T) {
 
 // TestCheckStructural_SEML02_NilAST verifies that a nil AST does not panic.
 func TestCheckStructural_SEML02_NilAST(t *testing.T) {
+	t.Parallel()
 	tc := typecheck.NewChecker(stubIndex{})
 	pr := makeStructuralPR("", nil)
 	results := tc.CheckStructural(pr)

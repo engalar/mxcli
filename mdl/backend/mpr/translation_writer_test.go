@@ -9,6 +9,7 @@ import (
 )
 
 func TestSetTranslationForLang_UpdateExisting(t *testing.T) {
+	t.Parallel()
 	textDoc := bson.D{
 		{Key: "$Type", Value: "Texts$Text"},
 		{Key: "Items", Value: bson.A{
@@ -31,6 +32,7 @@ func TestSetTranslationForLang_UpdateExisting(t *testing.T) {
 }
 
 func TestSetTranslationForLang_AddNew(t *testing.T) {
+	t.Parallel()
 	textDoc := bson.D{
 		{Key: "$Type", Value: "Texts$Text"},
 		{Key: "Items", Value: bson.A{
@@ -68,6 +70,7 @@ func TestSetTranslationForLang_AddNew(t *testing.T) {
 // translation. Real Texts$Text.Items arrays carry this marker; losing it
 // corrupts the BSON and triggers StorageLoadException in Studio Pro.
 func TestSetTranslationForLang_PreservesVersionMarker(t *testing.T) {
+	t.Parallel()
 	textDoc := bson.D{
 		{Key: "$Type", Value: "Texts$Text"},
 		{Key: "Items", Value: bson.A{
@@ -99,6 +102,7 @@ func TestSetTranslationForLang_PreservesVersionMarker(t *testing.T) {
 }
 
 func TestSetEnumValueTranslation(t *testing.T) {
+	t.Parallel()
 	enumDoc := bson.D{
 		{Key: "$Type", Value: "Enumerations$Enumeration"},
 		{Key: "Name", Value: "Status"},
@@ -153,6 +157,7 @@ func TestSetEnumValueTranslation(t *testing.T) {
 }
 
 func TestSetEnumValueTranslation_NoSuchValue(t *testing.T) {
+	t.Parallel()
 	enumDoc := bson.D{
 		{Key: "$Type", Value: "Enumerations$Enumeration"},
 		{Key: "Values", Value: bson.A{int32(3)}},
@@ -163,6 +168,7 @@ func TestSetEnumValueTranslation_NoSuchValue(t *testing.T) {
 }
 
 func TestSetTranslationForLang_EmptyItems(t *testing.T) {
+	t.Parallel()
 	textDoc := bson.D{
 		{Key: "$Type", Value: "Texts$Text"},
 		{Key: "Items", Value: bson.A{}},

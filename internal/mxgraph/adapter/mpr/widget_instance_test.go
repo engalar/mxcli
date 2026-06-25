@@ -7,6 +7,7 @@ import (
 )
 
 func TestWidgetInstanceAdapter_Name(t *testing.T) {
+	t.Parallel()
 	a := &WidgetInstanceAdapter{}
 	if a.Name() != "widgetinstance" {
 		t.Errorf("Name() = %q, want widgetinstance", a.Name())
@@ -14,6 +15,7 @@ func TestWidgetInstanceAdapter_Name(t *testing.T) {
 }
 
 func TestWidgetInstanceAdapter_Schema(t *testing.T) {
+	t.Parallel()
 	a := &WidgetInstanceAdapter{}
 	s := a.Schema()
 	if s == nil {
@@ -36,6 +38,7 @@ func TestWidgetInstanceAdapter_Schema(t *testing.T) {
 }
 
 func TestIsWidgetType(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		typeName string
 		want     bool
@@ -59,6 +62,7 @@ func TestIsWidgetType(t *testing.T) {
 }
 
 func TestShortTypeName(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		input string
 		want  string

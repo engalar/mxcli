@@ -78,6 +78,7 @@ func newMutator(doc bson.D) *mprWorkflowMutator {
 // --- SetProperty tests ---
 
 func TestWorkflowMutator_SetProperty_Display(t *testing.T) {
+	t.Parallel()
 	doc := makeWorkflowDoc()
 	m := newMutator(doc)
 
@@ -98,6 +99,7 @@ func TestWorkflowMutator_SetProperty_Display(t *testing.T) {
 }
 
 func TestWorkflowMutator_SetProperty_Display_NilSubDoc(t *testing.T) {
+	t.Parallel()
 	doc := bson.D{
 		{Key: "$ID", Value: bson.Binary{Subtype: 0x04, Data: make([]byte, 16)}},
 		{Key: "$Type", Value: "Workflows$Workflow"},
@@ -125,6 +127,7 @@ func TestWorkflowMutator_SetProperty_Display_NilSubDoc(t *testing.T) {
 }
 
 func TestWorkflowMutator_SetProperty_Description(t *testing.T) {
+	t.Parallel()
 	doc := makeWorkflowDoc()
 	m := newMutator(doc)
 
@@ -142,6 +145,7 @@ func TestWorkflowMutator_SetProperty_Description(t *testing.T) {
 }
 
 func TestWorkflowMutator_SetProperty_Description_NilSubDoc(t *testing.T) {
+	t.Parallel()
 	doc := bson.D{
 		{Key: "$ID", Value: bson.Binary{Subtype: 0x04, Data: make([]byte, 16)}},
 		{Key: "$Type", Value: "Workflows$Workflow"},
@@ -166,6 +170,7 @@ func TestWorkflowMutator_SetProperty_Description_NilSubDoc(t *testing.T) {
 }
 
 func TestWorkflowMutator_SetProperty_Unsupported(t *testing.T) {
+	t.Parallel()
 	doc := makeWorkflowDoc()
 	m := newMutator(doc)
 
@@ -179,6 +184,7 @@ func TestWorkflowMutator_SetProperty_Unsupported(t *testing.T) {
 }
 
 func TestWorkflowMutator_SetProperty_ExportLevel(t *testing.T) {
+	t.Parallel()
 	doc := makeWorkflowDoc()
 	doc = append(doc, bson.E{Key: "ExportLevel", Value: "Usable"})
 	m := newMutator(doc)
@@ -194,6 +200,7 @@ func TestWorkflowMutator_SetProperty_ExportLevel(t *testing.T) {
 // --- findActivityByCaption tests ---
 
 func TestWorkflowMutator_FindActivity_Found(t *testing.T) {
+	t.Parallel()
 	act1 := makeWfActivity("Workflows$UserTask", "Review", "task1")
 	act2 := makeWfActivity("Workflows$UserTask", "Approve", "task2")
 	m := newMutator(makeWorkflowDoc(act1, act2))
@@ -208,6 +215,7 @@ func TestWorkflowMutator_FindActivity_Found(t *testing.T) {
 }
 
 func TestWorkflowMutator_FindActivity_ByName(t *testing.T) {
+	t.Parallel()
 	act1 := makeWfActivity("Workflows$UserTask", "Review", "ReviewTask")
 	m := newMutator(makeWorkflowDoc(act1))
 
@@ -221,6 +229,7 @@ func TestWorkflowMutator_FindActivity_ByName(t *testing.T) {
 }
 
 func TestWorkflowMutator_FindActivity_NotFound(t *testing.T) {
+	t.Parallel()
 	act1 := makeWfActivity("Workflows$UserTask", "Review", "task1")
 	m := newMutator(makeWorkflowDoc(act1))
 
@@ -234,6 +243,7 @@ func TestWorkflowMutator_FindActivity_NotFound(t *testing.T) {
 }
 
 func TestWorkflowMutator_FindActivity_Ambiguous(t *testing.T) {
+	t.Parallel()
 	act1 := makeWfActivity("Workflows$UserTask", "Review", "task1")
 	act2 := makeWfActivity("Workflows$UserTask", "Review", "task2")
 	m := newMutator(makeWorkflowDoc(act1, act2))
@@ -248,6 +258,7 @@ func TestWorkflowMutator_FindActivity_Ambiguous(t *testing.T) {
 }
 
 func TestWorkflowMutator_FindActivity_AtPosition(t *testing.T) {
+	t.Parallel()
 	act1 := makeWfActivity("Workflows$UserTask", "Review", "task1")
 	act2 := makeWfActivity("Workflows$UserTask", "Review", "task2")
 	m := newMutator(makeWorkflowDoc(act1, act2))
@@ -262,6 +273,7 @@ func TestWorkflowMutator_FindActivity_AtPosition(t *testing.T) {
 }
 
 func TestWorkflowMutator_FindActivity_AtPosition_OutOfRange(t *testing.T) {
+	t.Parallel()
 	act1 := makeWfActivity("Workflows$UserTask", "Review", "task1")
 	m := newMutator(makeWorkflowDoc(act1))
 
@@ -277,6 +289,7 @@ func TestWorkflowMutator_FindActivity_AtPosition_OutOfRange(t *testing.T) {
 // --- DropActivity tests ---
 
 func TestWorkflowMutator_DropActivity(t *testing.T) {
+	t.Parallel()
 	act1 := makeWfActivity("Workflows$UserTask", "Review", "task1")
 	act2 := makeWfActivity("Workflows$UserTask", "Approve", "task2")
 	act3 := makeWfActivity("Workflows$UserTask", "Finalize", "task3")
@@ -302,6 +315,7 @@ func TestWorkflowMutator_DropActivity(t *testing.T) {
 }
 
 func TestWorkflowMutator_DropActivity_NotFound(t *testing.T) {
+	t.Parallel()
 	act1 := makeWfActivity("Workflows$UserTask", "Review", "task1")
 	m := newMutator(makeWorkflowDoc(act1))
 
@@ -314,6 +328,7 @@ func TestWorkflowMutator_DropActivity_NotFound(t *testing.T) {
 // --- DropBoundaryEvent tests ---
 
 func TestWorkflowMutator_DropBoundaryEvent_Single(t *testing.T) {
+	t.Parallel()
 	evt := makeWfBoundaryEvent("Workflows$InterruptingTimerBoundaryEvent")
 	act := makeWfActivityWithBoundaryEvents("Review", evt)
 	m := newMutator(makeWorkflowDoc(act))
@@ -330,6 +345,7 @@ func TestWorkflowMutator_DropBoundaryEvent_Single(t *testing.T) {
 }
 
 func TestWorkflowMutator_DropBoundaryEvent_Multiple(t *testing.T) {
+	t.Parallel()
 	evt1 := makeWfBoundaryEvent("Workflows$InterruptingTimerBoundaryEvent")
 	evt2 := makeWfBoundaryEvent("Workflows$NonInterruptingTimerBoundaryEvent")
 	act := makeWfActivityWithBoundaryEvents("Review", evt1, evt2)
@@ -351,6 +367,7 @@ func TestWorkflowMutator_DropBoundaryEvent_Multiple(t *testing.T) {
 }
 
 func TestWorkflowMutator_DropBoundaryEvent_NoEvents(t *testing.T) {
+	t.Parallel()
 	act := makeWfActivityWithBoundaryEvents("Review")
 	m := newMutator(makeWorkflowDoc(act))
 
@@ -366,6 +383,7 @@ func TestWorkflowMutator_DropBoundaryEvent_NoEvents(t *testing.T) {
 // --- findActivityIndex tests ---
 
 func TestWorkflowMutator_FindActivityIndex(t *testing.T) {
+	t.Parallel()
 	act1 := makeWfActivity("Workflows$UserTask", "Review", "task1")
 	act2 := makeWfActivity("Workflows$UserTask", "Approve", "task2")
 	m := newMutator(makeWorkflowDoc(act1, act2))
@@ -386,6 +404,7 @@ func TestWorkflowMutator_FindActivityIndex(t *testing.T) {
 }
 
 func TestWorkflowMutator_FindActivityIndex_NoFlow(t *testing.T) {
+	t.Parallel()
 	doc := bson.D{
 		{Key: "$Type", Value: "Workflows$Workflow"},
 	}
@@ -403,6 +422,7 @@ func TestWorkflowMutator_FindActivityIndex_NoFlow(t *testing.T) {
 // --- collectAllActivityNames tests ---
 
 func TestWorkflowMutator_CollectAllActivityNames(t *testing.T) {
+	t.Parallel()
 	act1 := makeWfActivity("Workflows$UserTask", "Review", "ReviewTask")
 	act2 := makeWfActivity("Workflows$UserTask", "Approve", "ApproveTask")
 	m := newMutator(makeWorkflowDoc(act1, act2))
@@ -420,6 +440,7 @@ func TestWorkflowMutator_CollectAllActivityNames(t *testing.T) {
 }
 
 func TestWorkflowMutator_CollectAllActivityNames_NoFlow(t *testing.T) {
+	t.Parallel()
 	doc := bson.D{{Key: "$Type", Value: "Workflows$Workflow"}}
 	m := newMutator(doc)
 
@@ -432,6 +453,7 @@ func TestWorkflowMutator_CollectAllActivityNames_NoFlow(t *testing.T) {
 // --- SetActivityProperty tests ---
 
 func TestWorkflowMutator_SetActivityProperty_DueDate(t *testing.T) {
+	t.Parallel()
 	act := makeWfActivity("Workflows$UserTask", "Review", "task1")
 	act = append(act, bson.E{Key: "DueDate", Value: ""})
 	m := newMutator(makeWorkflowDoc(act))
@@ -447,6 +469,7 @@ func TestWorkflowMutator_SetActivityProperty_DueDate(t *testing.T) {
 }
 
 func TestWorkflowMutator_SetActivityProperty_Unsupported(t *testing.T) {
+	t.Parallel()
 	act := makeWfActivity("Workflows$UserTask", "Review", "task1")
 	m := newMutator(makeWorkflowDoc(act))
 
@@ -462,6 +485,7 @@ func TestWorkflowMutator_SetActivityProperty_Unsupported(t *testing.T) {
 // --- DropOutcome tests ---
 
 func TestWorkflowMutator_DropOutcome_NotFound(t *testing.T) {
+	t.Parallel()
 	act := makeWfActivity("Workflows$UserTask", "Review", "task1")
 	act = append(act, bson.E{Key: "Outcomes", Value: bson.A{int32(3)}})
 	m := newMutator(makeWorkflowDoc(act))
@@ -478,6 +502,7 @@ func TestWorkflowMutator_DropOutcome_NotFound(t *testing.T) {
 // --- bsonArrayMarker constant test ---
 
 func TestWorkflowMutator_BsonArrayMarkerConstant(t *testing.T) {
+	t.Parallel()
 	if bsonArrayMarker != int32(3) {
 		t.Errorf("bsonArrayMarker = %v, want int32(3)", bsonArrayMarker)
 	}
@@ -562,6 +587,7 @@ func getActivities(doc bson.D) []bson.D {
 // ---------------------------------------------------------------------------
 
 func TestWorkflowMutator_InsertAfterActivity(t *testing.T) {
+	t.Parallel()
 	act1 := makeWfActivity("Workflows$UserTask", "First", "task1")
 	act2 := makeWfActivity("Workflows$UserTask", "Last", "task2")
 	m := newMutator(makeWorkflowDoc(act1, act2))
@@ -588,6 +614,7 @@ func TestWorkflowMutator_InsertAfterActivity(t *testing.T) {
 }
 
 func TestWorkflowMutator_InsertAfterActivity_NotFound(t *testing.T) {
+	t.Parallel()
 	m := newMutator(makeWorkflowDoc(makeWfActivity("Workflows$UserTask", "Only", "task1")))
 	err := m.InsertAfterActivityGen("Missing", 0, []element.Element{makeTestWorkflowActivity("new", "New")})
 	if err == nil {
@@ -600,6 +627,7 @@ func TestWorkflowMutator_InsertAfterActivity_NotFound(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestWorkflowMutator_ReplaceActivity(t *testing.T) {
+	t.Parallel()
 	act1 := makeWfActivity("Workflows$UserTask", "First", "task1")
 	act2 := makeWfActivity("Workflows$UserTask", "ToReplace", "task2")
 	act3 := makeWfActivity("Workflows$UserTask", "Last", "task3")
@@ -630,6 +658,7 @@ func TestWorkflowMutator_ReplaceActivity(t *testing.T) {
 }
 
 func TestWorkflowMutator_ReplaceActivity_NotFound(t *testing.T) {
+	t.Parallel()
 	m := newMutator(makeWorkflowDoc(makeWfActivity("Workflows$UserTask", "Only", "task1")))
 	err := m.ReplaceActivityGen("Missing", 0, []element.Element{makeTestWorkflowActivity("new", "New")})
 	if err == nil {
@@ -642,6 +671,7 @@ func TestWorkflowMutator_ReplaceActivity_NotFound(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestWorkflowMutator_InsertOutcome(t *testing.T) {
+	t.Parallel()
 	act := makeWfActivityWithOutcomes("Review", "task1")
 	m := newMutator(makeWorkflowDoc(act))
 
@@ -667,6 +697,7 @@ func TestWorkflowMutator_InsertOutcome(t *testing.T) {
 }
 
 func TestWorkflowMutator_InsertOutcome_WithActivities(t *testing.T) {
+	t.Parallel()
 	act := makeWfActivityWithOutcomes("Review", "task1")
 	m := newMutator(makeWorkflowDoc(act))
 
@@ -688,6 +719,7 @@ func TestWorkflowMutator_InsertOutcome_WithActivities(t *testing.T) {
 }
 
 func TestWorkflowMutator_InsertOutcome_ActivityNotFound(t *testing.T) {
+	t.Parallel()
 	m := newMutator(makeWorkflowDoc(makeWfActivity("Workflows$UserTask", "Only", "task1")))
 	err := m.InsertOutcomeGen("Missing", 0, "x", nil)
 	if err == nil {
@@ -700,6 +732,7 @@ func TestWorkflowMutator_InsertOutcome_ActivityNotFound(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestWorkflowMutator_DropOutcome_ByValue(t *testing.T) {
+	t.Parallel()
 	outcome1 := makeOutcome("Workflows$UserTaskOutcome", "Approve")
 	outcome2 := makeOutcome("Workflows$UserTaskOutcome", "Reject")
 	act := makeWfActivityWithOutcomes("Review", "task1", outcome1, outcome2)
@@ -721,6 +754,7 @@ func TestWorkflowMutator_DropOutcome_ByValue(t *testing.T) {
 }
 
 func TestWorkflowMutator_DropOutcome_Default(t *testing.T) {
+	t.Parallel()
 	voidOutcome := makeVoidConditionOutcome()
 	namedOutcome := makeOutcome("Workflows$UserTaskOutcome", "Approve")
 	act := makeWfActivityWithOutcomes("Review", "task1", voidOutcome, namedOutcome)
@@ -742,6 +776,7 @@ func TestWorkflowMutator_DropOutcome_Default(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestWorkflowMutator_InsertPath(t *testing.T) {
+	t.Parallel()
 	act := makeWfActivityWithOutcomes("Split", "split1")
 	act[1] = bson.E{Key: "$Type", Value: "Workflows$ParallelSplitActivity"}
 	m := newMutator(makeWorkflowDoc(act))
@@ -762,6 +797,7 @@ func TestWorkflowMutator_InsertPath(t *testing.T) {
 }
 
 func TestWorkflowMutator_InsertPath_WithActivities(t *testing.T) {
+	t.Parallel()
 	act := makeWfActivityWithOutcomes("Split", "split1")
 	act[1] = bson.E{Key: "$Type", Value: "Workflows$ParallelSplitActivity"}
 	m := newMutator(makeWorkflowDoc(act))
@@ -785,6 +821,7 @@ func TestWorkflowMutator_InsertPath_WithActivities(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestWorkflowMutator_DropPath_ByCaption(t *testing.T) {
+	t.Parallel()
 	path1 := bson.D{
 		{Key: "$ID", Value: bson.Binary{Subtype: 0x04, Data: make([]byte, 16)}},
 		{Key: "$Type", Value: "Workflows$ParallelSplitOutcome"},
@@ -809,6 +846,7 @@ func TestWorkflowMutator_DropPath_ByCaption(t *testing.T) {
 }
 
 func TestWorkflowMutator_DropPath_EmptyCaption_DropsLast(t *testing.T) {
+	t.Parallel()
 	path1 := bson.D{
 		{Key: "$ID", Value: bson.Binary{Subtype: 0x04, Data: make([]byte, 16)}},
 		{Key: "$Type", Value: "Workflows$ParallelSplitOutcome"},
@@ -838,6 +876,7 @@ func TestWorkflowMutator_DropPath_EmptyCaption_DropsLast(t *testing.T) {
 }
 
 func TestWorkflowMutator_DropPath_NotFound(t *testing.T) {
+	t.Parallel()
 	act := makeWfActivityWithOutcomes("Split", "split1")
 	m := newMutator(makeWorkflowDoc(act))
 
@@ -855,6 +894,7 @@ func TestWorkflowMutator_DropPath_NotFound(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestWorkflowMutator_InsertBranch_True(t *testing.T) {
+	t.Parallel()
 	act := makeWfActivityWithOutcomes("Decision", "dec1")
 	act[1] = bson.E{Key: "$Type", Value: "Workflows$ExclusiveSplitActivity"}
 	m := newMutator(makeWorkflowDoc(act))
@@ -878,6 +918,7 @@ func TestWorkflowMutator_InsertBranch_True(t *testing.T) {
 }
 
 func TestWorkflowMutator_InsertBranch_False(t *testing.T) {
+	t.Parallel()
 	act := makeWfActivityWithOutcomes("Decision", "dec1")
 	m := newMutator(makeWorkflowDoc(act))
 
@@ -894,6 +935,7 @@ func TestWorkflowMutator_InsertBranch_False(t *testing.T) {
 }
 
 func TestWorkflowMutator_InsertBranch_Default(t *testing.T) {
+	t.Parallel()
 	act := makeWfActivityWithOutcomes("Decision", "dec1")
 	m := newMutator(makeWorkflowDoc(act))
 
@@ -910,6 +952,7 @@ func TestWorkflowMutator_InsertBranch_Default(t *testing.T) {
 }
 
 func TestWorkflowMutator_InsertBranch_Enum(t *testing.T) {
+	t.Parallel()
 	act := makeWfActivityWithOutcomes("Decision", "dec1")
 	m := newMutator(makeWorkflowDoc(act))
 
@@ -929,6 +972,7 @@ func TestWorkflowMutator_InsertBranch_Enum(t *testing.T) {
 }
 
 func TestWorkflowMutator_InsertBranch_WithActivities(t *testing.T) {
+	t.Parallel()
 	act := makeWfActivityWithOutcomes("Decision", "dec1")
 	m := newMutator(makeWorkflowDoc(act))
 
@@ -951,6 +995,7 @@ func TestWorkflowMutator_InsertBranch_WithActivities(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestWorkflowMutator_DropBranch_True(t *testing.T) {
+	t.Parallel()
 	trueOutcome := makeBoolOutcome(true)
 	falseOutcome := makeBoolOutcome(false)
 	act := makeWfActivityWithOutcomes("Decision", "dec1", trueOutcome, falseOutcome)
@@ -972,6 +1017,7 @@ func TestWorkflowMutator_DropBranch_True(t *testing.T) {
 }
 
 func TestWorkflowMutator_DropBranch_False(t *testing.T) {
+	t.Parallel()
 	trueOutcome := makeBoolOutcome(true)
 	falseOutcome := makeBoolOutcome(false)
 	act := makeWfActivityWithOutcomes("Decision", "dec1", trueOutcome, falseOutcome)
@@ -989,6 +1035,7 @@ func TestWorkflowMutator_DropBranch_False(t *testing.T) {
 }
 
 func TestWorkflowMutator_DropBranch_Default(t *testing.T) {
+	t.Parallel()
 	voidOutcome := makeVoidConditionOutcome()
 	enumOutcome := makeOutcome("Workflows$EnumerationValueConditionOutcome", "Active")
 	act := makeWfActivityWithOutcomes("Decision", "dec1", voidOutcome, enumOutcome)
@@ -1010,6 +1057,7 @@ func TestWorkflowMutator_DropBranch_Default(t *testing.T) {
 }
 
 func TestWorkflowMutator_DropBranch_Enum(t *testing.T) {
+	t.Parallel()
 	enum1 := makeOutcome("Workflows$EnumerationValueConditionOutcome", "Active")
 	enum2 := makeOutcome("Workflows$EnumerationValueConditionOutcome", "Inactive")
 	act := makeWfActivityWithOutcomes("Decision", "dec1", enum1, enum2)
@@ -1031,6 +1079,7 @@ func TestWorkflowMutator_DropBranch_Enum(t *testing.T) {
 }
 
 func TestWorkflowMutator_DropBranch_NotFound(t *testing.T) {
+	t.Parallel()
 	act := makeWfActivityWithOutcomes("Decision", "dec1")
 	m := newMutator(makeWorkflowDoc(act))
 
@@ -1048,6 +1097,7 @@ func TestWorkflowMutator_DropBranch_NotFound(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestWorkflowMutator_InsertBoundaryEvent_InterruptingTimer(t *testing.T) {
+	t.Parallel()
 	act := makeWfActivity("Workflows$UserTask", "Review", "task1")
 	act = append(act, bson.E{Key: "BoundaryEvents", Value: bson.A{int32(3)}})
 	m := newMutator(makeWorkflowDoc(act))
@@ -1071,6 +1121,7 @@ func TestWorkflowMutator_InsertBoundaryEvent_InterruptingTimer(t *testing.T) {
 }
 
 func TestWorkflowMutator_InsertBoundaryEvent_NonInterruptingTimer(t *testing.T) {
+	t.Parallel()
 	act := makeWfActivity("Workflows$UserTask", "Review", "task1")
 	act = append(act, bson.E{Key: "BoundaryEvents", Value: bson.A{int32(3)}})
 	m := newMutator(makeWorkflowDoc(act))
@@ -1098,6 +1149,7 @@ func TestWorkflowMutator_InsertBoundaryEvent_NonInterruptingTimer(t *testing.T) 
 }
 
 func TestWorkflowMutator_InsertBoundaryEvent_WithActivities(t *testing.T) {
+	t.Parallel()
 	act := makeWfActivity("Workflows$UserTask", "Review", "task1")
 	act = append(act, bson.E{Key: "BoundaryEvents", Value: bson.A{int32(3)}})
 	m := newMutator(makeWorkflowDoc(act))
@@ -1117,6 +1169,7 @@ func TestWorkflowMutator_InsertBoundaryEvent_WithActivities(t *testing.T) {
 }
 
 func TestWorkflowMutator_InsertBoundaryEvent_NoDelay(t *testing.T) {
+	t.Parallel()
 	act := makeWfActivity("Workflows$UserTask", "Review", "task1")
 	act = append(act, bson.E{Key: "BoundaryEvents", Value: bson.A{int32(3)}})
 	m := newMutator(makeWorkflowDoc(act))
@@ -1140,6 +1193,7 @@ func TestWorkflowMutator_InsertBoundaryEvent_NoDelay(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestWorkflowMutator_SetActivityProperty_Page_New(t *testing.T) {
+	t.Parallel()
 	// TaskPage key present with nil value — should be replaced with a new PageReference.
 	act := makeWfActivity("Workflows$UserTask", "Review", "task1")
 	act = append(act, bson.E{Key: "TaskPage", Value: nil})
@@ -1160,6 +1214,7 @@ func TestWorkflowMutator_SetActivityProperty_Page_New(t *testing.T) {
 }
 
 func TestWorkflowMutator_SetActivityProperty_Page_MissingKey(t *testing.T) {
+	t.Parallel()
 	// Regression test: dSet silently failed when TaskPage key was absent.
 	// Fixed by appending the key to the activity and replacing it in the BSON tree.
 	act := makeWfActivity("Workflows$UserTask", "Review", "task1")
@@ -1182,6 +1237,7 @@ func TestWorkflowMutator_SetActivityProperty_Page_MissingKey(t *testing.T) {
 }
 
 func TestWorkflowMutator_SetActivityProperty_Page_MissingKey_NestedSubFlow(t *testing.T) {
+	t.Parallel()
 	// Exercises the recursive replaceActivity path: the target activity lives
 	// inside an outcome's sub-flow, not at the top level.
 	// Use distinct $IDs so replaceActivity cannot accidentally match the parent.
@@ -1238,6 +1294,7 @@ func TestWorkflowMutator_SetActivityProperty_Page_MissingKey_NestedSubFlow(t *te
 }
 
 func TestWorkflowMutator_SetActivityProperty_Page_Existing(t *testing.T) {
+	t.Parallel()
 	act := makeWfActivity("Workflows$UserTask", "Review", "task1")
 	act = append(act, bson.E{Key: "TaskPage", Value: bson.D{
 		{Key: "$ID", Value: bson.Binary{Subtype: 0x04, Data: make([]byte, 16)}},
@@ -1258,6 +1315,7 @@ func TestWorkflowMutator_SetActivityProperty_Page_Existing(t *testing.T) {
 }
 
 func TestWorkflowMutator_SetActivityProperty_Description(t *testing.T) {
+	t.Parallel()
 	act := makeWfActivity("Workflows$UserTask", "Review", "task1")
 	act = append(act, bson.E{Key: "TaskDescription", Value: bson.D{
 		{Key: "$ID", Value: bson.Binary{Subtype: 0x04, Data: make([]byte, 16)}},
@@ -1278,6 +1336,7 @@ func TestWorkflowMutator_SetActivityProperty_Description(t *testing.T) {
 }
 
 func TestWorkflowMutator_SetActivityProperty_TargetingMicroflow(t *testing.T) {
+	t.Parallel()
 	act := makeWfActivity("Workflows$UserTask", "Review", "task1")
 	act = append(act, bson.E{Key: "UserTargeting", Value: nil})
 	m := newMutator(makeWorkflowDoc(act))
@@ -1300,6 +1359,7 @@ func TestWorkflowMutator_SetActivityProperty_TargetingMicroflow(t *testing.T) {
 }
 
 func TestWorkflowMutator_SetActivityProperty_TargetingXPath(t *testing.T) {
+	t.Parallel()
 	act := makeWfActivity("Workflows$UserTask", "Review", "task1")
 	act = append(act, bson.E{Key: "UserTargeting", Value: nil})
 	m := newMutator(makeWorkflowDoc(act))
@@ -1323,6 +1383,7 @@ func TestWorkflowMutator_SetActivityProperty_TargetingXPath(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestWorkflowMutator_SetPropertyWithEntity_OverviewPage(t *testing.T) {
+	t.Parallel()
 	doc := makeWorkflowDoc()
 	doc = append(doc, bson.E{Key: "AdminPage", Value: nil})
 	m := newMutator(doc)
@@ -1341,6 +1402,7 @@ func TestWorkflowMutator_SetPropertyWithEntity_OverviewPage(t *testing.T) {
 }
 
 func TestWorkflowMutator_SetPropertyWithEntity_OverviewPage_Clear(t *testing.T) {
+	t.Parallel()
 	doc := makeWorkflowDoc()
 	doc = append(doc, bson.E{Key: "AdminPage", Value: bson.D{
 		{Key: "Page", Value: "OldPage"},
@@ -1357,6 +1419,7 @@ func TestWorkflowMutator_SetPropertyWithEntity_OverviewPage_Clear(t *testing.T) 
 }
 
 func TestWorkflowMutator_SetPropertyWithEntity_Parameter_New(t *testing.T) {
+	t.Parallel()
 	doc := makeWorkflowDoc()
 	doc = append(doc, bson.E{Key: "Parameter", Value: nil})
 	m := newMutator(doc)
@@ -1375,6 +1438,7 @@ func TestWorkflowMutator_SetPropertyWithEntity_Parameter_New(t *testing.T) {
 }
 
 func TestWorkflowMutator_SetPropertyWithEntity_Parameter_Update(t *testing.T) {
+	t.Parallel()
 	doc := makeWorkflowDoc()
 	doc = append(doc, bson.E{Key: "Parameter", Value: bson.D{
 		{Key: "$ID", Value: bson.Binary{Subtype: 0x04, Data: make([]byte, 16)}},
@@ -1395,6 +1459,7 @@ func TestWorkflowMutator_SetPropertyWithEntity_Parameter_Update(t *testing.T) {
 }
 
 func TestWorkflowMutator_SetPropertyWithEntity_Parameter_Clear(t *testing.T) {
+	t.Parallel()
 	doc := makeWorkflowDoc()
 	doc = append(doc, bson.E{Key: "Parameter", Value: bson.D{
 		{Key: "Entity", Value: "Something"},
@@ -1411,6 +1476,7 @@ func TestWorkflowMutator_SetPropertyWithEntity_Parameter_Clear(t *testing.T) {
 }
 
 func TestWorkflowMutator_SetPropertyWithEntity_Unsupported(t *testing.T) {
+	t.Parallel()
 	m := newMutator(makeWorkflowDoc())
 	err := m.SetPropertyWithEntity("INVALID", "x", "y")
 	if err == nil {
@@ -1423,6 +1489,7 @@ func TestWorkflowMutator_SetPropertyWithEntity_Unsupported(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestInsertBranchGen_BareEnumName_ReturnsError(t *testing.T) {
+	t.Parallel()
 	act := makeWfActivityWithOutcomes("Decision", "dec1")
 	m := newMutator(makeWorkflowDoc(act))
 
@@ -1436,6 +1503,7 @@ func TestInsertBranchGen_BareEnumName_ReturnsError(t *testing.T) {
 }
 
 func TestInsertBranchGen_TwoPartEnumName_ReturnsError(t *testing.T) {
+	t.Parallel()
 	act := makeWfActivityWithOutcomes("Decision", "dec1")
 	m := newMutator(makeWorkflowDoc(act))
 
@@ -1446,6 +1514,7 @@ func TestInsertBranchGen_TwoPartEnumName_ReturnsError(t *testing.T) {
 }
 
 func TestInsertBranchGen_FullyQualifiedEnum_Succeeds(t *testing.T) {
+	t.Parallel()
 	act := makeWfActivityWithOutcomes("Decision", "dec1")
 	m := newMutator(makeWorkflowDoc(act))
 
@@ -1467,6 +1536,7 @@ func TestInsertBranchGen_FullyQualifiedEnum_Succeeds(t *testing.T) {
 }
 
 func TestInsertBranchGen_TrueAndFalseAndDefault_NotValidated(t *testing.T) {
+	t.Parallel()
 	for _, cond := range []string{"true", "false", "default"} {
 		act := makeWfActivityWithOutcomes("Decision", "dec1")
 		m := newMutator(makeWorkflowDoc(act))
@@ -1481,6 +1551,7 @@ func TestInsertBranchGen_TrueAndFalseAndDefault_NotValidated(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestDropBranch_BareNameMatchesBareInBSON(t *testing.T) {
+	t.Parallel()
 	// Existing broken MPR: BSON has bare name "Overseas"
 	enumOutcome := makeOutcome("Workflows$EnumerationValueConditionOutcome", "Overseas")
 	act := makeWfActivityWithOutcomes("Decision", "dec1", enumOutcome)
@@ -1493,6 +1564,7 @@ func TestDropBranch_BareNameMatchesBareInBSON(t *testing.T) {
 }
 
 func TestDropBranch_BareNameMatchesQualifiedInBSON(t *testing.T) {
+	t.Parallel()
 	// Correctly stored MPR: BSON has "WF_Engine.ENUM_Region.Overseas"
 	enumOutcome := makeOutcome("Workflows$EnumerationValueConditionOutcome", "WF_Engine.ENUM_Region.Overseas")
 	act := makeWfActivityWithOutcomes("Decision", "dec1", enumOutcome)
@@ -1505,6 +1577,7 @@ func TestDropBranch_BareNameMatchesQualifiedInBSON(t *testing.T) {
 }
 
 func TestDropBranch_QualifiedNameMatchesQualifiedInBSON(t *testing.T) {
+	t.Parallel()
 	enumOutcome := makeOutcome("Workflows$EnumerationValueConditionOutcome", "WF_Engine.ENUM_Region.Overseas")
 	act := makeWfActivityWithOutcomes("Decision", "dec1", enumOutcome)
 	m := newMutator(makeWorkflowDoc(act))

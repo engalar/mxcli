@@ -35,6 +35,7 @@ func (s *recordingSink) Emit(events []mxgraph.Event) error {
 }
 
 func TestMprAdapterFindPath(t *testing.T) {
+	t.Parallel()
 	mprPath := findTestMPR(t)
 	if mprPath == "" {
 		t.Skip("no test MPR found")
@@ -89,6 +90,7 @@ func TestMprAdapterFindPath(t *testing.T) {
 }
 
 func TestMprAdapterBuild(t *testing.T) {
+	t.Parallel()
 	mprPath := findTestMPR(t)
 	if mprPath == "" {
 		t.Skip("no test MPR found")
