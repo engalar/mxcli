@@ -303,9 +303,9 @@ test-showcase: build
 
 # Run integration tests (requires mx binary / mxbuild)
 test-integration:
-	CGO_ENABLED=0 go test -tags integration -count=1 -timeout 30m \
-		./cmd/... ./internal/... ./mdl/... ./model/... ./modelsdk/... \
-		./sql/... ./tools/... ./generated/... ./scripts/...
+	set -e; for pkg in ./cmd/... ./internal/... ./mdl/... ./model/... ./modelsdk/... ./sql/... ./tools/... ./generated/... ./scripts/...; do \
+		CGO_ENABLED=0 go test -failfast -tags integration -timeout 30m "$$pkg"; \
+	done
 
 # Run integration tests with resource profiling and profile-based scheduling.
 # Run integration tests with resource profiling and profile-based scheduling.

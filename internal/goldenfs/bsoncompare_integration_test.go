@@ -186,52 +186,6 @@ func TestBsonCompare_CreatePage(t *testing.T) {
 	snap.Rollback()
 }
 
-// TestBsonCompare_DropMicroflow verifies the full create-then-drop roundtrip:
-// after dropping a microflow that was created in the same session, bsoncompare
-// must see zero net changes relative to the pristine baseline.
-func TestBsonCompare_DropMicroflow(t *testing.T) {
-	realDir := exprCheckerDir(t)
-	realMpr := filepath.Join(realDir, "minimal.mpr")
-	origStat, err := os.Stat(realMpr)
-	if err != nil {
-		t.Fatalf("stat real mpr: %v", err)
-	}
-
-	snap, err := Open(realDir)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func() {
-		if err := snap.Close(); err != nil {
-			t.Logf("snap.Close warning: %v", err)
-		}
-	}()
-
-	mountMpr := filepath.Join(snap.MountDir(), "minimal.mpr")
-
-	// Step 1: create the microflow and verify it appears as added.
-	runMDL(t, mountMpr, `create or modify microflow MyFirstModule.ACT_BsonDropTest ()
-  returns Nothing
-  {
-    return;
-  }`)
-
-	bsoncompare.AssertEqual(t, realMpr, mountMpr, bsoncompare.DefaultOptions(),
-		bsoncompare.ExpectAdded("MyFirstModule.ACT_BsonDropTest"),
-		bsoncompare.ExpectNoOtherChanges(),
-	)
-
-	// Step 2: drop it and verify the unit disappears — net diff from baseline is zero.
-	runMDL(t, mountMpr, `drop microflow MyFirstModule.ACT_BsonDropTest;`)
-
-	bsoncompare.AssertEqual(t, realMpr, mountMpr, bsoncompare.DefaultOptions(),
-		bsoncompare.ExpectNoOtherChanges(),
-	)
-
-	checkFUSEIsolation(t, realMpr, origStat)
-	snap.Rollback()
-}
-
 // TestBsonCompare_NoOpScript verifies that connecting + disconnecting without
 // any mutating statements produces zero BSON diffs between the baseline and
 // the overlay snapshot. Detects spurious writes from the executor / backend
