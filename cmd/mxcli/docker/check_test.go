@@ -23,12 +23,9 @@ func TestCheck_SkipUpdateWidgets(t *testing.T) {
 
 	err := Check(opts)
 	if err == nil {
-		t.Fatal("expected error when mx binary not found")
+		t.Fatal("expected error when project file not found")
 	}
-	if got := err.Error(); got != "mx not found; specify --mxbuild-path pointing to Mendix installation directory" {
-		// Accept any error about mx not being found
-		t.Logf("got error: %s", got)
-	}
+	t.Logf("got expected error: %s", err)
 }
 
 // createFakeMxDir creates a temp directory with fake mx and mxbuild scripts
@@ -50,25 +47,35 @@ echo "$1" >> ` + logFile + "\n"
 	return dir, logFile
 }
 
-// fakeMPRPath creates a temp directory with a fake .mpr filename (the file
-// itself does not need to exist for tests that only test mx invocation order).
+// fakeMPRPath creates a temp directory with an empty fake .mpr file.
+// The file must exist on disk so Check() can validate the path before
+// invoking mx (JVM startup is ~2.5s). A zero-byte file is sufficient
+// because the test only verifies mx invocation order, not MPR parsing.
 // Using t.TempDir() avoids pollution from ambient mprcontents/ directories
 // (e.g. /tmp/mprcontents/) that would confuse the MPR v2 detection logic.
 func fakeMPRPath(t *testing.T) string {
 	t.Helper()
-	return filepath.Join(t.TempDir(), "fake.mpr")
+	p := filepath.Join(t.TempDir(), "fake.mpr")
+	if err := os.WriteFile(p, nil, 0644); err != nil {
+		t.Fatal(err)
+	}
+	return p
 }
 
 // fakeMPRPathV2 creates a temp directory that looks like an MPR v2 project:
 // the directory contains an mprcontents/ sub-directory so that isMPRv2 returns
-// true.  The .mpr file itself is not created (not needed for invocation tests).
+// true. The .mpr file must also exist on disk so Check() can validate the path.
 func fakeMPRPathV2(t *testing.T) string {
 	t.Helper()
 	dir := t.TempDir()
 	if err := os.MkdirAll(filepath.Join(dir, "mprcontents"), 0755); err != nil {
 		t.Fatal(err)
 	}
-	return filepath.Join(dir, "fake.mpr")
+	p := filepath.Join(dir, "fake.mpr")
+	if err := os.WriteFile(p, nil, 0644); err != nil {
+		t.Fatal(err)
+	}
+	return p
 }
 
 func TestCheck_UpdateWidgetsBeforeCheck(t *testing.T) {

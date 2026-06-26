@@ -73,6 +73,14 @@ func Check(opts CheckOptions) error {
 		stderr = os.Stderr
 	}
 
+	// Fail fast if project path doesn't exist — avoids starting mx (JVM)
+	// just to get a "file not found" error.
+	if opts.ProjectPath != "" {
+		if _, err := os.Stat(opts.ProjectPath); err != nil {
+			return fmt.Errorf("project file not found: %s", opts.ProjectPath)
+		}
+	}
+
 	// Resolve mx binary
 	projectVersion := ""
 	if opts.ProjectPath != "" {
