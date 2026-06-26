@@ -50,7 +50,7 @@ jobs:
           exit $FAILED
 
       - name: Setup mxbuild
-        run: ./bin/mxcli setup mxbuild --version 11.9.0
+        run: ./bin/mxcli setup mxbuild --version 11.10.0
 
       - name: Integration tests
         run: make test-integration
