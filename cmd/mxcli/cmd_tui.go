@@ -8,7 +8,6 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/mendixlabs/mxcli/cmd/mxcli/tui"
-	"github.com/mendixlabs/mxcli/internal/launcherproto"
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
 )
@@ -127,16 +126,7 @@ func init() {
 
 // resolveMxcliPath returns the binary path the TUI should use for spawning
 // subcommands (project-tree, describe, exec, etc.).
-//
-// When the launcher exec's the daemon binary for TTY commands, it injects
-// MXCLI_LAUNCHER_PATH so the TUI calls back through the launcher, which routes
-// -p commands through the per-MPR daemon (persistent connection, unit cache).
-// Without this, os.Executable() returns the daemon binary path and every TUI
-// subcommand opens SQLite directly, bypassing the existing per-MPR daemon.
 func resolveMxcliPath() string {
-	if p := os.Getenv(launcherproto.EnvLauncherPath); p != "" {
-		return p
-	}
 	p, _ := os.Executable()
 	return p
 }

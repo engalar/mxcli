@@ -4,14 +4,12 @@ package main
 
 import (
 	"fmt"
-	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
 	"sort"
 	"strings"
-	"time"
 
 	"github.com/mendixlabs/mxcli/cmd/mxcli/docker"
 	"github.com/spf13/cobra"
@@ -83,16 +81,6 @@ func javaVersionOutput() (path string, versionLine string) {
 	}
 	lines := strings.SplitN(strings.TrimSpace(string(out)), "\n", 2)
 	return javaPath, strings.TrimSpace(lines[0])
-}
-
-// daemonSocketRunning returns true if a Unix socket at sockPath accepts connections.
-func daemonSocketRunning(sockPath string) bool {
-	conn, err := net.DialTimeout("unix", sockPath, 300*time.Millisecond)
-	if err != nil {
-		return err == nil
-	}
-	conn.Close()
-	return true
 }
 
 // allCachedMxBuildVersions lists every version directory under ~/.mxcli/mxbuild/.
@@ -187,28 +175,6 @@ func versionFromMxPath(p string) string {
 	return filepath.Base(parent)
 }
 
-// daemonBinaryPath returns the path to the installed mxcli-daemon binary.
-func daemonBinaryPath() string {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return ""
-	}
-	name := "mxcli-daemon"
-	if runtime.GOOS == "windows" {
-		name = "mxcli-daemon.exe"
-	}
-	return filepath.Join(home, ".mxcli", "daemon", name)
-}
-
-// daemonSocketPath returns the shared daemon socket path.
-func daemonSocketPath() string {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return ""
-	}
-	return filepath.Join(home, ".mxcli", "daemon", "mxcli.sock")
-}
-
 // localBinaryPath returns the path to the installed mxcli-local binary.
 func localBinaryPath() string {
 	home, err := os.UserHomeDir()
@@ -243,23 +209,9 @@ func runSetupShow(cmd *cobra.Command, _ []string) {
 	fmt.Fprintln(out, "=== mxcli Environment ===")
 	fmt.Fprintln(out)
 
-	// Launcher (this binary)
-	launcherPath, _ := os.Executable()
-	launcherVersion := version // set by ldflags
-	fmt.Fprintf(out, "mxcli launcher:  %s (%s)\n", launcherPath, launcherVersion)
-
-	// Daemon
-	daemonBin := daemonBinaryPath()
-	daemonVer := readVersionFile(filepath.Join(home, ".mxcli", "daemon", "version"))
-	if daemonVer == "" {
-		daemonVer = "unknown"
-	}
-	daemonExists := setupPathExists(daemonBin)
-	if daemonExists {
-		fmt.Fprintf(out, "mxcli daemon:    %s (%s) %s\n", daemonBin, daemonVer, foundTag(true, useColor))
-	} else {
-		fmt.Fprintf(out, "mxcli daemon:    %s %s\n", daemonBin, foundTag(false, useColor))
-	}
+	// This binary
+	selfPath, _ := os.Executable()
+	fmt.Fprintf(out, "mxcli:  %s (%s)\n", selfPath, version)
 
 	// Local runner
 	localBin := localBinaryPath()
@@ -348,19 +300,6 @@ func runSetupShow(cmd *cobra.Command, _ []string) {
 		fmt.Fprintf(out, "  java:     %s  %s, %s\n", javaPath, foundTag(true, useColor), javaVersion)
 	}
 
-	// ── Daemon Socket ─────────────────────────────────────────────────────────
-
-	fmt.Fprintln(out)
-	fmt.Fprintln(out, "=== Daemon Socket ===")
-	fmt.Fprintln(out)
-
-	sockPath := daemonSocketPath()
-	running := daemonSocketRunning(sockPath)
-	status := "running"
-	if !running {
-		status = "not running"
-	}
-	fmt.Fprintf(out, "  shared:   %s  [%s]\n", sockPath, status)
 }
 
 var setupShowCmd = &cobra.Command{
@@ -369,11 +308,10 @@ var setupShowCmd = &cobra.Command{
 	Long: `Print a structured overview of all key mxcli dependency paths and their status.
 
 Reports:
-  - mxcli launcher, daemon, and local runner paths and versions
+  - mxcli binary path and version
   - Cached mxbuild/mx installations (~/.mxcli/mxbuild/)
   - Studio Pro installations (Windows/macOS only)
   - Java runtime path and version
-  - Daemon socket connectivity
 
 Examples:
   mxcli setup show

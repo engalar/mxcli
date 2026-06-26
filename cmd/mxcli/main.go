@@ -74,23 +74,6 @@ func run() int {
 		return 0
 	}
 
-	// Intercept --serve <socket-path> BEFORE cobra parses flags.
-	if sockPath := extractServeSocket(os.Args[1:]); sockPath != "" {
-		idleTimeout := extractIdleTimeout(os.Args[1:])
-		// Per-MPR daemon: pre-connect and hold the backend for the process lifetime.
-		if mprPath := extractMPRPath(os.Args[1:]); mprPath != "" {
-			b, err := openPersistentBackend(mprPath)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "mxcli-daemon: %v\n", err)
-				return 1
-			}
-			persistentDaemonBackend = b
-			defer closePersistentBackend()
-		}
-		runDaemonServer(sockPath, idleTimeout, nil)
-		return 0
-	}
-
 	// Show warning banner unless --quiet, -q, --help, -h, or --version is passed
 	if !shouldSuppressWarning() {
 		fmt.Fprint(os.Stderr, warningBanner)
@@ -165,9 +148,6 @@ Examples:
   mxcli -vv -p app.mpr -c "SHOW ENTITIES"
 `,
 	Version: version,
-	// RunE instead of Run: errors are returned to cobra so that daemon-server
-	// mode (--serve) can send an exit frame without calling os.Exit, which
-	// would kill the entire daemon process.
 	SilenceErrors: true,
 	SilenceUsage:  true,
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -235,32 +215,19 @@ func resolveFormat(cmd *cobra.Command, defaultFormat string) string {
 }
 
 // buildExec creates an Executor for the given mode and output writer.
-// In per-MPR daemon mode (persistentDaemonBackend != nil) the pre-connected
-// backend is reused via noOpConnectBackend; otherwise a fresh MprBackend
-// is created per CONNECT statement.
-//
-// Pass cmd.OutOrStdout() so that daemon-server mode (--serve) routes output to
-// the socket instead of os.Stdout (which is /dev/null when the daemon is spawned
-// by the launcher). The caller must call logger.Close() and exec.Close() when done.
-// Note: the global log package is redirected to stderr by runCommand() in
-// daemon_server.go, so log.Printf HINT/WARNING messages are also visible.
+// A fresh MprBackend is created per CONNECT statement.
+// The caller must call logger.Close() and exec.Close() when done.
 func buildExec(mode string, out io.Writer) (*executor.Executor, *diaglog.Logger) {
 	logger := diaglog.Init(version, mode, globalVerboseLevel)
-	b := executor.Build().Out(out).WithLogger(logger)
-	if persistentDaemonBackend != nil {
-		b = b.WithBackend(&noOpConnectBackend{persistentDaemonBackend})
-	} else {
-		b = b.WithFactory(func() backend.ConnectionBackend { return mprbackend.New() })
-	}
+	b := executor.Build().Out(out).WithLogger(logger).WithFactory(func() backend.ConnectionBackend {
+		return mprbackend.New()
+	})
 	if globalJSONFlag {
 		b = b.Format(executor.FormatJSON)
 	}
 	exec := b.Create()
 
-	// Register domain-specific handlers from subpackages, overriding
-	// handler_deps.go's legacy registrations (kept for test backward compat).
-	// Store re-registration closures so Connect can re-register with a live
-	// HandlerDeps after setting the backend.
+	// Register domain-specific handlers from subpackages.
 	deps := exec.BuildHandlerDeps()
 	microflow.RegisterHandlers(exec.Registry(), deps)
 	page.RegisterHandlers(exec.Registry(), deps)
@@ -278,10 +245,6 @@ func buildExec(mode string, out io.Writer) (*executor.Executor, *diaglog.Logger)
 		query.RegisterHandlers(exec.Registry(), fresh)
 		misc.RegisterHandlers(exec.Registry(), fresh)
 	})
-
-	if daemonProgressOut != nil {
-		exec.SetProgressOut(daemonProgressOut)
-	}
 	return exec, logger
 }
 
@@ -455,34 +418,4 @@ func init() {
 	rootCmd.AddCommand(reloadCmd())
 }
 
-// extractServeSocket scans args for "--serve <path>" or "--serve=<path>".
-func extractServeSocket(args []string) string {
-	for i, a := range args {
-		if a == "--serve" && i+1 < len(args) {
-			return args[i+1]
-		}
-		if len(a) > 8 && a[:8] == "--serve=" {
-			return a[8:]
-		}
-	}
-	return ""
-}
 
-// extractIdleTimeout scans args for "--idle-timeout <duration>" or "--idle-timeout=<duration>".
-// Returns 0 if the flag is absent or the value cannot be parsed.
-func extractIdleTimeout(args []string) time.Duration {
-	for i, a := range args {
-		if a == "--idle-timeout" && i+1 < len(args) {
-			if d, err := time.ParseDuration(args[i+1]); err == nil {
-				return d
-			}
-		}
-		const prefix = "--idle-timeout="
-		if strings.HasPrefix(a, prefix) {
-			if d, err := time.ParseDuration(a[len(prefix):]); err == nil {
-				return d
-			}
-		}
-	}
-	return 0
-}

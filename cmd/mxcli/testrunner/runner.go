@@ -436,7 +436,7 @@ func findMxcli() (string, error) {
 	}
 
 	// Look in common locations
-	for _, p := range []string{"./mxcli-daemon", "./bin/mxcli-daemon", "../bin/mxcli-daemon", "./mxcli", "./bin/mxcli", "../bin/mxcli"} {
+	for _, p := range []string{"./mxcli", "./bin/mxcli", "../bin/mxcli"} {
 		if _, err := os.Stat(p); err == nil {
 			abs, _ := filepath.Abs(p)
 			return abs, nil
