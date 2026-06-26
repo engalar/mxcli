@@ -303,7 +303,7 @@ test-showcase: build
 
 # Run integration tests (requires mx binary / mxbuild)
 test-integration:
-	set -e; for pkg in ./cmd/... ./internal/... ./mdl/... ./model/... ./modelsdk/... ./sql/... ./tools/... ./generated/... ./scripts/...; do \
+	set -e; trap 'echo "Interrupted — aborting"; exit 130' INT TERM; for pkg in ./cmd/... ./internal/... ./mdl/... ./model/... ./modelsdk/... ./sql/... ./tools/... ./generated/... ./scripts/...; do \
 		CGO_ENABLED=0 go test -count=1 -tags integration -timeout 30m "$$pkg"; \
 	done
 
