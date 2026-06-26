@@ -1,0 +1,4 @@
+# internal/bsoncompare
+package internal/bsoncompare is not in std (/usr/local/go/src/internal/bsoncompare)
+FAIL	internal/bsoncompare [setup failed]
+FAIL

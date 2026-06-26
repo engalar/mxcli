@@ -4,25 +4,46 @@ package bsoncompare
 import (
 	"fmt"
 	"sort"
+
+	"github.com/mendixlabs/mxcli/modelsdk/codec"
+	mmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
 )
 
 func Compare(aPath, bPath string, opts Options) ([]UnitDiff, error) {
-	aUnits, err := ReadAllUnits(aPath)
-	if err != nil {
-		return nil, fmt.Errorf("bsoncompare: read A (%s): %w", aPath, err)
-	}
-	bUnits, err := ReadAllUnits(bPath)
-	if err != nil {
-		return nil, fmt.Errorf("bsoncompare: read B (%s): %w", bPath, err)
-	}
-
-	// Fast path: same file → identical by definition
 	if aPath == bPath {
 		return nil, nil
 	}
 
-	idMap := BuildIDMap(bUnits)
-	MergeInto(idMap, BuildIDMap(aUnits))
+	aReader, err := mmpr.OpenWithOptions(aPath, mmpr.OpenOptions{ReadOnly: true})
+	if err != nil {
+		return nil, fmt.Errorf("bsoncompare: open A (%s): %w", aPath, err)
+	}
+	defer aReader.Close()
+
+	bReader, err := mmpr.OpenWithOptions(bPath, mmpr.OpenOptions{ReadOnly: true})
+	if err != nil {
+		return nil, fmt.Errorf("bsoncompare: open B (%s): %w", bPath, err)
+	}
+	defer bReader.Close()
+
+	idMap, err := BuildIDMapFromReader(bReader)
+	if err != nil {
+		return nil, fmt.Errorf("bsoncompare: IDMap B: %w", err)
+	}
+	aIDMap, err := BuildIDMapFromReader(aReader)
+	if err != nil {
+		return nil, fmt.Errorf("bsoncompare: IDMap A: %w", err)
+	}
+	MergeInto(idMap, aIDMap)
+
+	aUnits, err := ReadAllUnits(aPath)
+	if err != nil {
+		return nil, fmt.Errorf("bsoncompare: read A: %w", err)
+	}
+	bUnits, err := ReadAllUnits(bPath)
+	if err != nil {
+		return nil, fmt.Errorf("bsoncompare: read B: %w", err)
+	}
 
 	aIndex := indexUnits(aUnits)
 	bIndex := indexUnits(bUnits)
@@ -40,7 +61,9 @@ func Compare(aPath, bPath string, opts Options) ([]UnitDiff, error) {
 	}
 	sort.Strings(names)
 
+	dec := codec.NewDecoder(codec.DefaultRegistry)
 	var result []UnitDiff
+
 	for _, name := range names {
 		au, aok := aIndex[name]
 		bu, bok := bIndex[name]
@@ -48,30 +71,33 @@ func Compare(aPath, bPath string, opts Options) ([]UnitDiff, error) {
 		case aok && !bok:
 			result = append(result, UnitDiff{QualifiedName: name, UnitType: au.UnitType, Kind: DiffRemoved})
 		case !aok && bok:
-			bu.Decode()
+			actual, err := dec.DecodeBytes(bu.Raw)
+			if err != nil {
+				continue
+			}
 			result = append(result, UnitDiff{
 				QualifiedName: name,
 				UnitType:      bu.UnitType,
 				Kind:          DiffAdded,
-				ActualDoc:     bu.Doc,
+				ActualDoc:     actual,
 			})
 		default:
 			if au.ContentHash == bu.ContentHash {
 				continue
 			}
-			au.Decode()
-			bu.Decode()
-			aN := Normalize(au.Doc, idMap, opts)
-			bN := Normalize(bu.Doc, idMap, opts)
-			var fields []FieldDiff
-			diffMaps("", aN, bN, false, &fields)
+			actual, aErr := dec.DecodeBytes(bu.Raw)
+			golden, gErr := dec.DecodeBytes(au.Raw)
+			if aErr != nil || gErr != nil {
+				continue
+			}
+			fields := compareElements("", golden, actual, idMap, opts)
 			if len(fields) > 0 {
 				result = append(result, UnitDiff{
 					QualifiedName: name,
 					UnitType:      au.UnitType,
 					Kind:          DiffChanged,
 					Fields:        fields,
-					ActualDoc:     bu.Doc,
+					ActualDoc:     actual,
 				})
 			}
 		}

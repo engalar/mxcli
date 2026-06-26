@@ -6,8 +6,6 @@ import (
 	"hash/fnv"
 	"sync"
 
-	"go.mongodb.org/mongo-driver/v2/bson"
-
 	mmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
 )
 
@@ -23,30 +21,11 @@ type cachedResult struct {
 type UnitDoc struct {
 	QualifiedName string
 	UnitType      string
-	// Raw is the raw BSON bytes. Preferred over Doc — avoids full decode
-	// for unchanged units and ID-map building.
-	Raw bson.Raw
-	// Doc is lazily decoded from Raw on first call to Decode(). Nil until
-	// first decode. Mutated only during the single-threaded Compare call.
-	Doc         bson.D
-	ContentHash uint64 // FNV-1a hash of raw BSON; fast diff skip when golden==actual
-}
-
-// Decode ensures Doc is populated from Raw. Safe to call multiple times.
-func (u *UnitDoc) Decode() {
-	if u.Doc != nil {
-		return
-	}
-	// bson.Unmarshal into a zero bson.D appends elements.
-	var doc bson.D
-	if err := bson.Unmarshal(u.Raw, &doc); err != nil {
-		return
-	}
-	u.Doc = doc
+	Raw           []byte   // raw BSON bytes
+	ContentHash   uint64   // FNV-1a hash of raw BSON; fast diff skip when golden==actual
 }
 
 func ReadAllUnits(mprPath string) ([]UnitDoc, error) {
-	// Fast path: cached result.
 	if cached, ok := readAllCache.Load(mprPath); ok {
 		r := cached.(*cachedResult)
 		return r.units, r.err
@@ -72,7 +51,7 @@ func ReadAllUnits(mprPath string) ([]UnitDoc, error) {
 		out = append(out, UnitDoc{
 			QualifiedName: info.QualifiedName,
 			UnitType:      info.Type,
-			Raw:           bson.Raw(info.Contents),
+			Raw:           info.Contents,
 			ContentHash:   h.Sum64(),
 		})
 	}

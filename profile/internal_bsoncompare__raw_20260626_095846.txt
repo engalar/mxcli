@@ -1,0 +1,131 @@
+=== RUN   TestDiffArray_SetDiff_AddedRef
+=== PAUSE TestDiffArray_SetDiff_AddedRef
+=== RUN   TestDiffArray_SetDiff_NoChange
+=== PAUSE TestDiffArray_SetDiff_NoChange
+=== RUN   TestDiffArray_ByName_Changed
+=== PAUSE TestDiffArray_ByName_Changed
+=== RUN   TestDiffArray_ByName_Added
+=== PAUSE TestDiffArray_ByName_Added
+=== RUN   TestDiffArray_ByPosition_LengthOnly
+=== PAUSE TestDiffArray_ByPosition_LengthOnly
+=== RUN   TestAssertEqual_SelfComparePasses
+=== PAUSE TestAssertEqual_SelfComparePasses
+=== RUN   TestExpectAdded_Matches
+=== PAUSE TestExpectAdded_Matches
+=== RUN   TestExpectAdded_NotFound
+=== PAUSE TestExpectAdded_NotFound
+=== RUN   TestExpectRemoved_Matches
+=== PAUSE TestExpectRemoved_Matches
+=== RUN   TestExpectRemoved_NotFound
+=== PAUSE TestExpectRemoved_NotFound
+=== RUN   TestExpectChanged_Matches
+=== PAUSE TestExpectChanged_Matches
+=== RUN   TestExpectChanged_NotFound
+=== PAUSE TestExpectChanged_NotFound
+=== RUN   TestExpectNoOtherChanges_ExtraUnit
+=== PAUSE TestExpectNoOtherChanges_ExtraUnit
+=== RUN   TestCompare_NoChange
+=== PAUSE TestCompare_NoChange
+=== RUN   TestCompare_ContentHashSkip
+=== PAUSE TestCompare_ContentHashSkip
+=== RUN   TestBuildIDMap_CorpusB
+=== PAUSE TestBuildIDMap_CorpusB
+=== RUN   TestBuildIDMap_Empty
+=== PAUSE TestBuildIDMap_Empty
+=== RUN   TestReadAllUnits_CorpusB
+=== PAUSE TestReadAllUnits_CorpusB
+=== RUN   TestReadAllUnits_ContentHashPopulated
+=== PAUSE TestReadAllUnits_ContentHashPopulated
+=== RUN   TestReadAllUnits_ContentHashStable
+=== PAUSE TestReadAllUnits_ContentHashStable
+=== RUN   TestReadAllUnits_MissingPath
+=== PAUSE TestReadAllUnits_MissingPath
+=== RUN   TestNormalize_SelfIDOmitted
+=== PAUSE TestNormalize_SelfIDOmitted
+=== RUN   TestNormalize_PointerResolved
+=== PAUSE TestNormalize_PointerResolved
+=== RUN   TestNormalize_UnknownPointer
+=== PAUSE TestNormalize_UnknownPointer
+=== RUN   TestNormalize_StableIdOmitted
+=== PAUSE TestNormalize_StableIdOmitted
+=== RUN   TestNormalize_LayoutFieldsOmitted
+=== PAUSE TestNormalize_LayoutFieldsOmitted
+=== RUN   TestNormalize_DocumentationOmitted
+=== PAUSE TestNormalize_DocumentationOmitted
+=== RUN   TestNormalize_VersionedArrayPrefixSkipped
+=== PAUSE TestNormalize_VersionedArrayPrefixSkipped
+=== RUN   TestDefaultOptions
+=== PAUSE TestDefaultOptions
+=== RUN   TestFormatDiff_Changed
+=== PAUSE TestFormatDiff_Changed
+=== RUN   TestFormatDiff_Added
+=== PAUSE TestFormatDiff_Added
+=== RUN   TestFormatDiff_Empty
+=== PAUSE TestFormatDiff_Empty
+=== CONT  TestDiffArray_SetDiff_AddedRef
+--- PASS: TestDiffArray_SetDiff_AddedRef (0.00s)
+=== CONT  TestNormalize_PointerResolved
+--- PASS: TestNormalize_PointerResolved (0.00s)
+=== CONT  TestNormalize_SelfIDOmitted
+--- PASS: TestNormalize_SelfIDOmitted (0.00s)
+=== CONT  TestReadAllUnits_MissingPath
+--- PASS: TestReadAllUnits_MissingPath (0.00s)
+=== CONT  TestReadAllUnits_ContentHashStable
+=== CONT  TestNormalize_UnknownPointer
+--- PASS: TestNormalize_UnknownPointer (0.00s)
+=== CONT  TestFormatDiff_Empty
+--- PASS: TestFormatDiff_Empty (0.00s)
+=== CONT  TestFormatDiff_Added
+--- PASS: TestFormatDiff_Added (0.00s)
+=== CONT  TestFormatDiff_Changed
+=== CONT  TestExpectChanged_Matches
+--- PASS: TestFormatDiff_Changed (0.00s)
+=== CONT  TestDefaultOptions
+--- PASS: TestExpectChanged_Matches (0.00s)
+=== CONT  TestReadAllUnits_ContentHashPopulated
+=== CONT  TestNormalize_VersionedArrayPrefixSkipped
+=== CONT  TestNormalize_DocumentationOmitted
+=== CONT  TestNormalize_LayoutFieldsOmitted
+=== CONT  TestNormalize_StableIdOmitted
+=== CONT  TestCompare_ContentHashSkip
+=== CONT  TestCompare_NoChange
+=== CONT  TestBuildIDMap_CorpusB
+=== CONT  TestExpectNoOtherChanges_ExtraUnit
+=== CONT  TestExpectChanged_NotFound
+--- PASS: TestDefaultOptions (0.00s)
+--- PASS: TestNormalize_VersionedArrayPrefixSkipped (0.00s)
+--- PASS: TestNormalize_DocumentationOmitted (0.00s)
+--- PASS: TestNormalize_LayoutFieldsOmitted (0.00s)
+--- PASS: TestNormalize_StableIdOmitted (0.00s)
+=== CONT  TestReadAllUnits_CorpusB
+--- PASS: TestExpectChanged_NotFound (0.00s)
+=== CONT  TestBuildIDMap_Empty
+--- PASS: TestExpectNoOtherChanges_ExtraUnit (0.00s)
+=== CONT  TestAssertEqual_SelfComparePasses
+--- PASS: TestBuildIDMap_Empty (0.00s)
+=== CONT  TestDiffArray_ByName_Added
+--- PASS: TestDiffArray_ByName_Added (0.00s)
+=== CONT  TestDiffArray_ByPosition_LengthOnly
+--- PASS: TestDiffArray_ByPosition_LengthOnly (0.00s)
+=== CONT  TestDiffArray_ByName_Changed
+--- PASS: TestDiffArray_ByName_Changed (0.00s)
+=== CONT  TestDiffArray_SetDiff_NoChange
+--- PASS: TestDiffArray_SetDiff_NoChange (0.00s)
+=== CONT  TestExpectRemoved_NotFound
+--- PASS: TestExpectRemoved_NotFound (0.00s)
+=== CONT  TestExpectRemoved_Matches
+--- PASS: TestExpectRemoved_Matches (0.00s)
+=== CONT  TestExpectAdded_NotFound
+--- PASS: TestExpectAdded_NotFound (0.00s)
+=== CONT  TestExpectAdded_Matches
+--- PASS: TestExpectAdded_Matches (0.00s)
+--- PASS: TestReadAllUnits_ContentHashStable (2.24s)
+--- PASS: TestReadAllUnits_ContentHashPopulated (2.28s)
+--- PASS: TestCompare_NoChange (2.28s)
+--- PASS: TestReadAllUnits_CorpusB (2.29s)
+--- PASS: TestCompare_ContentHashSkip (2.31s)
+--- PASS: TestAssertEqual_SelfComparePasses (2.34s)
+--- PASS: TestBuildIDMap_CorpusB (2.53s)
+PASS
+coverage: 73.9% of statements
+ok  	github.com/mendixlabs/mxcli/internal/bsoncompare	2.714s	coverage: 73.9% of statements

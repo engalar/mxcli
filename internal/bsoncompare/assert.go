@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"go.mongodb.org/mongo-driver/v2/bson"
+	"github.com/mendixlabs/mxcli/modelsdk/element"
 )
 
 // TB is the subset of *testing.T used by AssertEqual.
@@ -71,17 +71,14 @@ func (e expectChanged) Match(diffs []UnitDiff, claimed map[string]bool) error {
 	return fmt.Errorf("expected unit %q to be changed, but it was not found in diffs", e.name)
 }
 
-// WithUnitCheck returns a Matcher that finds the unit with the given
-// qualified name in the diff list and runs check against its actual BSON
-// document (the bPath / post-mutation side). The unit is claimed on success.
-// Fails if the unit is not found in the diffs or check returns an error.
-func WithUnitCheck(qualifiedName string, check func(bson.D) error) Matcher {
+// WithUnitCheck returns a Matcher that runs check against the actual Element.
+func WithUnitCheck(qualifiedName string, check func(element.Element) error) Matcher {
 	return withUnitCheck{name: qualifiedName, check: check}
 }
 
 type withUnitCheck struct {
 	name  string
-	check func(bson.D) error
+	check func(element.Element) error
 }
 
 func (w withUnitCheck) Match(diffs []UnitDiff, claimed map[string]bool) error {

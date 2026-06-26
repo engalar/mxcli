@@ -1,0 +1,16 @@
+=== RUN   TestDiffArray_SetDiff_AddedRef
+=== PAUSE TestDiffArray_SetDiff_AddedRef
+=== RUN   TestDiffArray_SetDiff_NoChange
+=== PAUSE TestDiffArray_SetDiff_NoChange
+=== RUN   TestDiffArray_ByName_Changed
+=== PAUSE TestDiffArray_ByName_Changed
+=== RUN   TestDiffArray_ByName_Added
+=== PAUSE TestDiffArray_ByName_Added
+=== RUN   TestDiffArray_ByPosition_LengthOnly
+=== PAUSE TestDiffArray_ByPosition_LengthOnly
+=== RUN   TestAssertEqual_SelfComparePasses
+=== PAUSE TestAssertEqual_SelfComparePasses
+=== RUN   TestExpectAdded_Matches
+=== PAUSE TestExpectAdded_Matches
+=== RUN   TestExpectAdded_NotFound
+=== PAUSE TestExpectAdded_NotFound
