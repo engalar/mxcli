@@ -47,15 +47,18 @@ jobs:
             OS="${TARGET%/*}"
             ARCH="${TARGET#*/}"
             EXT=""; [ "${OS}" = "windows" ] && EXT=".exe"
+            BIN="mxcli-${OS}-${ARCH}${EXT}"
             echo "Building ${OS}/${ARCH}..."
             CGO_ENABLED=0 GOOS="${OS}" GOARCH="${ARCH}" go build -ldflags "${LDFLAGS}" -trimpath -o "bin/${BIN}" ./cmd/mxcli 2>&1
-            (cd bin && zip -q "${BIN}.zip" "${BIN}" && rm "${BIN}")
+            mv "bin/${BIN}" "bin/mxcli${EXT}"
+            (cd bin && zip -q "mxcli-${OS}-${ARCH}.zip" "mxcli${EXT}" && rm "mxcli${EXT}")
           done
 
       - name: Generate SHA256 checksums
         run: |
           cd bin
           sha256sum mxcli-*.zip > SHA256SUMS
+          cat SHA256SUMS
 
       - name: Generate release notes from CHANGELOG.md
         run: |
