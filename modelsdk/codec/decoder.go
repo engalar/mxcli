@@ -66,6 +66,23 @@ func (d *Decoder) Decode(raw bson.Raw) (element.Element, error) {
 	return elem, nil
 }
 
+// DecodeBytes decodes a []byte as a BSON document into an Element.
+// Unlike Decode it accepts a plain byte slice so callers don't need
+// to import bson.Raw.
+func (d *Decoder) DecodeBytes(raw []byte) (element.Element, error) {
+	return d.Decode(bson.Raw(raw))
+}
+
+// DecodeTypeName extracts the $Type string from raw BSON bytes.
+func DecodeTypeName(raw bson.Raw) string {
+	return decodeTypeName(raw)
+}
+
+// DecodeID extracts the $ID field from raw BSON bytes.
+func DecodeID(raw bson.Raw) element.ID {
+	return decodeID(raw)
+}
+
 // decodeTypeName extracts the $Type string from a raw BSON document.
 func decodeTypeName(raw bson.Raw) string {
 	val, err := raw.LookupErr("$Type")

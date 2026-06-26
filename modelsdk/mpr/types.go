@@ -27,6 +27,14 @@ type ModuleInfo struct {
 	Name string
 }
 
+// UnitIdentity holds the three metadata fields extracted from a unit's BSON header.
+// Used by ListUnitIdentities to avoid full Element decode during ID-map building.
+type UnitIdentity struct {
+	ID   string // UUID-format hex string from $ID (e.g. "550e8400-e29b-41d4-a716-446655440000")
+	Name string // Name field
+	Type string // $Type field (e.g. "Microflows$Microflow")
+}
+
 // ListModules returns all modules in the project.
 func (r *Reader) ListModules() ([]*ModuleInfo, error) {
 	units, err := r.listUnitsByType("Projects$ModuleImpl")

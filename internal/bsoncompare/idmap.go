@@ -9,32 +9,58 @@ import (
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
+// rawDocOK returns the Raw value if doc is valid, nil otherwise.
+func rawDocOK(doc bson.Raw) bson.Raw {
+	if len(doc) > 0 {
+		return doc
+	}
+	return nil
+}
+
 type IDMap map[string]string
 
 func BuildIDMap(units []UnitDoc) IDMap {
 	m := make(IDMap, len(units)*40)
-	for _, u := range units {
-		collectIDs(u.Doc, u.QualifiedName, m, 0)
+	for i := range units {
+		collectIDsRaw(units[i].Raw, units[i].QualifiedName, m, 0)
 	}
 	return m
 }
 
-func collectIDs(doc bson.D, ctx string, m IDMap, depth int) {
-	if depth > 8 {
+// collectIDsRaw walks raw BSON to extract $ID → label mappings without
+// decoding into bson.D. This avoids the expensive bson.Unmarshal for the
+// 10k+ entries typically found in a corpus-b project.
+func collectIDsRaw(raw bson.Raw, ctx string, m IDMap, depth int) {
+	if depth > 8 || len(raw) == 0 {
 		return
 	}
+	elems, err := raw.Elements()
+	if err != nil {
+		return
+	}
+
 	var selfID []byte
 	var name, typ string
-	for _, e := range doc {
-		switch e.Key {
+	for _, elem := range elems {
+		switch elem.Key() {
 		case "$ID":
-			if b, ok := e.Value.(bson.Binary); ok && len(b.Data) == 16 {
-				selfID = b.Data
+			val := elem.Value()
+			if val.Type == bson.TypeBinary {
+				_, data := val.Binary()
+				if len(data) == 16 {
+					selfID = data
+				}
 			}
 		case "Name":
-			name, _ = e.Value.(string)
+			val := elem.Value()
+			if val.Type == bson.TypeString {
+				name = val.StringValue()
+			}
 		case "$Type":
-			typ, _ = e.Value.(string)
+			val := elem.Value()
+			if val.Type == bson.TypeString {
+				typ = val.StringValue()
+			}
 		}
 	}
 	if len(selfID) == 16 {
@@ -46,14 +72,23 @@ func collectIDs(doc bson.D, ctx string, m IDMap, depth int) {
 			ctx = name
 		}
 	}
-	for _, e := range doc {
-		switch v := e.Value.(type) {
-		case bson.D:
-			collectIDs(v, ctx+"."+e.Key, m, depth+1)
-		case bson.A:
-			for _, item := range v {
-				if sub, ok := item.(bson.D); ok {
-					collectIDs(sub, ctx, m, depth+1)
+
+	for _, elem := range elems {
+		val := elem.Value()
+		switch val.Type {
+		case bson.TypeEmbeddedDocument:
+			sub := val.Document()
+			collectIDsRaw(sub, ctx+"."+elem.Key(), m, depth+1)
+		case bson.TypeArray:
+			arr := val.Array()
+			arrVals, err := arr.Values()
+			if err != nil {
+				continue
+			}
+			for _, item := range arrVals {
+				if item.Type == bson.TypeEmbeddedDocument {
+					sub := item.Document()
+					collectIDsRaw(sub, ctx, m, depth+1)
 				}
 			}
 		}

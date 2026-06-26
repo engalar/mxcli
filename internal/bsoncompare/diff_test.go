@@ -27,3 +27,27 @@ func TestCompare_NoChange(t *testing.T) {
 		}
 	}
 }
+
+func TestCompare_ContentHashSkip(t *testing.T) {
+	t.Parallel()
+	// Read the same file via two separate cache-returned slices to verify
+	// the ContentHash skip works when different []UnitDoc slices carry
+	// identical hashes.
+	unitsA, err := bsoncompare.ReadAllUnits("../../testdata/corpus-b/app.mpr")
+	if err != nil {
+		t.Fatal(err)
+	}
+	unitsB, err := bsoncompare.ReadAllUnits("../../testdata/corpus-b/app.mpr")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(unitsA) != len(unitsB) {
+		t.Fatalf("length mismatch: %d vs %d", len(unitsA), len(unitsB))
+	}
+	for i := range unitsA {
+		if unitsA[i].ContentHash != unitsB[i].ContentHash {
+			t.Errorf("unit %s: ContentHash mismatch across cached reads (%d vs %d)",
+				unitsA[i].QualifiedName, unitsA[i].ContentHash, unitsB[i].ContentHash)
+		}
+	}
+}

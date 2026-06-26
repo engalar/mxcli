@@ -27,6 +27,50 @@ func TestReadAllUnits_CorpusB(t *testing.T) {
 	}
 }
 
+func TestReadAllUnits_ContentHashPopulated(t *testing.T) {
+	t.Parallel()
+	units, err := bsoncompare.ReadAllUnits("../../testdata/corpus-b/app.mpr")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(units) == 0 {
+		t.Fatal("no units loaded")
+	}
+	for _, u := range units {
+		if u.ContentHash == 0 {
+			t.Errorf("unit %s: ContentHash is zero", u.QualifiedName)
+		}
+	}
+}
+
+func TestReadAllUnits_ContentHashStable(t *testing.T) {
+	t.Parallel()
+	units1, err := bsoncompare.ReadAllUnits("../../testdata/corpus-b/app.mpr")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Second call — returns cached result; verify ContentHash survived
+	units2, err := bsoncompare.ReadAllUnits("../../testdata/corpus-b/app.mpr")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(units1) != len(units2) {
+		t.Fatalf("length mismatch: %d vs %d", len(units1), len(units2))
+	}
+	for i := range units1 {
+		if units1[i].QualifiedName == "" {
+			continue
+		}
+		if units1[i].QualifiedName != units2[i].QualifiedName {
+			continue
+		}
+		if units1[i].ContentHash != units2[i].ContentHash {
+			t.Errorf("unit %s: ContentHash unstable across cache (%d vs %d)",
+				units1[i].QualifiedName, units1[i].ContentHash, units2[i].ContentHash)
+		}
+	}
+}
+
 func TestReadAllUnits_MissingPath(t *testing.T) {
 	t.Parallel()
 	_, err := bsoncompare.ReadAllUnits("/nonexistent/path.mpr")

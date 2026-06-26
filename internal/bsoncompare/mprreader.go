@@ -3,6 +3,7 @@ package bsoncompare
 
 import (
 	"fmt"
+	"hash/fnv"
 	"sync"
 
 	"go.mongodb.org/mongo-driver/v2/bson"
@@ -22,7 +23,26 @@ type cachedResult struct {
 type UnitDoc struct {
 	QualifiedName string
 	UnitType      string
-	Doc           bson.D
+	// Raw is the raw BSON bytes. Preferred over Doc — avoids full decode
+	// for unchanged units and ID-map building.
+	Raw bson.Raw
+	// Doc is lazily decoded from Raw on first call to Decode(). Nil until
+	// first decode. Mutated only during the single-threaded Compare call.
+	Doc         bson.D
+	ContentHash uint64 // FNV-1a hash of raw BSON; fast diff skip when golden==actual
+}
+
+// Decode ensures Doc is populated from Raw. Safe to call multiple times.
+func (u *UnitDoc) Decode() {
+	if u.Doc != nil {
+		return
+	}
+	// bson.Unmarshal into a zero bson.D appends elements.
+	var doc bson.D
+	if err := bson.Unmarshal(u.Raw, &doc); err != nil {
+		return
+	}
+	u.Doc = doc
 }
 
 func ReadAllUnits(mprPath string) ([]UnitDoc, error) {
@@ -47,14 +67,13 @@ func ReadAllUnits(mprPath string) ([]UnitDoc, error) {
 
 	out := make([]UnitDoc, 0, len(infos))
 	for _, info := range infos {
-		var doc bson.D
-		if err := bson.Unmarshal(info.Contents, &doc); err != nil {
-			continue
-		}
+		h := fnv.New64a()
+		h.Write(info.Contents)
 		out = append(out, UnitDoc{
 			QualifiedName: info.QualifiedName,
 			UnitType:      info.Type,
-			Doc:           doc,
+			Raw:           bson.Raw(info.Contents),
+			ContentHash:   h.Sum64(),
 		})
 	}
 	readAllCache.Store(mprPath, &cachedResult{units: out})

@@ -243,6 +243,135 @@ func (r *Reader) ListRawUnits(objectType string) ([]*types.RawUnitInfo, error) {
 	return result, nil
 }
 
+// ListUnitIdentities returns all unit IDs with their Name and Type, extracted
+// from raw BSON without full Element decode. Recursively collects IDs from
+// sub-documents so all references resolve in the ID map.
+func (r *Reader) ListUnitIdentities() ([]UnitIdentity, error) {
+	units, err := r.listUnitsByType("")
+	if err != nil {
+		return nil, err
+	}
+	out := make([]UnitIdentity, 0, len(units)*10) // generous estimate for sub-doc IDs
+	for _, u := range units {
+		if len(u.Contents) == 0 {
+			continue
+		}
+		raw := bson.Raw(u.Contents)
+		collectIDsFromRaw(raw, u.Type, u.Contents, &out)
+	}
+	return out, nil
+}
+
+// collectIDsFromRaw recursively walks raw BSON and extracts $ID/Name/$Type.
+// name is the Name from the parent context; it is overridden when a child
+// document has its own Name field.
+func collectIDsFromRaw(raw bson.Raw, typeName string, contents []byte, out *[]UnitIdentity) {
+	elems, err := raw.Elements()
+	if err != nil {
+		return
+	}
+	var selfID []byte
+	var name, typ string
+	for _, elem := range elems {
+		switch elem.Key() {
+		case "$ID":
+			val := elem.Value()
+			if val.Type == bson.TypeBinary {
+				_, data, ok := val.BinaryOK()
+				if ok && len(data) == 16 {
+					selfID = data
+				}
+			}
+		case "Name":
+			val := elem.Value()
+			if val.Type == bson.TypeString {
+				name = val.StringValue()
+			}
+		case "$Type":
+			val := elem.Value()
+			if val.Type == bson.TypeString {
+				typ = val.StringValue()
+			}
+		}
+	}
+	if len(selfID) == 16 {
+		*out = append(*out, UnitIdentity{
+			ID:   BinaryToUUID(selfID),
+			Name: name,
+			Type: typ,
+		})
+	}
+	// Recurse into sub-documents
+	for _, elem := range elems {
+		val := elem.Value()
+		switch val.Type {
+		case bson.TypeEmbeddedDocument:
+			sub := val.Document()
+			collectIDsFromRaw(sub, "", sub, out)
+		case bson.TypeArray:
+			arr := val.Array()
+			vals, err := arr.Values()
+			if err != nil {
+				continue
+			}
+			for _, item := range vals {
+				if item.Type == bson.TypeEmbeddedDocument {
+					sub := item.Document()
+					collectIDsFromRaw(sub, "", sub, out)
+				}
+			}
+		}
+	}
+}
+
+// BinaryToUUID converts a 16-byte MS GUID to a UUID-format hex string.
+// Mirrors codec.BinaryToUUID for use in ListUnitIdentities without
+// importing the codec package.
+func BinaryToUUID(data []byte) string {
+	if len(data) != 16 {
+		return ""
+	}
+	const hextable = "0123456789abcdef"
+	var buf [36]byte
+	buf[0] = hextable[data[3]>>4]
+	buf[1] = hextable[data[3]&0xf]
+	buf[2] = hextable[data[2]>>4]
+	buf[3] = hextable[data[2]&0xf]
+	buf[4] = hextable[data[1]>>4]
+	buf[5] = hextable[data[1]&0xf]
+	buf[6] = hextable[data[0]>>4]
+	buf[7] = hextable[data[0]&0xf]
+	buf[8] = '-'
+	buf[9] = hextable[data[5]>>4]
+	buf[10] = hextable[data[5]&0xf]
+	buf[11] = hextable[data[4]>>4]
+	buf[12] = hextable[data[4]&0xf]
+	buf[13] = '-'
+	buf[14] = hextable[data[7]>>4]
+	buf[15] = hextable[data[7]&0xf]
+	buf[16] = hextable[data[6]>>4]
+	buf[17] = hextable[data[6]&0xf]
+	buf[18] = '-'
+	buf[19] = hextable[data[8]>>4]
+	buf[20] = hextable[data[8]&0xf]
+	buf[21] = hextable[data[9]>>4]
+	buf[22] = hextable[data[9]&0xf]
+	buf[23] = '-'
+	buf[24] = hextable[data[10]>>4]
+	buf[25] = hextable[data[10]&0xf]
+	buf[26] = hextable[data[11]>>4]
+	buf[27] = hextable[data[11]&0xf]
+	buf[28] = hextable[data[12]>>4]
+	buf[29] = hextable[data[12]&0xf]
+	buf[30] = hextable[data[13]>>4]
+	buf[31] = hextable[data[13]&0xf]
+	buf[32] = hextable[data[14]>>4]
+	buf[33] = hextable[data[14]&0xf]
+	buf[34] = hextable[data[15]>>4]
+	buf[35] = hextable[data[15]&0xf]
+	return string(buf[:])
+}
+
 // GetRawMicroflowByName returns the raw BSON contents for a microflow by
 // qualified name. Convenience wrapper over GetRawUnitByName.
 func (r *Reader) GetRawMicroflowByName(qualifiedName string) ([]byte, error) {

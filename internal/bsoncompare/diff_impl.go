@@ -16,6 +16,11 @@ func Compare(aPath, bPath string, opts Options) ([]UnitDiff, error) {
 		return nil, fmt.Errorf("bsoncompare: read B (%s): %w", bPath, err)
 	}
 
+	// Fast path: same file → identical by definition
+	if aPath == bPath {
+		return nil, nil
+	}
+
 	idMap := BuildIDMap(bUnits)
 	MergeInto(idMap, BuildIDMap(aUnits))
 
@@ -43,6 +48,7 @@ func Compare(aPath, bPath string, opts Options) ([]UnitDiff, error) {
 		case aok && !bok:
 			result = append(result, UnitDiff{QualifiedName: name, UnitType: au.UnitType, Kind: DiffRemoved})
 		case !aok && bok:
+			bu.Decode()
 			result = append(result, UnitDiff{
 				QualifiedName: name,
 				UnitType:      bu.UnitType,
@@ -50,6 +56,11 @@ func Compare(aPath, bPath string, opts Options) ([]UnitDiff, error) {
 				ActualDoc:     bu.Doc,
 			})
 		default:
+			if au.ContentHash == bu.ContentHash {
+				continue
+			}
+			au.Decode()
+			bu.Decode()
 			aN := Normalize(au.Doc, idMap, opts)
 			bN := Normalize(bu.Doc, idMap, opts)
 			var fields []FieldDiff
@@ -68,10 +79,10 @@ func Compare(aPath, bPath string, opts Options) ([]UnitDiff, error) {
 	return result, nil
 }
 
-func indexUnits(units []UnitDoc) map[string]UnitDoc {
-	m := make(map[string]UnitDoc, len(units))
-	for _, u := range units {
-		m[u.QualifiedName] = u
+func indexUnits(units []UnitDoc) map[string]*UnitDoc {
+	m := make(map[string]*UnitDoc, len(units))
+	for i := range units {
+		m[units[i].QualifiedName] = &units[i]
 	}
 	return m
 }

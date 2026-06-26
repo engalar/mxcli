@@ -13,6 +13,26 @@ import (
 	_ "modernc.org/sqlite"
 )
 
+func TestListUnitIdentities(t *testing.T) {
+	r, err := OpenWithOptions("../../testdata/corpus-b/app.mpr", OpenOptions{ReadOnly: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer r.Close()
+	idents, err := r.ListUnitIdentities()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(idents) < 100 {
+		t.Errorf("expected >=100 identities for corpus-b, got %d", len(idents))
+	}
+	for _, id := range idents {
+		if id.ID == "" {
+			t.Error("found identity with empty ID")
+		}
+	}
+}
+
 // hashContents computes a base64-encoded SHA256 hash matching the writer's format.
 func hashContents(contents []byte) string {
 	h := sha256.Sum256(contents)

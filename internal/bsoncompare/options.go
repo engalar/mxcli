@@ -16,31 +16,21 @@ func DefaultOptions() Options {
 	}
 }
 
-var builtinIgnore = map[string]bool{
-	"$ID":                      true,
-	"DestinationControlVector": true,
-	"OriginControlVector":      true,
-	"ControlVector":            true,
-	"PositionX":                true,
-	"PositionY":                true,
-	"RelativeMiddlePoint":      true,
-}
-
+// shouldIgnore checks if a BSON field should be excluded from comparison.
+//
+// Hot path — kept as a single switch + O(n) scan to maximise inlining
+// potential for the common cases.
 func shouldIgnore(fieldName string, opts Options) bool {
-	if builtinIgnore[fieldName] {
+	switch fieldName {
+	case "$ID", "DestinationControlVector", "OriginControlVector",
+		"ControlVector", "PositionX", "PositionY", "RelativeMiddlePoint":
 		return true
-	}
-	if opts.IgnoreLayout {
-		switch fieldName {
-		case "CanvasHeight", "CanvasWidth":
-			return true
-		}
-	}
-	if opts.IgnoreDocumentation && fieldName == "Documentation" {
-		return true
-	}
-	if opts.IgnoreStableId && fieldName == "StableId" {
-		return true
+	case "CanvasHeight", "CanvasWidth":
+		return opts.IgnoreLayout
+	case "Documentation":
+		return opts.IgnoreDocumentation
+	case "StableId":
+		return opts.IgnoreStableId
 	}
 	for _, f := range opts.IgnoreFields {
 		if f == fieldName {
