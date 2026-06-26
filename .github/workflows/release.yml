@@ -48,16 +48,14 @@ jobs:
             ARCH="${TARGET#*/}"
             EXT=""; [ "${OS}" = "windows" ] && EXT=".exe"
             echo "Building ${OS}/${ARCH}..."
-            CGO_ENABLED=0 GOOS="${OS}" GOARCH="${ARCH}" go build -ldflags "${LDFLAGS}" -trimpath -o "bin/mxcli-${OS}-${ARCH}${EXT}" ./cmd/mxcli 2>&1
+            CGO_ENABLED=0 GOOS="${OS}" GOARCH="${ARCH}" go build -ldflags "${LDFLAGS}" -trimpath -o "bin/${BIN}" ./cmd/mxcli 2>&1
+            (cd bin && zip -q "${BIN}.zip" "${BIN}" && rm "${BIN}")
           done
 
       - name: Generate SHA256 checksums
         run: |
           cd bin
-          sha256sum mxcli-linux-amd64 mxcli-linux-arm64 \
-                    mxcli-darwin-amd64 mxcli-darwin-arm64 \
-                    mxcli-windows-amd64.exe mxcli-windows-arm64.exe > SHA256SUMS
-          cat SHA256SUMS
+          sha256sum mxcli-*.zip > SHA256SUMS
 
       - name: Generate release notes from CHANGELOG.md
         run: |
@@ -88,12 +86,12 @@ jobs:
         with:
           body_path: release-notes.md
           files: |
-            bin/mxcli-linux-amd64
-            bin/mxcli-linux-arm64
-            bin/mxcli-darwin-amd64
-            bin/mxcli-darwin-arm64
-            bin/mxcli-windows-amd64.exe
-            bin/mxcli-windows-arm64.exe
+            bin/mxcli-linux-amd64.zip
+            bin/mxcli-linux-arm64.zip
+            bin/mxcli-darwin-amd64.zip
+            bin/mxcli-darwin-arm64.zip
+            bin/mxcli-windows-amd64.zip
+            bin/mxcli-windows-arm64.zip
             bin/SHA256SUMS
             install.sh
             install.ps1

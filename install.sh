@@ -107,44 +107,52 @@ if [ "$INSTALL_DIR" != "/usr/local/bin" ]; then
   fi
 fi
 
-# ── Download mxcli binary ─────────────────────────────────────────────────────
-BIN_NAME="mxcli-${OS}-${ARCH}${EXT}"
-BIN_URL="https://github.com/${REPO}/releases/download/${LATEST}/${BIN_NAME}"
+# ── Download mxcli zip ────────────────────────────────────────────────────────
+ZIP_NAME="mxcli-${OS}-${ARCH}.zip"
+ZIP_URL="https://github.com/${REPO}/releases/download/${LATEST}/${ZIP_NAME}"
 SUMS_URL="https://github.com/${REPO}/releases/download/${LATEST}/SHA256SUMS"
-TMP=$(mktemp /tmp/mxcli.XXXXXX)
+TMP_ZIP=$(mktemp /tmp/mxcli.XXXXXX.zip)
 TMP_SUMS=$(mktemp /tmp/mxcli-sums.XXXXXX)
-trap 'rm -f "$TMP" "$TMP_SUMS"' EXIT
+trap 'rm -f "$TMP_ZIP" "$TMP_SUMS"' EXIT
 
 echo "  Downloading mxcli (${OS}/${ARCH}) from GitHub..."
-curl -fsSL --progress-bar "$BIN_URL" -o "$TMP"
+curl -fsSL --progress-bar "$ZIP_URL" -o "$TMP_ZIP"
 
 echo "  Verifying checksum..."
 curl -fsSL "$SUMS_URL" -o "$TMP_SUMS"
-EXPECTED=$(grep " ${BIN_NAME}$" "$TMP_SUMS" | awk '{print $1}')
+EXPECTED=$(grep " ${ZIP_NAME}$" "$TMP_SUMS" | awk '{print $1}')
 if [ -z "$EXPECTED" ]; then
-  echo "❌ No checksum entry for ${BIN_NAME} in SHA256SUMS" >&2
+  echo "❌ No checksum entry for ${ZIP_NAME} in SHA256SUMS" >&2
   exit 1
 fi
 if command -v sha256sum >/dev/null 2>&1; then
-  ACTUAL=$(sha256sum "$TMP" | awk '{print $1}')
+  ACTUAL=$(sha256sum "$TMP_ZIP" | awk '{print $1}')
 elif command -v shasum >/dev/null 2>&1; then
-  ACTUAL=$(shasum -a 256 "$TMP" | awk '{print $1}')
+  ACTUAL=$(shasum -a 256 "$TMP_ZIP" | awk '{print $1}')
 else
   echo "⚠️  sha256sum/shasum not found — skipping checksum verification" >&2
   ACTUAL="$EXPECTED"
 fi
 if [ "$ACTUAL" != "$EXPECTED" ]; then
-  echo "❌ Checksum mismatch for ${BIN_NAME}" >&2
+  echo "❌ Checksum mismatch for ${ZIP_NAME}" >&2
   echo "   expected: $EXPECTED" >&2
   echo "   got:      $ACTUAL" >&2
   exit 1
 fi
 
-chmod +x "$TMP"
+# Extract binary from zip
+if command -v unzip >/dev/null 2>&1; then
+  unzip -q -o "$TMP_ZIP" -d "$(dirname "$TMP_ZIP")"
+else
+  echo "❌ unzip not found — please install unzip and retry." >&2
+  exit 1
+fi
+EXTRACTED="$(dirname "$TMP_ZIP")/mxcli${EXT}"
+chmod +x "$EXTRACTED"
 
 # Atomic install (never leaves a partial binary)
 mkdir -p "$INSTALL_DIR"
-mv "$TMP" "${INSTALL_DIR}/mxcli${EXT}"
+mv "$EXTRACTED" "${INSTALL_DIR}/mxcli${EXT}"
 
 echo ""
 echo "✅ mxcli $LATEST installed to ${INSTALL_DIR}/mxcli${EXT}"

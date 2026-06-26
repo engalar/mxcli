@@ -68,23 +68,39 @@ if ($UserPath -notlike "*$InstallDir*") {
     Write-Host "  Added $InstallDir to user PATH"
 }
 
-# ── Download mxcli binary ─────────────────────────────────────────────────────
-$BinName = "mxcli-windows-$Arch.exe"
-$BinUrl = "https://github.com/$Repo/releases/download/$Latest/$BinName"
+# ── Download mxcli zip ─────────────────────────────────────────────────────────
+$ZipName = "mxcli-windows-$Arch.zip"
+$ZipUrl = "https://github.com/$Repo/releases/download/$Latest/$ZipName"
 $Dest = Join-Path $InstallDir "mxcli.exe"
-$Tmp = [System.IO.Path]::Combine([System.IO.Path]::GetTempPath(), "mxcli-install-$([System.Guid]::NewGuid()).exe")
+$TmpDir = Join-Path ([System.IO.Path]::GetTempPath()) "mxcli-install-$([System.Guid]::NewGuid())"
+$TmpZip = "$TmpDir\$ZipName"
+New-Item -ItemType Directory -Force -Path $TmpDir | Out-Null
 
 Write-Host "  Downloading mxcli (windows/$Arch) from GitHub..."
 try {
-    Invoke-WebRequest -Uri $BinUrl -OutFile $Tmp -UseBasicParsing
+    Invoke-WebRequest -Uri $ZipUrl -OutFile $TmpZip -UseBasicParsing
 } catch {
     Write-Error "Download failed: $_"
     exit 1
 }
 
+# Extract binary from zip
+try {
+    Expand-Archive -Path $TmpZip -DestinationPath $TmpDir -Force
+} catch {
+    Write-Error "Extraction failed: $_"
+    exit 1
+}
+$Extracted = Join-Path $TmpDir "mxcli.exe"
+if (-not (Test-Path $Extracted)) {
+    Write-Error "Extracted binary not found in zip: $Extracted"
+    exit 1
+}
+
 # Atomic install
-Move-Item -Force $Tmp $Dest
+Move-Item -Force $Extracted $Dest
 Unblock-File -Path $Dest
+Remove-Item -Recurse -Force $TmpDir
 
 Write-Host ""
 Write-Host "✅ mxcli $Latest installed to $Dest"
