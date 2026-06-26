@@ -81,3 +81,4 @@ vscode-mdl/*.vsix
 
 # Test temp dirs on the same filesystem (created by SameFSTempDir)
 .mxcli-tmp-*/
+profile/
