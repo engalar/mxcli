@@ -222,11 +222,7 @@ func (r *Reader) ListRawUnits(objectType string) ([]*types.RawUnitInfo, error) {
 		if err != nil {
 			continue
 		}
-		var raw map[string]any
-		if err := bson.Unmarshal(contents, &raw); err != nil {
-			continue
-		}
-		name, _ := raw["Name"].(string)
+		name := extractNameFromBSON(contents)
 		moduleName := ResolveModuleName(u.ContainerID, moduleMap, containerParent)
 		fullName := name
 		if moduleName != "" {
@@ -241,6 +237,19 @@ func (r *Reader) ListRawUnits(objectType string) ([]*types.RawUnitInfo, error) {
 		})
 	}
 	return result, nil
+}
+
+// extractNameFromBSON reads just the Name field from raw BSON without a
+// full decode. Used by ListRawUnits and similar to avoid the expensive
+// bson.Unmarshal for all unit contents.
+func extractNameFromBSON(contents []byte) string {
+	raw := bson.Raw(contents)
+	val, err := raw.LookupErr("Name")
+	if err != nil {
+		return ""
+	}
+	s, _ := val.StringValueOK()
+	return s
 }
 
 // ListUnitIdentities returns all unit IDs with their Name and Type, extracted

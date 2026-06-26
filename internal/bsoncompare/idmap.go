@@ -51,6 +51,15 @@ func (m IDMap) Lookup(data []byte) string {
 	return "<ref:?>"
 }
 
+// LookupID resolves a UUID-format element.ID string to a human-readable label.
+// Used when comparing ByIdRef properties via IDMap labels rather than raw UUIDs.
+func (m IDMap) LookupID(id string) string {
+	if label, ok := m[id]; ok {
+		return "<ref:" + label + ">"
+	}
+	return "<ref:?>"
+}
+
 func MergeInto(dst, src IDMap) {
 	for k, v := range src {
 		if _, exists := dst[k]; !exists {

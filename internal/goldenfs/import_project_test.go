@@ -19,6 +19,8 @@ import (
 	mprbackend "github.com/mendixlabs/mxcli/mdl/backend/mpr"
 	"github.com/mendixlabs/mxcli/mdl/executor"
 	"github.com/mendixlabs/mxcli/mdl/visitor"
+	"github.com/mendixlabs/mxcli/modelsdk/codec"
+	"github.com/mendixlabs/mxcli/modelsdk/element"
 )
 
 // buildSyntheticExport writes a minimal mxcli-export-style MDL tree under dir,
@@ -92,49 +94,41 @@ func runImportViaFUSE(t *testing.T, mountMpr, exportDir string) string {
 	return buf.String()
 }
 
-// assertEntityHasGrant returns a bson.D check that fails unless the named
-// entity's AccessRules contain an AllowedModuleRoles entry for roleName.
+// assertEntityHasGrant returns a check that fails unless the named entity's
+// AccessRules contain an AllowedModuleRoles entry for roleName.
 //
 // Regression target: msdkWrite used to call BeginWriteTransaction inline,
 // flushing entity+grant to disk; importBuf.Flush then overwrote the same
 // entity from the cached pre-grant snapshot, silently dropping the grant.
-func assertEntityHasGrant(entityName, roleName string) func(bson.D) error {
-	return func(doc bson.D) error {
-		for _, entElem := range bsonLookupArray(doc, "Entities") {
-			entDoc, ok := entElem.(bson.D)
-			if !ok {
+func assertEntityHasGrant(entityName, roleName string) func(element.Element) error {
+	return func(elem element.Element) error {
+		for _, ent := range childList(elem, "Entities") {
+			if elementName(ent) != entityName {
 				continue
 			}
-			if bsonLookupStr(entDoc, "Name") != entityName {
-				continue
-			}
-			for _, ruleElem := range bsonLookupArray(entDoc, "AccessRules") {
-				ruleDoc, ok := ruleElem.(bson.D)
-				if !ok {
-					continue
-				}
-				for _, roleElem := range bsonLookupArray(ruleDoc, "AllowedModuleRoles") {
-					if roleStr, ok := roleElem.(string); ok && roleStr == roleName {
+			for _, rule := range childList(ent, "AccessRules") {
+				for _, role := range refListValues(rule, "AllowedModuleRoles") {
+					if role == roleName {
 						return nil
 					}
 				}
 			}
 			return fmt.Errorf("entity %q has no AccessRule for role %q", entityName, roleName)
 		}
-		return fmt.Errorf("entity %q not found in domain model BSON", entityName)
+		return fmt.Errorf("entity %q not found in domain model", entityName)
 	}
 }
 
-// assertPageHasAllowedRole returns a bson.D check that fails unless the page
-// unit's AllowedRoles list contains roleName.
+// assertPageHasAllowedRole returns a check that fails unless the page unit's
+// AllowedRoles list contains roleName.
 //
 // Regression target: msdkWritePage had the same sessionBuf bypass as
 // msdkWrite — page+AllowedRoles flushed inline, then overwritten by the
 // cached page without AllowedRoles.
-func assertPageHasAllowedRole(roleName string) func(bson.D) error {
-	return func(doc bson.D) error {
-		for _, elem := range bsonLookupArray(doc, "AllowedRoles") {
-			if s, ok := elem.(string); ok && s == roleName {
+func assertPageHasAllowedRole(roleName string) func(element.Element) error {
+	return func(elem element.Element) error {
+		for _, role := range refListValues(elem, "AllowedRoles") {
+			if role == roleName {
 				return nil
 			}
 		}
@@ -142,20 +136,21 @@ func assertPageHasAllowedRole(roleName string) func(bson.D) error {
 	}
 }
 
-// bsonLookupArray returns the bson.A value at key, or nil if missing or
-// wrong type. Used in lieu of a Lookup helper to keep tests self-contained.
-func bsonLookupArray(doc bson.D, key string) bson.A {
-	for _, e := range doc {
-		if e.Key == key {
-			if arr, ok := e.Value.(bson.A); ok {
-				return arr
+// childList extracts child elements from an Element's ChildListProperty by name.
+func childList(elem element.Element, propName string) []element.Element {
+	for _, p := range elem.Properties() {
+		if p.Name() == propName {
+			if cl, ok := p.(element.ChildListProperty); ok {
+				return cl.ChildElements()
 			}
 		}
 	}
 	return nil
 }
 
-// bsonLookupStr returns the string value at key, or "" if missing or wrong type.
+// bsonLookupStr returns the string value at key from a raw BSON document,
+// or "" if missing or wrong type. Used by TestImportProject_PluggableWidgetTypeNotPointer
+// which reads .mxunit files directly.
 func bsonLookupStr(doc bson.D, key string) string {
 	for _, e := range doc {
 		if e.Key == key {
@@ -165,6 +160,40 @@ func bsonLookupStr(doc bson.D, key string) string {
 		}
 	}
 	return ""
+}
+
+// elementName returns the Name of an element via the namer interface.
+func elementName(elem element.Element) string {
+	type namer interface{ NameValue() string }
+	if n, ok := elem.(namer); ok {
+		return n.NameValue()
+	}
+	return ""
+}
+
+// refListValues extracts string values from a ByNameRefList property,
+// stripping the version marker.
+func refListValues(elem element.Element, propName string) []string {
+	for _, p := range elem.Properties() {
+		if p.Name() == propName {
+			if wp, ok := p.(element.WritableProperty); ok {
+				vals, _ := wp.BSONValue().([]any)
+				if len(vals) > 0 {
+					if _, ver := vals[0].(int32); ver {
+						vals = vals[1:]
+					}
+				}
+				out := make([]string, 0, len(vals))
+				for _, v := range vals {
+					if s, ok := v.(string); ok {
+						out = append(out, s)
+					}
+				}
+				return out
+			}
+		}
+	}
+	return nil
 }
 
 // TestImportProject_EntityGrantSurvivesSessionBuf verifies that an entity
@@ -199,6 +228,7 @@ func TestImportProject_EntityGrantSurvivesSessionBuf(t *testing.T) {
 	// scan the dirty overlay directly for the first DomainModels$DomainModel
 	// file and assert the entity grant is present.
 	foundDM := false
+	dec := codec.NewDecoder(codec.DefaultRegistry)
 	for _, p := range snap.DirtyPaths() {
 		if !strings.HasSuffix(p, ".mxunit") {
 			continue
@@ -207,15 +237,15 @@ func TestImportProject_EntityGrantSurvivesSessionBuf(t *testing.T) {
 		if data == nil {
 			continue
 		}
-		var doc bson.D
-		if err := bson.Unmarshal(data, &doc); err != nil {
+		elem, err := dec.DecodeBytes(data)
+		if err != nil {
 			continue
 		}
-		if bsonLookupStr(doc, "$Type") != "DomainModels$DomainModel" {
+		if elem.TypeName() != "DomainModels$DomainModel" {
 			continue
 		}
 		foundDM = true
-		if err := assertEntityHasGrant("ImportTestEntity", "MyFirstModule.ImportTestRole")(doc); err != nil {
+		if err := assertEntityHasGrant("ImportTestEntity", "MyFirstModule.ImportTestRole")(elem); err != nil {
 			t.Errorf("entity grant check failed on %s: %v", p, err)
 		}
 		break

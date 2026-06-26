@@ -138,8 +138,14 @@ func compareBSONValue(path string, g, a any, idMap IDMap, opts Options) []FieldD
 		return compareBinary(path, gv, a, idMap)
 	case element.ID:
 		av, _ := a.(element.ID)
-		if gv != av {
-			return []FieldDiff{{Path: path, Golden: string(gv), Actual: string(av), Kind: DiffChanged}}
+		// Resolve via IDMap for human-readable comparison, matching the
+		// old bson.Binary behavior. Raw UUIDs that point to the same
+		// entity produce equal labels (no spurious diff on non-deterministic
+		// UUID regeneration).
+		gl := idMap.LookupID(string(gv))
+		al := idMap.LookupID(string(av))
+		if gl != al {
+			return []FieldDiff{{Path: path, Golden: gl, Actual: al, Kind: DiffChanged}}
 		}
 	case []string:
 		av, _ := a.([]string)
