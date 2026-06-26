@@ -55,7 +55,7 @@ func TestSemantic_FullPipeline_Macnica(t *testing.T) {
 	assert.GreaterOrEqual(t, len(semIssues), 0)
 }
 
-func TestSemantic_NoDaemon_SkipsSEM(t *testing.T) {
+func TestSemantic_NoIndex_NoFalsePositive(t *testing.T) {
 	t.Parallel()
 	corpusAMPR := testutil.FindMPR(t, "CORPUS_A_MPR", "testdata/corpus-a/app.mpr")
 	records := scanProject(t, corpusAMPR, scan.Options{})
@@ -65,5 +65,5 @@ func TestSemantic_NoDaemon_SkipsSEM(t *testing.T) {
 	for _, pr := range parsed {
 		semIssues = append(semIssues, validate.ValidateSemantic(pr, nil)...)
 	}
-	assert.Empty(t, semIssues, "nil idx (no-daemon mode) must produce no semantic issues")
+	assert.Empty(t, semIssues, "nil idx (standalone mode without index) must produce no semantic issues")
 }

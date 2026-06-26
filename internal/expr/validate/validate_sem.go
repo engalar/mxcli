@@ -44,7 +44,7 @@ type IndexReader interface {
 }
 
 // ValidateSemantic applies SEM-04/05/07 rules to a parse result.
-// When idx is nil (no-daemon mode), returns nil.
+// When idx is nil (standalone mode without index), returns nil.
 func ValidateSemantic(pr parse.ParseResult, idx IndexReader) []ValidationResult {
 	if idx == nil {
 		return nil
