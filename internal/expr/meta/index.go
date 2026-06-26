@@ -49,6 +49,14 @@ type Index struct {
 }
 
 // BuildFromBackend 从已连接的 MPR 后端构建 Index。
+//
+// 性能说明：三处缓存消除冗余后端调用——
+//
+//  1. dmCache 缓存 GetDomainModelGen 结果，避免 buildEntityAttrs 和
+//     buildAssociations 各 decode 一次同一个 DomainModel。
+//  2. loadModuleMap 只调用一次，buildEnumValues / buildConstants 共享。
+//  3. ListModules 在 dmCache 和 loadModuleMap 间隐式共享（同一 Reader 缓存的
+//     unitCache 在首次 listUnitsByType 后即生效），无需单独缓存。
 func BuildFromBackend(b backend.FullBackend) (*Index, error) {
 	idx := &Index{
 		entityAttrs:        make(map[string]map[string]exprcheck.TypeKind),
@@ -66,16 +74,26 @@ func BuildFromBackend(b backend.FullBackend) (*Index, error) {
 		userRoles:          make(map[string]bool),
 	}
 
-	if err := idx.buildEntityAttrs(b); err != nil {
+	// 共享缓存：moduleID → *DomainModel（消除 buildEntityAttrs 和
+	// buildAssociations 之间的冗余 decode）。
+	dmCache := make(map[string]*genDm.DomainModel)
+
+	// loadModuleMap 只调一次，buildEnumValues / buildConstants 共享。
+	modByID, folderParent, err := loadModuleMap(b)
+	if err != nil {
 		return nil, err
 	}
-	if err := idx.buildEnumValues(b); err != nil {
+
+	if err := idx.buildEntityAttrs(b, dmCache); err != nil {
 		return nil, err
 	}
-	if err := idx.buildConstants(b); err != nil {
+	if err := idx.buildEnumValues(b, modByID, folderParent); err != nil {
 		return nil, err
 	}
-	if err := idx.buildAssociations(b); err != nil {
+	if err := idx.buildConstants(b, modByID, folderParent); err != nil {
+		return nil, err
+	}
+	if err := idx.buildAssociations(b, dmCache); err != nil {
 		return nil, err
 	}
 	if err := idx.buildMicroflowVars(b); err != nil {
@@ -104,7 +122,7 @@ func (idx *Index) buildUserRoles(b backend.FullBackend) error {
 	return nil
 }
 
-func (idx *Index) buildEntityAttrs(b backend.FullBackend) error {
+func (idx *Index) buildEntityAttrs(b backend.FullBackend, dmCache map[string]*genDm.DomainModel) error {
 	modules, err := b.ListModules()
 	if err != nil {
 		return err
@@ -123,6 +141,8 @@ func (idx *Index) buildEntityAttrs(b backend.FullBackend) error {
 		if err != nil || dm == nil {
 			continue
 		}
+		// 写入共享缓存供 buildAssociations 复用。
+		dmCache[string(m.ID)] = dm
 		moduleName := m.Name
 
 		for _, elem := range dm.EntitiesItems() {
@@ -315,12 +335,8 @@ func resolveModule(containerID string, modByID map[string]string, folderParent m
 	return ""
 }
 
-func (idx *Index) buildEnumValues(b backend.FullBackend) error {
+func (idx *Index) buildEnumValues(b backend.FullBackend, modByID map[string]string, folderParent map[string]string) error {
 	enums, err := b.ListEnumerations()
-	if err != nil {
-		return err
-	}
-	modByID, folderParent, err := loadModuleMap(b)
 	if err != nil {
 		return err
 	}
@@ -340,12 +356,8 @@ func (idx *Index) buildEnumValues(b backend.FullBackend) error {
 	return nil
 }
 
-func (idx *Index) buildConstants(b backend.FullBackend) error {
+func (idx *Index) buildConstants(b backend.FullBackend, modByID map[string]string, folderParent map[string]string) error {
 	constants, err := b.ListConstants()
-	if err != nil {
-		return err
-	}
-	modByID, folderParent, err := loadModuleMap(b)
 	if err != nil {
 		return err
 	}
@@ -401,15 +413,19 @@ func constantKindToExprKind(kind string) exprcheck.TypeKind {
 	}
 }
 
-func (idx *Index) buildAssociations(b backend.FullBackend) error {
+func (idx *Index) buildAssociations(b backend.FullBackend, dmCache map[string]*genDm.DomainModel) error {
 	modules, err := b.ListModules()
 	if err != nil {
 		return err
 	}
 	for _, m := range modules {
-		dm, err := b.GetDomainModelGen(m.ID)
-		if err != nil || dm == nil {
-			continue
+		dm, ok := dmCache[string(m.ID)]
+		if !ok {
+			var err error
+			dm, err = b.GetDomainModelGen(m.ID)
+			if err != nil || dm == nil {
+				continue
+			}
 		}
 		for _, elem := range dm.AssociationsItems() {
 			assoc, ok := elem.(*genDm.Association)
