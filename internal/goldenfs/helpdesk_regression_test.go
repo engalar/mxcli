@@ -115,9 +115,43 @@ func helpdeskMDLSections(t *testing.T) []string {
 func runHelpdeskMDL(t *testing.T, mprPath string) {
 	t.Helper()
 	sections := helpdeskMDLSections(t)
+
+	// Shared executor: create once, reuse for all sections.
+	// Between sections, explicit disconnect+connect refreshes the backend
+	// connection and executorCache (including graph catalog and entity name
+	// maps), avoiding the stale-cache issue of a single batch.
+	//
+	// This saves 33 executor creations + 33×7 handler registrations vs
+	// calling runMDL per section.
+
+	e := executor.New(io.Discard)
+	e.SetQuiet(true)
+	e.SetBackendFactory(func() backend.ConnectionBackend { return mprbackend.New() })
+	deps := e.BuildHandlerDeps()
+	microflow.RegisterHandlers(e.Registry(), deps)
+	page.RegisterHandlers(e.Registry(), deps)
+	workflow.RegisterHandlers(e.Registry(), deps)
+	domainmodel.RegisterHandlers(e.Registry(), deps)
+	security.RegisterHandlers(e.Registry(), deps)
+	query.RegisterHandlers(e.Registry(), deps)
+	misc.RegisterHandlers(e.Registry(), deps)
+	e.AddReregister(func(fresh *executor.HandlerDeps) {
+		microflow.RegisterHandlers(e.Registry(), fresh)
+		page.RegisterHandlers(e.Registry(), fresh)
+		workflow.RegisterHandlers(e.Registry(), fresh)
+		domainmodel.RegisterHandlers(e.Registry(), fresh)
+		security.RegisterHandlers(e.Registry(), fresh)
+		query.RegisterHandlers(e.Registry(), fresh)
+		misc.RegisterHandlers(e.Registry(), fresh)
+	})
+	defer func() {
+		if err := e.Close(); err != nil {
+			t.Errorf("runHelpdeskMDL: executor close: %v", err)
+		}
+	}()
+
 	for i, section := range sections {
 		label := fmt.Sprintf("section-%d", i+1)
-		// Extract MARK comment for logging
 		for _, line := range strings.SplitN(section, "\n", 3) {
 			if strings.HasPrefix(line, "-- MARK:") {
 				label = strings.TrimPrefix(line, "-- MARK: ")
@@ -125,7 +159,16 @@ func runHelpdeskMDL(t *testing.T, mprPath string) {
 			}
 		}
 		t.Logf("Executing: %s", label)
-		runMDL(t, mprPath, section)
+		// Each section runs as its own connect+execute+disconnect cycle
+		// within the same executor, avoiding stale caches.
+		full := "connect local '" + mprPath + "';\n" + section + "\ndisconnect;\n"
+		prog, errs := visitor.Build(full)
+		if len(errs) > 0 {
+			t.Fatalf("MDL parse error in %s: %v", label, errs)
+		}
+		if err := e.ExecuteProgram(prog); err != nil {
+			t.Fatalf("executor error in %s: %v", label, err)
+		}
 	}
 }
 

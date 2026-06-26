@@ -200,11 +200,20 @@ func (r *Reader) buildUnitCache() error {
 		}
 
 		// If the previous cache has this unit with the same ContentsHash,
-		// reuse its Contents and Type without re-reading the file.
+		// reuse its Contents and Type without re-reading the file — UNLESS
+		// the script overlay has fresher content (list-cache bug: writes go
+		// to scriptOverlay, not SQLite, so SQLite hash never changes during
+		// script execution, causing stale content to be reused).
 		if prev, ok := prevByID[unitUUID]; ok && prev.ContentsHash == contentsHash && prev.ContentsHash != "" {
-			cu.Type = prev.Type
-			cu.Contents = prev.Contents
-			cu.ContentsHash = prev.ContentsHash
+			if overlay, ok := r.scriptOverlay[unitUUID]; ok {
+				cu.Type = getTypeFromContents(overlay)
+				cu.Contents = overlay
+				cu.ContentsHash = contentsHash // SQLite hash unchanged; overlay check on next rebuild
+			} else {
+				cu.Type = prev.Type
+				cu.Contents = prev.Contents
+				cu.ContentsHash = prev.ContentsHash
+			}
 		} else {
 			// Hash changed or new unit: evict stale contentCache entry,
 			// then read fresh from disk (populates cache with new data).
