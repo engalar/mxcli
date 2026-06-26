@@ -37,9 +37,9 @@ AI 是否在开始操作前就有足够的信息做出正确决策？
 
 **3. 出错反馈**
 错误发生时，错误信息是否**可理解**且**含有下一步引导**？
-- 错误必须通过 `cmd.ErrOrStderr()` 路由到 socket，不能进 `/dev/null`（禁止 `os.Exit`、禁止裸 `fmt.Fprintf(os.Stderr)`）
+- 错误必须通过 `cmd.ErrOrStderr()` 路由，禁止 `os.Exit`、禁止裸 `fmt.Fprintf(os.Stderr)`
 - 错误消息必须说明**为什么失败**和**怎么修**，而不只是"not found"
-- `log.Printf` 的 HINT/WARNING 同样必须可见（daemon 模式下需重定向全局 log）
+- `log.Printf` 的 HINT/WARNING 同样必须通过 `cmd.ErrOrStderr()` 输出
 
 ### 与传统工具设计的区别
 
@@ -196,7 +196,7 @@ ModelSDKGo/
 │       ├── repair/          # ranked repair suggestions for fixable issues
 │       ├── report/          # HTML/JSON/text report generator (full pipeline)
 │       ├── meta/            # Index interface + CatalogReader (entity attrs, enums, constants)
-│       └── daemon/          # Background daemon — JIT index, socket protocol, idle watcher
+│       └── daemon/          # (removed) Background index server was here
 │
 ├── generated/metamodel/     # Auto-generated type definitions
 ├── examples/                # Usage examples
@@ -337,7 +337,7 @@ All executor code must go through the backend abstraction layer — the executor
 When adding or modifying pluggable widget support (DataGrid2, Gallery, filter widgets, etc.):
 - [ ] **No raw type strings in executor** — `TestNoRawBSONTypeStringsInExecutor` catches `"Forms$..."`, `"CustomWidgets$..."` literals; use gen types + `genElementToBSONDoc()` instead
 - [ ] **No duplicate write paths** — if both `buildDatasourceV3` (Forms path) and `buildDataGridDataSourceBSON` (DataGrid2 path) handle the same datasource type, extract a shared helper (see `buildNanoflowSourceGen` pattern)
-- [ ] **Daemon version synced after widget changes** — after changing `modelsdk/widgets/`, `mdl/executor/`, or `mdl/backend/mpr/`, run `make install-daemon` before testing; `TestNoDirectBSONImportInExecutor` and `TestNoRawBSONTypeStringsInExecutor` check structural correctness but the daemon must match the code
+- [ ] **mx check exit code checked** — any script that validates rebuilt projects must check BOTH `$?` (non-zero = crash) AND `[error]` line count; use `mx_check_against_baseline()` from `scripts/lib/mx-check.sh`
 - [ ] **mx check exit code checked** — any script that validates rebuilt projects must check BOTH `$?` (non-zero = crash) AND `[error]` line count; use `mx_check_against_baseline()` from `scripts/lib/mx-check.sh`
 - [ ] **Widget template extraction works** — for new widget types, verify `extractTemplateFromProject` can find an instance in the clean project (`testdata/helpdesk-clean-*/mprcontents/`); if not, the widget needs to exist in Atlas Core or similar baseline
 
@@ -446,12 +446,11 @@ go build -o bin/mxcli ./cmd/mxcli
 | **Local build** | `mxcli local build -p app.mpr [--skip-check]` | Build PAD package without Docker (Windows + Linux); output at `.docker/build/` |
 | **Local run** | `mxcli local run -p app.mpr [--admin-password pw] [--db postgres://...]` | Start Mendix runtime without Docker; HSQLDB by default, app at :8080 |
 | **Local upgrade** | `mxcli local upgrade` | Download latest `mxcli-local` from `local-v*` GitHub release |
-| **Daemon upgrade** | `mxcli daemon upgrade\|rollback\|status` | Manage mxcli-daemon lifecycle independently of launcher |
-| **Self upgrade** | `mxcli upgrade` | Self-fork launcher upgrade (rename trick on Windows) |
+| **Self upgrade** | `mxcli upgrade` | Download latest `mxcli` release (rename trick on Windows) |
 
 ### mxcli local — Run Without Docker
 
-`mxcli local` commands work on Windows and Linux without Docker. They use a separate independently-releasable binary `mxcli-local` that the launcher downloads on first use from `local-v*` GitHub releases.
+`mxcli local` commands work on Windows and Linux without Docker. They use a separate independently-releasable binary `mxcli-local` that mxcli downloads on first use from `local-v*` GitHub releases.
 
 ```bash
 # Step 1: Build PAD package (runs mxbuild locally, no Docker needed)
@@ -470,28 +469,25 @@ mxcli local upgrade    # download latest local-v* release
 mxcli local rollback   # restore previous version
 ```
 
-**PAD structure** (`.docker/build/`): contains `bin/start` (Linux/macOS), `bin/start.bat` (Windows), `bin/start.ps1` (PowerShell), and `lib/runtime/launcher/runtimelauncher.jar`. The launcher execs the platform-appropriate script.
+**PAD structure** (`.docker/build/`): contains `bin/start` (Linux/macOS), `bin/start.bat` (Windows), `bin/start.ps1` (PowerShell), and `lib/runtime/launcher/runtimelauncher.jar`. The runtime launcher execs the platform-appropriate script.
 
-**Binary architecture** — three independently released components:
+**Binary architecture** — two independently released components:
 
 | Binary | Tag pattern | Install path | Manages |
 |--------|-------------|--------------|---------|
-| `mxcli` (launcher) | `v*` | user PATH | routes commands, manages sub-binaries |
-| `mxcli-daemon` | `daemon-v*` | `~/.mxcli/daemon/` | all MDL commands, LSP, catalog |
+| `mxcli` | `v*` | user PATH | all CLI commands, LSP, catalog |
 | `mxcli-local` | `local-v*` | `~/.mxcli/local/` | PAD build + local runtime launch |
 
 Upgrade commands:
-- `mxcli upgrade` — self-fork launcher upgrade (Windows: rename trick; POSIX: atomic rename)
-- `mxcli daemon upgrade` — download latest `daemon-v*` release
+- `mxcli upgrade` — download latest `mxcli` release (rename trick on Windows; atomic rename on POSIX)
 - `mxcli local upgrade` — download latest `local-v*` release
 
 **Key implementation files:**
-- `cmd/mxcli-local/` — mxcli-local binary (build + run Cobra commands)
+- `cmd/mxcli-local/` — mxcli-local binary (build + run Cobra commands) (directory struct; implementation in progress)
 - `cmd/mxcli/docker/local.go` — `StartLocal()`, `ParseDBURL()`, `ProcessStarter` interface
 - `cmd/mxcli/docker/testfixtures/pad.go` — `FakePAD` fixture for unit tests
 - `cmd/mxcli-launcher/local.go` — launcher routing + `ensureLocalBinary()` + upgrade/rollback
-- `cmd/mxcli-launcher/upgrade.go` — `ComponentConfig`, `upgradeComponent()`, `rollbackComponent()`
-- `cmd/mxcli-launcher/self_update.go` — `runSelfUpgrade()`, `runInternalUpdate()`, `PIDWaiter` interface
+- `cmd/mxcli-launcher/self_update.go` — (removed) Launcher binary was here
 - `.github/workflows/release-local.yml` — CI for `local-v*` tags
 
 ### mxcli new
@@ -606,4 +602,4 @@ Full syntax tables for all MDL statements (microflows, pages, security, navigati
 - `cmd/mxcli/docker/oql.go` - OQL query execution via M2EE admin API
 - `sql/import.go` - IMPORT pipeline (batch insert, Mendix ID generation, sequence tracking)
 - `sql/generate.go` - Database Connector MDL generation from external schema
-- `cmd/mxcli-launcher/self_update.go` - `runSelfUpgrade()`, `runInternalUpdate()`, `PIDWaiter` interface
+- `cmd/mxcli-launcher/self_update.go` - (removed) Launcher binary was here

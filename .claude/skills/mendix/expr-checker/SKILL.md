@@ -19,19 +19,12 @@ mxcli expr repair <mprcontents>...
 
 # 完整流水线：scan → parse → validate → 生成报告
 mxcli expr report -p app.mpr --format html -o report.html
-
-# 管理后台 daemon
-mxcli expr daemon start   -p app.mpr
-mxcli expr daemon status
-mxcli expr daemon stop    -p app.mpr
 ```
 
 ## 重要选项
 
 | 选项 | 适用命令 | 说明 |
 |------|----------|------|
-| `--no-daemon` | `validate` | 跳过 daemon，仅做语法校验（适合 CI） |
-| `--socket PATH` | `daemon start` | 自定义 Unix socket 路径 |
 | `--format json\|html\|text` | `report`, `scan`, `validate` | 输出格式（默认 json） |
 | `--filter <substring>` | `validate`, `report` | 按 unit_type 过滤（如 `Microflow`） |
 | `--severity ERROR\|WARNING\|INFO` | `validate`, `report` | 按严重程度过滤 |
@@ -47,7 +40,7 @@ mxcli expr daemon stop    -p app.mpr
 | `SYN-02` | 字段存储了 URL 而非表达式 | INFO |
 | `SYN-03` | if-then 缺少 else 分支（启发式） | WARNING |
 
-### SEM — 语义规则（需要 -p 和 daemon）
+### SEM — 语义规则（需要 --project / -p）
 
 | 码 | 含义 | 严重程度 |
 |----|------|----------|
@@ -60,21 +53,19 @@ mxcli expr daemon stop    -p app.mpr
 ### 快速语法扫描（无需打开项目）
 
 ```bash
-mxcli expr validate -p app.mpr --no-daemon --format text
+mxcli expr validate -p app.mpr --format text
 ```
 
 ### 完整语义检查（需要 MPR）
 
 ```bash
-# daemon 会自动启动并缓存 index
 mxcli expr validate -p app.mpr --format json | jq '.[] | select(.Severity=="ERROR")'
 ```
 
 ### CI 集成
 
 ```bash
-# 仅语法检查，不启动 daemon，非零退出码表示有 ERROR
-mxcli expr validate -p app.mpr --no-daemon --severity ERROR --format json
+mxcli expr validate -p app.mpr --severity ERROR --format json
 echo "Exit: $?"
 ```
 
@@ -85,14 +76,16 @@ mxcli expr report -p app.mpr --format html -o expr-report.html
 open expr-report.html
 ```
 
-## Daemon 工作原理
+## Index 工作原理
 
-`mxcli expr validate`（不带 `--no-daemon`）会自动启动一个后台 daemon，daemon：
-- 为 MPR 建立 JIT 语义索引（实体属性、枚举值、常量）
-- 通过 Unix socket 提供校验服务（socket 路径从 MPR 路径派生，默认 `/tmp/mxexpr-*.sock`）
-- 空闲超时后自动退出
+`mxcli expr validate` 自动构建语义 index（实体属性、枚举值、常量）：
 
-手动管理：`mxcli expr daemon start|status|stop -p app.mpr`
+1. **建立 index** — 打开 MPR 并构建实体/枚举/常量/关联/微流变量的内存索引（无持久化 daemon 进程）
+2. **扫描表达式** — 从 mprcontents/ 中提取所有表达式字符串
+3. **解析 + 校验** — 对每个表达式进行语法解析和语义校验
+4. **输出结果** — 带错误码的格式化报告
+
+语义校验（SEM-04/05/07）需要 `--project` / `-p` 参数；没有时只做语法校验（SYN 规则）。
 
 ## 与 LSP / VS Code 的关系
 
