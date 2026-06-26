@@ -14,7 +14,7 @@
 #   make docs-serve - Serve docs site locally with live reload
 #   make sbom      - Generate CycloneDX SBOM (Go + TypeScript)
 #   make sbom-report - Generate Markdown dependency report
-#   make install-global - Build + install mxcli-daemon to /usr/local/bin/mxcli (requires sudo)
+#   make install-global - Build + install mxcli to /usr/local/bin/mxcli (requires sudo)
 #   make mine-exprgrammar MINE_MPR=path/to/app.mpr - Re-mine generated/exprgrammar/mined.go from an MPR
 #   make clean     - Remove build artifacts
 
@@ -31,8 +31,6 @@ BUILD_TIME = $(shell date -u +"%Y-%m-%dT%H:%M:%SZ" 2>/dev/null || echo "unknown"
 LDFLAGS = -ldflags "-X main.Version=$(VERSION) -X main.BuildTime=$(BUILD_TIME) -X main.CommitSHA=$(COMMIT_SHA)"
 # Release builds strip debug info and symbol table (~23% smaller).
 RELEASE_LDFLAGS = -ldflags "-X main.Version=$(VERSION) -X main.BuildTime=$(BUILD_TIME) -X main.CommitSHA=$(COMMIT_SHA) -s -w"
-DAEMON_NAME = mxcli-daemon
-
 # Clean version for VS Code extension (must be valid semver: major.minor.patch)
 VSCE_VERSION = $(shell echo "$(VERSION)" | sed 's/^v//; s/-.*//' | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$$' || echo "0.0.0")
 
@@ -57,7 +55,7 @@ TEST_TIMEOUT ?= 180s
 # Default (empty) uses Go's built-in caching for faster iterations.
 TEST_NOCACHE ?=
 
-.PHONY: build mdlrun build-local install-local build-debug release release-mxcli release-win-amd64 release-launcher release-daemon release-local-bins clean test test-fresh _test-inner test-mdl report report-bench report-reset-baseline bench-baseline grammar sync-skills sync-commands sync-lint-rules sync-changelog sync-examples sync-all docs documentation docs-site docs-serve source-tree sbom sbom-report lint lint-go fmt vet update-helpdesk-golden test-helpdesk-regression setup install install-daemon install-global test-section-check update-snapshots validate-snapshots validate-academy-capstone test-integration-profiled test-profile-check test-profile-record
+.PHONY: build mdlrun build-local install-local build-debug release release-mxcli release-win-amd64 release-local-bins clean test test-fresh _test-inner test-mdl report report-bench report-reset-baseline bench-baseline grammar sync-skills sync-commands sync-lint-rules sync-changelog sync-examples sync-all docs documentation docs-site docs-serve source-tree sbom sbom-report lint lint-go fmt vet update-helpdesk-golden test-helpdesk-regression setup install install-global test-section-check update-snapshots validate-snapshots validate-academy-capstone test-integration-profiled test-profile-check test-profile-record
 
 setup:
 	git config core.hooksPath .githooks
@@ -157,11 +155,6 @@ build: sync-all
 	CGO_ENABLED=0 go build $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME) $(CMD_PATH)
 	@echo "Built $(BUILD_DIR)/$(BINARY_NAME)"
 
-# Compress a single daemon binary: make compress-daemon BIN=bin/mxcli-daemon-linux-amd64
-compress-daemon:
-	@command -v zstd >/dev/null || (echo "zstd not found; install it first" && exit 1)
-	zstd -19 -f "$(BIN)" -o "$(BIN).tar.zst"
-	@echo "Compressed: $(BIN).tar.zst"
 
 # Build with debug tools (includes bson discover/compare/dump)
 build-debug: sync-all completions
