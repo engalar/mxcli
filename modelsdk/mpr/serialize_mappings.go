@@ -22,31 +22,31 @@ func SerializeImportMapping(im *model.ImportMapping) ([]byte, error) {
 	}
 
 	// ParameterType is a required sub-document even when not used (DataTypes$UnknownType).
-	parameterType := bson.M{
-		"$ID":   idToBsonBinary(generateUUID()),
-		"$Type": "DataTypes$UnknownType",
+	parameterType := bson.D{
+		{Key: "$ID", Value: idToBsonBinary(generateUUID())},
+		{Key: "$Type", Value: "DataTypes$UnknownType"},
 	}
 
-	doc := bson.M{
-		"$ID":               idToBsonBinary(string(im.ID)),
-		"$Type":             "ImportMappings$ImportMapping",
-		"Name":              im.Name,
-		"Documentation":     im.Documentation,
-		"Excluded":          im.Excluded,
-		"ExportLevel":       exportLevel,
-		"JsonStructure":     im.JsonStructure,
-		"XmlSchema":         im.XmlSchema,
-		"MessageDefinition": im.MessageDefinition,
-		"Elements":          elements,
+	doc := bson.D{
+		{Key: "$ID", Value: idToBsonBinary(string(im.ID))},
+		{Key: "$Type", Value: "ImportMappings$ImportMapping"},
+		{Key: "Name", Value: im.Name},
+		{Key: "Documentation", Value: im.Documentation},
+		{Key: "Excluded", Value: im.Excluded},
+		{Key: "ExportLevel", Value: exportLevel},
+		{Key: "JsonStructure", Value: im.JsonStructure},
+		{Key: "XmlSchema", Value: im.XmlSchema},
+		{Key: "MessageDefinition", Value: im.MessageDefinition},
+		{Key: "Elements", Value: elements},
 		// Required fields with defaults — verified against Studio Pro-created BSON
-		"UseSubtransactionsForMicroflows": false,
-		"PublicName":                      "",
-		"XsdRootElementName":              "",
-		"MappingSourceReference":          nil,
-		"ParameterType":                   parameterType,
-		"OperationName":                   "",
-		"ServiceName":                     "",
-		"WsdlFile":                        "",
+		{Key: "UseSubtransactionsForMicroflows", Value: false},
+		{Key: "PublicName", Value: ""},
+		{Key: "XsdRootElementName", Value: ""},
+		{Key: "MappingSourceReference", Value: nil},
+		{Key: "ParameterType", Value: parameterType},
+		{Key: "OperationName", Value: ""},
+		{Key: "ServiceName", Value: ""},
+		{Key: "WsdlFile", Value: ""},
 	}
 	return bson.Marshal(doc)
 }
@@ -65,7 +65,7 @@ func normalizeRootMappingElement(kind string, exposedName *string, _ *int) {
 	}
 }
 
-func serImportMappingElement(elem *model.ImportMappingElement, parentPath string) bson.M {
+func serImportMappingElement(elem *model.ImportMappingElement, parentPath string) bson.D {
 	id := string(elem.ID)
 	if id == "" {
 		id = generateUUID()
@@ -77,7 +77,7 @@ func serImportMappingElement(elem *model.ImportMappingElement, parentPath string
 	return serImportValueElement(id, elem, parentPath)
 }
 
-func serImportObjectElement(id string, elem *model.ImportMappingElement, parentPath string) bson.M {
+func serImportObjectElement(id string, elem *model.ImportMappingElement, parentPath string) bson.D {
 	jsonPath := elem.JsonPath
 	if jsonPath == "" {
 		if elem.ExposedName == "" {
@@ -102,58 +102,58 @@ func serImportObjectElement(id string, elem *model.ImportMappingElement, parentP
 		objectHandlingBackup = "Create"
 	}
 
-	return bson.M{
-		"$ID":                               idToBsonBinary(id),
-		"$Type":                             "ImportMappings$ObjectMappingElement",
-		"Entity":                            elem.Entity,
-		"ExposedName":                       elem.ExposedName,
-		"JsonPath":                          jsonPath,
-		"XmlPath":                           "",
-		"ObjectHandling":                    objectHandling,
-		"ObjectHandlingBackup":              objectHandlingBackup,
-		"ObjectHandlingBackupAllowOverride": false,
-		"Association":                       elem.Association,
-		"Children":                          children,
-		"MinOccurs":                         int32(elem.MinOccurs),
-		"MaxOccurs":                         int32(elem.MaxOccurs),
-		"Nillable":                          elem.Nillable,
-		"IsDefaultType":                     false,
-		"ElementType":                       serElementTypeForKind(elem.Kind),
-		"Documentation":                     "",
-		"CustomHandlerCall":                 nil,
+	return bson.D{
+		{Key: "$ID", Value: idToBsonBinary(id)},
+		{Key: "$Type", Value: "ImportMappings$ObjectMappingElement"},
+		{Key: "Entity", Value: elem.Entity},
+		{Key: "ExposedName", Value: elem.ExposedName},
+		{Key: "JsonPath", Value: jsonPath},
+		{Key: "XmlPath", Value: ""},
+		{Key: "ObjectHandling", Value: objectHandling},
+		{Key: "ObjectHandlingBackup", Value: objectHandlingBackup},
+		{Key: "ObjectHandlingBackupAllowOverride", Value: false},
+		{Key: "Association", Value: elem.Association},
+		{Key: "Children", Value: children},
+		{Key: "MinOccurs", Value: int32(elem.MinOccurs)},
+		{Key: "MaxOccurs", Value: int32(elem.MaxOccurs)},
+		{Key: "Nillable", Value: elem.Nillable},
+		{Key: "IsDefaultType", Value: false},
+		{Key: "ElementType", Value: serElementTypeForKind(elem.Kind)},
+		{Key: "Documentation", Value: ""},
+		{Key: "CustomHandlerCall", Value: nil},
 	}
 }
 
-func serImportValueElement(id string, elem *model.ImportMappingElement, parentPath string) bson.M {
+func serImportValueElement(id string, elem *model.ImportMappingElement, parentPath string) bson.D {
 	dataType := serMappingValueDataType(elem.DataType)
 	jsonPath := elem.JsonPath
 	if jsonPath == "" {
 		jsonPath = parentPath + "|" + elem.ExposedName
 	}
 
-	return bson.M{
-		"$ID":              idToBsonBinary(id),
-		"$Type":            "ImportMappings$ValueMappingElement",
-		"Attribute":        elem.Attribute,
-		"ExposedName":      elem.ExposedName,
-		"JsonPath":         jsonPath,
-		"XmlPath":          "",
-		"IsKey":            elem.IsKey,
-		"Type":             dataType,
-		"MinOccurs":        int32(elem.MinOccurs),
-		"MaxOccurs":        int32(elem.MaxOccurs),
-		"Nillable":         elem.Nillable,
-		"IsDefaultType":    false,
-		"ElementType":      "Value",
-		"Documentation":    "",
-		"Converter":        "",
-		"FractionDigits":   int32(elem.FractionDigits),
-		"TotalDigits":      int32(elem.TotalDigits),
-		"MaxLength":        int32(elem.MaxLength),
-		"IsContent":        false,
-		"IsXmlAttribute":   false,
-		"OriginalValue":    elem.OriginalValue,
-		"XmlPrimitiveType": serXmlPrimitiveTypeName(elem.DataType),
+	return bson.D{
+		{Key: "$ID", Value: idToBsonBinary(id)},
+		{Key: "$Type", Value: "ImportMappings$ValueMappingElement"},
+		{Key: "Attribute", Value: elem.Attribute},
+		{Key: "ExposedName", Value: elem.ExposedName},
+		{Key: "JsonPath", Value: jsonPath},
+		{Key: "XmlPath", Value: ""},
+		{Key: "IsKey", Value: elem.IsKey},
+		{Key: "Type", Value: dataType},
+		{Key: "MinOccurs", Value: int32(elem.MinOccurs)},
+		{Key: "MaxOccurs", Value: int32(elem.MaxOccurs)},
+		{Key: "Nillable", Value: elem.Nillable},
+		{Key: "IsDefaultType", Value: false},
+		{Key: "ElementType", Value: "Value"},
+		{Key: "Documentation", Value: ""},
+		{Key: "Converter", Value: ""},
+		{Key: "FractionDigits", Value: int32(elem.FractionDigits)},
+		{Key: "TotalDigits", Value: int32(elem.TotalDigits)},
+		{Key: "MaxLength", Value: int32(elem.MaxLength)},
+		{Key: "IsContent", Value: false},
+		{Key: "IsXmlAttribute", Value: false},
+		{Key: "OriginalValue", Value: elem.OriginalValue},
+		{Key: "XmlPrimitiveType", Value: serXmlPrimitiveTypeName(elem.DataType)},
 	}
 }
 
@@ -177,32 +177,32 @@ func SerializeExportMapping(em *model.ExportMapping) ([]byte, error) {
 		nullValueOption = "LeaveOutElement"
 	}
 
-	doc := bson.M{
-		"$ID":               idToBsonBinary(string(em.ID)),
-		"$Type":             "ExportMappings$ExportMapping",
-		"Name":              em.Name,
-		"Documentation":     em.Documentation,
-		"Excluded":          em.Excluded,
-		"ExportLevel":       exportLevel,
-		"JsonStructure":     em.JsonStructure,
-		"XmlSchema":         em.XmlSchema,
-		"MessageDefinition": em.MessageDefinition,
-		"NullValueOption":   nullValueOption,
-		"Elements":          elements,
+	doc := bson.D{
+		{Key: "$ID", Value: idToBsonBinary(string(em.ID))},
+		{Key: "$Type", Value: "ExportMappings$ExportMapping"},
+		{Key: "Name", Value: em.Name},
+		{Key: "Documentation", Value: em.Documentation},
+		{Key: "Excluded", Value: em.Excluded},
+		{Key: "ExportLevel", Value: exportLevel},
+		{Key: "JsonStructure", Value: em.JsonStructure},
+		{Key: "XmlSchema", Value: em.XmlSchema},
+		{Key: "MessageDefinition", Value: em.MessageDefinition},
+		{Key: "NullValueOption", Value: nullValueOption},
+		{Key: "Elements", Value: elements},
 		// Required fields with defaults — verified against Studio Pro-created BSON
-		"PublicName":             "",
-		"XsdRootElementName":     "",
-		"IsHeaderParameter":      false,
-		"ParameterName":          "",
-		"OperationName":          "",
-		"ServiceName":            "",
-		"WsdlFile":               "",
-		"MappingSourceReference": nil,
+		{Key: "PublicName", Value: ""},
+		{Key: "XsdRootElementName", Value: ""},
+		{Key: "IsHeaderParameter", Value: false},
+		{Key: "ParameterName", Value: ""},
+		{Key: "OperationName", Value: ""},
+		{Key: "ServiceName", Value: ""},
+		{Key: "WsdlFile", Value: ""},
+		{Key: "MappingSourceReference", Value: nil},
 	}
 	return bson.Marshal(doc)
 }
 
-func serExportMappingElement(elem *model.ExportMappingElement, parentPath string) bson.M {
+func serExportMappingElement(elem *model.ExportMappingElement, parentPath string) bson.D {
 	id := string(elem.ID)
 	if id == "" {
 		id = generateUUID()
@@ -214,7 +214,7 @@ func serExportMappingElement(elem *model.ExportMappingElement, parentPath string
 	return serExportValueElement(id, elem, parentPath)
 }
 
-func serExportObjectElement(id string, elem *model.ExportMappingElement, parentPath string) bson.M {
+func serExportObjectElement(id string, elem *model.ExportMappingElement, parentPath string) bson.D {
 	jsonPath := elem.JsonPath
 	if jsonPath == "" {
 		if elem.ExposedName == "" {
@@ -236,57 +236,57 @@ func serExportObjectElement(id string, elem *model.ExportMappingElement, parentP
 
 	maxOccurs := int32(elem.MaxOccurs)
 
-	return bson.M{
-		"$ID":                               idToBsonBinary(id),
-		"$Type":                             "ExportMappings$ObjectMappingElement",
-		"Entity":                            elem.Entity,
-		"ExposedName":                       elem.ExposedName,
-		"JsonPath":                          jsonPath,
-		"XmlPath":                           "",
-		"ObjectHandling":                    objectHandling,
-		"ObjectHandlingBackup":              objectHandling,
-		"ObjectHandlingBackupAllowOverride": false,
-		"Association":                       elem.Association,
-		"Children":                          children,
-		"MinOccurs":                         int32(0),
-		"MaxOccurs":                         maxOccurs,
-		"Nillable":                          true,
-		"IsDefaultType":                     false,
-		"ElementType":                       serElementTypeForKind(elem.Kind),
-		"Documentation":                     "",
-		"CustomHandlerCall":                 nil,
+	return bson.D{
+		{Key: "$ID", Value: idToBsonBinary(id)},
+		{Key: "$Type", Value: "ExportMappings$ObjectMappingElement"},
+		{Key: "Entity", Value: elem.Entity},
+		{Key: "ExposedName", Value: elem.ExposedName},
+		{Key: "JsonPath", Value: jsonPath},
+		{Key: "XmlPath", Value: ""},
+		{Key: "ObjectHandling", Value: objectHandling},
+		{Key: "ObjectHandlingBackup", Value: objectHandling},
+		{Key: "ObjectHandlingBackupAllowOverride", Value: false},
+		{Key: "Association", Value: elem.Association},
+		{Key: "Children", Value: children},
+		{Key: "MinOccurs", Value: int32(0)},
+		{Key: "MaxOccurs", Value: maxOccurs},
+		{Key: "Nillable", Value: true},
+		{Key: "IsDefaultType", Value: false},
+		{Key: "ElementType", Value: serElementTypeForKind(elem.Kind)},
+		{Key: "Documentation", Value: ""},
+		{Key: "CustomHandlerCall", Value: nil},
 	}
 }
 
-func serExportValueElement(id string, elem *model.ExportMappingElement, parentPath string) bson.M {
+func serExportValueElement(id string, elem *model.ExportMappingElement, parentPath string) bson.D {
 	dataType := serMappingValueDataType(elem.DataType)
 	jsonPath := elem.JsonPath
 	if jsonPath == "" {
 		jsonPath = parentPath + "|" + elem.ExposedName
 	}
 
-	return bson.M{
-		"$ID":              idToBsonBinary(id),
-		"$Type":            "ExportMappings$ValueMappingElement",
-		"Attribute":        elem.Attribute,
-		"ExposedName":      elem.ExposedName,
-		"JsonPath":         jsonPath,
-		"XmlPath":          "",
-		"Type":             dataType,
-		"MinOccurs":        int32(0),
-		"MaxOccurs":        int32(0),
-		"Nillable":         true,
-		"IsDefaultType":    false,
-		"ElementType":      "Value",
-		"Documentation":    "",
-		"Converter":        "",
-		"FractionDigits":   int32(-1),
-		"TotalDigits":      int32(-1),
-		"MaxLength":        int32(0),
-		"IsContent":        false,
-		"IsXmlAttribute":   false,
-		"OriginalValue":    "",
-		"XmlPrimitiveType": serXmlPrimitiveTypeName(elem.DataType),
+	return bson.D{
+		{Key: "$ID", Value: idToBsonBinary(id)},
+		{Key: "$Type", Value: "ExportMappings$ValueMappingElement"},
+		{Key: "Attribute", Value: elem.Attribute},
+		{Key: "ExposedName", Value: elem.ExposedName},
+		{Key: "JsonPath", Value: jsonPath},
+		{Key: "XmlPath", Value: ""},
+		{Key: "Type", Value: dataType},
+		{Key: "MinOccurs", Value: int32(0)},
+		{Key: "MaxOccurs", Value: int32(0)},
+		{Key: "Nillable", Value: true},
+		{Key: "IsDefaultType", Value: false},
+		{Key: "ElementType", Value: "Value"},
+		{Key: "Documentation", Value: ""},
+		{Key: "Converter", Value: ""},
+		{Key: "FractionDigits", Value: int32(-1)},
+		{Key: "TotalDigits", Value: int32(-1)},
+		{Key: "MaxLength", Value: int32(0)},
+		{Key: "IsContent", Value: false},
+		{Key: "IsXmlAttribute", Value: false},
+		{Key: "OriginalValue", Value: ""},
+		{Key: "XmlPrimitiveType", Value: serXmlPrimitiveTypeName(elem.DataType)},
 	}
 }
 

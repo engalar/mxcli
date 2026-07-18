@@ -49,6 +49,11 @@ type Writer struct {
 	// scriptUpdateBuf, when non-nil, diverts updateUnit calls to a buffering
 	// callback (same goal as scriptInsertBuf for ALTER/REPLACE operations).
 	scriptUpdateBuf func(unitID string, contents []byte) error
+
+	// scriptContainerUpdateBuf, when non-nil, diverts UpdateUnitContainer calls
+	// to a buffering callback. Used by EXECUTE SCRIPT to batch container
+	// (folder) moves via ScriptBuffer.AddContainerUpdate.
+	scriptContainerUpdateBuf func(unitID, containerID string) error
 }
 
 // SetSessionBuf installs a callback that intercepts every updateUnit call.
@@ -71,9 +76,12 @@ func (w *Writer) ClearSessionBuf() {
 // while a script transaction is active. When set, inserts and updates are
 // routed to the callback (typically ScriptBuffer.AddInsert/AddUpdate)
 // instead of going through file I/O + SQL. Pass nil for both to disable.
-func (w *Writer) SetScriptBuf(insertFn func(unitID, containerID, containmentName, unitType string, contents []byte) error, updateFn func(unitID string, contents []byte) error) {
+func (w *Writer) SetScriptBuf(insertFn func(unitID, containerID, containmentName, unitType string, contents []byte) error, updateFn func(unitID string, contents []byte) error, containerUpdateFn ...func(unitID, containerID string) error) {
 	w.scriptInsertBuf = insertFn
 	w.scriptUpdateBuf = updateFn
+	if len(containerUpdateFn) > 0 {
+		w.scriptContainerUpdateBuf = containerUpdateFn[0]
+	}
 }
 
 // ClearScriptBuf removes any installed script buffer callback so subsequent
@@ -81,6 +89,7 @@ func (w *Writer) SetScriptBuf(insertFn func(unitID, containerID, containmentName
 func (w *Writer) ClearScriptBuf() {
 	w.scriptInsertBuf = nil
 	w.scriptUpdateBuf = nil
+	w.scriptContainerUpdateBuf = nil
 }
 
 // NewWriter creates a new writer from a reader opened in read-write mode.
@@ -185,6 +194,7 @@ type BatchWriteOp struct {
 	ContainmentName string
 	UnitType        string
 	Contents        []byte
+	NewContainerID  string // non-empty = move to new container after content update
 }
 
 // BeginWriteTransaction starts a new write transaction.
@@ -725,11 +735,25 @@ func (w *Writer) BatchWrite(ops []BatchWriteOp) error {
 			}
 		} else {
 			if w.reader.version == MPRVersionV2 {
-				hash := sha256.Sum256(op.Contents)
-				contentsHash := base64.StdEncoding.EncodeToString(hash[:])
-				_, err = sqlTx.Exec(`UPDATE Unit SET ContentsHash = ? WHERE UnitID = ?`, contentsHash, unitIDBlob)
+				if len(op.Contents) > 0 {
+					hash := sha256.Sum256(op.Contents)
+					contentsHash := base64.StdEncoding.EncodeToString(hash[:])
+					_, err = sqlTx.Exec(`UPDATE Unit SET ContentsHash = ? WHERE UnitID = ?`, contentsHash, unitIDBlob)
+				}
+				if op.NewContainerID != "" {
+					_, err = sqlTx.Exec(`UPDATE Unit SET ContainerID = ? WHERE UnitID = ?`, uuidToBlob(op.NewContainerID), unitIDBlob)
+				}
 			} else {
-				_, err = sqlTx.Exec(`UPDATE Unit SET Contents = ? WHERE UnitID = ?`, op.Contents, unitIDBlob)
+				if op.NewContainerID != "" {
+					containerIDBlob := uuidToBlob(op.NewContainerID)
+					if len(op.Contents) > 0 {
+						_, err = sqlTx.Exec(`UPDATE Unit SET Contents = ?, ContainerID = ? WHERE UnitID = ?`, op.Contents, containerIDBlob, unitIDBlob)
+					} else {
+						_, err = sqlTx.Exec(`UPDATE Unit SET ContainerID = ? WHERE UnitID = ?`, containerIDBlob, unitIDBlob)
+					}
+				} else {
+					_, err = sqlTx.Exec(`UPDATE Unit SET Contents = ? WHERE UnitID = ?`, op.Contents, unitIDBlob)
+				}
 			}
 		}
 		if err != nil {
@@ -760,6 +784,11 @@ func (w *Writer) BatchWrite(ops []BatchWriteOp) error {
 
 // UpdateUnitContainer changes the ContainerID of a unit, moving it to a new parent.
 func (w *Writer) UpdateUnitContainer(unitID, newContainerID string) error {
+	// Script batch mode: divert to ScriptBuffer for EXECUTE SCRIPT.
+	if w.scriptContainerUpdateBuf != nil {
+		return w.scriptContainerUpdateBuf(unitID, newContainerID)
+	}
+
 	unitIDBlob := uuidToBlob(unitID)
 	if unitIDBlob == nil {
 		return fmt.Errorf("invalid unit ID: %s", unitID)

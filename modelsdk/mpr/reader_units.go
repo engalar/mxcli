@@ -112,10 +112,20 @@ func (r *Reader) listUnitsByTypeV1(typePrefix string) ([]rawUnit, error) {
 			return nil, fmt.Errorf("failed to scan unit row: %w", err)
 		}
 
+		// Check script overlay for updated content within the same EXECUTE SCRIPT
+		// block (e.g. project settings after ALTER SETTINGS LANGUAGE ADD, or domain
+		// models after CREATE ENTITY).  Only accept the overlay when the first BSON
+		// key is "$ID" — the Mendix storage engine requires this invariant and will
+		// crash with a StorageLoadException when it is violated.
+		unitUUID := blobToUUID(unitID)
+		if overlay, ok := r.scriptOverlay[unitUUID]; ok && bsonFirstKeyIs(overlay, "$ID") {
+			contents = overlay
+		}
+
 		typeName := getTypeFromContents(contents)
 		if typePrefix == "" || strings.HasPrefix(typeName, typePrefix) {
 			units = append(units, rawUnit{
-				ID:              blobToUUID(unitID),
+				ID:              unitUUID,
 				ContainerID:     blobToUUID(containerID),
 				ContainmentName: containmentName,
 				Type:            typeName,
@@ -336,6 +346,32 @@ func getTypeFromContents(contents []byte) string {
 		return ""
 	}
 	return s
+}
+
+// bsonFirstKeyIs reports whether the first key in a raw BSON document matches
+// want. Returns false on empty/malformed input. The Mendix storage engine
+// requires the first key of every storage object to be "$ID"; overlays that
+// violate this invariant cause StorageLoadException at mx check time.
+func bsonFirstKeyIs(contents []byte, want string) bool {
+	if len(contents) < 5 {
+		return false
+	}
+	// BSON document layout: int32 total_length, then (type_byte, cstring_key, value)+, \x00
+	pos := 4
+	if pos >= len(contents) {
+		return false
+	}
+	_ = contents[pos] // type byte
+	pos++
+	keyStart := pos
+	for pos < len(contents) && contents[pos] != 0 {
+		pos++
+	}
+	if pos >= len(contents) {
+		return false
+	}
+	firstKey := string(contents[keyStart:pos])
+	return firstKey == want
 }
 
 // RawUnitInfo contains information about a raw unit for BSON debugging.

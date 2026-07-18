@@ -16,9 +16,10 @@ type scriptBufEntry struct {
 // ScriptBuffer accumulates write operations during an EXECUTE SCRIPT block.
 // No SQL connection is held; a single atomic BatchWrite is issued at Commit time.
 type ScriptBuffer struct {
-	inserts map[string]scriptBufEntry
-	updates map[string][]byte
-	reader  *modelsdkmpr.Reader
+	inserts          map[string]scriptBufEntry
+	updates          map[string][]byte
+	containerUpdates map[string]string // unitID → newContainerID (for existing SQLite units)
+	reader           *modelsdkmpr.Reader
 }
 
 func newScriptBuffer(r *modelsdkmpr.Reader) *ScriptBuffer {
@@ -48,14 +49,34 @@ func (buf *ScriptBuffer) AddUpdate(unitID string, contents []byte) error {
 	return nil
 }
 
+func (buf *ScriptBuffer) AddContainerUpdate(unitID, containerID string) error {
+	// For inserts (buffered in this script transaction), update the insert
+	// entry's ContainerID so the BatchWrite uses the new container.
+	if e, ok := buf.inserts[unitID]; ok {
+		e.containerID = containerID
+		buf.inserts[unitID] = e
+		return nil
+	}
+	// For existing SQLite units, add an update that sets both Contents and
+	// ContainerID on commit. We store the container ID in a separate map
+	// and merge it into the BatchWrite at commit time.
+	buf.updates[unitID] = nil // ensure the unit is in the updates map
+	if buf.containerUpdates == nil {
+		buf.containerUpdates = make(map[string]string)
+	}
+	buf.containerUpdates[unitID] = containerID
+	return nil
+}
+
 func (buf *ScriptBuffer) Rollback() {
 	buf.inserts = nil
 	buf.updates = nil
+	buf.containerUpdates = nil
 	buf.reader.ClearScriptMode()
 }
 
 func (buf *ScriptBuffer) toBatchOps() []modelsdkmpr.BatchWriteOp {
-	ops := make([]modelsdkmpr.BatchWriteOp, 0, len(buf.inserts)+len(buf.updates))
+	ops := make([]modelsdkmpr.BatchWriteOp, 0, len(buf.inserts)+len(buf.updates)+len(buf.containerUpdates))
 	for id, e := range buf.inserts {
 		ops = append(ops, modelsdkmpr.BatchWriteOp{
 			Insert: true, UnitID: id, ContainerID: e.containerID,
@@ -63,7 +84,11 @@ func (buf *ScriptBuffer) toBatchOps() []modelsdkmpr.BatchWriteOp {
 		})
 	}
 	for id, contents := range buf.updates {
-		ops = append(ops, modelsdkmpr.BatchWriteOp{Insert: false, UnitID: id, Contents: contents})
+		newContainerID := ""
+		if buf.containerUpdates != nil {
+			newContainerID = buf.containerUpdates[id]
+		}
+		ops = append(ops, modelsdkmpr.BatchWriteOp{Insert: false, UnitID: id, Contents: contents, NewContainerID: newContainerID})
 	}
 	return ops
 }

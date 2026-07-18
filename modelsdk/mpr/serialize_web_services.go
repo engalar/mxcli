@@ -16,96 +16,93 @@ import (
 
 // SerializeConsumedODataService returns BSON bytes for a consumed OData service unit.
 func SerializeConsumedODataService(svc *model.ConsumedODataService) ([]byte, error) {
-	doc := bson.M{
-		"$ID":                  idToBsonBinary(string(svc.ID)),
-		"$Type":                "Rest$ConsumedODataService",
-		"Name":                 svc.Name,
-		"Documentation":        svc.Documentation,
-		"Version":              svc.Version,
-		"ServiceName":          svc.ServiceName,
-		"ODataVersion":         svc.ODataVersion,
-		"MetadataUrl":          svc.MetadataUrl,
-		"TimeoutExpression":    svc.TimeoutExpression,
-		"ProxyType":            svc.ProxyType,
-		"Description":          svc.Description,
-		"Validated":            svc.Validated,
-		"Excluded":             svc.Excluded,
-		"ExportLevel":          "Hidden",
-		"Metadata":             svc.Metadata,
-		"MetadataHash":         svc.MetadataHash,
-		"MetadataReferences":   bson.A{int32(0)},
-		"ValidatedEntities":    bson.A{int32(0)},
-		"LastUpdated":          "",
-		"UseQuerySegment":      false,
-		"MinimumMxVersion":     "",
-		"RecommendedMxVersion": "",
+	doc := bson.D{
+		{Key: "$ID", Value: idToBsonBinary(string(svc.ID))},
+		{Key: "$Type", Value: "Rest$ConsumedODataService"},
+		{Key: "Name", Value: svc.Name},
+		{Key: "Documentation", Value: svc.Documentation},
+		{Key: "Version", Value: svc.Version},
+		{Key: "ServiceName", Value: svc.ServiceName},
+		{Key: "ODataVersion", Value: svc.ODataVersion},
+		{Key: "MetadataUrl", Value: svc.MetadataUrl},
+		{Key: "TimeoutExpression", Value: svc.TimeoutExpression},
+		{Key: "ProxyType", Value: svc.ProxyType},
+		{Key: "Description", Value: svc.Description},
+		{Key: "Validated", Value: svc.Validated},
+		{Key: "Excluded", Value: svc.Excluded},
+		{Key: "ExportLevel", Value: "Hidden"},
+		{Key: "Metadata", Value: svc.Metadata},
+		{Key: "MetadataHash", Value: svc.MetadataHash},
+		{Key: "MetadataReferences", Value: bson.A{int32(0)}},
+		{Key: "ValidatedEntities", Value: bson.A{int32(0)}},
+		{Key: "LastUpdated", Value: ""},
+		{Key: "UseQuerySegment", Value: false},
+		{Key: "MinimumMxVersion", Value: ""},
+		{Key: "RecommendedMxVersion", Value: ""},
 	}
 
 	if svc.ConfigurationMicroflow != "" {
-		doc["ConfigurationMicroflow"] = svc.ConfigurationMicroflow
+		doc = append(doc, bson.E{Key: "ConfigurationMicroflow", Value: svc.ConfigurationMicroflow})
 	}
 	if svc.ErrorHandlingMicroflow != "" {
-		doc["ErrorHandlingMicroflow"] = svc.ErrorHandlingMicroflow
+		doc = append(doc, bson.E{Key: "ErrorHandlingMicroflow", Value: svc.ErrorHandlingMicroflow})
 	}
 	if svc.ProxyHost != "" {
-		doc["ProxyHost"] = svc.ProxyHost
+		doc = append(doc, bson.E{Key: "ProxyHost", Value: svc.ProxyHost})
 	}
 	if svc.ProxyPort != "" {
-		doc["ProxyPort"] = svc.ProxyPort
+		doc = append(doc, bson.E{Key: "ProxyPort", Value: svc.ProxyPort})
 	}
 	if svc.ProxyUsername != "" {
-		doc["ProxyUsername"] = svc.ProxyUsername
+		doc = append(doc, bson.E{Key: "ProxyUsername", Value: svc.ProxyUsername})
 	}
 	if svc.ProxyPassword != "" {
-		doc["ProxyPassword"] = svc.ProxyPassword
+		doc = append(doc, bson.E{Key: "ProxyPassword", Value: svc.ProxyPassword})
 	}
 	if svc.ApplicationId != "" {
-		doc["ApplicationId"] = svc.ApplicationId
+		doc = append(doc, bson.E{Key: "ApplicationId", Value: svc.ApplicationId})
 	}
 	if svc.EndpointId != "" {
-		doc["EndpointId"] = svc.EndpointId
+		doc = append(doc, bson.E{Key: "EndpointId", Value: svc.EndpointId})
 	}
 	if svc.CatalogUrl != "" {
-		doc["CatalogUrl"] = svc.CatalogUrl
+		doc = append(doc, bson.E{Key: "CatalogUrl", Value: svc.CatalogUrl})
 	}
 	if svc.EnvironmentType != "" {
-		doc["EnvironmentType"] = svc.EnvironmentType
+		doc = append(doc, bson.E{Key: "EnvironmentType", Value: svc.EnvironmentType})
 	}
 
-	doc["HttpConfiguration"] = serWebHttpConfiguration(svc.HttpConfiguration)
+	doc = append(doc, bson.E{Key: "HttpConfiguration", Value: serWebHttpConfiguration(svc.HttpConfiguration)})
 
 	return bson.Marshal(doc)
 }
 
-// serWebHttpConfiguration converts an HttpConfiguration to a BSON map.
-func serWebHttpConfiguration(cfg *model.HttpConfiguration) bson.M {
+// serWebHttpConfiguration converts an HttpConfiguration to a BSON document.
+func serWebHttpConfiguration(cfg *model.HttpConfiguration) bson.D {
 	cfgID := generateUUID()
 	if cfg != nil && cfg.ID != "" {
 		cfgID = string(cfg.ID)
 	}
 
-	doc := bson.M{
-		"$ID":                        idToBsonBinary(cfgID),
-		"$Type":                      "Microflows$HttpConfiguration",
-		"UseHttpAuthentication":      false,
-		"HttpAuthenticationUserName": "",
-		"HttpAuthenticationPassword": "",
-		"HttpMethod":                 "Post",
-		"OverrideLocation":           false,
-		"CustomLocation":             "",
-		"ClientCertificate":          "",
+	doc := bson.D{
+		{Key: "$ID", Value: idToBsonBinary(cfgID)},
+		{Key: "$Type", Value: "Microflows$HttpConfiguration"},
 	}
 
 	if cfg != nil {
-		doc["UseHttpAuthentication"] = cfg.UseAuthentication
-		doc["HttpAuthenticationUserName"] = cfg.Username
-		doc["HttpAuthenticationPassword"] = cfg.Password
+		doc = append(doc,
+			bson.E{Key: "UseHttpAuthentication", Value: cfg.UseAuthentication},
+			bson.E{Key: "HttpAuthenticationUserName", Value: cfg.Username},
+			bson.E{Key: "HttpAuthenticationPassword", Value: cfg.Password},
+		)
 		if cfg.HttpMethod != "" {
-			doc["HttpMethod"] = cfg.HttpMethod
+			doc = append(doc, bson.E{Key: "HttpMethod", Value: cfg.HttpMethod})
 		}
-		doc["OverrideLocation"] = cfg.OverrideLocation
-		doc["CustomLocation"] = cfg.CustomLocation
-		doc["ClientCertificate"] = cfg.ClientCertificate
+		doc = append(doc,
+			bson.E{Key: "OverrideLocation", Value: cfg.OverrideLocation},
+			bson.E{Key: "CustomLocation", Value: cfg.CustomLocation},
+			bson.E{Key: "ClientCertificate", Value: cfg.ClientCertificate},
+		)
 
 		if len(cfg.HeaderEntries) > 0 {
 			headers := bson.A{int32(3)}
@@ -114,15 +111,25 @@ func serWebHttpConfiguration(cfg *model.HttpConfiguration) bson.M {
 				if hID == "" {
 					hID = generateUUID()
 				}
-				headers = append(headers, bson.M{
-					"$ID":   idToBsonBinary(hID),
-					"$Type": "Microflows$HttpHeaderEntry",
-					"Key":   h.Key,
-					"Value": h.Value,
+				headers = append(headers, bson.D{
+					{Key: "$ID", Value: idToBsonBinary(hID)},
+					{Key: "$Type", Value: "Microflows$HttpHeaderEntry"},
+					{Key: "Key", Value: h.Key},
+					{Key: "Value", Value: h.Value},
 				})
 			}
-			doc["HttpHeaderEntries"] = headers
+			doc = append(doc, bson.E{Key: "HttpHeaderEntries", Value: headers})
 		}
+	} else {
+		doc = append(doc,
+			bson.E{Key: "UseHttpAuthentication", Value: false},
+			bson.E{Key: "HttpAuthenticationUserName", Value: ""},
+			bson.E{Key: "HttpAuthenticationPassword", Value: ""},
+			bson.E{Key: "HttpMethod", Value: "Post"},
+			bson.E{Key: "OverrideLocation", Value: false},
+			bson.E{Key: "CustomLocation", Value: ""},
+			bson.E{Key: "ClientCertificate", Value: ""},
+		)
 	}
 
 	return doc
@@ -164,130 +171,144 @@ func SerializePublishedODataService(svc *model.PublishedODataService) ([]byte, e
 		entitySets = append(entitySets, serWebPublishedEntitySet(es, entityTypeID))
 	}
 
-	doc := bson.M{
-		"$ID":                     idToBsonBinary(string(svc.ID)),
-		"$Type":                   "ODataPublish$PublishedODataService2",
-		"Name":                    svc.Name,
-		"Documentation":           svc.Documentation,
-		"Path":                    svc.Path,
-		"Namespace":               svc.Namespace,
-		"ServiceName":             svc.ServiceName,
-		"Version":                 svc.Version,
-		"ODataVersion":            svc.ODataVersion,
-		"Summary":                 svc.Summary,
-		"Description":             svc.Description,
-		"PublishAssociations":     svc.PublishAssociations,
-		"UseGeneralization":       svc.UseGeneralization,
-		"AuthenticationMicroflow": svc.AuthMicroflow,
-		"AuthenticationTypes":     authTypes,
-		"EntityTypes":             entityTypes,
-		"EntitySets":              entitySets,
-		"Excluded":                svc.Excluded,
+	doc := bson.D{
+		{Key: "$ID", Value: idToBsonBinary(string(svc.ID))},
+		{Key: "$Type", Value: "ODataPublish$PublishedODataService2"},
+		{Key: "Name", Value: svc.Name},
+		{Key: "Documentation", Value: svc.Documentation},
+		{Key: "Path", Value: svc.Path},
+		{Key: "Namespace", Value: svc.Namespace},
+		{Key: "ServiceName", Value: svc.ServiceName},
+		{Key: "Version", Value: svc.Version},
+		{Key: "ODataVersion", Value: svc.ODataVersion},
+		{Key: "Summary", Value: svc.Summary},
+		{Key: "Description", Value: svc.Description},
+		{Key: "PublishAssociations", Value: svc.PublishAssociations},
+		{Key: "UseGeneralization", Value: svc.UseGeneralization},
+		{Key: "AuthenticationMicroflow", Value: svc.AuthMicroflow},
+		{Key: "AuthenticationTypes", Value: authTypes},
+		{Key: "EntityTypes", Value: entityTypes},
+		{Key: "EntitySets", Value: entitySets},
+		{Key: "Excluded", Value: svc.Excluded},
 	}
 	return bson.Marshal(doc)
 }
 
-func serWebPublishedEntityType(et *model.PublishedEntityType) bson.M {
+func serWebPublishedEntityType(et *model.PublishedEntityType) bson.D {
 	members := bson.A{}
 	for _, m := range et.Members {
 		members = append(members, serWebPublishedMember(m))
 	}
-	return bson.M{
-		"$ID":          idToBsonBinary(string(et.ID)),
-		"$Type":        "ODataPublish$EntityType",
-		"Entity":       et.Entity,
-		"ExposedName":  et.ExposedName,
-		"Summary":      et.Summary,
-		"Description":  et.Description,
-		"ChildMembers": members,
+	return bson.D{
+		{Key: "$ID", Value: idToBsonBinary(string(et.ID))},
+		{Key: "$Type", Value: "ODataPublish$EntityType"},
+		{Key: "Entity", Value: et.Entity},
+		{Key: "ExposedName", Value: et.ExposedName},
+		{Key: "Summary", Value: et.Summary},
+		{Key: "Description", Value: et.Description},
+		{Key: "ChildMembers", Value: members},
 	}
 }
 
-func serWebPublishedEntitySet(es *model.PublishedEntitySet, entityTypeID string) bson.M {
-	doc := bson.M{
-		"$ID":         idToBsonBinary(string(es.ID)),
-		"$Type":       "ODataPublish$EntitySet",
-		"ExposedName": es.ExposedName,
-		"UsePaging":   es.UsePaging,
-		"PageSize":    int64(es.PageSize),
+func serWebPublishedEntitySet(es *model.PublishedEntitySet, entityTypeID string) bson.D {
+	doc := bson.D{
+		{Key: "$ID", Value: idToBsonBinary(string(es.ID))},
+		{Key: "$Type", Value: "ODataPublish$EntitySet"},
+		{Key: "ExposedName", Value: es.ExposedName},
+		{Key: "UsePaging", Value: es.UsePaging},
+		{Key: "PageSize", Value: int64(es.PageSize)},
 	}
 
 	if entityTypeID != "" {
-		doc["EntityTypePointer"] = idToBsonBinary(entityTypeID)
+		doc = append(doc, bson.E{Key: "EntityTypePointer", Value: idToBsonBinary(entityTypeID)})
 	}
 	if es.ReadMode != "" {
-		doc["ReadMode"] = serWebReadMode(es.ReadMode)
+		doc = append(doc, bson.E{Key: "ReadMode", Value: serWebReadMode(es.ReadMode)})
 	}
 	if es.InsertMode != "" {
-		doc["InsertMode"] = serWebChangeMode(es.InsertMode)
+		doc = append(doc, bson.E{Key: "InsertMode", Value: serWebChangeMode(es.InsertMode)})
 	}
 	if es.UpdateMode != "" {
-		doc["UpdateMode"] = serWebChangeMode(es.UpdateMode)
+		doc = append(doc, bson.E{Key: "UpdateMode", Value: serWebChangeMode(es.UpdateMode)})
 	}
 	if es.DeleteMode != "" {
-		doc["DeleteMode"] = serWebChangeMode(es.DeleteMode)
+		doc = append(doc, bson.E{Key: "DeleteMode", Value: serWebChangeMode(es.DeleteMode)})
 	}
+
 	return doc
 }
 
-func serWebPublishedMember(m *model.PublishedMember) bson.M {
+func serWebPublishedMember(m *model.PublishedMember) bson.D {
 	memberID := string(m.ID)
 	if memberID == "" {
 		memberID = generateUUID()
 	}
 
-	doc := bson.M{
-		"$ID":         idToBsonBinary(memberID),
-		"ExposedName": m.ExposedName,
-		"Filterable":  m.Filterable,
-		"Sortable":    m.Sortable,
-		"IsPartOfKey": m.IsPartOfKey,
+	typeName := "ODataPublish$PublishedAttribute"
+	attrField := "Attribute"
+	attrValue := m.Name
+	switch m.Kind {
+	case "association":
+		typeName = "ODataPublish$PublishedAssociationEnd"
+		attrField = "Association"
+	case "id":
+		typeName = "ODataPublish$PublishedId"
 	}
 
-	switch m.Kind {
-	case "attribute":
-		doc["$Type"] = "ODataPublish$PublishedAttribute"
-		doc["Attribute"] = m.Name
-	case "association":
-		doc["$Type"] = "ODataPublish$PublishedAssociationEnd"
-		doc["Association"] = m.Name
-	case "id":
-		doc["$Type"] = "ODataPublish$PublishedId"
-		doc["Attribute"] = m.Name
-	default:
-		doc["$Type"] = "ODataPublish$PublishedAttribute"
-		doc["Attribute"] = m.Name
+	return bson.D{
+		{Key: "$ID", Value: idToBsonBinary(memberID)},
+		{Key: "$Type", Value: typeName},
+		{Key: "ExposedName", Value: m.ExposedName},
+		{Key: attrField, Value: attrValue},
+		{Key: "Filterable", Value: m.Filterable},
+		{Key: "Sortable", Value: m.Sortable},
+		{Key: "IsPartOfKey", Value: m.IsPartOfKey},
 	}
-	return doc
 }
 
-func serWebReadMode(mode string) bson.M {
+func serWebReadMode(mode string) bson.D {
 	modeID := idToBsonBinary(generateUUID())
 	switch {
 	case strings.EqualFold(mode, "ReadFromDatabase") || strings.EqualFold(mode, "SOURCE"):
-		return bson.M{"$ID": modeID, "$Type": "ODataPublish$ReadSource"}
+		return bson.D{{Key: "$ID", Value: modeID}, {Key: "$Type", Value: "ODataPublish$ReadSource"}}
 	case strings.HasPrefix(mode, "CallMicroflow:"):
-		return bson.M{"$ID": modeID, "$Type": "ODataPublish$CallMicroflowToRead", "Microflow": strings.TrimPrefix(mode, "CallMicroflow:")}
+		return bson.D{
+			{Key: "$ID", Value: modeID},
+			{Key: "$Type", Value: "ODataPublish$CallMicroflowToRead"},
+			{Key: "Microflow", Value: strings.TrimPrefix(mode, "CallMicroflow:")},
+		}
 	case strings.HasPrefix(mode, "MICROFLOW "):
-		return bson.M{"$ID": modeID, "$Type": "ODataPublish$CallMicroflowToRead", "Microflow": strings.TrimPrefix(mode, "MICROFLOW ")}
+		return bson.D{
+			{Key: "$ID", Value: modeID},
+			{Key: "$Type", Value: "ODataPublish$CallMicroflowToRead"},
+			{Key: "Microflow", Value: strings.TrimPrefix(mode, "MICROFLOW ")},
+		}
 	default:
-		return bson.M{"$ID": modeID, "$Type": "ODataPublish$ReadSource"}
+		return bson.D{{Key: "$ID", Value: modeID}, {Key: "$Type", Value: "ODataPublish$ReadSource"}}
 	}
 }
 
-func serWebChangeMode(mode string) bson.M {
+func serWebChangeMode(mode string) bson.D {
 	modeID := idToBsonBinary(generateUUID())
 	switch {
 	case strings.EqualFold(mode, "ChangeFromDatabase") || strings.EqualFold(mode, "SOURCE"):
-		return bson.M{"$ID": modeID, "$Type": "ODataPublish$ChangeSource"}
+		return bson.D{{Key: "$ID", Value: modeID}, {Key: "$Type", Value: "ODataPublish$ChangeSource"}}
 	case strings.EqualFold(mode, "NotSupported") || strings.EqualFold(mode, "NOT_SUPPORTED"):
-		return bson.M{"$ID": modeID, "$Type": "ODataPublish$ChangeNotSupported"}
+		return bson.D{{Key: "$ID", Value: modeID}, {Key: "$Type", Value: "ODataPublish$ChangeNotSupported"}}
 	case strings.HasPrefix(mode, "CallMicroflow:"):
-		return bson.M{"$ID": modeID, "$Type": "ODataPublish$CallMicroflowToChange", "Microflow": strings.TrimPrefix(mode, "CallMicroflow:")}
+		return bson.D{
+			{Key: "$ID", Value: modeID},
+			{Key: "$Type", Value: "ODataPublish$CallMicroflowToChange"},
+			{Key: "Microflow", Value: strings.TrimPrefix(mode, "CallMicroflow:")},
+		}
 	case strings.HasPrefix(mode, "MICROFLOW "):
-		return bson.M{"$ID": modeID, "$Type": "ODataPublish$CallMicroflowToChange", "Microflow": strings.TrimPrefix(mode, "MICROFLOW ")}
+		return bson.D{
+			{Key: "$ID", Value: modeID},
+			{Key: "$Type", Value: "ODataPublish$CallMicroflowToChange"},
+			{Key: "Microflow", Value: strings.TrimPrefix(mode, "MICROFLOW ")},
+		}
 	default:
-		return bson.M{"$ID": modeID, "$Type": "ODataPublish$ChangeNotSupported"}
+		return bson.D{{Key: "$ID", Value: modeID}, {Key: "$Type", Value: "ODataPublish$ChangeNotSupported"}}
 	}
 }
 
@@ -297,96 +318,95 @@ func serWebChangeMode(mode string) bson.M {
 
 // SerializeConsumedRestService returns BSON bytes for a consumed REST service unit.
 func SerializeConsumedRestService(svc *model.ConsumedRestService) ([]byte, error) {
-	doc := bson.M{
-		"$ID":              idToBsonBinary(string(svc.ID)),
-		"$Type":            "Rest$ConsumedRestService",
-		"Name":             svc.Name,
-		"Documentation":    svc.Documentation,
-		"Excluded":         svc.Excluded,
-		"ExportLevel":      "Hidden",
-		"BaseUrlParameter": nil,
+	doc := bson.D{
+		{Key: "$ID", Value: idToBsonBinary(string(svc.ID))},
+		{Key: "$Type", Value: "Rest$ConsumedRestService"},
+		{Key: "Name", Value: svc.Name},
+		{Key: "Documentation", Value: svc.Documentation},
+		{Key: "Excluded", Value: svc.Excluded},
+		{Key: "ExportLevel", Value: "Hidden"},
+		{Key: "BaseUrlParameter", Value: nil},
 	}
 
 	if svc.OpenApiContent != "" {
-		doc["OpenApiFile"] = bson.M{
-			"$ID":     idToBsonBinary(generateUUID()),
-			"$Type":   "Rest$OpenApiFile",
-			"Content": svc.OpenApiContent,
-		}
+		doc = append(doc, bson.E{Key: "OpenApiFile", Value: bson.D{
+			{Key: "$ID", Value: idToBsonBinary(generateUUID())},
+			{Key: "$Type", Value: "Rest$OpenApiFile"},
+			{Key: "Content", Value: svc.OpenApiContent},
+		}})
 	}
 
-	doc["BaseUrl"] = serWebValueTemplate(svc.BaseUrl)
+	doc = append(doc, bson.E{Key: "BaseUrl", Value: serWebValueTemplate(svc.BaseUrl)})
 
 	if svc.Authentication == nil {
-		doc["AuthenticationScheme"] = nil
+		doc = append(doc, bson.E{Key: "AuthenticationScheme", Value: nil})
 	} else {
-		doc["AuthenticationScheme"] = serWebRestAuthScheme(svc.Authentication)
+		doc = append(doc, bson.E{Key: "AuthenticationScheme", Value: serWebRestAuthScheme(svc.Authentication)})
 	}
 
 	ops := bson.A{int32(2)}
 	for _, op := range svc.Operations {
 		ops = append(ops, serWebRestOperation(op))
 	}
-	doc["Operations"] = ops
+	doc = append(doc, bson.E{Key: "Operations", Value: ops})
 
 	return bson.Marshal(doc)
 }
 
-func serWebValueTemplate(value string) bson.M {
-	return bson.M{
-		"$ID":   idToBsonBinary(generateUUID()),
-		"$Type": "Rest$ValueTemplate",
-		"Value": value,
+func serWebValueTemplate(value string) bson.D {
+	return bson.D{
+		{Key: "$ID", Value: idToBsonBinary(generateUUID())},
+		{Key: "$Type", Value: "Rest$ValueTemplate"},
+		{Key: "Value", Value: value},
 	}
 }
 
-func serWebRestAuthScheme(auth *model.RestAuthentication) bson.M {
-	doc := bson.M{
-		"$ID":   idToBsonBinary(generateUUID()),
-		"$Type": "Rest$BasicAuthenticationScheme",
+func serWebRestAuthScheme(auth *model.RestAuthentication) bson.D {
+	return bson.D{
+		{Key: "$ID", Value: idToBsonBinary(generateUUID())},
+		{Key: "$Type", Value: "Rest$BasicAuthenticationScheme"},
+		{Key: "Username", Value: serWebRestValue(auth.Username)},
+		{Key: "Password", Value: serWebRestValue(auth.Password)},
 	}
-	doc["Username"] = serWebRestValue(auth.Username)
-	doc["Password"] = serWebRestValue(auth.Password)
-	return doc
 }
 
-func serWebRestValue(value string) bson.M {
+func serWebRestValue(value string) bson.D {
 	if strings.HasPrefix(value, "$") {
 		constRef := strings.TrimPrefix(value, "$")
-		return bson.M{
-			"$ID":   idToBsonBinary(generateUUID()),
-			"$Type": "Rest$ConstantValue",
-			"Value": constRef,
+		return bson.D{
+			{Key: "$ID", Value: idToBsonBinary(generateUUID())},
+			{Key: "$Type", Value: "Rest$ConstantValue"},
+			{Key: "Value", Value: constRef},
 		}
 	}
-	return bson.M{
-		"$ID":   idToBsonBinary(generateUUID()),
-		"$Type": "Rest$StringValue",
-		"Value": value,
+	return bson.D{
+		{Key: "$ID", Value: idToBsonBinary(generateUUID())},
+		{Key: "$Type", Value: "Rest$StringValue"},
+		{Key: "Value", Value: value},
 	}
 }
 
-func serWebRestOperation(op *model.RestClientOperation) bson.M {
-	doc := bson.M{
-		"$ID":   idToBsonBinary(generateUUID()),
-		"$Type": "Rest$RestOperation",
-		"Name":  op.Name,
+func serWebRestOperation(op *model.RestClientOperation) bson.D {
+	doc := bson.D{
+		{Key: "$ID", Value: idToBsonBinary(generateUUID())},
+		{Key: "$Type", Value: "Rest$RestOperation"},
+		{Key: "Name", Value: op.Name},
 	}
 
 	timeout := int64(op.Timeout)
 	if timeout <= 0 {
 		timeout = 300
 	}
-	doc["Timeout"] = timeout
+	doc = append(doc, bson.E{Key: "Timeout", Value: timeout})
 
 	tags := bson.A{int32(1)}
 	for _, t := range op.Tags {
 		tags = append(tags, t)
 	}
-	doc["Tags"] = tags
+	doc = append(doc, bson.E{Key: "Tags", Value: tags})
 
-	doc["Method"] = serWebRestMethod(op)
-	doc["Path"] = serWebValueTemplate(op.Path)
+	doc = append(doc, bson.E{Key: "Method", Value: serWebRestMethod(op)})
+	doc = append(doc, bson.E{Key: "Path", Value: serWebValueTemplate(op.Path)})
 
 	headers := bson.A{int32(2)}
 	hasAccept := false
@@ -399,113 +419,113 @@ func serWebRestOperation(op *model.RestClientOperation) bson.M {
 	if !hasAccept {
 		headers = append(headers, serWebRestHeader(&model.RestClientHeader{Name: "Accept", Value: "*/*"}))
 	}
-	doc["Headers"] = headers
+	doc = append(doc, bson.E{Key: "Headers", Value: headers})
 
 	params := bson.A{int32(2)}
 	for _, p := range op.Parameters {
 		params = append(params, serWebRestParameter(p))
 	}
-	doc["Parameters"] = params
+	doc = append(doc, bson.E{Key: "Parameters", Value: params})
 
 	queryParams := bson.A{int32(2)}
 	for _, q := range op.QueryParameters {
 		queryParams = append(queryParams, serWebRestQueryParameter(q))
 	}
-	doc["QueryParameters"] = queryParams
+	doc = append(doc, bson.E{Key: "QueryParameters", Value: queryParams})
 
 	if op.ResponseType == "MAPPING" && op.ResponseEntity != "" && len(op.ResponseMappings) > 0 {
-		doc["ResponseHandling"] = serWebRestImplicitMappingResponse(op.ResponseEntity, op.ResponseMappings)
+		doc = append(doc, bson.E{Key: "ResponseHandling", Value: serWebRestImplicitMappingResponse(op.ResponseEntity, op.ResponseMappings)})
 	} else {
-		doc["ResponseHandling"] = serWebRestResponseHandling(op.ResponseType)
+		doc = append(doc, bson.E{Key: "ResponseHandling", Value: serWebRestResponseHandling(op.ResponseType)})
 	}
 
 	return doc
 }
 
-func serWebRestMethod(op *model.RestClientOperation) bson.M {
+func serWebRestMethod(op *model.RestClientOperation) bson.D {
 	httpMethod := serWebHttpMethodToMendix(op.HttpMethod)
 
 	if op.BodyType != "" {
-		bodyDoc := bson.M{
-			"$ID":        idToBsonBinary(generateUUID()),
-			"$Type":      "Rest$RestOperationMethodWithBody",
-			"HttpMethod": httpMethod,
+		bodyDoc := bson.D{
+			{Key: "$ID", Value: idToBsonBinary(generateUUID())},
+			{Key: "$Type", Value: "Rest$RestOperationMethodWithBody"},
+			{Key: "HttpMethod", Value: httpMethod},
 		}
 		if op.BodyType == "EXPORT_MAPPING" && len(op.BodyMappings) > 0 {
-			bodyDoc["Body"] = serWebRestImplicitMappingBody(op.BodyVariable, op.BodyMappings)
+			bodyDoc = append(bodyDoc, bson.E{Key: "Body", Value: serWebRestImplicitMappingBody(op.BodyVariable, op.BodyMappings)})
 		} else {
-			bodyDoc["Body"] = serWebRestBody(op.BodyType, op.BodyVariable)
+			bodyDoc = append(bodyDoc, bson.E{Key: "Body", Value: serWebRestBody(op.BodyType, op.BodyVariable)})
 		}
 		return bodyDoc
 	}
 
 	methodUpper := strings.ToUpper(op.HttpMethod)
 	if methodUpper == "POST" || methodUpper == "PUT" || methodUpper == "PATCH" {
-		bodyDoc := bson.M{
-			"$ID":        idToBsonBinary(generateUUID()),
-			"$Type":      "Rest$RestOperationMethodWithBody",
-			"HttpMethod": httpMethod,
+		bodyDoc := bson.D{
+			{Key: "$ID", Value: idToBsonBinary(generateUUID())},
+			{Key: "$Type", Value: "Rest$RestOperationMethodWithBody"},
+			{Key: "HttpMethod", Value: httpMethod},
 		}
-		bodyDoc["Body"] = serWebRestBody("JSON", op.BodyVariable)
+		bodyDoc = append(bodyDoc, bson.E{Key: "Body", Value: serWebRestBody("JSON", op.BodyVariable)})
 		return bodyDoc
 	}
 
-	return bson.M{
-		"$ID":        idToBsonBinary(generateUUID()),
-		"$Type":      "Rest$RestOperationMethodWithoutBody",
-		"HttpMethod": httpMethod,
+	return bson.D{
+		{Key: "$ID", Value: idToBsonBinary(generateUUID())},
+		{Key: "$Type", Value: "Rest$RestOperationMethodWithoutBody"},
+		{Key: "HttpMethod", Value: httpMethod},
 	}
 }
 
-func serWebRestBody(bodyType, bodyExpr string) bson.M {
+func serWebRestBody(bodyType, bodyExpr string) bson.D {
 	switch strings.ToUpper(bodyType) {
 	case "JSON":
-		return bson.M{
-			"$ID":   idToBsonBinary(generateUUID()),
-			"$Type": "Rest$JsonBody",
-			"Value": bodyExpr,
+		return bson.D{
+			{Key: "$ID", Value: idToBsonBinary(generateUUID())},
+			{Key: "$Type", Value: "Rest$JsonBody"},
+			{Key: "Value", Value: bodyExpr},
 		}
 	case "FILE", "TEMPLATE":
-		return bson.M{
-			"$ID":           idToBsonBinary(generateUUID()),
-			"$Type":         "Rest$StringBody",
-			"ValueTemplate": serWebValueTemplate(bodyExpr),
+		return bson.D{
+			{Key: "$ID", Value: idToBsonBinary(generateUUID())},
+			{Key: "$Type", Value: "Rest$StringBody"},
+			{Key: "ValueTemplate", Value: serWebValueTemplate(bodyExpr)},
 		}
 	default:
-		return bson.M{
-			"$ID":   idToBsonBinary(generateUUID()),
-			"$Type": "Rest$JsonBody",
-			"Value": bodyExpr,
+		return bson.D{
+			{Key: "$ID", Value: idToBsonBinary(generateUUID())},
+			{Key: "$Type", Value: "Rest$JsonBody"},
+			{Key: "Value", Value: bodyExpr},
 		}
 	}
 }
 
-func serWebRestImplicitMappingBody(entity string, mappings []*model.RestResponseMapping) bson.M {
+func serWebRestImplicitMappingBody(entity string, mappings []*model.RestResponseMapping) bson.D {
 	rootElement := serWebInlineMappingElement(entity, "", "", "(Object)", mappings, "ExportMappings", "Parameter")
-	return bson.M{
-		"$ID":                idToBsonBinary(generateUUID()),
-		"$Type":              "Rest$ImplicitMappingBody",
-		"RootMappingElement": rootElement,
-		"TestValue": bson.M{
-			"$ID":   idToBsonBinary(generateUUID()),
-			"$Type": "Rest$StringValue",
-			"Value": "",
-		},
+	return bson.D{
+		{Key: "$ID", Value: idToBsonBinary(generateUUID())},
+		{Key: "$Type", Value: "Rest$ImplicitMappingBody"},
+		{Key: "RootMappingElement", Value: rootElement},
+		{Key: "TestValue", Value: bson.D{
+			{Key: "$ID", Value: idToBsonBinary(generateUUID())},
+			{Key: "$Type", Value: "Rest$StringValue"},
+			{Key: "Value", Value: ""},
+		}},
 	}
 }
 
-func serWebRestImplicitMappingResponse(entity string, mappings []*model.RestResponseMapping) bson.M {
+func serWebRestImplicitMappingResponse(entity string, mappings []*model.RestResponseMapping) bson.D {
 	rootElement := serWebInlineMappingElement(entity, "", "", "(Object)", mappings, "ImportMappings", "Create")
-	return bson.M{
-		"$ID":                idToBsonBinary(generateUUID()),
-		"$Type":              "Rest$ImplicitMappingResponseHandling",
-		"ContentType":        "application/json",
-		"RootMappingElement": rootElement,
-		"StatusCode":         int32(200),
+	return bson.D{
+		{Key: "$ID", Value: idToBsonBinary(generateUUID())},
+		{Key: "$Type", Value: "Rest$ImplicitMappingResponseHandling"},
+		{Key: "ContentType", Value: "application/json"},
+		{Key: "RootMappingElement", Value: rootElement},
+		{Key: "StatusCode", Value: int32(200)},
 	}
 }
 
-func serWebInlineMappingElement(entity, association, exposedName, jsonPath string, mappings []*model.RestResponseMapping, namespace, objectHandling string) bson.M {
+func serWebInlineMappingElement(entity, association, exposedName, jsonPath string, mappings []*model.RestResponseMapping, namespace, objectHandling string) bson.D {
 	children := bson.A{int32(2)}
 	for _, m := range mappings {
 		if m.Entity != "" {
@@ -518,29 +538,32 @@ func serWebInlineMappingElement(entity, association, exposedName, jsonPath strin
 				valueJsonPath = jsonPath + "|" + m.ExposedName
 			}
 			attrQN := entity + "." + m.Attribute
-			children = append(children, bson.M{
-				"$ID":              idToBsonBinary(generateUUID()),
-				"$Type":            namespace + "$ValueMappingElement",
-				"Attribute":        attrQN,
-				"ExposedName":      m.ExposedName,
-				"JsonPath":         valueJsonPath,
-				"XmlPath":          "",
-				"IsKey":            false,
-				"Type":             bson.M{"$ID": idToBsonBinary(generateUUID()), "$Type": "DataTypes$StringType"},
-				"MinOccurs":        int32(0),
-				"MaxOccurs":        int32(1),
-				"Nillable":         true,
-				"IsDefaultType":    false,
-				"ElementType":      "Value",
-				"Documentation":    "",
-				"Converter":        "",
-				"FractionDigits":   int32(-1),
-				"TotalDigits":      int32(-1),
-				"MaxLength":        int32(0),
-				"IsContent":        false,
-				"IsXmlAttribute":   false,
-				"OriginalValue":    "",
-				"XmlPrimitiveType": "String",
+			children = append(children, bson.D{
+				{Key: "$ID", Value: idToBsonBinary(generateUUID())},
+				{Key: "$Type", Value: namespace + "$ValueMappingElement"},
+				{Key: "Attribute", Value: attrQN},
+				{Key: "ExposedName", Value: m.ExposedName},
+				{Key: "JsonPath", Value: valueJsonPath},
+				{Key: "XmlPath", Value: ""},
+				{Key: "IsKey", Value: false},
+				{Key: "Type", Value: bson.D{
+					{Key: "$ID", Value: idToBsonBinary(generateUUID())},
+					{Key: "$Type", Value: "DataTypes$StringType"},
+				}},
+				{Key: "MinOccurs", Value: int32(0)},
+				{Key: "MaxOccurs", Value: int32(1)},
+				{Key: "Nillable", Value: true},
+				{Key: "IsDefaultType", Value: false},
+				{Key: "ElementType", Value: "Value"},
+				{Key: "Documentation", Value: ""},
+				{Key: "Converter", Value: ""},
+				{Key: "FractionDigits", Value: int32(-1)},
+				{Key: "TotalDigits", Value: int32(-1)},
+				{Key: "MaxLength", Value: int32(0)},
+				{Key: "IsContent", Value: false},
+				{Key: "IsXmlAttribute", Value: false},
+				{Key: "OriginalValue", Value: ""},
+				{Key: "XmlPrimitiveType", Value: "String"},
 			})
 		}
 	}
@@ -550,75 +573,75 @@ func serWebInlineMappingElement(entity, association, exposedName, jsonPath strin
 		minOccurs = 0
 	}
 
-	return bson.M{
-		"$ID":                               idToBsonBinary(generateUUID()),
-		"$Type":                             namespace + "$ObjectMappingElement",
-		"Entity":                            entity,
-		"ExposedName":                       exposedName,
-		"JsonPath":                          jsonPath,
-		"XmlPath":                           "",
-		"ObjectHandling":                    objectHandling,
-		"ObjectHandlingBackup":              "Create",
-		"ObjectHandlingBackupAllowOverride": false,
-		"Association":                       association,
-		"Children":                          children,
-		"MinOccurs":                         minOccurs,
-		"MaxOccurs":                         int32(1),
-		"Nillable":                          true,
-		"IsDefaultType":                     false,
-		"ElementType":                       "Object",
-		"Documentation":                     "",
-		"CustomHandlerCall":                 nil,
+	return bson.D{
+		{Key: "$ID", Value: idToBsonBinary(generateUUID())},
+		{Key: "$Type", Value: namespace + "$ObjectMappingElement"},
+		{Key: "Entity", Value: entity},
+		{Key: "ExposedName", Value: exposedName},
+		{Key: "JsonPath", Value: jsonPath},
+		{Key: "XmlPath", Value: ""},
+		{Key: "ObjectHandling", Value: objectHandling},
+		{Key: "ObjectHandlingBackup", Value: "Create"},
+		{Key: "ObjectHandlingBackupAllowOverride", Value: false},
+		{Key: "Association", Value: association},
+		{Key: "Children", Value: children},
+		{Key: "MinOccurs", Value: minOccurs},
+		{Key: "MaxOccurs", Value: int32(1)},
+		{Key: "Nillable", Value: true},
+		{Key: "IsDefaultType", Value: false},
+		{Key: "ElementType", Value: "Object"},
+		{Key: "Documentation", Value: ""},
+		{Key: "CustomHandlerCall", Value: nil},
 	}
 }
 
-func serWebRestHeader(h *model.RestClientHeader) bson.M {
-	return bson.M{
-		"$ID":   idToBsonBinary(generateUUID()),
-		"$Type": "Rest$HeaderWithValueTemplate",
-		"Name":  h.Name,
-		"Value": serWebValueTemplate(h.Value),
+func serWebRestHeader(h *model.RestClientHeader) bson.D {
+	return bson.D{
+		{Key: "$ID", Value: idToBsonBinary(generateUUID())},
+		{Key: "$Type", Value: "Rest$HeaderWithValueTemplate"},
+		{Key: "Name", Value: h.Name},
+		{Key: "Value", Value: serWebValueTemplate(h.Value)},
 	}
 }
 
-func serWebRestParameter(p *model.RestClientParameter) bson.M {
-	return bson.M{
-		"$ID":      idToBsonBinary(generateUUID()),
-		"$Type":    "Rest$OperationParameter",
-		"Name":     p.Name,
-		"DataType": serWebRestDataType(p.DataType),
+func serWebRestParameter(p *model.RestClientParameter) bson.D {
+	return bson.D{
+		{Key: "$ID", Value: idToBsonBinary(generateUUID())},
+		{Key: "$Type", Value: "Rest$OperationParameter"},
+		{Key: "Name", Value: p.Name},
+		{Key: "DataType", Value: serWebRestDataType(p.DataType)},
 	}
 }
 
-func serWebRestQueryParameter(p *model.RestClientParameter) bson.M {
-	return bson.M{
-		"$ID":   idToBsonBinary(generateUUID()),
-		"$Type": "Rest$QueryParameter",
-		"Name":  p.Name,
-		"ParameterUsage": bson.M{
-			"$ID":   idToBsonBinary(generateUUID()),
-			"$Type": "Rest$RequiredQueryParameterUsage",
-		},
+func serWebRestQueryParameter(p *model.RestClientParameter) bson.D {
+	return bson.D{
+		{Key: "$ID", Value: idToBsonBinary(generateUUID())},
+		{Key: "$Type", Value: "Rest$QueryParameter"},
+		{Key: "Name", Value: p.Name},
+		{Key: "ParameterUsage", Value: bson.D{
+			{Key: "$ID", Value: idToBsonBinary(generateUUID())},
+			{Key: "$Type", Value: "Rest$RequiredQueryParameterUsage"},
+		}},
 	}
 }
 
-func serWebRestResponseHandling(responseType string) bson.M {
-	doc := bson.M{
-		"$ID":   idToBsonBinary(generateUUID()),
-		"$Type": "Rest$NoResponseHandling",
+func serWebRestResponseHandling(responseType string) bson.D {
+	doc := bson.D{
+		{Key: "$ID", Value: idToBsonBinary(generateUUID())},
+		{Key: "$Type", Value: "Rest$NoResponseHandling"},
 	}
 	switch strings.ToUpper(responseType) {
 	case "JSON":
-		doc["ContentType"] = "application/json"
+		doc = append(doc, bson.E{Key: "ContentType", Value: "application/json"})
 	case "STRING":
-		doc["ContentType"] = "text/plain"
+		doc = append(doc, bson.E{Key: "ContentType", Value: "text/plain"})
 	case "FILE":
-		doc["ContentType"] = "application/octet-stream"
+		doc = append(doc, bson.E{Key: "ContentType", Value: "application/octet-stream"})
 	}
 	return doc
 }
 
-func serWebRestDataType(typeName string) bson.M {
+func serWebRestDataType(typeName string) bson.D {
 	bsonType := "DataTypes$StringType"
 	switch typeName {
 	case "Integer":
@@ -632,9 +655,9 @@ func serWebRestDataType(typeName string) bson.M {
 	case "String":
 		bsonType = "DataTypes$StringType"
 	}
-	return bson.M{
-		"$ID":   idToBsonBinary(generateUUID()),
-		"$Type": bsonType,
+	return bson.D{
+		{Key: "$ID", Value: idToBsonBinary(generateUUID())},
+		{Key: "$Type", Value: bsonType},
 	}
 }
 
@@ -648,49 +671,49 @@ func SerializePublishedRestService(svc *model.PublishedRestService) ([]byte, err
 	for _, res := range svc.Resources {
 		ops := bson.A{int32(2)}
 		for _, op := range res.Operations {
-			opDoc := bson.M{
-				"$ID":                  idToBsonBinary(GenerateID()),
-				"$Type":                "Rest$PublishedRestServiceOperation",
-				"HttpMethod":           serWebHttpMethodToMendix(op.HTTPMethod),
-				"Path":                 op.Path,
-				"Microflow":            op.Microflow,
-				"Summary":              op.Summary,
-				"Deprecated":           op.Deprecated,
-				"Commit":               "Yes",
-				"Documentation":        "",
-				"ExportMapping":        "",
-				"ImportMapping":        "",
-				"ObjectHandlingBackup": "Create",
-				"Parameters":           serWebPublishedRestParams(op.Path, op.Microflow, op.Parameters),
+			opDoc := bson.D{
+				{Key: "$ID", Value: idToBsonBinary(GenerateID())},
+				{Key: "$Type", Value: "Rest$PublishedRestServiceOperation"},
+				{Key: "HttpMethod", Value: serWebHttpMethodToMendix(op.HTTPMethod)},
+				{Key: "Path", Value: op.Path},
+				{Key: "Microflow", Value: op.Microflow},
+				{Key: "Summary", Value: op.Summary},
+				{Key: "Deprecated", Value: op.Deprecated},
+				{Key: "Commit", Value: "Yes"},
+				{Key: "Documentation", Value: ""},
+				{Key: "ExportMapping", Value: ""},
+				{Key: "ImportMapping", Value: ""},
+				{Key: "ObjectHandlingBackup", Value: "Create"},
+				{Key: "Parameters", Value: serWebPublishedRestParams(op.Path, op.Microflow, op.Parameters)},
 			}
 			ops = append(ops, opDoc)
 		}
-		resDoc := bson.M{
-			"$ID":           idToBsonBinary(GenerateID()),
-			"$Type":         "Rest$PublishedRestServiceResource",
-			"Name":          res.Name,
-			"Documentation": "",
-			"Operations":    ops,
+		resDoc := bson.D{
+			{Key: "$ID", Value: idToBsonBinary(GenerateID())},
+			{Key: "$Type", Value: "Rest$PublishedRestServiceResource"},
+			{Key: "Name", Value: res.Name},
+			{Key: "Documentation", Value: ""},
+			{Key: "Operations", Value: ops},
 		}
 		resources = append(resources, resDoc)
 	}
 
-	doc := bson.M{
-		"$ID":                     idToBsonBinary(string(svc.ID)),
-		"$Type":                   "Rest$PublishedRestService",
-		"Name":                    svc.Name,
-		"Documentation":           "",
-		"Excluded":                svc.Excluded,
-		"ExportLevel":             "Hidden",
-		"Path":                    svc.Path,
-		"Version":                 svc.Version,
-		"ServiceName":             svc.ServiceName,
-		"AllowedRoles":            serWebMendixStringArray(svc.AllowedRoles),
-		"AuthenticationTypes":     bson.A{int32(2)},
-		"AuthenticationMicroflow": "",
-		"CorsConfiguration":       nil,
-		"Parameters":              bson.A{int32(2)},
-		"Resources":               resources,
+	doc := bson.D{
+		{Key: "$ID", Value: idToBsonBinary(string(svc.ID))},
+		{Key: "$Type", Value: "Rest$PublishedRestService"},
+		{Key: "Name", Value: svc.Name},
+		{Key: "Documentation", Value: ""},
+		{Key: "Excluded", Value: svc.Excluded},
+		{Key: "ExportLevel", Value: "Hidden"},
+		{Key: "Path", Value: svc.Path},
+		{Key: "Version", Value: svc.Version},
+		{Key: "ServiceName", Value: svc.ServiceName},
+		{Key: "AllowedRoles", Value: serWebMendixStringArray(svc.AllowedRoles)},
+		{Key: "AuthenticationTypes", Value: bson.A{int32(2)}},
+		{Key: "AuthenticationMicroflow", Value: ""},
+		{Key: "CorsConfiguration", Value: nil},
+		{Key: "Parameters", Value: bson.A{int32(2)}},
+		{Key: "Resources", Value: resources},
 	}
 
 	return bson.Marshal(doc)
@@ -704,17 +727,17 @@ func serWebPublishedRestParams(path string, microflowQN string, _ []string) bson
 		if microflowQN != "" {
 			mfParam = microflowQN + "." + name
 		}
-		params = append(params, bson.M{
-			"$ID":   idToBsonBinary(generateUUID()),
-			"$Type": "Rest$RestOperationParameter",
-			"Name":  name,
-			"Type": bson.M{
-				"$ID":   idToBsonBinary(generateUUID()),
-				"$Type": "DataTypes$StringType",
-			},
-			"ParameterType":      "Path",
-			"MicroflowParameter": mfParam,
-			"Description":        "",
+		params = append(params, bson.D{
+			{Key: "$ID", Value: idToBsonBinary(generateUUID())},
+			{Key: "$Type", Value: "Rest$RestOperationParameter"},
+			{Key: "Name", Value: name},
+			{Key: "Type", Value: bson.D{
+				{Key: "$ID", Value: idToBsonBinary(generateUUID())},
+				{Key: "$Type", Value: "DataTypes$StringType"},
+			}},
+			{Key: "ParameterType", Value: "Path"},
+			{Key: "MicroflowParameter", Value: mfParam},
+			{Key: "Description", Value: ""},
 		})
 	}
 	return params
