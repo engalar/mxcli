@@ -387,6 +387,13 @@ func (r *Reader) GetRawUnitBytes(unitID string) ([]byte, error) {
 			return data, nil
 		}
 	}
+	// Script insert fallback: units inserted but not yet committed to SQLite.
+	for _, e := range r.scriptInserts {
+		if e.ID == unitID {
+			return e.Contents, nil
+		}
+	}
+
 	// Fast path: return buffered bytes injected by BufferedUnitStore if present.
 	if len(r.overlay) > 0 {
 		if data, ok := r.overlay[unitID]; ok {

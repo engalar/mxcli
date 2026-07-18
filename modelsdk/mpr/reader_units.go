@@ -124,6 +124,20 @@ func (r *Reader) listUnitsByTypeV1(typePrefix string) ([]rawUnit, error) {
 		}
 	}
 
+	// Merge buffered script inserts so reads within EXECUTE SCRIPT see new units.
+	for _, e := range r.scriptInserts {
+		typeName := getTypeFromContents(e.Contents)
+		if typePrefix == "" || strings.HasPrefix(typeName, typePrefix) {
+			units = append(units, rawUnit{
+				ID:              e.ID,
+				ContainerID:     e.ContainerID,
+				ContainmentName: e.ContainmentName,
+				Type:            typeName,
+				Contents:        e.Contents,
+			})
+		}
+	}
+
 	return units, nil
 }
 

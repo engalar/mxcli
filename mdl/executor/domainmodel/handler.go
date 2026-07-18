@@ -74,12 +74,18 @@ func RegisterHandlers(r *executor.Registry, deps *executor.HandlerDeps) {
 			if deps.Cache != nil && deps.Cache.DomainModelByModule() != nil {
 				delete(deps.Cache.DomainModelByModule(), moduleID)
 			}
+			if ectx.Backend != nil {
+				ectx.Backend.InvalidateCache()
+			}
 		},
 		InvalidateDomainModelsCache: func() {
 			if deps.Cache != nil {
 				deps.Cache.SetDomainModels(nil)
 				deps.Cache.SetDomainModelsGen(nil)
 				deps.Cache.SetDomainModelsWithContainer(nil)
+			}
+			if ectx.Backend != nil {
+				ectx.Backend.InvalidateCache()
 			}
 		},
 		InvalidateHierarchy: func() {
