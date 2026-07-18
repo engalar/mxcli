@@ -1,0 +1,326 @@
+-- MARK: Account Management — Pages
+
+-- R1: HD.ManageMyAccount
+-- New pattern: DataView with microflow datasource (datasource: microflow HD.DS_GetMyProfile)
+-- Previously only DataGrid demonstrated microflow datasource; DataView is different.
+-- DS_GetMyProfile internally runs split type + cast to return HD.UserProfile.
+-- No page parameter — can be referenced directly as a menu item.
+create or replace page HD.ManageMyAccount (
+  title: 'My Account',
+  layout: Atlas_Core.Atlas_Default,
+  folder: 'Account'
+) {
+  layoutgrid lgAcctMain {
+    row rAcctMain {
+      column cAcctMain (desktopwidth: 12) {
+        dataview dvProfile (datasource: microflow HD.DS_GetMyProfile) {
+          textbox tbDisplayName (label: 'Display Name', attribute: DisplayName)
+          footer ftrAcctActions {
+            actionbutton btnSaveProfile (
+              caption: 'Save',
+              action: save_changes,
+              buttonstyle: primary
+            )
+            actionbutton btnChangePwd (
+              caption: 'Change Password',
+              action: create_object HD.PasswordForm then show_page HD.ShowMyPasswordForm,
+              buttonstyle: default
+            )
+          }
+        }
+      }
+    }
+  }
+};
+
+-- R2: HD.ChangeMyPassword
+-- Full-page password change form. Triggers HD.ACT_ChangePassword (java action + raise error).
+create or replace page HD.ChangeMyPassword (
+  title: 'Change Password',
+  layout: Atlas_Core.Atlas_Default,
+  folder: 'Account',
+  params: { $Form: HD.PasswordForm }
+) {
+  layoutgrid lgPwd {
+    row rPwd {
+      column cPwd (desktopwidth: 12) {
+        dataview dvPwdFull (datasource: $Form) {
+          textbox tbNewPwdFull     (label: 'New Password',     attribute: NewPassword)
+          textbox tbConfirmPwdFull (label: 'Confirm Password', attribute: ConfirmPassword)
+          footer ftrPwdFull {
+            actionbutton btnSubmitPwdFull (
+              caption: 'Change Password',
+              action: microflow HD.ACT_ChangePassword (Form: $currentObject),
+              buttonstyle: primary
+            )
+            actionbutton btnCancelPwdFull (
+              caption: 'Cancel',
+              action: cancel_changes close_page
+            )
+          }
+        }
+      }
+    }
+  }
+};
+
+-- R3: HD.ShowMyPasswordForm
+-- Popup variant of ChangeMyPassword. Same HD.ACT_ChangePassword microflow,
+-- Atlas_Core.PopupLayout entry point. Demonstrates one microflow callable from
+-- two different page contexts (full-page vs. popup).
+create or replace page HD.ShowMyPasswordForm (
+  title: 'Change Password',
+  layout: Atlas_Core.PopupLayout,
+  folder: 'Account',
+  params: { $Form: HD.PasswordForm }
+) {
+  dataview dvPwdPopup (datasource: $Form) {
+    textbox tbNewPwdPopup     (label: 'New Password',     attribute: NewPassword)
+    textbox tbConfirmPwdPopup (label: 'Confirm Password', attribute: ConfirmPassword)
+    footer ftrPwdPopup {
+      actionbutton btnSubmitPwdPopup (
+        caption: 'Change Password',
+        action: microflow HD.ACT_ChangePassword (Form: $currentObject) close_page,
+        buttonstyle: primary
+      )
+      actionbutton btnCancelPwdPopup (
+        caption: 'Cancel',
+        action: cancel_changes close_page
+      )
+    }
+  }
+};
+
+-- R4 + R5 + R6: HD.Account_Overview
+-- R6: tabcontainer tcAccounts with two tabpages (Active Accounts / Inactive Accounts)
+-- R4: textfilter (Name, Email, Company) + dropdownfilter (IsActive boolean column)
+-- R5: ShowContentAs: customContent column containing actionbutton widgets
+create or replace page HD.Account_Overview (
+  title: 'Account Management',
+  layout: Atlas_Core.Atlas_Default,
+  folder: 'Account'
+) {
+  layoutgrid lgAcct {
+    row rAcct {
+      column cAcct (desktopwidth: 12) {
+        tabcontainer tcAccounts {
+
+          tabpage tabActive (caption: 'Active Accounts') {
+
+            datagrid dgAgents (
+              datasource: database from HD.Agent sort by Name asc,
+              PageSize: 15
+            ) {
+              column colAgentName   (attribute: Name,     caption: 'Name') {
+                textfilter fAgentName
+              }
+              column colAgentEmail  (attribute: Email,    caption: 'Email') {
+                textfilter fAgentEmail
+              }
+              column colAgentActive (attribute: IsActive, caption: 'Active',
+                                    ColumnWidth: manual, Size: 80) {
+                dropdownfilter fAgentActive
+              }
+              column colAgentAct (caption: 'Actions',
+                ShowContentAs: customContent,
+                ColumnWidth: manual, Size: 180) {
+                actionbutton btnEditAgent (
+                  caption: 'Edit',
+                  action: show_page HD.Agent_Edit (Agent: $currentObject),
+                  buttonstyle: default
+                )
+                actionbutton btnDeactivate (
+                  caption: 'Deactivate',
+                  action: microflow HD.ACT_Agent_Deactivate (Agent: $currentObject),
+                  buttonstyle: default
+                )
+              }
+            }
+
+            datagrid dgCustomers (
+              datasource: database from HD.Customer sort by Name asc,
+              PageSize: 15
+            ) {
+              column colCustName    (attribute: Name,    caption: 'Name') {
+                textfilter fCustName
+              }
+              column colCustEmail   (attribute: Email,   caption: 'Email') {
+                textfilter fCustEmail
+              }
+              column colCustCompany (attribute: Company, caption: 'Company') {
+                textfilter fCustCompany
+              }
+              column colCustAct (caption: 'Actions',
+                ShowContentAs: customContent,
+                ColumnWidth: manual, Size: 200) {
+                actionbutton btnNewTicket (
+                  caption: 'New Ticket',
+                  action: show_page HD.Customer_New (Customer: $currentObject),
+                  buttonstyle: primary
+                )
+                actionbutton btnEditCustomer (
+                  caption: 'Edit',
+                  action: show_page HD.Customer_Edit (Customer: $currentObject),
+                  buttonstyle: default
+                )
+              }
+            }
+
+          }
+
+          tabpage tabInactive (caption: 'Inactive Accounts') {
+
+            datagrid dgInactiveAgents (
+              datasource: database from HD.Agent sort by Name asc,
+              PageSize: 15
+            ) {
+              column colIName   (attribute: Name,               caption: 'Name') {
+                textfilter fIName
+              }
+              column colIActive (attribute: IsActive,           caption: 'Active',
+                                ColumnWidth: manual, Size: 80) {
+                dropdownfilter fIActive
+              }
+              column colReason  (attribute: DeactivationReason, caption: 'Reason')
+              column colIAct    (caption: 'Actions',
+                ShowContentAs: customContent,
+                ColumnWidth: manual, Size: 120) {
+                actionbutton btnReactivate (
+                  caption: 'Reactivate',
+                  action: microflow HD.ACT_Agent_Reactivate (Agent: $currentObject),
+                  buttonstyle: default
+                )
+              }
+            }
+
+          }
+
+        }
+      }
+    }
+  }
+};
+
+-- R7: HD.Customer_New — DataGrid nested inside DataView
+-- Outer dvCustomer: datasource: $Customer (page parameter)
+-- Inner dgFirstTicket: datasource: $Customer/HD.Ticket_Customer/HD.Ticket
+--   — DataGrid (not DataView) is CORRECT here: HD.Customer does not own the Ticket association
+--     (HD.Ticket_Customer runs FROM Ticket TO Customer), so the association path returns a list.
+--     DataView requires a single object; DataGrid accepts a list — hence DataGrid is the right widget.
+--     CE6705 confirms: DataView cannot use association datasource (list → single mismatch).
+create or replace page HD.Customer_New (
+  title: 'Customer Profile',
+  layout: Atlas_Core.Atlas_Default,
+  folder: 'Account',
+  params: { $Customer: HD.Customer }
+) {
+  layoutgrid lgCust {
+    row rCust {
+      column cCust (desktopwidth: 12) {
+        dataview dvCustomer (datasource: $Customer) {
+          textbox tbCustName    (label: 'Name',    attribute: Name)
+          textbox tbCustEmail   (label: 'Email',   attribute: Email)
+          textbox tbCustCompany (label: 'Company', attribute: Company)
+          datagrid dgFirstTicket (
+            datasource: $Customer/HD.Ticket_Customer/HD.Ticket
+          ) {
+            column colTicketSubject (attribute: Subject, caption: 'Subject')
+            column colTicketStatus  (attribute: Status,  caption: 'Status', ColumnWidth: manual, Size: 120)
+          }
+          footer ftrCustSave {
+            actionbutton btnSaveCust (
+              caption: 'Save',
+              action: save_changes close_page,
+              buttonstyle: primary
+            )
+            actionbutton btnCancelCust (
+              caption: 'Cancel',
+              action: cancel_changes close_page
+            )
+          }
+        }
+      }
+    }
+  }
+};
+
+-- R8: HD.Agent_Edit — conditional visibility (attribute equality)
+-- visible: [$Agent/IsActive = false] controls DeactivationReason textbox.
+-- When IsActive is true the field is hidden; when false it appears and is editable.
+create or replace page HD.Agent_Edit (
+  title: 'Edit Agent',
+  layout: Atlas_Core.Atlas_Default,
+  folder: 'Account',
+  params: { $Agent: HD.Agent }
+) {
+  layoutgrid lgAgent {
+    row rAgent {
+      column cAgent (desktopwidth: 12) {
+        dataview dvAgent (datasource: $Agent) {
+          textbox tbAgentName  (label: 'Name',   attribute: Name)
+          textbox tbAgentEmail (label: 'Email',  attribute: Email)
+          textbox tbIsActive   (label: 'Active', attribute: Name)
+          textbox tbDeactivationReason (
+            label: 'Deactivation Reason',
+            attribute: DeactivationReason,
+            visible: [$Agent/IsActive = false]
+          )
+          footer ftrAgent {
+            actionbutton btnSaveAgent (
+              caption: 'Save',
+              action: save_changes close_page,
+              buttonstyle: primary
+            )
+            actionbutton btnCancelAgent (
+              caption: 'Cancel',
+              action: cancel_changes close_page
+            )
+          }
+        }
+      }
+    }
+  }
+};
+
+-- R9: HD.Customer_Edit — conditional visibility (empty check)
+-- visible: [$Customer/Company != empty] controls the corporate contract block.
+-- The block appears only after the user fills in a company name.
+create or replace page HD.Customer_Edit (
+  title: 'Edit Customer',
+  layout: Atlas_Core.Atlas_Default,
+  folder: 'Account',
+  params: { $Customer: HD.Customer }
+) {
+  layoutgrid lgCustEdit {
+    row rCustEdit {
+      column cCustEdit (desktopwidth: 12) {
+        dataview dvCustEdit (datasource: $Customer) {
+          textbox tbCustEditName    (label: 'Name',    attribute: Name)
+          textbox tbCustEditEmail   (label: 'Email',   attribute: Email)
+          textbox tbCustEditCompany (label: 'Company', attribute: Company)
+          dynamictext txtContractTitle (
+            content: 'Corporate Contract',
+            rendermode: H4,
+            visible: [$Customer/Company != empty]
+          )
+          dynamictext txtContractInfo (
+            content: 'Company on file: {1}',
+            contentparams: [{1} = Company],
+            visible: [$Customer/Company != empty]
+          )
+          footer ftrCustEdit {
+            actionbutton btnSaveCustEdit (
+              caption: 'Save',
+              action: save_changes close_page,
+              buttonstyle: primary
+            )
+            actionbutton btnCancelCustEdit (
+              caption: 'Cancel',
+              action: cancel_changes close_page
+            )
+          }
+        }
+      }
+    }
+  }
+};

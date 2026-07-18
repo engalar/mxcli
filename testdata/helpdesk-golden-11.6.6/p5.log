@@ -1,0 +1,170 @@
+WARNING: This is a vibe-coded PoC, alpha quality, use with caution.
+Connected to: /tmp/tmp.YiF1MHS7e6/minimal.mpr (Mendix 11.6.6)
+Translated enumeration HD.TicketStatus in zh_CN (5 values)
+Translated enumeration HD.TicketPriority in zh_CN (4 values)
+Translated page HD.Ticket_NewEdit in zh_CN (1 fields)
+Translated enumeration KB.ArticleStatus in zh_CN (3 values)
+Translated page HD.Ticket_Overview in zh_CN (1 fields)
+Translated page KB.Article_Overview in zh_CN (1 fields)
+Translated page HD.Account_Overview in zh_CN (1 fields)
+Translated navigation Responsive in zh_CN (11 fields)
+Translated enumeration HD.TicketStatus in nl_NL (2 values)
+LANGUAGE fr_FR dropped
+LANGUAGE nl_NL dropped
+| Code  | Language             | Default | CheckCompleteness |
+|-------|----------------------|---------|-------------------|
+| en_US | English (US)         | yes     |                   |
+| zh_CN | Chinese (Simplified) |         |                   |
+| nl_NL | Dutch                |         | yes               |
+| fr_FR | French               |         |                   |
+
+(4 languages)
+Created module: FT
+Created enumeration: FT.DispatchStatus
+Created entity: FT.FieldTech
+  ⚠  FT.FieldTech has no access rules — run SHOW PROJECT SECURITY and GRANT to configure entity-level access
+Created entity: FT.DispatchOrder
+  ⚠  FT.DispatchOrder has no access rules — run SHOW PROJECT SECURITY and GRANT to configure entity-level access
+Created association: FT.DispatchOrder_Ticket
+Created association: FT.DispatchOrder_FieldTech
+Created entity: FT.CheckInRecord
+Created association: FT.CheckInRecord_DispatchOrder
+Created entity: FT.WorkOrderImport
+Translated enumeration FT.DispatchStatus in zh_CN (5 values)
+Created view entity: FT.TicketSLAStats
+Created view entity: FT.DispatchSummary
+Created microflow: FT.ACT_Dispatch_Assign
+Created microflow: FT.ACT_Dispatch_Open
+Created microflow: FT.ACT_Dispatch_Complete
+Created microflow: FT.ACT_WorkOrder_Import
+Created microflow: FT.ACT_FT_Initialize
+Created microflow: FT.DS_HealthCheck
+Created microflow: FT.DS_MyDispatchOrders
+Created microflow: FT.DS_RelevantArticles
+Created microflow: FT.DS_CategoryChildren
+Created nanoflow: FT.NF_FT_CheckIn
+Created nanoflow: FT.NF_FT_CompleteOffline
+Created nanoflow: FT.NF_FT_LoadOrders
+Created json structure: FT.SMSPayload
+Created rest client: FT.SMSGateway (1 operations)
+Created json structure: FT.WorkOrderPayload
+Created import mapping FT.WorkOrderImport_Mapping
+Created export mapping FT.DispatchOrder_Export
+2026/07/16 19:53:12 warning: action show_page FT.DispatchOrder_Detail not found (will still create action by name)
+Created page FT.DispatchQueue
+Created page FT.DispatchOrder_Detail
+Created page FT.SLADashboard
+Translated page FT.SLADashboard in zh_CN (1 fields)
+Created module role: FT.FieldTechRole
+Created user role: FieldTech
+  reconciled: FieldTech: stripped stale MemberAccess for owner
+Granted access on FT.FieldTech to FT.FieldTechRole
+  Result: read (Name, IsAvailable, Phone, Region), write (Phone, Region)
+Granted access on FT.DispatchOrder to FT.FieldTechRole
+  Result: read (DispatchedAt, FT.DispatchOrder_FieldTech, FT.DispatchOrder_Ticket, CompletedAt, SiteNotes, Status), write (CompletedAt, SiteNotes, Status)
+Granted access on FT.CheckInRecord to FT.FieldTechRole
+  Result: create, read *, write *
+Granted access on FT.WorkOrderImport to FT.FieldTechRole
+  Result: create, read *, write *
+Granted execute access on FT.ACT_Dispatch_Assign to FT.FieldTechRole
+Granted execute access on FT.ACT_Dispatch_Open to FT.FieldTechRole
+Granted execute access on FT.ACT_Dispatch_Complete to FT.FieldTechRole
+Granted execute access on FT.ACT_WorkOrder_Import to FT.FieldTechRole
+Granted execute access on FT.DS_MyDispatchOrders to FT.FieldTechRole
+Granted execute access on FT.DS_RelevantArticles to FT.FieldTechRole
+Granted execute access on FT.DS_HealthCheck to FT.FieldTechRole
+Granted execute access on FT.NF_FT_CheckIn to FT.FieldTechRole
+Granted execute access on FT.NF_FT_CompleteOffline to FT.FieldTechRole
+Granted execute access on FT.NF_FT_LoadOrders to FT.FieldTechRole
+Granted view access on FT.DispatchQueue to FT.FieldTechRole
+Granted view access on FT.DispatchOrder_Detail to FT.FieldTechRole
+Granted view access on FT.SLADashboard to FT.FieldTechRole
+Updated model settings
+Altered page HD.Ticket_Detail
+Altered page HD.Ticket_Detail
+| Image Collection                     | Export Level | Images |
+|--------------------------------------|--------------|--------|
+| Atlas_Web_Content.Content            | Hidden       | 7      |
+| FeedbackModule.Image_collection_Logo | Hidden       | 1      |
+| FeedbackModule.Images                | Hidden       | 2      |
+| NanoflowCommons.Icons                | Hidden       | 25     |
+| Atlas_Core.Content                   | Hidden       | 1      |
+| Atlas_Core.Layout                    | Hidden       | 5      |
+| MyFirstModule.Images                 | Hidden       | 11     |
+
+(7 image collection(s))
+
+── Performance ──────────────────────────────
+  Statements: 3 GrantPageAccesss, 1 Connect, 2 AlterLanguages, 1 CreateModule, 2 CreateJsonStructures, 1 CreateUserRole, 3 GrantNanoflowAccesss, 2 AlterPages, 2 Shows, 1 CreateEnumeration, 1 AlterSettings, 11 Translates, 4 CreateEntitys, 3 CreateNanoflows, 1 CreateRestClient, 1 CreateExportMapping, 3 CreatePageStmtV3s, 1 CreateModuleRole, 4 GrantEntityAccesss, 3 CreateAssociations, 2 CreateViewEntitys, 9 CreateMicroflows, 1 CreateImportMapping, 7 GrantMicroflowAccesss
+  Total time: 308ms
+  ── Per statement ──
+    13ms  Connect  connect local '/tmp/tmp.YiF1MHS7e6/minimal.mpr'
+    16ms  Translate  TranslateStmt
+    3ms  Translate  TranslateStmt
+    1ms  Translate  TranslateStmt
+    2ms  Translate  TranslateStmt
+    4ms  Translate  TranslateStmt
+    2ms  Translate  TranslateStmt
+    11ms  Translate  TranslateStmt
+    3ms  Translate  TranslateStmt
+    1ms  Translate  TranslateStmt
+    175µs  AlterLanguage  AlterLanguageStmt
+    156µs  AlterLanguage  AlterLanguageStmt
+    162µs  Show  show LANGUAGES
+    243µs  CreateModule  create module FT
+    1ms  CreateEnumeration  create enumeration FT.DispatchStatus
+    1ms  CreateEntity  create entity FT.FieldTech
+    1ms  CreateEntity  create entity FT.DispatchOrder
+    2ms  CreateAssociation  create association FT.DispatchOrder_Ticket
+    3ms  CreateAssociation  create association FT.DispatchOrder_FieldTech
+    243µs  CreateEntity  create entity FT.CheckInRecord
+    3ms  CreateAssociation  create association FT.CheckInRecord_DispatchOrder
+    308µs  CreateEntity  create entity FT.WorkOrderImport
+    7ms  Translate  TranslateStmt
+    2ms  CreateViewEntity  create view entity FT.TicketSLAStats
+    3ms  CreateViewEntity  create view entity FT.DispatchSummary
+    9ms  CreateMicroflow  create microflow FT.ACT_Dispatch_Assign
+    8ms  CreateMicroflow  create microflow FT.ACT_Dispatch_Open
+    5ms  CreateMicroflow  create microflow FT.ACT_Dispatch_Complete
+    8ms  CreateMicroflow  create microflow FT.ACT_WorkOrder_Import
+    7ms  CreateMicroflow  create microflow FT.ACT_FT_Initialize
+    7ms  CreateMicroflow  create microflow FT.DS_HealthCheck
+    7ms  CreateMicroflow  create microflow FT.DS_MyDispatchOrders
+    6ms  CreateMicroflow  create microflow FT.DS_RelevantArticles
+    9ms  CreateMicroflow  create microflow FT.DS_CategoryChildren
+    3ms  CreateNanoflow  CreateNanoflowStmt
+    3ms  CreateNanoflow  CreateNanoflowStmt
+    2ms  CreateNanoflow  CreateNanoflowStmt
+    849µs  CreateJsonStructure  CreateJsonStructureStmt
+    1ms  CreateRestClient  CreateRestClientStmt
+    784µs  CreateJsonStructure  CreateJsonStructureStmt
+    1ms  CreateImportMapping  CreateImportMappingStmt
+    1ms  CreateExportMapping  CreateExportMappingStmt
+    29ms  CreatePageStmtV3  create page FT.DispatchQueue
+    7ms  CreatePageStmtV3  create page FT.DispatchOrder_Detail
+    24ms  CreatePageStmtV3  create page FT.SLADashboard
+    8ms  Translate  TranslateStmt
+    71µs  CreateModuleRole  create module role FT.FieldTechRole
+    148µs  CreateUserRole  create user role FieldTech
+    1ms  GrantEntityAccess  grant on entity FT.FieldTech
+    2ms  GrantEntityAccess  grant on entity FT.DispatchOrder
+    2ms  GrantEntityAccess  grant on entity FT.CheckInRecord
+    2ms  GrantEntityAccess  grant on entity FT.WorkOrderImport
+    4ms  GrantMicroflowAccess  grant execute on microflow FT.ACT_Dispatch_Assign
+    4ms  GrantMicroflowAccess  grant execute on microflow FT.ACT_Dispatch_Open
+    4ms  GrantMicroflowAccess  grant execute on microflow FT.ACT_Dispatch_Comp...
+    4ms  GrantMicroflowAccess  grant execute on microflow FT.ACT_WorkOrder_Import
+    4ms  GrantMicroflowAccess  grant execute on microflow FT.DS_MyDispatchOrders
+    4ms  GrantMicroflowAccess  grant execute on microflow FT.DS_RelevantArticles
+    5ms  GrantMicroflowAccess  grant execute on microflow FT.DS_HealthCheck
+    1ms  GrantNanoflowAccess  grant execute on nanoflow FT.NF_FT_CheckIn
+    1ms  GrantNanoflowAccess  grant execute on nanoflow FT.NF_FT_CompleteOffline
+    1ms  GrantNanoflowAccess  grant execute on nanoflow FT.NF_FT_LoadOrders
+    4ms  GrantPageAccess  grant view on page FT.DispatchQueue
+    277µs  GrantPageAccess  grant view on page FT.DispatchOrder_Detail
+    5ms  GrantPageAccess  grant view on page FT.SLADashboard
+    233µs  AlterSettings  alter settings model
+    5ms  AlterPage  alter PAGE HD.Ticket_Detail
+    4ms  AlterPage  alter PAGE HD.Ticket_Detail
+    173µs  Show  show IMAGE COLLECTIONS
+  Script time: 448ms

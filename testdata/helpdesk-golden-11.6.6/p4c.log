@@ -1,0 +1,11 @@
+WARNING: This is a vibe-coded PoC, alpha quality, use with caution.
+Connected to: /tmp/tmp.YiF1MHS7e6/minimal.mpr (Mendix 11.6.6)
+LANGUAGE fr_FR added
+
+── Performance ──────────────────────────────
+  Statements: 1 Connect, 1 AlterLanguage
+  Total time: 28ms
+  ── Per statement ──
+    13ms  Connect  connect local '/tmp/tmp.YiF1MHS7e6/minimal.mpr'
+    14ms  AlterLanguage  AlterLanguageStmt
+  Script time: 71ms

@@ -1,0 +1,1 @@
+alter settings language add 'nl_NL' (checkCompleteness: true);

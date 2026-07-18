@@ -1,0 +1,27 @@
+WARNING: This is a vibe-coded PoC, alpha quality, use with caution.
+Connected to: /tmp/tmp.YiF1MHS7e6/minimal.mpr (Mendix 11.6.6)
+2026/07/16 19:53:08 warning: then show_page HD.ShowMyPasswordForm not found (will still create action by name)
+Created page HD.ManageMyAccount
+Created page HD.ChangeMyPassword
+Created page HD.ShowMyPasswordForm
+2026/07/16 19:53:08 warning: action show_page HD.Agent_Edit not found (will still create action by name)
+2026/07/16 19:53:08 warning: action show_page HD.Customer_New not found (will still create action by name)
+2026/07/16 19:53:08 warning: action show_page HD.Customer_Edit not found (will still create action by name)
+Created page HD.Account_Overview
+Created page HD.Customer_New
+Created page HD.Agent_Edit
+Created page HD.Customer_Edit
+
+── Performance ──────────────────────────────
+  Statements: 1 Connect, 7 CreatePageStmtV3s
+  Total time: 166ms
+  ── Per statement ──
+    12ms  Connect  connect local '/tmp/tmp.YiF1MHS7e6/minimal.mpr'
+    27ms  CreatePageStmtV3  create page HD.ManageMyAccount
+    11ms  CreatePageStmtV3  create page HD.ChangeMyPassword
+    8ms  CreatePageStmtV3  create page HD.ShowMyPasswordForm
+    68ms  CreatePageStmtV3  create page HD.Account_Overview
+    19ms  CreatePageStmtV3  create page HD.Customer_New
+    10ms  CreatePageStmtV3  create page HD.Agent_Edit
+    7ms  CreatePageStmtV3  create page HD.Customer_Edit
+  Script time: 212ms
