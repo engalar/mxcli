@@ -1,0 +1,346 @@
+{
+  "type": "Microflows$Nanoflow",
+  "canonical": {
+    "$ID": {
+      "$binary": {
+        "base64": "qO6eW2iMt0CDgmmtkRQ8kg==",
+        "subType": "00"
+      }
+    },
+    "$Type": "Microflows$Nanoflow",
+    "AllowedModuleRoles": [
+      {
+        "$numberInt": "1"
+      },
+      "Administration.User"
+    ],
+    "Documentation": "",
+    "Excluded": false,
+    "ExportLevel": "Hidden",
+    "Flows": [
+      {
+        "$numberInt": "3"
+      },
+      {
+        "$ID": {
+          "$binary": {
+            "base64": "hYvtmF/jekayVvELL1Viog==",
+            "subType": "00"
+          }
+        },
+        "$Type": "Microflows$SequenceFlow",
+        "CaseValues": [
+          {
+            "$numberInt": "2"
+          },
+          {
+            "$ID": {
+              "$binary": {
+                "base64": "7cheflsV3UeZ6ORiW97CEA==",
+                "subType": "00"
+              }
+            },
+            "$Type": "Microflows$NoCase"
+          }
+        ],
+        "DestinationConnectionIndex": {
+          "$numberLong": "3"
+        },
+        "DestinationPointer": {
+          "$binary": {
+            "base64": "JdWiMNP6T0qlgsyFByORCg==",
+            "subType": "00"
+          }
+        },
+        "IsErrorHandler": false,
+        "Line": {
+          "$ID": {
+            "$binary": {
+              "base64": "jiRqrp6og0aPT8FwxtNluA==",
+              "subType": "00"
+            }
+          },
+          "$Type": "Microflows$BezierCurve",
+          "DestinationControlVector": "0;0",
+          "OriginControlVector": "0;0"
+        },
+        "OriginConnectionIndex": {
+          "$numberLong": "1"
+        },
+        "OriginPointer": {
+          "$binary": {
+            "base64": "1xeOSXqS0ES3eNtlc+TR6A==",
+            "subType": "00"
+          }
+        },
+        "CaseValue": null
+      },
+      {
+        "$ID": {
+          "$binary": {
+            "base64": "yYz0OKdnKEOBhEpG2SWGYA==",
+            "subType": "00"
+          }
+        },
+        "$Type": "Microflows$SequenceFlow",
+        "CaseValues": [
+          {
+            "$numberInt": "2"
+          },
+          {
+            "$ID": {
+              "$binary": {
+                "base64": "QGzjvQ782km0QOWZw0CAeA==",
+                "subType": "00"
+              }
+            },
+            "$Type": "Microflows$NoCase"
+          }
+        ],
+        "DestinationConnectionIndex": {
+          "$numberLong": "3"
+        },
+        "DestinationPointer": {
+          "$binary": {
+            "base64": "Um3Vfs+ysEStdeT/IUntDw==",
+            "subType": "00"
+          }
+        },
+        "IsErrorHandler": false,
+        "Line": {
+          "$ID": {
+            "$binary": {
+              "base64": "nvcpq4Tym0aWxnrUofV0sQ==",
+              "subType": "00"
+            }
+          },
+          "$Type": "Microflows$BezierCurve",
+          "DestinationControlVector": "0;0",
+          "OriginControlVector": "0;0"
+        },
+        "OriginConnectionIndex": {
+          "$numberLong": "1"
+        },
+        "OriginPointer": {
+          "$binary": {
+            "base64": "JdWiMNP6T0qlgsyFByORCg==",
+            "subType": "00"
+          }
+        },
+        "CaseValue": null
+      },
+      {
+        "$ID": {
+          "$binary": {
+            "base64": "xyAQwpi1W0GoYwkz7cRJ4A==",
+            "subType": "00"
+          }
+        },
+        "$Type": "Microflows$SequenceFlow",
+        "CaseValues": [
+          {
+            "$numberInt": "2"
+          },
+          {
+            "$ID": {
+              "$binary": {
+                "base64": "sb+UArYhY0eFiPqT4EiB3w==",
+                "subType": "00"
+              }
+            },
+            "$Type": "Microflows$NoCase"
+          }
+        ],
+        "DestinationConnectionIndex": {
+          "$numberLong": "3"
+        },
+        "DestinationPointer": {
+          "$binary": {
+            "base64": "bsWLVb8wYEeACQ+yRZpaqA==",
+            "subType": "00"
+          }
+        },
+        "IsErrorHandler": false,
+        "Line": {
+          "$ID": {
+            "$binary": {
+              "base64": "lpaf1nrHsEW+/gbNi0fAcQ==",
+              "subType": "00"
+            }
+          },
+          "$Type": "Microflows$BezierCurve",
+          "DestinationControlVector": "0;0",
+          "OriginControlVector": "0;0"
+        },
+        "OriginConnectionIndex": {
+          "$numberLong": "1"
+        },
+        "OriginPointer": {
+          "$binary": {
+            "base64": "Um3Vfs+ysEStdeT/IUntDw==",
+            "subType": "00"
+          }
+        },
+        "CaseValue": null
+      }
+    ],
+    "MarkAsUsed": false,
+    "MicroflowReturnType": {
+      "$ID": {
+        "$binary": {
+          "base64": "RwOdTzuOHkCWSSjbUGDzUg==",
+          "subType": "00"
+        }
+      },
+      "$Type": "DataTypes$ListType",
+      "Entity": "Administration.Account"
+    },
+    "Name": "AdminNanoflow",
+    "ObjectCollection": {
+      "$ID": {
+        "$binary": {
+          "base64": "Bx/k9D+LxUea5gTaGwPlkQ==",
+          "subType": "00"
+        }
+      },
+      "$Type": "Microflows$MicroflowObjectCollection",
+      "Objects": [
+        {
+          "$numberInt": "3"
+        },
+        {
+          "$ID": {
+            "$binary": {
+              "base64": "1xeOSXqS0ES3eNtlc+TR6A==",
+              "subType": "00"
+            }
+          },
+          "$Type": "Microflows$StartEvent",
+          "RelativeMiddlePoint": "200;200",
+          "Size": "20;20"
+        },
+        {
+          "$ID": {
+            "$binary": {
+              "base64": "JdWiMNP6T0qlgsyFByORCg==",
+              "subType": "00"
+            }
+          },
+          "$Type": "Microflows$ActionActivity",
+          "Action": {
+            "$ID": {
+              "$binary": {
+                "base64": "d0Zq0+8AzUulixD/lmmBdw==",
+                "subType": "00"
+              }
+            },
+            "$Type": "Microflows$SynchronizeAction",
+            "ErrorHandlingType": "Abort",
+            "Type": "All",
+            "VariableNames": [
+              {
+                "$numberInt": "1"
+              }
+            ]
+          },
+          "AutoGenerateCaption": true,
+          "BackgroundColor": "Default",
+          "Caption": "Activity",
+          "Disabled": false,
+          "Documentation": "",
+          "RelativeMiddlePoint": "360;200",
+          "Size": "120;60"
+        },
+        {
+          "$ID": {
+            "$binary": {
+              "base64": "Um3Vfs+ysEStdeT/IUntDw==",
+              "subType": "00"
+            }
+          },
+          "$Type": "Microflows$ActionActivity",
+          "Action": {
+            "$ID": {
+              "$binary": {
+                "base64": "tWRJPlUBbEml/bz7p3caWg==",
+                "subType": "00"
+              }
+            },
+            "$Type": "Microflows$RetrieveAction",
+            "ErrorHandlingType": "Abort",
+            "ResultVariableName": "AccountList",
+            "RetrieveSource": {
+              "$ID": {
+                "$binary": {
+                  "base64": "KVgVW0FndUCIX5daklNu/g==",
+                  "subType": "00"
+                }
+              },
+              "$Type": "Microflows$DatabaseRetrieveSource",
+              "Entity": "Administration.Account",
+              "NewSortings": {
+                "$ID": {
+                  "$binary": {
+                    "base64": "pZ4IleYxO02qkd+G4S1MXQ==",
+                    "subType": "00"
+                  }
+                },
+                "$Type": "Microflows$SortingsList",
+                "Sortings": [
+                  {
+                    "$numberInt": "2"
+                  },
+                  {
+                    "$ID": {
+                      "$binary": {
+                        "base64": "zS4UQnyIdEejhWJJoACm7g==",
+                        "subType": "00"
+                      }
+                    },
+                    "$Type": "Microflows$RetrieveSorting",
+                    "AttributeRef": {
+                      "$ID": {
+                        "$binary": {
+                          "base64": "+OpBunhd6U6wlaMAInmYLw==",
+                          "subType": "00"
+                        }
+                      },
+                      "$Type": "DomainModels$AttributeRef",
+                      "Attribute": "Administration.Account.FullName",
+                      "EntityRef": null
+                    },
+                    "SortOrder": "Descending"
+                  }
+                ]
+              },
+              "Range": null,
+              "XpathConstraint": "[FullName = empty and System.owner = '[%CurrentUser%]']"
+            }
+          },
+          "AutoGenerateCaption": true,
+          "BackgroundColor": "Default",
+          "Caption": "Activity",
+          "Disabled": false,
+          "Documentation": "",
+          "RelativeMiddlePoint": "520;200",
+          "Size": "120;60"
+        },
+        {
+          "$ID": {
+            "$binary": {
+              "base64": "bsWLVb8wYEeACQ+yRZpaqA==",
+              "subType": "00"
+            }
+          },
+          "$Type": "Microflows$EndEvent",
+          "RelativeMiddlePoint": "680;200",
+          "ReturnValue": "$AccountList",
+          "Size": "20;20",
+          "ReturnValueModel": null
+        }
+      ]
+    },
+    "ReturnVariableName": "AccountList",
+    "UseListParameterByReference": true
+  }
+}
