@@ -224,6 +224,25 @@ func TestRoundtrip_Microflow_Basic(t *testing.T) {
 [ ] make report 通过，无新增 FAIL
 ```
 
+## Golden 测试（BSON 验证层）
+
+除上述标准层外，还有一套 BSON 黄金回归测试。详见 [`GOLDEN_TEST_GUIDE.md`](GOLDEN_TEST_GUIDE.md)。
+
+**快速命令**：
+```bash
+# Encoder Golden — codec 输出 BSON = golden
+go test ./modelsdk/codec/golden/... -v -count=1
+
+# Pipeline MDL — 手写 MDL 通过完整管道后 BSON = golden
+go test -run TestMDLToGolden ./modelsdk/codec/golden/ -v -count=1
+
+# Full Roundtrip — golden BSON → describe → MDL → 管道 → BSON
+go test -run TestGoldenRoundtrip ./mdl/executor/ -v -count=1
+
+# 写入/更新 golden（任一测试）
+GOLDEN_WRITE=1 go test ./modelsdk/codec/golden/... -v -count=1
+```
+
 ## 本地验证流程
 
 ```bash
@@ -254,3 +273,7 @@ go test ./mdl/executor/... -run 'DescribeSanity' -v  # L6b
 | gen 测试做字节对比 | 实现细节变化就会失败 | 改为断言 TypeName() 和字段值 |
 | benchmark 没有 ResetTimer | setup 时间计入 b.N | 在 loop 前加 `b.ResetTimer()` |
 | L6b 里的新文档类型报错 | 对应 DESCRIBE 函数有 bug | 修复 DESCRIBE，不要 skip |
+| golden BSON diff 中大量 `extra` 字段 | Builder 设了 golden 没有的默认值字段 | 检查 golden 中字段是否存在，移除多余的 Set* 调用 |
+| golden BSON diff 中 `type` diff（int32 vs int64） | Go bson 默认 int32，Studio Pro 写 int64 | 显式转型 int64() |
+| `TestGoldenRoundtrip` 报 `sql: no rows` | SetupMDL 不足，前置实体/模块不存在 | 补全 SetupMDL |
+| roundtrip MDL 解析报 `expecting '('` | 文档名是关键字 | 在 `sanitizeDescribedMDL` 中添加 rename |
