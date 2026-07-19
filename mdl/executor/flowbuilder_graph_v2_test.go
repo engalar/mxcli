@@ -200,6 +200,43 @@ func TestBuildFlowGraphGenInitialisesMeasurerWhenNil(t *testing.T) {
 	}
 }
 
+func TestBuildFlowGraphGenListReturnTypeEmitsCreateListAction(t *testing.T) {
+	// When the microflow returns a list variable and the body has no
+	// explicit declare for it, buildFlowGraphGen must synthesise a
+	// CreateListAction (not CreateVariableAction). Using the wrong
+	// action type causes Mendix BSON parse failure → KeyNotFoundException
+	// crash in mx check / Studio Pro.
+	fb := newGraphTestFb()
+	body := []ast.MicroflowStatement{} // no explicit declare
+	returns := &ast.MicroflowReturnType{
+		Type: ast.DataType{
+			Kind:      ast.TypeListOf,
+			EntityRef: &ast.QualifiedName{Module: "Sales", Name: "Order"},
+		},
+		Variable: "Orders",
+	}
+	oc := fb.buildFlowGraphGen(body, returns)
+	if oc == nil {
+		t.Fatal("expected non-nil ObjectCollection")
+	}
+	// Walk objects to find the ActionActivity with the list declaration.
+	var found bool
+	for _, obj := range oc.ObjectsItems() {
+		aa, ok := obj.(*genMf.ActionActivity)
+		if !ok {
+			continue
+		}
+		if _, isList := aa.Action().(*genMf.CreateListAction); isList {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatal("no CreateListAction found in generated objects — " +
+			"buildFlowGraphGen must emit CreateListAction for list return type")
+	}
+}
+
 // TestResetLayoutProducesValidCoordinates verifies that RESET LAYOUT does not
 // clear RelativeMiddlePoint to "". buildFlowGraphGen computes valid "x;y"
 // coordinates for every activity; the RESET LAYOUT option just means

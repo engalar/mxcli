@@ -69,19 +69,48 @@ func (fb *flowBuilderGen) buildFlowGraphGen(stmts []ast.MicroflowStatement, retu
 	lastID := startID
 	fb.posX += fb.spacing
 
-	// Synthetic CreateVariableAction for return variable.
+	// Synthetic declare for return variable.
 	// 11.12.1+ validator requires the return variable to have a
 	// declaration node in the graph (ObjectCollection), not just a
 	// ReturnVariableName metadata field on the microflow.
+	// List-typed variables require CreateListAction; all other types
+	// use CreateVariableAction (see flowbuilder_actions_v2.go:76-95).
 	if returns != nil && returns.Variable != "" && !bodyHasDeclareFor(stmts, returns.Variable) {
-		declAction := genMf.NewCreateVariableAction()
-		assignFreshID(declAction)
-		declAction.SetErrorHandlingType(fb.ehTypeGen(nil))
-		declAction.SetVariableName(returns.Variable)
-		if dt := convertASTToGenDataType(returns.Type); dt != nil {
-			declAction.SetVariableType(dt)
+		var declAction element.Element
+		if returns.Type.Kind == ast.TypeListOf {
+			entityQN := ""
+			if returns.Type.EntityRef != nil {
+				entityQN = returns.Type.EntityRef.Module + "." + returns.Type.EntityRef.Name
+			}
+			listAct := genMf.NewCreateListAction()
+			assignFreshID(listAct)
+			listAct.SetOutputVariableName(returns.Variable)
+			listAct.SetEntityQualifiedName(entityQN)
+			declAction = listAct
+			if fb.varTypes != nil && entityQN != "" {
+				fb.varTypes[returns.Variable] = "List of " + entityQN
+			}
+			if fb.declaredVars != nil {
+				fb.declaredVars[returns.Variable] = "List of " + entityQN
+			}
+		} else {
+			declAct := genMf.NewCreateVariableAction()
+			assignFreshID(declAct)
+			declAct.SetErrorHandlingType(fb.ehTypeGen(nil))
+			declAct.SetVariableName(returns.Variable)
+			if dt := convertASTToGenDataType(returns.Type); dt != nil {
+				declAct.SetVariableType(dt)
+			}
+			declAct.SetInitialValue(mendixExprValue(defaultInitialValue(returns.Type)))
+			declAction = declAct
+			if ref := paramEntityRef(returns.Type); ref != nil && ref.Module != "" {
+				if fb.varTypes != nil {
+					fb.varTypes[returns.Variable] = ref.Module + "." + ref.Name
+				}
+			} else if fb.declaredVars != nil {
+				fb.declaredVars[returns.Variable] = returns.Type.Kind.String()
+			}
 		}
-		declAction.SetInitialValue(mendixExprValue(defaultInitialValue(returns.Type)))
 		declID := fb.genActivityWrap(declAction, nil, "")
 		fb.flows = append(fb.flows, newHorizontalFlowGen(lastID, declID))
 		lastID = declID
