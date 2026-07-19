@@ -138,8 +138,8 @@ func invalidateDomainModelsGenCache(ctx *ExecContext) {
 	// Invalidate sub-backend cache so the next ListDomainModelsGen call
 	// re-fetches from the backend. MprBackend.InvalidateCache() clears
 	// per-domain caches on microflowBackend, pageBackend, domainModelBackend, etc.
-	if ctx.Backend != nil {
-		ctx.Backend.InvalidateCache()
+	if ctx.CacheInvalidator != nil {
+		ctx.CacheInvalidator.InvalidateCache()
 	}
 	// Per-module cache (Fix 1) is NOT cleared here. Mutator paths must
 	// either:

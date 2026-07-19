@@ -92,8 +92,8 @@ func execCreateImageCollectionFn(ctx context.Context, s *ast.CreateImageCollecti
 		fmt.Fprintf(deps.Output, "Created image collection: %s\n", s.Name)
 	}
 
-	if deps.Backend != nil {
-		deps.Backend.InvalidateCache()
+	if deps.CacheInvalidator != nil {
+		deps.CacheInvalidator.InvalidateCache()
 	}
 	return nil
 }
@@ -315,8 +315,8 @@ func execAlterImageCollectionFn(ctx context.Context, s *ast.AlterImageCollection
 			if err := deps.ImageCollectionWriter.MoveImageCollection(ic); err != nil {
 				return mdlerrors.NewBackend("move image collection", err)
 			}
-			if deps.Backend != nil {
-				deps.Backend.InvalidateCache()
+			if deps.CacheInvalidator != nil {
+				deps.CacheInvalidator.InvalidateCache()
 			}
 			fmt.Fprintf(deps.Output, "Moved image collection %s to module %s\n", s.Name, action.Target.Module)
 
