@@ -960,13 +960,10 @@ func (ctx *ExecContext) initRoles() {
 	ctx.AgentEditorOperator = ctx.Backend
 }
 
-// Connected returns true if a project is connected via the Backend.
+// Connected returns true if a project is connected.
 func (ctx *ExecContext) Connected() bool {
 	if ctx.ConnectionManager != nil {
 		return ctx.ConnectionManager.IsConnected()
-	}
-	if ctx.Backend != nil {
-		return ctx.Backend.IsConnected()
 	}
 	return false
 }
