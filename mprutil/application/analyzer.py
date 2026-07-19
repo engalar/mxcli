@@ -25,23 +25,25 @@ class ReferenceAnalyzer:
         results: list[tuple[str, str]] = []
         pos = 0
         while pos < len(data) - 20:
-            if data[pos : pos + 5] == b"\x05$ID":
+            if data[pos : pos + 5] == b"\x05$ID\x00":
                 blen = int.from_bytes(data[pos + 5 : pos + 9], "little", signed=True)
                 if blen == 16:
                     guid = data[pos + 10 : pos + 26].hex()[:16]
-                    # find $Type after this $ID
-                    rest = data[pos + 26 : pos + 200]
-                    tp_idx = rest.find(b"\x02$Type")
+                    rest = data[pos + 26 : pos + 400]
+                    # BSON key is "Type" ("$Type" appears in newer versions)
+                    tp_idx = rest.find(b"\x02Type\x00")
+                    if tp_idx < 0:
+                        tp_idx = rest.find(b"\x02$Type\x00")
                     if tp_idx >= 0:
                         sl = int.from_bytes(
-                            rest[tp_idx + 6 : tp_idx + 10], "little", signed=True
+                            rest[tp_idx + 7 : tp_idx + 11], "little", signed=True
                         )
                         if 0 < sl < 200:
-                            tp = rest[tp_idx + 10 : tp_idx + 10 + sl - 1].decode(
+                            tp = rest[tp_idx + 11 : tp_idx + 11 + sl - 1].decode(
                                 "ascii", errors="replace"
                             )
                             results.append((guid, tp))
-                            pos += tp_idx + 10 + sl
+                            pos += 26 + tp_idx + 11 + sl
                             continue
             pos += 1
         return results
