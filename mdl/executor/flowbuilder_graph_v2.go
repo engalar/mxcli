@@ -69,6 +69,24 @@ func (fb *flowBuilderGen) buildFlowGraphGen(stmts []ast.MicroflowStatement, retu
 	lastID := startID
 	fb.posX += fb.spacing
 
+	// Synthetic CreateVariableAction for return variable.
+	// 11.12.1+ validator requires the return variable to have a
+	// declaration node in the graph (ObjectCollection), not just a
+	// ReturnVariableName metadata field on the microflow.
+	if returns != nil && returns.Variable != "" && !bodyHasDeclareFor(stmts, returns.Variable) {
+		declAction := genMf.NewCreateVariableAction()
+		assignFreshID(declAction)
+		declAction.SetErrorHandlingType(fb.ehTypeGen(nil))
+		declAction.SetVariableName(returns.Variable)
+		if dt := convertASTToGenDataType(returns.Type); dt != nil {
+			declAction.SetVariableType(dt)
+		}
+		declAction.SetInitialValue(mendixExprValue(defaultInitialValue(returns.Type)))
+		declID := fb.genActivityWrap(declAction, nil, "")
+		fb.flows = append(fb.flows, newHorizontalFlowGen(lastID, declID))
+		lastID = declID
+	}
+
 	// Iterate body statements via the dispatcher (h1).
 	for _, stmt := range stmts {
 		// Consume any pending case label set by the previous statement
@@ -145,4 +163,36 @@ func (fb *flowBuilderGen) buildFlowGraphGen(stmts []ast.MicroflowStatement, retu
 // return value.
 func (fb *flowBuilderGen) flowBuilderGenObjects() []element.Element {
 	return fb.objects
+}
+
+// bodyHasDeclareFor checks whether any statement in the body is
+// a declare statement for the given variable name.
+func bodyHasDeclareFor(stmts []ast.MicroflowStatement, varName string) bool {
+	for _, stmt := range stmts {
+		if d, ok := stmt.(*ast.DeclareStmt); ok {
+			if d.Variable == varName {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// defaultInitialValue returns a Mendix expression for the default
+// initial value of a return variable, based on its type.
+func defaultInitialValue(dt ast.DataType) string {
+	switch dt.Kind {
+	case ast.TypeString:
+		return "''"
+	case ast.TypeInteger, ast.TypeLong:
+		return "0"
+	case ast.TypeBoolean:
+		return "true"
+	case ast.TypeDecimal:
+		return "0.0"
+	case ast.TypeDateTime:
+		return "dateTime(0)"
+	default:
+		return "empty"
+	}
 }

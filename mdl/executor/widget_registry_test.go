@@ -4,14 +4,11 @@ package executor
 
 import (
 	"bytes"
-	"encoding/json"
 	"log"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
-
-	"github.com/mendixlabs/mxcli/modelsdk/widgets/definitions"
 )
 
 func TestRegistryLoadsAllEmbeddedDefinitions(t *testing.T) {
@@ -99,28 +96,14 @@ func TestRegistryGetByWidgetID(t *testing.T) {
 	}
 }
 
-func TestAllEmbeddedDefinitionsAreValidJSON(t *testing.T) {
-	entries, err := definitions.EmbeddedFS.ReadDir(".")
-	if err != nil {
-		t.Fatalf("ReadDir error: %v", err)
+func TestAllEmbeddedDefinitionsAreValid(t *testing.T) {
+	defs := embeddedDefinitions()
+	if len(defs) == 0 {
+		t.Fatal("no embedded definitions found")
 	}
 
-	for _, entry := range entries {
-		if !strings.HasSuffix(entry.Name(), ".def.json") {
-			continue
-		}
-
-		t.Run(entry.Name(), func(t *testing.T) {
-			data, err := definitions.EmbeddedFS.ReadFile(entry.Name())
-			if err != nil {
-				t.Fatalf("ReadFile error: %v", err)
-			}
-
-			var def WidgetDefinition
-			if err := json.Unmarshal(data, &def); err != nil {
-				t.Fatalf("json unmarshal error: %v", err)
-			}
-
+	for _, def := range defs {
+		t.Run(def.MDLName, func(t *testing.T) {
 			// Validate required fields
 			if def.WidgetID == "" {
 				t.Error("widgetId is empty")

@@ -5,7 +5,6 @@ package widgets
 
 import (
 	"bytes"
-	"embed"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -13,9 +12,9 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"sync"
 
 	"log"
-	"sync"
 
 	"go.mongodb.org/mongo-driver/v2/bson"
 
@@ -100,13 +99,6 @@ func sortedMapKeys(m map[string]any) []string {
 	return keys
 }
 
-// templateFS previously held embedded widget templates (*.json files under
-// templates/mendix-11.6/). All templates have been removed; widget Type/Object
-// BSON is now derived entirely from the project's installed .mpk files via
-// GenerateFromMPK, eliminating CE0463 errors caused by stale embedded templates.
-// The embed.FS and its scan helpers are kept as no-ops to preserve the API.
-var templateFS embed.FS
-
 // WidgetTemplate represents a loaded widget template.
 type WidgetTemplate struct {
 	WidgetID      string         `json:"widgetId"`
@@ -119,111 +111,15 @@ type WidgetTemplate struct {
 	Object        map[string]any `json:"object"` // WidgetObject with all property values
 }
 
-// templateCache caches loaded templates.
-var (
-	templateCache     = make(map[string]*WidgetTemplate)
-	templateCacheLock sync.RWMutex
-)
-
 // generatedCache stores MPK-derived templates for the session lifetime.
 // Key: widgetID string. Value: *WidgetTemplate (placeholder IDs, not yet remapped).
 var generatedCache sync.Map
 
-// widgetTemplateIndex maps widget IDs to template filenames.
-// Built lazily by scanning embedded template JSON files.
-var (
-	widgetTemplateIndex     map[string]string
-	widgetTemplateIndexOnce sync.Once
-)
-
-// getWidgetTemplateIndex returns the widget ID → filename mapping,
-// built by scanning all embedded JSON templates for their "widgetId" field.
-func getWidgetTemplateIndex() map[string]string {
-	widgetTemplateIndexOnce.Do(func() {
-		widgetTemplateIndex = make(map[string]string)
-		entries, err := templateFS.ReadDir("templates/mendix-11.6")
-		if err != nil {
-			return
-		}
-		for _, entry := range entries {
-			if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".json") {
-				continue
-			}
-			// Read just enough to extract widgetId
-			data, err := templateFS.ReadFile("templates/mendix-11.6/" + entry.Name())
-			if err != nil {
-				continue
-			}
-			var header struct {
-				WidgetID string         `json:"widgetId"`
-				Type     map[string]any `json:"type"`
-			}
-			if err := json.Unmarshal(data, &header); err != nil {
-				continue
-			}
-			wid := header.WidgetID
-			// Fallback: extract WidgetId from type.WidgetId for older templates
-			if wid == "" && header.Type != nil {
-				if v, ok := header.Type["WidgetId"].(string); ok {
-					wid = v
-				}
-			}
-			if wid == "" {
-				continue
-			}
-			widgetTemplateIndex[wid] = entry.Name()
-		}
-	})
-	return widgetTemplateIndex
-}
-
-// GetTemplate loads a widget template by widget ID.
-// Returns nil if the template is not found.
-func GetTemplate(widgetID string) (*WidgetTemplate, error) {
-	// Check cache first
-	templateCacheLock.RLock()
-	if tmpl, ok := templateCache[widgetID]; ok {
-		templateCacheLock.RUnlock()
-		return tmpl, nil
-	}
-	templateCacheLock.RUnlock()
-
-	// Find template file from auto-scanned index
-	index := getWidgetTemplateIndex()
-	filename, ok := index[widgetID]
-	if !ok {
-		return nil, nil // Not found, not an error
-	}
-
-	// Load template
-	data, err := templateFS.ReadFile("templates/mendix-11.6/" + filename)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read template %s: %w", filename, err)
-	}
-
-	var tmpl WidgetTemplate
-	if err := json.Unmarshal(data, &tmpl); err != nil {
-		return nil, fmt.Errorf("failed to parse template %s: %w", filename, err)
-	}
-
-	// Cache the template
-	templateCacheLock.Lock()
-	templateCache[widgetID] = &tmpl
-	templateCacheLock.Unlock()
-
-	return &tmpl, nil
-}
-
-// getOrGenerateTemplate returns a WidgetTemplate for widgetID. It checks the embedded
-// template cache first, then falls back to deriving a template from the project's .mpk
-// widget file. Returns nil, nil when the widget is unknown and no MPK is available.
+// getOrGenerateTemplate returns a WidgetTemplate for widgetID. It first checks the
+// session cache, then attempts to derive a template from the project's .mpk widget
+// file or existing widget instances. Returns nil, nil when the widget is unknown.
 func getOrGenerateTemplate(widgetID, projectPath string) (*WidgetTemplate, error) {
-	// 1. Embedded templates (existing path)
-	if tmpl, err := GetTemplate(widgetID); err != nil || tmpl != nil {
-		return tmpl, err
-	}
-
-	// 2. Session cache of previously generated templates
+	// 1. Session cache of previously generated templates
 	if cached, ok := generatedCache.Load(widgetID); ok {
 		return cached.(*WidgetTemplate), nil
 	}
@@ -285,39 +181,6 @@ func ResetGeneratedCache() {
 		generatedCache.Delete(k)
 		return true
 	})
-}
-
-// GetTemplateBSON loads a widget template and converts its type definition to BSON.
-// The returned bson.D can be used directly in widget creation.
-// IDs in the template are regenerated with new UUIDs while preserving internal references.
-// If projectPath is non-empty, the template is augmented from the project's .mpk widget file.
-func GetTemplateBSON(widgetID string, idGenerator func() string, projectPath string) (bson.D, map[string]PropertyTypeIDEntry, error) {
-	tmpl, err := getOrGenerateTemplate(widgetID, projectPath)
-	if err != nil {
-		return nil, nil, err
-	}
-	if tmpl == nil {
-		return nil, nil, nil
-	}
-
-	// Deep-clone and augment from .mpk (skip for generated templates — already complete)
-	if !tmpl.Generated {
-		tmpl = augmentFromMPK(tmpl, widgetID, projectPath)
-	}
-
-	// Phase 1: Collect all $ID values and create old->new ID mappings
-	idMapping := make(map[string]string)
-	collectIDs(tmpl.Type, idGenerator, idMapping)
-
-	// Phase 2: Convert JSON to BSON, replacing IDs using the mapping
-	propertyTypeIDs := make(map[string]PropertyTypeIDEntry)
-	bsonType := jsonToBSONWithMapping(tmpl.Type, idMapping, propertyTypeIDs)
-
-	if containsPlaceholderID(bsonType) {
-		return nil, nil, fmt.Errorf("placeholder ID leak detected in widget template type for %s: aa000000-prefix ID was not remapped", widgetID)
-	}
-
-	return bsonType, propertyTypeIDs, nil
 }
 
 // GetTemplateFullBSON loads a widget template and converts both Type and Object to BSON.
@@ -1102,12 +965,4 @@ func augmentFromMPK(tmpl *WidgetTemplate, widgetID string, projectPath string) *
 	return clone
 }
 
-// ListAvailableTemplates returns a list of available widget template IDs.
-func ListAvailableTemplates() []string {
-	index := getWidgetTemplateIndex()
-	result := make([]string, 0, len(index))
-	for widgetID := range index {
-		result = append(result, widgetID)
-	}
-	return result
-}
+

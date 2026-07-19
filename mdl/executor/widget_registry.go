@@ -13,7 +13,6 @@ import (
 
 	"github.com/mendixlabs/mxcli/internal/mxgraph"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
-	"github.com/mendixlabs/mxcli/modelsdk/widgets/definitions"
 	"github.com/mendixlabs/mxcli/modelsdk/widgets/mpk"
 )
 
@@ -85,36 +84,16 @@ func NewWidgetRegistryWithOps(extraOps map[string]bool) (*WidgetRegistry, error)
 		mpkDiscovered:   make(map[string]*DiscoveredWidget),
 	}
 
-	entries, err := definitions.EmbeddedFS.ReadDir(".")
-	if err != nil {
-		return nil, mdlerrors.NewBackend("read embedded definitions", err)
-	}
-
-	for _, entry := range entries {
-		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".def.json") {
-			continue
-		}
-
-		data, err := definitions.EmbeddedFS.ReadFile(entry.Name())
-		if err != nil {
-			return nil, mdlerrors.NewBackend(fmt.Sprintf("read definition %s", entry.Name()), err)
-		}
-
-		var def WidgetDefinition
-		if err := json.Unmarshal(data, &def); err != nil {
-			return nil, mdlerrors.NewBackend(fmt.Sprintf("parse definition %s", entry.Name()), err)
-		}
-
-		if err := reg.validateDefinitionOperations(&def, entry.Name()); err != nil {
-			return nil, err
-		}
-
+	for _, def := range embeddedDefinitions() {
 		def.MDLName = strings.ToLower(def.MDLName)
 		for i := range def.ChildSlots {
 			def.ChildSlots[i].MDLContainer = strings.ToLower(def.ChildSlots[i].MDLContainer)
 		}
-		reg.byMDLName[strings.ToUpper(def.MDLName)] = &def
-		reg.byWidgetID[def.WidgetID] = &def
+		if err := reg.validateDefinitionOperations(def, def.WidgetID); err != nil {
+			return nil, err
+		}
+		reg.byMDLName[strings.ToUpper(def.MDLName)] = def
+		reg.byWidgetID[def.WidgetID] = def
 	}
 
 	return reg, nil
@@ -518,6 +497,121 @@ var (
 // embedded built-in registry, or nil if not found. The registry is initialized
 // once on first call and is safe for concurrent use. It is intended for use in
 // describe/read contexts that have no access to the pageBuilder or project path.
+// embeddedDefinitions returns the built-in widget definitions that were
+// previously loaded from modelsdk/widgets/definitions/*.def.json.
+func embeddedDefinitions() []*WidgetDefinition {
+	return []*WidgetDefinition{
+		{
+			WidgetID: "com.mendix.widget.web.combobox.Combobox", MDLName: "COMBOBOX",
+			TemplateFile: "combobox.json", DefaultEditable: "Always",
+			Modes: []WidgetMode{
+				{Name: "association", Condition: "hasDataSource", Description: "Association mode",
+					PropertyMappings: []PropertyMapping{
+						{PropertyKey: "optionsSourceType", Value: "association", Operation: "primitive"},
+						{PropertyKey: "optionsSourceAssociationDataSource", Source: "DataSource", Operation: "datasource"},
+						{PropertyKey: "attributeAssociation", Source: "Association", Operation: "association"},
+						{PropertyKey: "optionsSourceAssociationCaptionAttribute", Source: "CaptionAttribute", Operation: "attribute"},
+					}},
+				{Name: "default", Description: "Enumeration mode",
+					PropertyMappings: []PropertyMapping{
+						{PropertyKey: "attributeEnumeration", Source: "Attribute", Operation: "attribute"},
+					}},
+			},
+		},
+		{
+			WidgetID: "com.mendix.widget.web.gallery.Gallery", MDLName: "GALLERY",
+			TemplateFile: "gallery.json", DefaultEditable: "Always",
+			PropertyMappings: []PropertyMapping{
+				{PropertyKey: "advanced", Value: "false", Operation: "primitive"},
+				{PropertyKey: "datasource", Source: "DataSource", Operation: "datasource"},
+				{PropertyKey: "itemSelection", Source: "Selection", Operation: "selection", Default: "Single"},
+				{PropertyKey: "itemSelectionMode", Value: "clear", Operation: "primitive"},
+				{PropertyKey: "desktopItems", Source: "DesktopColumns", Default: "1", Operation: "primitive"},
+				{PropertyKey: "tabletItems", Source: "TabletColumns", Default: "1", Operation: "primitive"},
+				{PropertyKey: "phoneItems", Source: "PhoneColumns", Default: "1", Operation: "primitive"},
+				{PropertyKey: "pageSize", Value: "20", Operation: "primitive"},
+				{PropertyKey: "pagination", Value: "buttons", Operation: "primitive"},
+				{PropertyKey: "pagingPosition", Value: "below", Operation: "primitive"},
+				{PropertyKey: "showEmptyPlaceholder", Value: "none", Operation: "primitive"},
+				{PropertyKey: "onClickTrigger", Value: "single", Operation: "primitive"},
+			},
+			ChildSlots: []ChildSlotMapping{
+				{PropertyKey: "content", MDLContainer: "TEMPLATE", Operation: "widgets"},
+				{PropertyKey: "emptyPlaceholder", MDLContainer: "EMPTYPLACEHOLDER", Operation: "widgets"},
+				{PropertyKey: "filtersPlaceholder", MDLContainer: "FILTER", Operation: "widgets"},
+			},
+		},
+		{
+			WidgetID: "com.mendix.widget.web.image.Image", MDLName: "IMAGE",
+			TemplateFile: "image.json", DefaultEditable: "Always",
+			PropertyMappings: []PropertyMapping{
+				{PropertyKey: "datasource", Source: "ImageType", Default: "image", Operation: "primitive"},
+				{PropertyKey: "imageUrl", Source: "ImageUrl", Operation: "texttemplate"},
+				{PropertyKey: "alternativeText", Source: "AlternativeText", Operation: "texttemplate"},
+				{PropertyKey: "onClick", Source: "OnClick", Operation: "action"},
+				{PropertyKey: "onClickType", Source: "OnClickType", Default: "action", Operation: "primitive"},
+				{PropertyKey: "widthUnit", Source: "WidthUnit", Default: "auto", Operation: "primitive"},
+				{PropertyKey: "width", Source: "Width", Default: "100", Operation: "primitive"},
+				{PropertyKey: "heightUnit", Source: "HeightUnit", Default: "auto", Operation: "primitive"},
+				{PropertyKey: "height", Source: "Height", Default: "100", Operation: "primitive"},
+				{PropertyKey: "iconSize", Source: "IconSize", Default: "14", Operation: "primitive"},
+				{PropertyKey: "displayAs", Source: "DisplayAs", Default: "fullImage", Operation: "primitive"},
+				{PropertyKey: "responsive", Source: "Responsive", Default: "true", Operation: "primitive"},
+				{PropertyKey: "isBackgroundImage", Source: "IsBackgroundImage", Default: "false", Operation: "primitive"},
+			},
+			ChildSlots: []ChildSlotMapping{
+				{PropertyKey: "children", MDLContainer: "CONTENT", Operation: "widgets"},
+			},
+		},
+		{
+			WidgetID: "com.mendix.widget.web.barcodescanner.BarcodeScanner", MDLName: "BARCODESCANNER",
+			TemplateFile: "barcodescanner.json", DefaultEditable: "Always",
+			PropertyMappings: []PropertyMapping{
+				{PropertyKey: "datasource", Source: "Attribute", Operation: "attribute"},
+			},
+		},
+		{
+			WidgetID: "com.mendix.widget.web.datagridtextfilter.DatagridTextFilter", MDLName: "TEXTFILTER",
+			TemplateFile: "datagrid-text-filter.json", DefaultEditable: "Always",
+			PropertyMappings: []PropertyMapping{
+				{PropertyKey: "attrChoice", Value: "linked", Operation: "primitive"},
+				{PropertyKey: "attributes", Source: "Attributes", Operation: "attributeObjects"},
+				{PropertyKey: "defaultFilter", Source: "FilterType", Operation: "primitive"},
+			},
+		},
+		{
+			WidgetID: "com.mendix.widget.web.datagridnumberfilter.DatagridNumberFilter", MDLName: "NUMBERFILTER",
+			TemplateFile: "datagrid-number-filter.json", DefaultEditable: "Always",
+			PropertyMappings: []PropertyMapping{
+				{PropertyKey: "attrChoice", Value: "linked", Operation: "primitive"},
+				{PropertyKey: "attributes", Source: "Attributes", Operation: "attributeObjects"},
+				{PropertyKey: "defaultFilter", Source: "FilterType", Operation: "primitive"},
+			},
+		},
+		{
+			WidgetID: "com.mendix.widget.web.datagriddatefilter.DatagridDateFilter", MDLName: "DATEFILTER",
+			TemplateFile: "datagrid-date-filter.json", DefaultEditable: "Always",
+			PropertyMappings: []PropertyMapping{
+				{PropertyKey: "attrChoice", Value: "linked", Operation: "primitive"},
+				{PropertyKey: "attributes", Source: "Attributes", Operation: "attributeObjects"},
+				{PropertyKey: "defaultFilter", Source: "FilterType", Operation: "primitive"},
+			},
+		},
+		{
+			WidgetID: "com.mendix.widget.web.datagriddropdownfilter.DatagridDropdownFilter", MDLName: "DROPDOWNFILTER",
+			TemplateFile: "datagrid-dropdown-filter.json", DefaultEditable: "Always",
+			PropertyMappings: []PropertyMapping{
+				{PropertyKey: "attrChoice", Value: "custom", Operation: "primitive"},
+				{PropertyKey: "attr", Source: "FirstAttribute", Operation: "attribute"},
+			},
+		},
+		{
+			WidgetID: "com.mendix.widget.web.dropdownsort.DropdownSort", MDLName: "DROPDOWNSORT",
+			TemplateFile: "dropdownsort.json", DefaultEditable: "Always",
+		},
+	}
+}
+
 func BuiltinWidgetDef(widgetID string) *WidgetDefinition {
 	builtinOnce.Do(func() {
 		reg, err := NewWidgetRegistry()

@@ -285,7 +285,7 @@ func walkPropertyGroup(pg xmlPropGroup, parentCategory string, def *WidgetDefini
 			Caption:      p.Caption,
 			Description:  p.Description,
 			Category:     category,
-			Required:     p.Required != "false", // default true when attribute absent
+			Required:     p.Required == "true", // default false when attribute absent
 			DefaultValue: p.DefaultValue,
 			IsList:       p.IsList == "true",
 			DataSource:   p.DataSource,
@@ -345,7 +345,7 @@ func collectNestedProperties(pg xmlPropGroup, parent *PropertyDef) {
 			Type:         p.Type,
 			Caption:      p.Caption,
 			Description:  p.Description,
-			Required:     p.Required != "false", // default true when attribute absent
+			Required:     p.Required == "true", // default false when attribute absent
 			DefaultValue: p.DefaultValue,
 			IsList:       p.IsList == "true",
 			DataSource:   p.DataSource,

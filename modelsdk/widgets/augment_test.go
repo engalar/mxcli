@@ -481,17 +481,23 @@ func TestCreatePropertyPair_TextTemplate(t *testing.T) {
 }
 
 func TestAugmentTemplate_WithRealTemplate(t *testing.T) {
-	// Load the actual combobox template and augment with a mock definition
-	// that adds one extra boolean property
-	tmpl, err := GetTemplate("com.mendix.widget.web.combobox.Combobox")
-	if err != nil {
-		t.Fatalf("GetTemplate failed: %v", err)
+	ResetPlaceholderCounter()
+
+	// Generate a base template from a mock definition
+	baseDef := &mpk.WidgetDefinition{
+		ID:      "com.mendix.widget.web.combobox.Combobox",
+		Name:    "ComboBox",
+		Version: "3.0.0",
+		Properties: []mpk.PropertyDef{
+			{Key: "label", Type: "string", Caption: "Label", DefaultValue: ""},
+			{Key: "required", Type: "boolean", Caption: "Required", DefaultValue: "false"},
+		},
 	}
+	tmpl := GenerateFromMPK(baseDef)
 	if tmpl == nil {
-		t.Skip("ComboBox template not available")
+		t.Fatal("GenerateFromMPK returned nil")
 	}
 
-	ResetPlaceholderCounter()
 	clone, err := deepCloneTemplate(tmpl)
 	if err != nil {
 		t.Fatalf("deepCloneTemplate failed: %v", err)
@@ -506,47 +512,27 @@ func TestAugmentTemplate_WithRealTemplate(t *testing.T) {
 			originalCount++
 		}
 	}
+	if originalCount != 2 {
+		t.Fatalf("expected 2 original properties, got %d", originalCount)
+	}
 
 	// Create a definition that has all existing properties plus one new one
 	def := &mpk.WidgetDefinition{
 		ID:      "com.mendix.widget.web.combobox.Combobox",
 		Version: "3.0.0",
+		Properties: []mpk.PropertyDef{
+			{Key: "label", Type: "string", Caption: "Label"},
+			{Key: "required", Type: "boolean", Caption: "Required"},
+			{Key: "newTestProperty", Type: "boolean", Caption: "New Test Property", DefaultValue: "false"},
+		},
 	}
-
-	// Copy existing properties from template
-	for _, pt := range propTypes {
-		ptMap, ok := pt.(map[string]any)
-		if !ok {
-			continue
-		}
-		key, _ := ptMap["PropertyKey"].(string)
-		vt, _ := ptMap["ValueType"].(map[string]any)
-		vtType := ""
-		if vt != nil {
-			vtType, _ = vt["Type"].(string)
-		}
-		if vtType == "System" {
-			def.SystemProps = append(def.SystemProps, mpk.PropertyDef{Key: key, IsSystem: true})
-		} else {
-			xmlType := bsonTypeToXmlType(vtType)
-			def.Properties = append(def.Properties, mpk.PropertyDef{Key: key, Type: xmlType})
-		}
-	}
-
-	// Add one new property
-	def.Properties = append(def.Properties, mpk.PropertyDef{
-		Key:          "newTestProperty",
-		Type:         "boolean",
-		Caption:      "New Test Property",
-		DefaultValue: "false",
-	})
 
 	err = AugmentTemplate(clone, def)
 	if err != nil {
 		t.Fatalf("AugmentTemplate failed: %v", err)
 	}
 
-	// Check that we now have originalCount + 1 property types
+	// Check that we now have 3 property types (original 2 + 1 new)
 	updatedPropTypes := objType["PropertyTypes"].([]any)
 	newCount := 0
 	for _, pt := range updatedPropTypes {
@@ -558,15 +544,6 @@ func TestAugmentTemplate_WithRealTemplate(t *testing.T) {
 		t.Errorf("expected %d PropertyTypes, got %d", originalCount+1, newCount)
 	}
 
-	// Count original Object.Properties (may differ from PropertyTypes due to system props)
-	origObjProps := tmpl.Object["Properties"].([]any)
-	origPropCount := 0
-	for _, p := range origObjProps {
-		if _, ok := p.(map[string]any); ok {
-			origPropCount++
-		}
-	}
-
 	// Check the Properties in Object also increased by 1
 	objProps := clone.Object["Properties"].([]any)
 	propCount := 0
@@ -575,8 +552,8 @@ func TestAugmentTemplate_WithRealTemplate(t *testing.T) {
 			propCount++
 		}
 	}
-	if propCount != origPropCount+1 {
-		t.Errorf("expected %d Properties, got %d", origPropCount+1, propCount)
+	if propCount != originalCount+1 {
+		t.Errorf("expected %d Properties, got %d", originalCount+1, propCount)
 	}
 }
 
@@ -587,12 +564,18 @@ func TestAugmentTemplate_WithRealTemplate(t *testing.T) {
 func TestAugmentTemplate_NoPlaceholderLeakAfterBSONConversion(t *testing.T) {
 	ResetPlaceholderCounter()
 
-	tmpl, err := GetTemplate("com.mendix.widget.web.combobox.Combobox")
-	if err != nil {
-		t.Fatalf("GetTemplate failed: %v", err)
+	baseDef := &mpk.WidgetDefinition{
+		ID:      "com.mendix.widget.web.combobox.Combobox",
+		Name:    "ComboBox",
+		Version: "3.0.0",
+		Properties: []mpk.PropertyDef{
+			{Key: "label", Type: "string", Caption: "Label", DefaultValue: "Default"},
+			{Key: "required", Type: "boolean", Caption: "Required", DefaultValue: "false"},
+		},
 	}
+	tmpl := GenerateFromMPK(baseDef)
 	if tmpl == nil {
-		t.Skip("ComboBox template not available")
+		t.Fatal("GenerateFromMPK returned nil")
 	}
 
 	clone, err := deepCloneTemplate(tmpl)
@@ -600,7 +583,6 @@ func TestAugmentTemplate_NoPlaceholderLeakAfterBSONConversion(t *testing.T) {
 		t.Fatalf("deepCloneTemplate failed: %v", err)
 	}
 
-	// Build a definition with existing properties + one new one
 	objType := clone.Type["ObjectType"].(map[string]any)
 	propTypes := objType["PropertyTypes"].([]any)
 	def := &mpk.WidgetDefinition{

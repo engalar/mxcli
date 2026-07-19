@@ -243,14 +243,8 @@ func TestGenerateFromMPK_PlaceholderIDsRemapped(t *testing.T) {
 		return strings.Repeat("f", 32)
 	}
 
-	templateCacheLock.Lock()
-	templateCache["com.example.Widget"] = tmpl
-	templateCacheLock.Unlock()
-	defer func() {
-		templateCacheLock.Lock()
-		delete(templateCache, "com.example.Widget")
-		templateCacheLock.Unlock()
-	}()
+	generatedCache.Store("com.example.Widget", tmpl)
+	defer generatedCache.Delete("com.example.Widget")
 
 	bsonType, bsonObj, _, _, _, err := GetTemplateFullBSON("com.example.Widget", idGen, "")
 	if err != nil {

@@ -315,99 +315,103 @@ func createPropertyPair(p mpk.PropertyDef, bsonType string) (map[string]any, map
 }
 
 // createDefaultValueType creates a default ValueType structure for a given BSON type.
+// Only type-relevant fields are included to match Studio Pro's expectations.
 func createDefaultValueType(vtID string, bsonType string, p mpk.PropertyDef) map[string]any {
-	// Build AllowedTypes: version marker 1 followed by allowed Mendix type names.
 	allowedTypes := []any{float64(1)}
 	for _, t := range p.AllowedTypes {
 		allowedTypes = append(allowedTypes, t)
 	}
 
-	// Build EnumerationValues array for enumeration-type properties.
-	enumValues := []any{float64(2)}
-	for _, ev := range p.EnumerationValues {
-		enumValues = append(enumValues, map[string]any{
-			"$ID":     placeholderID(),
-			"$Type":   "CustomWidgets$WidgetEnumerationValue",
-			"Caption": ev.Caption,
-			"_Key":    ev.Key,
-		})
-	}
-
-	// Build SelectionTypes array for selection-type properties.
-	selectionTypes := []any{float64(1)}
-	for _, st := range p.SelectionTypes {
-		selectionTypes = append(selectionTypes, st)
-	}
-
 	vt := map[string]any{
-		"$ID":                         vtID,
-		"$Type":                       "CustomWidgets$WidgetValueType",
-		"ActionVariables":             []any{float64(2)},
-		"AllowNonPersistableEntities": false,
-		"AllowedTypes":                allowedTypes,
-		"AssociationTypes":            []any{float64(1)},
-		"DataSourceProperty":          "",
-		"DefaultType":                 "None",
-		"DefaultValue":                p.DefaultValue,
-		"EntityProperty":              "",
-		"EnumerationValues":           enumValues,
-		"IsLinked":                    false,
-		"IsList":                      p.IsList,
-		"IsMetaData":                  false,
-		"IsPath":                      "No",
-		"Multiline":                   false,
-		"ObjectType":                  nil,
-		"OnChangeProperty":            "",
-		"ParameterIsList":             false,
-		"PathType":                    "None",
-		"Required":                    p.Required,
-		"ReturnType":                  buildReturnType(bsonType, p),
-		"SelectableObjectsProperty":   "",
-		"SelectionTypes":              selectionTypes,
-		"SetLabel":                    false,
-		"Translations":                []any{float64(2)},
-		"Type":                        bsonType,
+		"$ID":          vtID,
+		"$Type":        "CustomWidgets$WidgetValueType",
+		"DefaultValue": p.DefaultValue,
+		"IsList":       p.IsList,
+		"Required":     p.Required,
+		"Type":         bsonType,
 	}
 
-	if p.DataSource != "" {
+	switch bsonType {
+	case "Attribute":
+		vt["AllowedTypes"] = allowedTypes
 		vt["DataSourceProperty"] = p.DataSource
+		vt["IsPath"] = "No"
+		vt["PathType"] = "None"
+	case "Association":
+		vt["AssociationTypes"] = []any{float64(1)}
+		vt["DataSourceProperty"] = p.DataSource
+		vt["IsPath"] = "No"
+		vt["PathType"] = "None"
+	case "Action":
+		vt["ActionVariables"] = []any{float64(2)}
+	case "Boolean", "Integer", "Decimal", "String":
+		// No additional type-specific fields needed
+	case "Enumeration":
+		enumValues := []any{float64(2)}
+		for _, ev := range p.EnumerationValues {
+			enumValues = append(enumValues, map[string]any{
+				"$ID":     placeholderID(),
+				"$Type":   "CustomWidgets$WidgetEnumerationValue",
+				"Caption": ev.Caption,
+				"_Key":    ev.Key,
+			})
+		}
+		vt["EnumerationValues"] = enumValues
+	case "Expression":
+		vt["EntityProperty"] = ""
+		vt["ReturnType"] = buildReturnType(bsonType, p)
+	case "DataSource":
+		vt["EntityProperty"] = ""
+	case "Icon":
+		// No additional fields needed
+	case "Image":
+		// No additional fields needed
+	case "Object":
+		if len(p.Children) > 0 {
+			vt["ObjectType"] = buildNestedObjectType(p.Children)
+		}
+	case "Selection":
+		selectionTypes := []any{float64(1)}
+		for _, st := range p.SelectionTypes {
+			selectionTypes = append(selectionTypes, st)
+		}
+		vt["DataSourceProperty"] = p.DataSource
+		vt["SelectionTypes"] = selectionTypes
+	case "TextTemplate":
+		vt["Translations"] = []any{float64(2)}
+	case "Widgets":
+		// No additional fields needed
+	case "File":
+		// No additional fields needed
 	}
 
-	// Build nested ObjectType for object-type properties with children
-	if bsonType == "Object" && len(p.Children) > 0 {
-		vt["ObjectType"] = buildNestedObjectType(p.Children)
+	if p.DataSource != "" && bsonType != "Attribute" && bsonType != "Association" &&
+		bsonType != "Selection" {
+		vt["DataSourceProperty"] = p.DataSource
 	}
 
 	return vt
 }
 
+
+
 // createDefaultWidgetValue creates a default WidgetValue for a given BSON type.
+// Only type-relevant fields are included to match Studio Pro's expectations.
+// Nil-valued fields are omitted during BSON serialization to avoid CE0463.
 func createDefaultWidgetValue(vtID string, bsonType string, p mpk.PropertyDef) map[string]any {
 	val := map[string]any{
 		"$ID":               placeholderID(),
 		"$Type":             "CustomWidgets$WidgetValue",
-		"Action":            createDefaultNoAction(),
 		"AttributeRef":      nil,
 		"DataSource":        nil,
 		"EntityRef":         nil,
-		"Expression":        "",
-		"Form":              "",
 		"Icon":              nil,
-		"Image":             "",
-		"Microflow":         "",
-		"Nanoflow":          "",
-		"Objects":           []any{float64(2)},
-		"PrimitiveValue":    "",
-		"Selection":         "None",
 		"SourceVariable":    nil,
 		"TextTemplate":      nil,
 		"TranslatableValue": nil,
 		"TypePointer":       vtID,
-		"Widgets":           []any{float64(2)},
-		"XPathConstraint":   "",
 	}
 
-	// Set type-specific defaults
 	switch bsonType {
 	case "Boolean":
 		if p.DefaultValue != "" {
@@ -421,12 +425,44 @@ func createDefaultWidgetValue(vtID string, bsonType string, p mpk.PropertyDef) m
 		} else {
 			val["PrimitiveValue"] = "0"
 		}
+	case "Decimal", "String":
+		if p.DefaultValue != "" {
+			val["PrimitiveValue"] = p.DefaultValue
+		}
 	case "Enumeration":
 		if p.DefaultValue != "" {
 			val["PrimitiveValue"] = p.DefaultValue
 		}
+	case "Expression":
+		if p.DefaultValue != "" {
+			val["Expression"] = p.DefaultValue
+		} else {
+			val["Expression"] = ""
+		}
 	case "TextTemplate":
 		val["TextTemplate"] = createDefaultClientTemplate()
+	case "Action":
+		val["Action"] = createDefaultNoAction()
+	case "Widgets":
+		val["Widgets"] = []any{float64(2)}
+	case "Object":
+		val["Objects"] = []any{float64(2)}
+	case "Selection":
+		if p.DefaultValue != "" {
+			val["Selection"] = p.DefaultValue
+		} else {
+			val["Selection"] = "None"
+		}
+	case "Image":
+		if p.DefaultValue != "" {
+			val["Image"] = p.DefaultValue
+		}
+	case "Attribute":
+		// AttributeRef is nil by default, filled by builder
+	case "Association":
+		// EntityRef is nil by default, filled by builder
+	case "DataSource":
+		// DataSource is nil by default, filled by builder
 	}
 
 	return val
@@ -464,26 +500,22 @@ func createDefaultClientTemplate() map[string]any {
 func resetPropertyValue(val map[string]any, p mpk.PropertyDef) {
 	bsonType := xmlTypeToBSONType(p.Type)
 
-	// Reset all value fields to defaults
+	// Clear type-specific keys, keeping only common reference fields.
+	for _, k := range []string{"Action", "Expression", "Form", "Image", "Microflow",
+		"Nanoflow", "Objects", "PrimitiveValue", "Selection", "Widgets", "XPathConstraint"} {
+		delete(val, k)
+	}
+
+	// Reset common reference fields.
 	val["AttributeRef"] = nil
 	val["DataSource"] = nil
 	val["EntityRef"] = nil
-	val["Expression"] = ""
-	val["Form"] = ""
 	val["Icon"] = nil
-	val["Image"] = ""
-	val["Microflow"] = ""
-	val["Nanoflow"] = ""
-	val["Objects"] = []any{float64(2)}
-	val["PrimitiveValue"] = ""
-	val["Selection"] = "None"
 	val["SourceVariable"] = nil
 	val["TextTemplate"] = nil
 	val["TranslatableValue"] = nil
-	val["Widgets"] = []any{float64(2)}
-	val["XPathConstraint"] = ""
 
-	// Set type-specific defaults
+	// Set type-specific defaults.
 	switch bsonType {
 	case "Boolean":
 		if p.DefaultValue != "" {
@@ -497,12 +529,38 @@ func resetPropertyValue(val map[string]any, p mpk.PropertyDef) {
 		} else {
 			val["PrimitiveValue"] = "0"
 		}
+	case "Decimal", "String":
+		if p.DefaultValue != "" {
+			val["PrimitiveValue"] = p.DefaultValue
+		}
 	case "Enumeration":
 		if p.DefaultValue != "" {
 			val["PrimitiveValue"] = p.DefaultValue
 		}
+	case "Expression":
+		if p.DefaultValue != "" {
+			val["Expression"] = p.DefaultValue
+		} else {
+			val["Expression"] = ""
+		}
 	case "TextTemplate":
 		val["TextTemplate"] = createDefaultClientTemplate()
+	case "Action":
+		val["Action"] = createDefaultNoAction()
+	case "Widgets":
+		val["Widgets"] = []any{float64(2)}
+	case "Object":
+		val["Objects"] = []any{float64(2)}
+	case "Selection":
+		if p.DefaultValue != "" {
+			val["Selection"] = p.DefaultValue
+		} else {
+			val["Selection"] = "None"
+		}
+	case "Image":
+		if p.DefaultValue != "" {
+			val["Image"] = p.DefaultValue
+		}
 	}
 }
 

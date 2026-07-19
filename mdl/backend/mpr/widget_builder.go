@@ -839,33 +839,50 @@ func createDefaultWidgetValue(entry types.PropertyTypeIDEntry) bson.D {
 		}
 	}
 
-	return bson.D{
+	doc := bson.D{
 		{Key: "$ID", Value: types.UUIDToBlob(types.GenerateID())},
 		{Key: "$Type", Value: "CustomWidgets$WidgetValue"},
-		{Key: "Action", Value: bson.D{
+		{Key: "TypePointer", Value: types.UUIDToBlob(entry.ValueTypeID)},
+	}
+
+	switch entry.ValueType {
+	case "Boolean", "Integer", "Decimal", "String", "Enumeration":
+		doc = append(doc, bson.E{Key: "PrimitiveValue", Value: primitiveVal})
+	case "Expression":
+		doc = append(doc, bson.E{Key: "Expression", Value: expressionVal})
+	case "TextTemplate":
+		if textTemplate != nil {
+			doc = append(doc, bson.E{Key: "TextTemplate", Value: textTemplate})
+		}
+	case "Action":
+		doc = append(doc, bson.E{Key: "Action", Value: bson.D{
 			{Key: "$ID", Value: types.UUIDToBlob(types.GenerateID())},
 			{Key: "$Type", Value: "Forms$NoAction"},
 			{Key: "DisabledDuringExecution", Value: true},
-		}},
-		{Key: "AttributeRef", Value: nil},
-		{Key: "DataSource", Value: nil},
-		{Key: "EntityRef", Value: nil},
-		{Key: "Expression", Value: expressionVal},
-		{Key: "Form", Value: ""},
-		{Key: "Icon", Value: nil},
-		{Key: "Image", Value: ""},
-		{Key: "Microflow", Value: ""},
-		{Key: "Nanoflow", Value: ""},
-		{Key: "Objects", Value: bson.A{int32(2)}},
-		{Key: "PrimitiveValue", Value: primitiveVal},
-		{Key: "Selection", Value: "None"},
-		{Key: "SourceVariable", Value: nil},
-		{Key: "TextTemplate", Value: textTemplate},
-		{Key: "TranslatableValue", Value: nil},
-		{Key: "TypePointer", Value: types.UUIDToBlob(entry.ValueTypeID)},
-		{Key: "Widgets", Value: bson.A{int32(2)}},
-		{Key: "XPathConstraint", Value: ""},
+		}})
+	case "DataSource":
+		doc = append(doc, bson.E{Key: "DataSource", Value: nil})
+	case "Widgets":
+		doc = append(doc, bson.E{Key: "Widgets", Value: bson.A{int32(2)}})
+	case "Object":
+		doc = append(doc, bson.E{Key: "Objects", Value: bson.A{int32(2)}})
+	case "Selection":
+		val := primitiveVal
+		if val == "" {
+			val = "None"
+		}
+		doc = append(doc, bson.E{Key: "Selection", Value: val})
+	case "Attribute":
+		doc = append(doc, bson.E{Key: "AttributeRef", Value: nil})
+	case "Association":
+		doc = append(doc, bson.E{Key: "EntityRef", Value: nil})
+	case "Image":
+		if primitiveVal != "" {
+			doc = append(doc, bson.E{Key: "Image", Value: primitiveVal})
+		}
 	}
+
+	return doc
 }
 
 // ---------------------------------------------------------------------------
