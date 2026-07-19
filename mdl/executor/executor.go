@@ -857,9 +857,9 @@ func (ctx *ExecContext) initRoles() {
 	if ctx == nil {
 		return
 	}
-	// Try backendFactory first (set alongside ctx.Backend in production).
 	bf := ctx.backendFactory
-	if bf == nil {
+	if bf == nil && ctx.Backend != nil {
+		// Keep fallback for mock backends that don't implement BackendFactory.
 		bf, _ = ctx.Backend.(backend.BackendFactory)
 	}
 	if bf != nil {
