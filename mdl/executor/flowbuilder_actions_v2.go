@@ -295,6 +295,10 @@ func (fb *flowBuilderGen) genActivityWrap(action element.Element, errorHandling 
 	activity.SetRelativeMiddlePoint(layoutPos(fb.posX, fb.posY))
 	activity.SetSize(layoutSize(ActivityWidth, ActivityHeight))
 	activity.SetAutoGenerateCaption(true)
+	activity.SetDisabled(false)
+	activity.SetCaption("Activity")
+	activity.SetBackgroundColor("Default")
+	activity.SetDocumentation("")
 	activity.SetAction(action)
 
 	fb.objects = append(fb.objects, activity)

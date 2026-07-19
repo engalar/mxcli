@@ -20,7 +20,7 @@ var ndslLexer = chroma.MustNewLexer(
 		return chroma.Rules{
 			"root": {
 				{Pattern: `\$Type\b`, Type: chroma.KeywordType},
-				{Pattern: `<uuid>`, Type: chroma.CommentPreproc},
+				{Pattern: `[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}`, Type: chroma.LiteralString},
 				{Pattern: `int(?:32|64)\(\d+\)`, Type: chroma.LiteralNumberInteger},
 				{Pattern: `[A-Z][A-Za-z]*(?:\[\d+\])?(?:\.[A-Z][A-Za-z]*(?:\[\d+\])?)*`, Type: chroma.NameAttribute},
 				{Pattern: `"[^"]*"`, Type: chroma.LiteralString},

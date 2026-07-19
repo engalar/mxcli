@@ -31,14 +31,14 @@ func init() {
 	codec.DefaultDescRegistry.Register("Microflows$ActionActivity", &codec.TypeDesc{
 		TypeName: "Microflows$ActionActivity",
 		Properties: []codec.PropDesc{
-			{Name: "relativeMiddlePoint", BSONKey: "RelativeMiddlePoint", Kind: codec.PropKindString, RefType: ""},
-			{Name: "size", BSONKey: "Size", Kind: codec.PropKindString, RefType: ""},
 			{Name: "action", BSONKey: "Action", Kind: codec.PropKindPart, RefType: ""},
-			{Name: "disabled", BSONKey: "Disabled", Kind: codec.PropKindBool, RefType: ""},
-			{Name: "caption", BSONKey: "Caption", Kind: codec.PropKindString, RefType: ""},
 			{Name: "autoGenerateCaption", BSONKey: "AutoGenerateCaption", Kind: codec.PropKindBool, RefType: ""},
 			{Name: "backgroundColor", BSONKey: "BackgroundColor", Kind: codec.PropKindEnum, RefType: ""},
+			{Name: "caption", BSONKey: "Caption", Kind: codec.PropKindString, RefType: ""},
+			{Name: "disabled", BSONKey: "Disabled", Kind: codec.PropKindBool, RefType: ""},
 			{Name: "documentation", BSONKey: "Documentation", Kind: codec.PropKindString, RefType: ""},
+			{Name: "relativeMiddlePoint", BSONKey: "RelativeMiddlePoint", Kind: codec.PropKindString, RefType: ""},
+			{Name: "size", BSONKey: "Size", Kind: codec.PropKindString, RefType: ""},
 		},
 	})
 	codec.DefaultDescRegistry.Register("Microflows$AdditionalAttribute", &codec.TypeDesc{
@@ -442,9 +442,9 @@ func init() {
 		TypeName: "Microflows$DatabaseRetrieveSource",
 		Properties: []codec.PropDesc{
 			{Name: "entity", BSONKey: "Entity", Kind: codec.PropKindByNameRef, RefType: "DomainModels$Entity"},
+			{Name: "sortItemList", BSONKey: "NewSortings", Kind: codec.PropKindPart, RefType: ""},
 			{Name: "range", BSONKey: "Range", Kind: codec.PropKindPart, RefType: ""},
 			{Name: "xPathConstraint", BSONKey: "XpathConstraint", Kind: codec.PropKindString, RefType: ""},
-			{Name: "sortItemList", BSONKey: "NewSortings", Kind: codec.PropKindPart, RefType: ""},
 		},
 	})
 	codec.DefaultDescRegistry.Register("Microflows$DeleteAction", &codec.TypeDesc{
@@ -1373,8 +1373,8 @@ func init() {
 		TypeName: "Microflows$RetrieveAction",
 		Properties: []codec.PropDesc{
 			{Name: "errorHandlingType", BSONKey: "ErrorHandlingType", Kind: codec.PropKindEnum, RefType: ""},
-			{Name: "retrieveSource", BSONKey: "RetrieveSource", Kind: codec.PropKindPart, RefType: ""},
 			{Name: "outputVariableName", BSONKey: "ResultVariableName", Kind: codec.PropKindString, RefType: ""},
+			{Name: "retrieveSource", BSONKey: "RetrieveSource", Kind: codec.PropKindPart, RefType: ""},
 		},
 	})
 	codec.DefaultDescRegistry.Register("Microflows$RetryOperation", &codec.TypeDesc{

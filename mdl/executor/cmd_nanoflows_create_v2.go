@@ -132,6 +132,9 @@ func ExecCreateNanoflowGenFn(ctx context.Context, s *ast.CreateNanoflowStmt, dep
 	nf.SetName(s.Name.Name)
 	nf.SetDocumentation(s.Documentation)
 	nf.SetExcluded(s.Excluded)
+	nf.SetExportLevel("Hidden")
+	nf.SetMarkAsUsed(false)
+	nf.SetUseListParameterByReference(true)
 
 	if preserveAllowedRoles {
 		nf.SetAllowedModuleRolesQualifiedNames(existingAllowedRoles)
@@ -237,9 +240,6 @@ func ExecCreateNanoflowGenFn(ctx context.Context, s *ast.CreateNanoflowStmt, dep
 	nf.SetObjectCollection(oc)
 
 	if s.ReturnType != nil {
-		if t := paramASTToShortType(s.ReturnType.Type); t != "" {
-			nf.SetReturnType(t)
-		}
 		if dt := convertASTToGenDataType(s.ReturnType.Type); dt != nil {
 			nf.SetMicroflowReturnType(dt)
 		}

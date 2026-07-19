@@ -73,6 +73,8 @@ func (fb *flowBuilderGen) buildDatabaseRetrieveSourceGen(s *ast.RetrieveStmt) *g
 
 	if s.Where != nil {
 		src.SetXPathConstraint(retrieveXPathConstraint(s.Where))
+	} else {
+		src.SetXPathConstraint("")
 	}
 
 	if s.Limit != "" {
@@ -189,12 +191,8 @@ func buildRetrieveRangeGen(limit, offset string) element.Element {
 	}
 	cr := genMf.NewCustomRange()
 	assignFreshID(cr)
-	if limit != "" {
-		cr.SetLimitExpression(limit)
-	}
-	if offset != "" {
-		cr.SetOffsetExpression(offset)
-	}
+	cr.SetLimitExpression(limit)
+	cr.SetOffsetExpression(offset)
 	return cr
 }
 
@@ -220,9 +218,11 @@ func buildRetrieveSortItemListGen(columns []ast.SortColumnDef, entityQN string) 
 		}
 		item := genMf.NewSortItem()
 		assignFreshID(item)
-		item.SetAttributePath(attrPath)
 		item.SetSortOrder(order)
-		// AttributeRef is what Studio Pro reads; AttributePath alone causes CE1613.
+		// AttributeRef is the only sort-attribute field in Mendix 11.
+		// AttributePath (string) was removed — do NOT set it.
+		// EntityRef must be null for direct-entity attribute sorts
+		// (not across an association); only Attribute is set.
 		attrRef := genDm.NewAttributeRef()
 		assignFreshID(attrRef)
 		attrRef.SetAttributeQualifiedName(attrPath)

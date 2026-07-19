@@ -151,34 +151,14 @@ func (o *Activity) InitFromRaw(raw bson.Raw) {
 
 type ActionActivity struct {
 	element.Base
-	relativeMiddlePoint *property.Primitive[string]
-	size                *property.Primitive[string]
 	action              *property.Part[element.Element]
-	disabled            *property.Primitive[bool]
-	caption             *property.Primitive[string]
 	autoGenerateCaption *property.Primitive[bool]
 	backgroundColor     *property.Enum[string]
+	caption             *property.Primitive[string]
+	disabled            *property.Primitive[bool]
 	documentation       *property.Primitive[string]
-}
-
-// RelativeMiddlePoint returns the value of the relativeMiddlePoint property.
-func (o *ActionActivity) RelativeMiddlePoint() string {
-	return o.relativeMiddlePoint.Get()
-}
-
-// SetRelativeMiddlePoint sets the value of the relativeMiddlePoint property.
-func (o *ActionActivity) SetRelativeMiddlePoint(v string) {
-	o.relativeMiddlePoint.Set(v)
-}
-
-// Size returns the value of the size property.
-func (o *ActionActivity) Size() string {
-	return o.size.Get()
-}
-
-// SetSize sets the value of the size property.
-func (o *ActionActivity) SetSize(v string) {
-	o.size.Set(v)
+	relativeMiddlePoint *property.Primitive[string]
+	size                *property.Primitive[string]
 }
 
 // Action returns the value of the action property.
@@ -189,26 +169,6 @@ func (o *ActionActivity) Action() element.Element {
 // SetAction sets the value of the action property.
 func (o *ActionActivity) SetAction(v element.Element) {
 	o.action.Set(v)
-}
-
-// Disabled returns the value of the disabled property.
-func (o *ActionActivity) Disabled() bool {
-	return o.disabled.Get()
-}
-
-// SetDisabled sets the value of the disabled property.
-func (o *ActionActivity) SetDisabled(v bool) {
-	o.disabled.Set(v)
-}
-
-// Caption returns the value of the caption property.
-func (o *ActionActivity) Caption() string {
-	return o.caption.Get()
-}
-
-// SetCaption sets the value of the caption property.
-func (o *ActionActivity) SetCaption(v string) {
-	o.caption.Set(v)
 }
 
 // AutoGenerateCaption returns the value of the autoGenerateCaption property.
@@ -231,6 +191,26 @@ func (o *ActionActivity) SetBackgroundColor(v string) {
 	o.backgroundColor.Set(v)
 }
 
+// Caption returns the value of the caption property.
+func (o *ActionActivity) Caption() string {
+	return o.caption.Get()
+}
+
+// SetCaption sets the value of the caption property.
+func (o *ActionActivity) SetCaption(v string) {
+	o.caption.Set(v)
+}
+
+// Disabled returns the value of the disabled property.
+func (o *ActionActivity) Disabled() bool {
+	return o.disabled.Get()
+}
+
+// SetDisabled sets the value of the disabled property.
+func (o *ActionActivity) SetDisabled(v bool) {
+	o.disabled.Set(v)
+}
+
 // Documentation returns the value of the documentation property.
 func (o *ActionActivity) Documentation() string {
 	return o.documentation.Get()
@@ -241,23 +221,43 @@ func (o *ActionActivity) SetDocumentation(v string) {
 	o.documentation.Set(v)
 }
 
+// RelativeMiddlePoint returns the value of the relativeMiddlePoint property.
+func (o *ActionActivity) RelativeMiddlePoint() string {
+	return o.relativeMiddlePoint.Get()
+}
+
+// SetRelativeMiddlePoint sets the value of the relativeMiddlePoint property.
+func (o *ActionActivity) SetRelativeMiddlePoint(v string) {
+	o.relativeMiddlePoint.Set(v)
+}
+
+// Size returns the value of the size property.
+func (o *ActionActivity) Size() string {
+	return o.size.Get()
+}
+
+// SetSize sets the value of the size property.
+func (o *ActionActivity) SetSize(v string) {
+	o.size.Set(v)
+}
+
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 // NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *ActionActivity) InitFromRaw(raw bson.Raw) {
-	o.relativeMiddlePoint.Init(raw)
-	o.size.Init(raw)
 	if child, err := codec.DecodeChild(raw, "Action"); err == nil {
 		o.action.SetFromDecode(child)
 	}
-	o.disabled.Init(raw)
-	o.caption.Init(raw)
 	o.autoGenerateCaption.Init(raw)
 	if val, err := raw.LookupErr("BackgroundColor"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
 			o.backgroundColor.SetFromDecode(s)
 		}
 	}
+	o.caption.Init(raw)
+	o.disabled.Init(raw)
 	o.documentation.Init(raw)
+	o.relativeMiddlePoint.Init(raw)
+	o.size.Init(raw)
 }
 
 // ────────────────────────────────────────────────────────
@@ -2951,9 +2951,9 @@ func (o *CustomRequestHandling) InitFromRaw(raw bson.Raw) {
 type DatabaseRetrieveSource struct {
 	element.Base
 	entity          *property.ByNameRef[element.Element]
+	sortItemList    *property.Part[element.Element]
 	propRange       *property.Part[element.Element]
 	xPathConstraint *property.Primitive[string]
-	sortItemList    *property.Part[element.Element]
 }
 
 // EntityQualifiedName returns the value of the entity property.
@@ -2964,6 +2964,16 @@ func (o *DatabaseRetrieveSource) EntityQualifiedName() string {
 // SetEntityQualifiedName sets the value of the entity property.
 func (o *DatabaseRetrieveSource) SetEntityQualifiedName(v string) {
 	o.entity.SetQualifiedName(v)
+}
+
+// SortItemList returns the value of the sortItemList property.
+func (o *DatabaseRetrieveSource) SortItemList() element.Element {
+	return o.sortItemList.Get()
+}
+
+// SetSortItemList sets the value of the sortItemList property.
+func (o *DatabaseRetrieveSource) SetSortItemList(v element.Element) {
+	o.sortItemList.Set(v)
 }
 
 // Range returns the value of the range property.
@@ -2986,16 +2996,6 @@ func (o *DatabaseRetrieveSource) SetXPathConstraint(v string) {
 	o.xPathConstraint.Set(v)
 }
 
-// SortItemList returns the value of the sortItemList property.
-func (o *DatabaseRetrieveSource) SortItemList() element.Element {
-	return o.sortItemList.Get()
-}
-
-// SetSortItemList sets the value of the sortItemList property.
-func (o *DatabaseRetrieveSource) SetSortItemList(v element.Element) {
-	o.sortItemList.Set(v)
-}
-
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 // NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *DatabaseRetrieveSource) InitFromRaw(raw bson.Raw) {
@@ -3004,13 +3004,13 @@ func (o *DatabaseRetrieveSource) InitFromRaw(raw bson.Raw) {
 			o.entity.SetFromDecode(s)
 		}
 	}
+	if child, err := codec.DecodeChild(raw, "NewSortings"); err == nil {
+		o.sortItemList.SetFromDecode(child)
+	}
 	if child, err := codec.DecodeChild(raw, "Range"); err == nil {
 		o.propRange.SetFromDecode(child)
 	}
 	o.xPathConstraint.Init(raw)
-	if child, err := codec.DecodeChild(raw, "NewSortings"); err == nil {
-		o.sortItemList.SetFromDecode(child)
-	}
 }
 
 // ────────────────────────────────────────────────────────
@@ -9999,8 +9999,8 @@ func (o *ResumeOperation) InitFromRaw(raw bson.Raw) {
 type RetrieveAction struct {
 	element.Base
 	errorHandlingType  *property.Enum[string]
-	retrieveSource     *property.Part[element.Element]
 	outputVariableName *property.Primitive[string]
+	retrieveSource     *property.Part[element.Element]
 }
 
 // ErrorHandlingType returns the value of the errorHandlingType property.
@@ -10013,16 +10013,6 @@ func (o *RetrieveAction) SetErrorHandlingType(v string) {
 	o.errorHandlingType.Set(v)
 }
 
-// RetrieveSource returns the value of the retrieveSource property.
-func (o *RetrieveAction) RetrieveSource() element.Element {
-	return o.retrieveSource.Get()
-}
-
-// SetRetrieveSource sets the value of the retrieveSource property.
-func (o *RetrieveAction) SetRetrieveSource(v element.Element) {
-	o.retrieveSource.Set(v)
-}
-
 // OutputVariableName returns the value of the outputVariableName property.
 func (o *RetrieveAction) OutputVariableName() string {
 	return o.outputVariableName.Get()
@@ -10033,6 +10023,16 @@ func (o *RetrieveAction) SetOutputVariableName(v string) {
 	o.outputVariableName.Set(v)
 }
 
+// RetrieveSource returns the value of the retrieveSource property.
+func (o *RetrieveAction) RetrieveSource() element.Element {
+	return o.retrieveSource.Get()
+}
+
+// SetRetrieveSource sets the value of the retrieveSource property.
+func (o *RetrieveAction) SetRetrieveSource(v element.Element) {
+	o.retrieveSource.Set(v)
+}
+
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 // NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *RetrieveAction) InitFromRaw(raw bson.Raw) {
@@ -10041,10 +10041,10 @@ func (o *RetrieveAction) InitFromRaw(raw bson.Raw) {
 			o.errorHandlingType.SetFromDecode(s)
 		}
 	}
+	o.outputVariableName.Init(raw)
 	if child, err := codec.DecodeChild(raw, "RetrieveSource"); err == nil {
 		o.retrieveSource.SetFromDecode(child)
 	}
-	o.outputVariableName.Init(raw)
 }
 
 // ────────────────────────────────────────────────────────
@@ -12562,23 +12562,23 @@ func NewAbortOperation() *AbortOperation {
 func initActionActivity() *ActionActivity {
 	o := &ActionActivity{}
 	o.SetTypeName("Microflows$ActionActivity")
-	o.relativeMiddlePoint = property.NewPrimitive[string]("RelativeMiddlePoint", property.DecodeString)
-	o.relativeMiddlePoint.Bind(&o.Base, 0)
-	o.size = property.NewPrimitive[string]("Size", property.DecodeString)
-	o.size.Bind(&o.Base, 1)
 	o.action = property.NewPart[element.Element]("Action")
-	o.action.Bind(&o.Base, 2)
-	o.disabled = property.NewPrimitive[bool]("Disabled", property.DecodeBool)
-	o.disabled.Bind(&o.Base, 3)
-	o.caption = property.NewPrimitive[string]("Caption", property.DecodeString)
-	o.caption.Bind(&o.Base, 4)
+	o.action.Bind(&o.Base, 0)
 	o.autoGenerateCaption = property.NewPrimitive[bool]("AutoGenerateCaption", property.DecodeBool)
-	o.autoGenerateCaption.Bind(&o.Base, 5)
+	o.autoGenerateCaption.Bind(&o.Base, 1)
 	o.backgroundColor = property.NewEnum[string]("BackgroundColor")
-	o.backgroundColor.Bind(&o.Base, 6)
+	o.backgroundColor.Bind(&o.Base, 2)
+	o.caption = property.NewPrimitive[string]("Caption", property.DecodeString)
+	o.caption.Bind(&o.Base, 3)
+	o.disabled = property.NewPrimitive[bool]("Disabled", property.DecodeBool)
+	o.disabled.Bind(&o.Base, 4)
 	o.documentation = property.NewPrimitive[string]("Documentation", property.DecodeString)
-	o.documentation.Bind(&o.Base, 7)
-	o.SetProperties([]element.Property{o.relativeMiddlePoint, o.size, o.action, o.disabled, o.caption, o.autoGenerateCaption, o.backgroundColor, o.documentation})
+	o.documentation.Bind(&o.Base, 5)
+	o.relativeMiddlePoint = property.NewPrimitive[string]("RelativeMiddlePoint", property.DecodeString)
+	o.relativeMiddlePoint.Bind(&o.Base, 6)
+	o.size = property.NewPrimitive[string]("Size", property.DecodeString)
+	o.size.Bind(&o.Base, 7)
+	o.SetProperties([]element.Property{o.action, o.autoGenerateCaption, o.backgroundColor, o.caption, o.disabled, o.documentation, o.relativeMiddlePoint, o.size})
 	return o
 }
 
@@ -13544,13 +13544,13 @@ func initDatabaseRetrieveSource() *DatabaseRetrieveSource {
 	o.SetTypeName("Microflows$DatabaseRetrieveSource")
 	o.entity = property.NewByNameRef[element.Element]("Entity", "DomainModels$Entity")
 	o.entity.Bind(&o.Base, 0)
-	o.propRange = property.NewPart[element.Element]("Range")
-	o.propRange.Bind(&o.Base, 1)
-	o.xPathConstraint = property.NewPrimitive[string]("XpathConstraint", property.DecodeString)
-	o.xPathConstraint.Bind(&o.Base, 2)
 	o.sortItemList = property.NewPart[element.Element]("NewSortings")
-	o.sortItemList.Bind(&o.Base, 3)
-	o.SetProperties([]element.Property{o.entity, o.propRange, o.xPathConstraint, o.sortItemList})
+	o.sortItemList.Bind(&o.Base, 1)
+	o.propRange = property.NewPart[element.Element]("Range")
+	o.propRange.Bind(&o.Base, 2)
+	o.xPathConstraint = property.NewPrimitive[string]("XpathConstraint", property.DecodeString)
+	o.xPathConstraint.Bind(&o.Base, 3)
+	o.SetProperties([]element.Property{o.entity, o.sortItemList, o.propRange, o.xPathConstraint})
 	return o
 }
 
@@ -16118,11 +16118,11 @@ func initRetrieveAction() *RetrieveAction {
 	o.SetTypeName("Microflows$RetrieveAction")
 	o.errorHandlingType = property.NewEnum[string]("ErrorHandlingType")
 	o.errorHandlingType.Bind(&o.Base, 0)
-	o.retrieveSource = property.NewPart[element.Element]("RetrieveSource")
-	o.retrieveSource.Bind(&o.Base, 1)
 	o.outputVariableName = property.NewPrimitive[string]("ResultVariableName", property.DecodeString)
-	o.outputVariableName.Bind(&o.Base, 2)
-	o.SetProperties([]element.Property{o.errorHandlingType, o.retrieveSource, o.outputVariableName})
+	o.outputVariableName.Bind(&o.Base, 1)
+	o.retrieveSource = property.NewPart[element.Element]("RetrieveSource")
+	o.retrieveSource.Bind(&o.Base, 2)
+	o.SetProperties([]element.Property{o.errorHandlingType, o.outputVariableName, o.retrieveSource})
 	return o
 }
 
@@ -16367,7 +16367,7 @@ func initSequenceFlow() *SequenceFlow {
 	o.line.Bind(&o.Base, 7)
 	o.caseValue = property.NewPart[element.Element]("CaseValue")
 	o.caseValue.Bind(&o.Base, 8)
-	o.caseValues = property.NewPartList[element.Element]("CaseValues")
+	o.caseValues = property.NewPartListV2[element.Element]("CaseValues")
 	o.caseValues.Bind(&o.Base, 9)
 	o.isErrorHandler = property.NewPrimitive[bool]("IsErrorHandler", property.DecodeBool)
 	o.isErrorHandler.Bind(&o.Base, 10)
@@ -16563,7 +16563,7 @@ func NewSortItem() *SortItem {
 func initSortItemList() *SortItemList {
 	o := &SortItemList{}
 	o.SetTypeName("Microflows$SortingsList")
-	o.items = property.NewPartList[element.Element]("Sortings")
+	o.items = property.NewPartListV2[element.Element]("Sortings")
 	o.items.Bind(&o.Base, 0)
 	o.SetProperties([]element.Property{o.items})
 	return o

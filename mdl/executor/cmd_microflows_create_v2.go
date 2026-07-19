@@ -137,6 +137,8 @@ func ExecCreateMicroflowGenFn(ctx context.Context, s *ast.CreateMicroflowStmt, d
 	mf.SetName(s.Name.Name)
 	mf.SetDocumentation(s.Documentation)
 	mf.SetExcluded(s.Excluded)
+	mf.SetExportLevel("Hidden")
+	mf.SetMarkAsUsed(false)
 	mf.SetAllowConcurrentExecution(true)
 
 	if preserveAllowedRoles {
@@ -146,9 +148,6 @@ func ExecCreateMicroflowGenFn(ctx context.Context, s *ast.CreateMicroflowStmt, d
 	}
 
 	if s.ReturnType != nil {
-		if t := paramASTToShortType(s.ReturnType.Type); t != "" {
-			mf.SetReturnType(t)
-		}
 		if dt := convertASTToGenDataType(s.ReturnType.Type); dt != nil {
 			mf.SetMicroflowReturnType(dt)
 		}
@@ -156,7 +155,6 @@ func ExecCreateMicroflowGenFn(ctx context.Context, s *ast.CreateMicroflowStmt, d
 			mf.SetReturnVariableName(s.ReturnType.Variable)
 		}
 	} else {
-		mf.SetReturnType("Nothing")
 		vt := genDt.NewVoidType()
 		assignFreshID(vt)
 		mf.SetMicroflowReturnType(vt)

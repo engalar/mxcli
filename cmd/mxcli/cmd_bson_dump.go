@@ -9,7 +9,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
 	bsondebug "github.com/mendixlabs/mxcli/cmd/mxcli/bson"
 	"github.com/mendixlabs/mxcli/internal/mxgraph"
@@ -68,7 +67,6 @@ Examples:
 		}
 
 		// Open the project
-		startTime := time.Now()
 		reader, err := mmpr.Open(projectPath)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error opening project: %v\n", err)
@@ -85,9 +83,7 @@ Examples:
 			}
 		}
 
-		defer func() {
-			fmt.Fprintf(os.Stderr, "bson dump: %.2fs\n", time.Since(startTime).Seconds())
-		}()
+
 
 		// List objects
 		if listObjects {

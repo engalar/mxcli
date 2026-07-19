@@ -5,6 +5,8 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/mendixlabs/mxcli/modelsdk/mpr"
+
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
@@ -25,23 +27,10 @@ func RenderForDiff(doc bson.D, indent int) string {
 }
 
 func renderDoc(sb *strings.Builder, doc bson.D, indent int, sep string) {
-	pad := strings.Repeat("  ", indent)
-
-	typeName := ""
-	for _, e := range doc {
-		if e.Key == "$Type" {
-			typeName, _ = e.Value.(string)
-			break
-		}
-	}
-	if typeName != "" {
-		sb.WriteString(pad + typeName + "\n")
-	}
-
-	renderFields(sb, doc, indent+1, sep)
+	renderFields(sb, doc, indent, sep)
 }
 
-// renderFields renders only the non-structural fields of a doc, sorted alphabetically.
+// renderFields renders all fields of a doc, sorted alphabetically.
 func renderFields(sb *strings.Builder, doc bson.D, indent int, sep string) {
 	type field struct {
 		key string
@@ -49,9 +38,6 @@ func renderFields(sb *strings.Builder, doc bson.D, indent int, sep string) {
 	}
 	var fields []field
 	for _, e := range doc {
-		if e.Key == "$ID" || e.Key == "$Type" {
-			continue
-		}
 		fields = append(fields, field{e.Key, e.Value})
 	}
 	sort.Slice(fields, func(i, j int) bool {
@@ -71,21 +57,10 @@ func renderField(sb *strings.Builder, key string, val any, indent int, sep strin
 		fmt.Fprintf(sb, "%s%s%snull\n", pad, key, sep)
 
 	case bson.Binary:
-		fmt.Fprintf(sb, "%s%s%s<uuid>\n", pad, key, sep)
+		fmt.Fprintf(sb, "%s%s%s%s\n", pad, key, sep, mpr.BsonBinaryToID(v))
 
 	case bson.D:
-		typeName := ""
-		for _, e := range v {
-			if e.Key == "$Type" {
-				typeName, _ = e.Value.(string)
-				break
-			}
-		}
-		if typeName != "" {
-			fmt.Fprintf(sb, "%s%s%s%s\n", pad, key, sep, typeName)
-		} else {
-			fmt.Fprintf(sb, "%s%s%s\n", pad, key, sep)
-		}
+		fmt.Fprintf(sb, "%s%s%s:\n", pad, key, sep)
 		renderFields(sb, v, indent+1, sep)
 
 	case bson.A:
@@ -131,19 +106,7 @@ func renderArrayElement(sb *strings.Builder, elem any, indent int, sep string) {
 
 	switch v := elem.(type) {
 	case bson.D:
-		typeName := ""
-		for _, e := range v {
-			if e.Key == "$Type" {
-				typeName, _ = e.Value.(string)
-				break
-			}
-		}
-		if typeName != "" {
-			fmt.Fprintf(sb, "%s- %s\n", pad, typeName)
-		} else {
-			fmt.Fprintf(sb, "%s-\n", pad)
-		}
-		renderFields(sb, v, indent+2, sep)
+		renderFields(sb, v, indent, sep)
 
 	case string:
 		fmt.Fprintf(sb, "%s- %q\n", pad, v)
@@ -152,3 +115,5 @@ func renderArrayElement(sb *strings.Builder, elem any, indent int, sep string) {
 		fmt.Fprintf(sb, "%s- %v\n", pad, elem)
 	}
 }
+
+

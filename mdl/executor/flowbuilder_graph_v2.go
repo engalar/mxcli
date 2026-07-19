@@ -84,6 +84,7 @@ func (fb *flowBuilderGen) buildFlowGraphGen(stmts []ast.MicroflowStatement, retu
 			}
 			listAct := genMf.NewCreateListAction()
 			assignFreshID(listAct)
+			listAct.SetErrorHandlingType(fb.ehTypeGen(nil))
 			listAct.SetOutputVariableName(returns.Variable)
 			listAct.SetEntityQualifiedName(entityQN)
 			declAction = listAct

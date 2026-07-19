@@ -125,8 +125,8 @@ func init() {
 	codec.DefaultDescRegistry.Register("DomainModels$AttributeRef", &codec.TypeDesc{
 		TypeName: "DomainModels$AttributeRef",
 		Properties: []codec.PropDesc{
-			{Name: "entityRef", BSONKey: "EntityRef", Kind: codec.PropKindPart, RefType: ""},
 			{Name: "attribute", BSONKey: "Attribute", Kind: codec.PropKindByNameRef, RefType: "DomainModels$Attribute"},
+			{Name: "entityRef", BSONKey: "EntityRef", Kind: codec.PropKindPart, RefType: ""},
 		},
 	})
 	codec.DefaultDescRegistry.Register("DomainModels$MappedValue", &codec.TypeDesc{

@@ -385,7 +385,12 @@ func pascalCase(s string) string {
 // For example, projects.Document defines Name — MxSchema extends Document,
 // and JsonStructure extends MxSchema. JsonStructure needs Name even though
 // it crosses two domain boundaries.
-func buildCrossDomainProps(genDir string, domainList []string) map[string][]dtsparser.JsProp {
+func buildCrossDomainProps(genDir string, _ []string) map[string][]dtsparser.JsProp {
+	// Scan all .js files — not just the ones in domainList — so cross-domain
+	// inheritance (e.g. projects.Document → ... → Microflow) is resolved
+	// even when codegen is invoked with -domains=rest,workflows,etc.
+	domainList := discoverDomains(genDir, "")
+
 	// Step 1: Collect all classes with their own properties and base class.
 	type classInfo struct {
 		baseName string

@@ -1,0 +1,238 @@
+$ID: 9315486c-edde-473c-879e-f8f447ff1417
+$Type: "Microflows$Nanoflow"
+AllowedModuleRoles [marker=1]: []
+Documentation: ""
+Excluded: false
+ExportLevel: "Hidden"
+Flows [marker=3]:
+  $ID: 6f045ead-3643-4422-842b-cf21fd9a0700
+  $Type: "Microflows$SequenceFlow"
+  CaseValues [marker=2]: []
+  DestinationConnectionIndex: 3
+  DestinationPointer: 2911414d-6662-463a-93a6-77f5e0e3397a
+  IsErrorHandler: false
+  Line: :
+    $ID: 9fbbc835-0dcd-47c0-9464-079492cd6c03
+    $Type: "Microflows$BezierCurve"
+    DestinationControlVector: "-30;0"
+    OriginControlVector: "15;0"
+  OriginConnectionIndex: 1
+  OriginPointer: ec75e6dc-1676-44ac-a7f7-8c84c349ee28
+  $ID: 1fcf57cf-1d19-478e-979e-4d8464e7b074
+  $Type: "Microflows$SequenceFlow"
+  CaseValues [marker=2]: []
+  DestinationConnectionIndex: 3
+  DestinationPointer: c8573512-98b7-4ad7-a864-fe5efe2c10c4
+  IsErrorHandler: false
+  Line: :
+    $ID: 826ec3a1-fc40-43dc-9a97-d3ff8e8cdc4b
+    $Type: "Microflows$BezierCurve"
+    DestinationControlVector: "-30;0"
+    OriginControlVector: "30;0"
+  OriginConnectionIndex: 1
+  OriginPointer: bd665d06-c493-4096-b2fe-fbc544f76884
+  $ID: bae2bbae-9450-4163-989f-23a307c76abe
+  $Type: "Microflows$SequenceFlow"
+  CaseValues [marker=2]: []
+  DestinationConnectionIndex: 3
+  DestinationPointer: 26dc2c8c-a806-40c4-b0b6-83de9455adb7
+  IsErrorHandler: false
+  Line: :
+    $ID: a550e06c-cc1f-41a6-a17f-644034630969
+    $Type: "Microflows$BezierCurve"
+    DestinationControlVector: "-30;0"
+    OriginControlVector: "30;0"
+  OriginConnectionIndex: 1
+  OriginPointer: c8573512-98b7-4ad7-a864-fe5efe2c10c4
+  $ID: b47073e4-b72d-4cce-b926-12eef3636367
+  $Type: "Microflows$SequenceFlow"
+  CaseValues [marker=2]: []
+  DestinationConnectionIndex: 3
+  DestinationPointer: afe7bfe2-9923-4172-af51-69e9024acdc1
+  IsErrorHandler: false
+  Line: :
+    $ID: 56fe576f-810b-41d6-b0a7-4a8bf3f54309
+    $Type: "Microflows$BezierCurve"
+    DestinationControlVector: "-30;0"
+    OriginControlVector: "30;0"
+  OriginConnectionIndex: 1
+  OriginPointer: 26dc2c8c-a806-40c4-b0b6-83de9455adb7
+  $ID: 34b2cb22-fe7c-4e7e-aeaa-7e49ce2dd4a8
+  $Type: "Microflows$SequenceFlow"
+  CaseValues [marker=2]: []
+  DestinationConnectionIndex: 3
+  DestinationPointer: bd665d06-c493-4096-b2fe-fbc544f76884
+  IsErrorHandler: false
+  Line: :
+    $ID: 3f6e3060-088b-406a-9055-f2f33b9069f9
+    $Type: "Microflows$BezierCurve"
+    DestinationControlVector: "0;0"
+    OriginControlVector: "0;0"
+  OriginConnectionIndex: 1
+  OriginPointer: 2911414d-6662-463a-93a6-77f5e0e3397a
+  $ID: 0a2d24cc-5ca3-44a8-9ea9-f0f440f5442c
+  $Type: "Microflows$SequenceFlow"
+  CaseValues [marker=2]: []
+  DestinationConnectionIndex: 3
+  DestinationPointer: c2896874-7123-41cf-beee-e027738edf30
+  IsErrorHandler: false
+  Line: :
+    $ID: b3011821-1b1d-4f9e-b32e-ca7ba47f6f43
+    $Type: "Microflows$BezierCurve"
+    DestinationControlVector: "-30;0"
+    OriginControlVector: "30;0"
+  OriginConnectionIndex: 1
+  OriginPointer: afe7bfe2-9923-4172-af51-69e9024acdc1
+  $ID: 2e1d40ae-7240-4cb2-8137-552d2433602d
+  $Type: "Microflows$SequenceFlow"
+  CaseValues [marker=2]: []
+  DestinationConnectionIndex: 3
+  DestinationPointer: 068637c1-8521-49aa-955d-06efd4a98fd4
+  IsErrorHandler: false
+  Line: :
+    $ID: 8c7eaffd-09cb-413a-8bb1-7e36832e6ed8
+    $Type: "Microflows$BezierCurve"
+    DestinationControlVector: "0;0"
+    OriginControlVector: "0;0"
+  OriginConnectionIndex: 1
+  OriginPointer: c2896874-7123-41cf-beee-e027738edf30
+MarkAsUsed: false
+MicroflowReturnType: :
+  $ID: 6839e276-e4b5-4cbb-b67a-fc9bb1309914
+  $Type: "DataTypes$ListType"
+  Entity: "Administration.Account"
+Name: "Nanoflow"
+ObjectCollection: :
+  $ID: c5150bd0-74f5-407e-9768-e58d3fb2b0c9
+  $Type: "Microflows$MicroflowObjectCollection"
+  Objects [marker=3]:
+    $ID: ec75e6dc-1676-44ac-a7f7-8c84c349ee28
+    $Type: "Microflows$StartEvent"
+    RelativeMiddlePoint: "-202;200"
+    Size: "20;20"
+    $ID: 068637c1-8521-49aa-955d-06efd4a98fd4
+    $Type: "Microflows$EndEvent"
+    Documentation: ""
+    RelativeMiddlePoint: "1028;200"
+    ReturnValue: "$AccountList"
+    Size: "20;20"
+    $ID: bd665d06-c493-4096-b2fe-fbc544f76884
+    $Type: "Microflows$ActionActivity"
+    Action: :
+      $ID: edd61c27-b843-41b7-805f-4259ba218c2f
+      $Type: "Microflows$SynchronizeAction"
+      ErrorHandlingType: "Abort"
+      Type: "All"
+      VariableNames [marker=1]: []
+    AutoGenerateCaption: true
+    BackgroundColor: "Default"
+    Caption: "Activity"
+    Disabled: false
+    Documentation: ""
+    RelativeMiddlePoint: "128;200"
+    Size: "120;60"
+    $ID: c8573512-98b7-4ad7-a864-fe5efe2c10c4
+    $Type: "Microflows$ActionActivity"
+    Action: :
+      $ID: a3a189d7-50ac-4944-bb3b-690d2287b2de
+      $Type: "Microflows$SynchronizeAction"
+      ErrorHandlingType: "Abort"
+      Type: "Unsynchronized"
+      VariableNames [marker=1]: []
+    AutoGenerateCaption: true
+    BackgroundColor: "Default"
+    Caption: "Activity"
+    Disabled: false
+    Documentation: ""
+    RelativeMiddlePoint: "318;200"
+    Size: "120;60"
+    $ID: 26dc2c8c-a806-40c4-b0b6-83de9455adb7
+    $Type: "Microflows$ActionActivity"
+    Action: :
+      $ID: f8732f47-f9ed-40eb-9ac0-135198455fc1
+      $Type: "Microflows$SynchronizeAction"
+      ErrorHandlingType: "Abort"
+      Type: "Specific"
+      VariableNames [marker=1]:
+        - "NewAccount"
+    AutoGenerateCaption: true
+    BackgroundColor: "Default"
+    Caption: "Activity"
+    Disabled: false
+    Documentation: ""
+    RelativeMiddlePoint: "508;200"
+    Size: "120;60"
+    $ID: 2911414d-6662-463a-93a6-77f5e0e3397a
+    $Type: "Microflows$ActionActivity"
+    Action: :
+      $ID: e4557269-b6ce-4dce-84e5-998542ad7fae
+      $Type: "Microflows$CreateChangeAction"
+      Commit: "No"
+      Entity: "Administration.Account"
+      ErrorHandlingType: "Abort"
+      Items [marker=2]: []
+      RefreshInClient: true
+      VariableName: "NewAccount"
+    AutoGenerateCaption: true
+    BackgroundColor: "Default"
+    Caption: "Activity"
+    Disabled: false
+    Documentation: ""
+    RelativeMiddlePoint: "-62;200"
+    Size: "120;60"
+    $ID: afe7bfe2-9923-4172-af51-69e9024acdc1
+    $Type: "Microflows$ActionActivity"
+    Action: :
+      $ID: 4fa3270c-2822-47dc-9734-dd71882bc933
+      $Type: "Microflows$RetrieveAction"
+      ErrorHandlingType: "Abort"
+      ResultVariableName: "AccountPasswordDataList"
+      RetrieveSource: :
+        $ID: 4fa99399-4fea-4e35-97ec-bdc0e97bc98d
+        $Type: "Microflows$AssociationRetrieveSource"
+        AssociationId: "Administration.AccountPasswordData_Account"
+        StartVariableName: "NewAccount"
+    AutoGenerateCaption: true
+    BackgroundColor: "Default"
+    Caption: "Activity"
+    Disabled: false
+    Documentation: ""
+    RelativeMiddlePoint: "698;200"
+    Size: "120;60"
+    $ID: c2896874-7123-41cf-beee-e027738edf30
+    $Type: "Microflows$ActionActivity"
+    Action: :
+      $ID: 049e4893-9bbf-4222-bc21-5bc9b0c82fd5
+      $Type: "Microflows$RetrieveAction"
+      ErrorHandlingType: "Abort"
+      ResultVariableName: "AccountList"
+      RetrieveSource: :
+        $ID: 24a17543-1b21-4d74-8505-817d6a793700
+        $Type: "Microflows$DatabaseRetrieveSource"
+        Entity: "Administration.Account"
+        NewSortings: :
+          $ID: 16bc4879-2d26-4413-911f-65a75a22d761
+          $Type: "Microflows$SortingsList"
+          Sortings [marker=2]:
+            $ID: a451a804-39be-480b-855d-848a26de295d
+            $Type: "Microflows$RetrieveSorting"
+            AttributeRef: :
+              $ID: 2959f97a-c529-4f76-b88a-de13447e7b6d
+              $Type: "DomainModels$AttributeRef"
+              Attribute: "Administration.Account.FullName"
+              EntityRef: null
+            SortOrder: "Descending"
+        Range: :
+          $ID: 4174b329-88e0-47fa-a0de-ae8233518e1e
+          $Type: "Microflows$ConstantRange"
+          SingleObject: false
+        XpathConstraint: "[\n  (\n    FullName = empty\n    and System.owner = '[%CurrentUser%]'\n  )\n]"
+    AutoGenerateCaption: true
+    BackgroundColor: "Default"
+    Caption: "Activity"
+    Disabled: false
+    Documentation: ""
+    RelativeMiddlePoint: "888;200"
+    Size: "120;60"
+ReturnVariableName: ""
+UseListParameterByReference: true

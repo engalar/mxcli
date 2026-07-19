@@ -49,6 +49,17 @@ import (
 // Every unconditional flow carries a NoCase in CaseValues to match the
 // BSON Studio Pro writes. Without it Mendix cannot traverse the flow
 // graph and reports CE0108 "Variable not in scope".
+// setSequenceFlowDefaults populates fields that Studio Pro always
+// writes on every SequenceFlow (IsErrorHandler, Line BezierCurve).
+func setSequenceFlowDefaults(flow *genMf.SequenceFlow) {
+	flow.SetIsErrorHandler(false)
+	curve := genMf.NewBezierCurve()
+	assignFreshID(curve)
+	curve.SetOriginControlVector("0;0")
+	curve.SetDestinationControlVector("0;0")
+	flow.SetLine(curve)
+}
+
 func newHorizontalFlowGen(originID, destinationID element.ID) *genMf.SequenceFlow {
 	flow := genMf.NewSequenceFlow()
 	assignFreshID(flow)
@@ -56,6 +67,7 @@ func newHorizontalFlowGen(originID, destinationID element.ID) *genMf.SequenceFlo
 	flow.SetDestinationID(destinationID)
 	flow.SetOriginConnectionIndex(int32(AnchorRight))
 	flow.SetDestinationConnectionIndex(int32(AnchorLeft))
+	setSequenceFlowDefaults(flow)
 	addNoCaseToFlow(flow)
 	return flow
 }
@@ -71,6 +83,7 @@ func newHorizontalFlowWithCaseGen(originID, destinationID element.ID, caseValue 
 	flow.SetDestinationID(destinationID)
 	flow.SetOriginConnectionIndex(int32(AnchorRight))
 	flow.SetDestinationConnectionIndex(int32(AnchorLeft))
+	setSequenceFlowDefaults(flow)
 	if cv := caseValueForFlowGen(caseValue); cv != nil {
 		flow.AddCaseValues(cv)
 	}
@@ -87,6 +100,7 @@ func newHorizontalFlowWithEnumCaseGen(originID, destinationID element.ID, caseVa
 	flow.SetDestinationID(destinationID)
 	flow.SetOriginConnectionIndex(int32(AnchorRight))
 	flow.SetDestinationConnectionIndex(int32(AnchorLeft))
+	setSequenceFlowDefaults(flow)
 	ec := genMf.NewEnumerationCase()
 	assignFreshID(ec)
 	ec.SetValue(caseValue)
@@ -104,6 +118,7 @@ func newHorizontalFlowWithInheritanceCaseGen(originID, destinationID element.ID,
 	flow.SetDestinationID(destinationID)
 	flow.SetOriginConnectionIndex(int32(AnchorRight))
 	flow.SetDestinationConnectionIndex(int32(AnchorLeft))
+	setSequenceFlowDefaults(flow)
 	ic := genMf.NewInheritanceCase()
 	assignFreshID(ic)
 	ic.SetValueQualifiedName(entityQN)
@@ -121,6 +136,7 @@ func newDownwardFlowWithCaseGen(originID, destinationID element.ID, caseValue st
 	flow.SetDestinationID(destinationID)
 	flow.SetOriginConnectionIndex(int32(AnchorBottom))
 	flow.SetDestinationConnectionIndex(int32(AnchorLeft))
+	setSequenceFlowDefaults(flow)
 	if cv := caseValueForFlowGen(caseValue); cv != nil {
 		flow.AddCaseValues(cv)
 	}
@@ -137,6 +153,7 @@ func newDownwardFlowWithInheritanceCaseGen(originID, destinationID element.ID, e
 	flow.SetDestinationID(destinationID)
 	flow.SetOriginConnectionIndex(int32(AnchorBottom))
 	flow.SetDestinationConnectionIndex(int32(AnchorLeft))
+	setSequenceFlowDefaults(flow)
 	ic := genMf.NewInheritanceCase()
 	assignFreshID(ic)
 	ic.SetValueQualifiedName(entityQN)
@@ -154,6 +171,7 @@ func newUpwardFlowGen(originID, destinationID element.ID) *genMf.SequenceFlow {
 	flow.SetDestinationID(destinationID)
 	flow.SetOriginConnectionIndex(int32(AnchorRight))
 	flow.SetDestinationConnectionIndex(int32(AnchorBottom))
+	setSequenceFlowDefaults(flow)
 	addNoCaseToFlow(flow)
 	return flow
 }
@@ -171,6 +189,11 @@ func newErrorHandlerFlowGen(originID, destinationID element.ID) *genMf.SequenceF
 	flow.SetOriginConnectionIndex(int32(AnchorBottom))
 	flow.SetDestinationConnectionIndex(int32(AnchorTop))
 	flow.SetIsErrorHandler(true)
+	curve := genMf.NewBezierCurve()
+	assignFreshID(curve)
+	curve.SetOriginControlVector("0;0")
+	curve.SetDestinationControlVector("0;0")
+	flow.SetLine(curve)
 	addNoCaseToFlow(flow)
 	return flow
 }

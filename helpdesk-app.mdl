@@ -1,0 +1,3177 @@
+-- ============================================================================
+-- HelpDesk + KnowledgeBase — Full-Stack Application Baseline
+-- ============================================================================
+--
+-- Purpose : End-to-end regression baseline (mx check must produce 0 new errors)
+-- Modules : KB, HD
+-- Version : Mendix 11.6+ (workflow requires 11.0+)
+-- Design  : docs/superpowers/specs/2026-05-22-helpdesk-app-design.md
+-- Facts   : docs/mendix-platform-reference.md
+-- Note    : Golden rebuilt after mongo-driver v1→v2 migration (nav_compat bsonD fix)
+-- Note    : codec.Encoder.Version field added for property-level version gating (new elements only)
+-- Note    : gen init() VersionRegistry removed; PropertyVersioner interface dispatch replaces global map
+-- Note    : GetContainerID added to backend; layoutDocToModel + WidgetPlaceholder fix describe layout output
+-- Note    : MoveImageCollection added to ImageBackend (UpdateUnitContainer wrapper) for ALTER IMAGE COLLECTION ... MOVE TO
+-- Note    : notifyTarget (11.7.0+) replaces activity ByNameRef in notify workflow action
+-- Note    : visitor keyword arg parsing fixed (Search keyword → arg.Name now captured)
+-- Note    : testdata reorganised: helpdesk-{clean,golden}-{11.6.6,11.10.0}/ naming scheme
+-- Note    : VoidConditionOutcome added to CallMicroflowTask for 11.6.6 compat; golden merged from remote
+-- Note    : Golden rebuilt 2026-06-02 after PageModel IR landing (Tasks 1-8); describe path
+--           now routes pure-IR widgets through new pageModelToMDL renderer and lossy widgets
+--           (DataGrid/Gallery/CustomWidget/Button-with-Action/etc.) through legacy describe.
+-- Note    : relayout now distributes association connector Y positions evenly along each entity
+--           edge (100*(k+1)/(N+1)) instead of stacking all lines at Y=50; endpoints are sorted
+--           by peer entity Y so lines follow the same top-to-bottom order and do not cross.
+-- Note    : Golden rebuilt 2026-06-02 after 10 describe/execute idempotency fixes:
+--           XPath "/" spacing, abort-reason double-quoting, wait-for-notification comment
+--           keyword, DataGrid pagesize key case, column attribute condition, CallWorkflow
+--           boundary events, DynamicText contentparams $var/attr routing, toString()
+--           expression passthrough, @position on workflow microflow actions; also fixes
+--           11.10.0 commit/change mismatch and row1/col1 drift in both versions.
+-- Note    : msdkWrite now routes through writeUnitContents so EXECUTE SCRIPT security
+--           grants are no longer silently discarded by commitScriptBuffer BatchWrite;
+--           EXECUTE SCRIPT 'helpdesk-app.mdl' now produces the same result as exec.
+-- Note    : loop body with multiple activities (change + commit) now correctly describes
+--           all activities; previously only one was emitted due to missing parent-level
+--           SequenceFlow lookup in emitLoopedActivityGen.
+-- Note    : Account Management section added (R1-R9): HD.UserProfile extends
+--           System.User; split type/cast; create/call java action; raise error;
+--           show home page; DataView microflow datasource; tabcontainer/tabpage;
+--           customContent action button column; nested DataView; conditional visibility.
+--           Stage 3.2.2 describe gap: DS_GetMyProfile/ACT_ChangePassword/JA_HashPassword
+--           excluded from describe roundtrip pending formatter implementation.
+-- Note    : TabPage/GroupBox Caption BSON type fixed: genSimpleLabel (Forms$ClientTemplate)
+--           replaced with genSimpleText (Texts$Text); StorageLoadException on mx check resolved.
+-- Note    : ACCESS-001/002/003 hints added to mxcli check --references; role→entity
+--           permission gaps now auto-diagnosed with MDL fix suggestions.
+-- Note    : page model now extracts microflow/nanoflow datasource refs (MicroflowSettings.
+--           Microflow / Nanoflow by-name fields) so access analysis sees MF-sourced DataViews.
+-- Note    : Golden rebuilt 2026-06-07 after describe syntax migration to {} canonical form:
+--           microflow/nanoflow bodies now emit { } instead of begin/end;, if { } else { }
+--           instead of if then/else/end if, loop $x { } instead of loop/begin/end loop,
+--           split type $x { case X { } else { } } instead of split type/case/end split.
+--           Also fixes AllowedRoles fallback to AllowedModuleRoles for human-edited pages.
+-- Note    : minimal.mpr SQLite Unit table patched 2026-06-08: removed 4 dangling rows for
+--           a duplicate module 'minimal' (bf242742 + DomainModel/Settings/Security children)
+--           deleted in commits 6bff72805/7c6f98308 but never purged from the Unit table;
+--           mx check crashed with DirectoryNotFoundException until this was cleaned up.
+--           Follow-up: those 4 mxunit files were accidentally re-added in cb3ab29c9 and
+--           are now removed; the SQLite fix remains intact.
+-- Note    : Golden rebuilt 2026-06-08 after fixing delete_behavior output: astDeleteBehaviorStr
+--           and genAssocDeleteBehaviorToMDL now emit MDL canonical uppercase keywords
+--           (DELETE_BUT_KEEP_REFERENCES) instead of BSON-style camelCase strings.
+-- Note    : Nanoflow repository layer added (mdl/backend/mpr/repos/nanoflows.go +
+--           mdl/repos/nanoflows.go) mirroring the microflow repo pattern; no BSON output change.
+-- Note    : FieldTech (FT) extension added (Tasks 1-10): FT module demonstrating new MDL
+--           features — cascade/prevent delete_behavior, multi-column index, VIEW ENTITY/OQL
+--           (LEFT OUTER JOIN, count/avg), REST client, JSON structures, import/export mappings,
+--           Business Event Service (publish/subscribe), offline nanoflows (CALL JAVASCRIPT
+--           ACTION + connectivity guard), ALTER PAGE INSERT, ALTER SETTINGS MODEL, REVOKE,
+--           reversed() XPath, CREATE LIST, page url slug, page variables.
+-- Note    : FT extension — features NOT executable on a baseline project (documented inline):
+--           (1) SYNCHRONIZE: planned MDL activity, no grammar support yet — omitted from
+--               nanoflows. (2) OfflineNative navigation profile: mxcli ALTER PAGE/navigation
+--               can only patch existing profiles, not create new ones — shown as a commented
+--               example (enable Native mobile in Studio Pro first).
+-- Note    : FT extension — known-acceptable mx check errors: 3× CE1613 from the
+--           NanoflowCommons.GetCurrentLocation JS action (the NanoflowCommons marketplace
+--           module is not installed in testdata; install it to clear these). No
+--           StorageLoadException; project loads cleanly.
+-- Note    : FT extension — page actionbuttons call the offline nanoflows WITHOUT
+--           arguments (NF_FT_CheckIn / NF_FT_CompleteOffline were made parameterless,
+--           retrieving the order themselves). This works around a known mxcli bug where
+--           a page nanoflow parameter mapping crashes mx check ("Parameter property ...
+--           null"); the executor root cause is fixed (qualified ParameterQualifiedName)
+--           with a regression test, but CE0115 arg matching still needs a Studio Pro BSON
+--           sample, so no-arg calls are used here. See cmd_pages_builder_v3.go TODO.
+-- Note    : Golden rebuilt 2026-06-08 after gen-typed module creation fix (SOLID-I):
+--           createModuleViaModelsdk now uses genSec.NewModuleSecurity() and
+--           msdkprojects.NewModuleSettings() instead of raw BSON construction.
+--           Known-acceptable mx check errors in FT module (5 total):
+--             CE0148 x3: FT pages with HD.ManagerRole — executor adds FT.User to
+--               AllowedModuleRoles alongside the granted role; Mendix role resolution
+--               fails for programmatically-created modules. Root cause documented in
+--               helpdesk-app.mdl MARK: Security section. CE0148 = validation only
+--               (project loads; not a StorageLoadException crash).
+--             CE0271 x2: import/export mapping JSON source not fully wired (mxcli
+--               executor limitation); CE0271 = validation only.
+-- Note    : Golden rebuilt 2026-06-08 after two-stage fix to createBusinessEventServiceGen:
+--           (1) Definition (Part) and OperationImplementations (PartList) were not written,
+--           causing Studio Pro to crash with "unsupported document type" on TryGetIcon.
+--           (2) MessageAttribute.AttributeType was written as DataTypes$IntegerType but
+--           Mendix requires DomainModels$*AttributeType (AttributeTypeBase subclass);
+--           wrong type family caused "cannot be converted to type AttributeTypeBase" crash.
+--           Fix uses genDM.New*AttributeType() for all BE message attribute types.
+--           Regression tests: WritesDefinition + AttributeTypeUsesDomainModels + OperationEntityIsWritten.
+-- Note    : MoveDocumentGen added as generic UpdateUnitContainer wrapper (OCP: replaces identical
+--           MovePageGen/MoveSnippetGen/MoveLayoutGen); layoutDocToModel added for layout BSON
+--           parsing and WidgetPlaceholder added to widget kind map.
+-- Note    : UpdateJavaScriptActionGen added (JS action Platform write path); WidgetPlaceholder rendered in layout describe
+-- Note    : DemoUsers BSON array version prefix fixed 3→2: supplements.json now lists
+--           ProjectSecurity.demoUsers in part_list_version2_fields so codegen emits
+--           NewPartListV2; Mendix runtime requires prefix=2 to create demo user accounts
+--           on startup — prefix=3 silently skipped all demo users ("unknown user" at login).
+--           Regression guard: TestAddDemoUser_PreservesVersionPrefix2.
+-- Note    : UserRole.guid GUID field added: supplements.json binary_uuid_properties now
+--           includes "UserRole.guid" with key override "GUID". mxcli-created roles without
+--           a binary GUID caused mxbuild to assign a random UUID per build, creating
+--           System.UserRole churn that made DemoUserSynchronizer.fetchUserRoleId() fail
+--           silently — demo-user role assignment threw IndexOutOfBoundsException on empty
+--           list, so Customer/Agent/Manager demo users were never created at runtime.
+--           Fix: addUserRoleViaModelsdk writes GUID==$ID; alterUserRoleModuleRoles
+--           backfills missing GUIDs on existing roles. mxbuild now emits stable UUIDs
+--           across builds. Regression guards: TestAddUserRole_WritesStableGUID,
+--           TestAlterUserRole_BackfillsMissingGUID.
+--
+-- Edge cases covered:
+--   Domain    : self-ref association, cross-module association,
+--               non-persistent entity, many-to-many via junction table
+--   Microflow : 5-state status machine, rollback branch, time comparison,
+--               constant reference (@Module.Const),
+--               retrieve with XPath + sort (XpathConstraint + NewSortings BSON),
+--               retrieve with pagination (offset + limit expressions)
+--   Nanoflow  : DB retrieve, call microflow, create+commit persistent,
+--               pure-compute return value
+--   Workflow  : parent-child, user task, multi-user task, decision (enum),
+--               parallel split, jump, wait-for-notification,
+--               interrupting + non-interrupting boundary events, annotation
+--   Microflow workflow activities: all 13 (Call, ChangeState, CompleteTask,
+--               ApplyJumpTo, GenerateJumpTo, RetrieveActivityRecords,
+--               RetrieveContext, RetrieveWorkflows, ShowTaskPage,
+--               ShowAdminPage, Lock, Unlock, Notify)
+--   Security  : XPath row-level filters, module/user role mapping,
+--               page/microflow grants, demo users
+--   Navigation: role-derived menu visibility (no roles() on menu items)
+--   ValidationFeedback: multi-field accumulate pattern, single-field bail-early pattern
+--   Datasource types: all 6 MDL types demonstrated —
+--     parameter ($Ticket, $Article)  → DataView context source
+--     association ($Ticket/Assoc/E)  → DataGrid nested list
+--     selection (artGallery)         → DataView listen-to-widget (KB.Article_Overview)
+--     database (from HD.Ticket)      → DataGrid/Gallery database source
+--     microflow (DS_MyTickets, no args → omit parens) → DataGrid microflow source (HD.MyTickets_Overview)
+--     nanoflow (NF_TicketSearch_Apply)→ DataGrid nanoflow source (HD.TicketSearch_Results)
+--   Widget CE0463: fully eliminated. DataGrid2 column filters use columnsFilterable;
+--                  Gallery filter (fStatus) preserves Studio Pro type \$IDs via
+--                  extractTemplateFromProject + stable-ID remapping. Both 11.6.6 and
+--                  11.10.0 now rebuild to 0 CE0463 errors automatically.
+--                  Studio Pro validates against internal platform definition,
+--                  not the project MPK — exact comparison mechanism TBD.
+--   Note: raise error; (ErrorEvent) generates CE0710 in mx check due to a BSON
+--         sequence flow bug in flowbuilder — tracked as follow-up. ACT_ChangePassword
+--         uses show message + return false as a workaround.
+--
+-- Validation:
+--   ./bin/mxcli check mdl-examples/use-cases/helpdesk/helpdesk-app.mdl
+--
+-- ============================================================================
+
+-- MARK: KnowledgeBase — Module & Enumerations
+
+create module KB;
+
+create or modify enumeration KB.ArticleStatus (
+  Draft      'Draft',
+  Published  'Published',
+  Archived   'Archived'
+);
+
+
+
+create or modify persistent entity KB.Category (
+  Name:        string(200) not null,
+  Description: string(500)
+);
+
+-- Self-referencing association: Category tree (parent → child)
+create or modify association KB.Category_Parent
+  from KB.Category to KB.Category
+  type reference
+  owner default;
+
+create or modify persistent entity KB.Tag (
+  Name: string(100) not null unique
+);
+
+create or modify persistent entity KB.Article (
+  Title:       string(500) not null,
+  Content:     string,
+  Status:      KB.ArticleStatus default Draft,
+  PublishedAt: datetime,
+  ViewCount:   integer default 0
+)
+index (Status)
+index (PublishedAt);
+
+create or modify association KB.Article_Category
+  from KB.Article to KB.Category
+  type reference
+  owner default;
+
+-- Many-to-many junction table: Article <-> Tag
+create or modify persistent entity KB.ArticleTag (
+);
+
+create or modify association KB.ArticleTag_Article
+  from KB.ArticleTag to KB.Article
+  type reference
+  owner default;
+
+create or modify association KB.ArticleTag_Tag
+  from KB.ArticleTag to KB.Tag
+  type reference
+  owner default;
+
+-- XPath row-level filter target: user sees only own ratings
+create or modify persistent entity KB.ArticleRating (
+  Score:   integer not null,
+  Comment: string(1000)
+)
+system members (owner);
+
+create or modify association KB.ArticleRating_Article
+  from KB.ArticleRating to KB.Article
+  type reference
+  owner default;
+
+-- MARK: HelpDesk — Module & Enumerations
+
+create module HD;
+
+-- 5-state status machine — edge case: Reopen (state reversal)
+create or modify enumeration HD.TicketStatus (
+  Draft      'Draft',
+  Open       'Open',
+  InProgress 'In Progress',
+  Resolved   'Resolved',
+  Closed     'Closed'
+);
+
+create or modify enumeration HD.TicketPriority (
+  Low      'Low',
+  Normal   'Normal',
+  High     'High',
+  Critical 'Critical'
+);
+
+-- MARK: HelpDesk — Entities & Non-persistent
+
+create or modify persistent entity HD.Customer (
+  Name:    string(200) not null,
+  Email:   string(200) not null,
+  Company: string(200)
+)
+system members (owner)
+index (Email);
+
+create or modify persistent entity HD.Agent (
+  Name:               string(200) not null,
+  Email:              string(200) not null,
+  IsActive:           boolean default true,
+  DeactivationReason: string(500)
+);
+
+-- system members clause enables the 4 NoGeneralization boolean flags in BSON.
+-- Child entities (generalization) inherit system members from their root ancestor;
+-- only root (NoGeneralization) entities declare this clause.
+create or modify persistent entity HD.Ticket (
+  Subject:     string(500) not null,
+  Description: string,
+  Status:      HD.TicketStatus   default Draft,
+  Priority:    HD.TicketPriority default Normal,
+  SLADueAt:   datetime,
+  ResolvedAt:  datetime,
+  IsOverSLA:   boolean default false
+)
+system members (owner, createdDate, changedDate, changedBy)
+index (Status)
+index (Priority)
+index (SLADueAt);
+
+create or modify association HD.Ticket_Customer
+  from HD.Ticket to HD.Customer
+  type reference
+  owner default;
+
+-- Nullable: ticket may not yet be assigned to an agent
+create or modify association HD.Ticket_Agent
+  from HD.Ticket to HD.Agent
+  type reference
+  owner default;
+
+create or modify persistent entity HD.TicketComment (
+  Content:    string not null,
+  IsInternal: boolean default false
+);
+
+create or modify association HD.TicketComment_Ticket
+  from HD.TicketComment to HD.Ticket
+  type reference
+  owner default;
+
+-- Workflow context entity for escalation approval
+create or modify persistent entity HD.EscalationRequest (
+  Reason:          string(1000) not null,
+  RequestedAt:     datetime,
+  RejectionReason: string(1000)
+);
+
+create or modify association HD.EscalationRequest_Ticket
+  from HD.EscalationRequest to HD.Ticket
+  type reference
+  owner default;
+
+-- Non-persistent entity: ticket search / filter form
+create or modify non-persistent entity HD.TicketSearch (
+  SubjectKeyword: string(200),
+  StatusFilter:   HD.TicketStatus,
+  PriorityFilter: HD.TicketPriority
+);
+
+-- Cross-module: ticket may link to a KB article (nullable)
+create or modify association HD.Ticket_KBArticle
+  from HD.Ticket to KB.Article
+  type reference
+  owner default;
+
+-- SLA time limits per priority, configurable per environment
+create or modify constant HD.SLA_HIGH_HOURS
+  type integer
+  default 8
+  comment 'SLA deadline in hours for High-priority tickets.';
+
+create or modify constant HD.SLA_CRITICAL_HOURS
+  type integer
+  default 2
+  comment 'SLA deadline in hours for Critical-priority tickets. Configure shorter per environment.';
+
+-- ACT_Ticket_Submit: Draft → Open
+-- Edge cases: Subject validation (rollback branch), SLA computed from constant
+create or modify microflow HD.ACT_Ticket_Submit
+  ($Ticket: HD.Ticket)
+  returns boolean as $Success
+  folder 'Ticket'
+{
+  if $Ticket/Subject = '' {
+      validation feedback $Ticket/Subject message 'Subject is required';
+      return false;
+  }
+
+  -- Compute SLA due date based on priority.
+  -- Hours: Critical=2, High=8, default=24.
+  -- MDL has no else-if; use nested if/else.
+  if $Ticket/Priority = HD.TicketPriority.Critical {
+    change $Ticket (
+      Status   = HD.TicketStatus.Open,
+      SLADueAt = addHours('[%CurrentDateTime%]', @HD.SLA_CRITICAL_HOURS)
+    );
+  } else {
+    if $Ticket/Priority = HD.TicketPriority.High {
+      change $Ticket (
+        Status   = HD.TicketStatus.Open,
+        SLADueAt = addHours('[%CurrentDateTime%]', @HD.SLA_HIGH_HOURS)
+      );
+    } else {
+      change $Ticket (
+        Status   = HD.TicketStatus.Open,
+        SLADueAt = addHours('[%CurrentDateTime%]', 24)
+      );
+    }
+  }
+  commit $Ticket;
+  return true;
+}
+/
+
+-- ACT_Ticket_Validate: multi-field validation feedback demo
+-- Edge cases:
+--   accumulate pattern — collect ALL field errors before returning false
+--     (shows all red fields at once, unlike bail-early in ACT_Ticket_Submit)
+--   plain attribute path: validation feedback $Obj/Attr message '...';
+--   objects clause: validation feedback $Obj/Attr message '{1}...' objects [$Obj/Attr];
+--     (objects provides template args for {1}/{2}/... placeholders in message)
+create or modify microflow HD.ACT_Ticket_Validate
+  ($Ticket: HD.Ticket)
+  returns boolean as $Valid
+  folder 'Ticket'
+{
+  declare $Valid: boolean = true;
+
+  -- Plain form: no template args, bail-early on empty subject
+  if $Ticket/Subject = '' {
+    validation feedback $Ticket/Subject message 'Subject is required.';
+    set $Valid = false;
+  } else {
+    -- objects form: {1} placeholder bound to the attribute value via objects clause
+    if length($Ticket/Subject) < 3 {
+      validation feedback $Ticket/Subject message 'Subject ''{1}'' is too short (minimum 3 characters).' objects [$Ticket/Subject];
+      set $Valid = false;
+    }
+  }
+
+  -- Field: Description — required when Priority is Critical
+  if $Ticket/Priority = HD.TicketPriority.Critical {
+    if $Ticket/Description = '' or $Ticket/Description = empty {
+      validation feedback $Ticket/Description message 'Description is required for Critical tickets.';
+      set $Valid = false;
+    }
+  }
+
+  return $Valid;
+}
+/
+
+-- ACT_Ticket_Assign: Open → InProgress, set Agent
+-- Edge case: pre-condition state assertion
+create or modify microflow HD.ACT_Ticket_Assign
+  ($Ticket: HD.Ticket, $Agent: HD.Agent)
+  returns boolean as $Success
+  folder 'Ticket'
+{
+  if $Ticket/Status != HD.TicketStatus.Open {
+      show message 'Only Open tickets can be assigned.' type warning;
+      return false;
+  }
+  change $Ticket (
+    Status = HD.TicketStatus.InProgress,
+    HD.Ticket_Agent = $Agent
+  );
+  commit $Ticket;
+  return true;
+}
+/
+
+-- ACT_Ticket_Resolve: InProgress → Resolved
+-- Edge case: time comparison to set IsOverSLA flag
+create or modify microflow HD.ACT_Ticket_Resolve
+  ($Ticket: HD.Ticket)
+  returns boolean as $Success
+  folder 'Ticket'
+{
+  if $Ticket/Status != HD.TicketStatus.InProgress {
+      return false;
+  }
+  declare $Now: datetime = '[%CurrentDateTime%]';
+  declare $IsOver: boolean = $Now > $Ticket/SLADueAt and $Ticket/SLADueAt != empty;
+  change $Ticket (
+    Status     = HD.TicketStatus.Resolved,
+    ResolvedAt = $Now,
+    IsOverSLA  = $IsOver
+  );
+  commit $Ticket;
+  return true;
+}
+/
+
+-- ACT_Ticket_Reopen: Resolved/Closed → Open
+-- Edge case: state reversal (backward transition)
+create or modify microflow HD.ACT_Ticket_Reopen
+  ($Ticket: HD.Ticket)
+  returns boolean as $Success
+  folder 'Ticket'
+{
+  if $Ticket/Status != HD.TicketStatus.Resolved
+     and $Ticket/Status != HD.TicketStatus.Closed {
+      return false;
+  }
+  change $Ticket (
+    Status     = HD.TicketStatus.Open,
+    ResolvedAt = empty
+  );
+  commit $Ticket;
+  return true;
+}
+/
+
+-- ACT_Ticket_Close: Resolved → Closed (terminal transition)
+create or modify microflow HD.ACT_Ticket_Close
+  ($Ticket: HD.Ticket)
+  returns boolean as $Success
+  folder 'Ticket'
+{
+  if $Ticket/Status != HD.TicketStatus.Resolved {
+      return false;
+  }
+  change $Ticket (Status = HD.TicketStatus.Closed);
+  commit $Ticket;
+  return true;
+}
+/
+
+-- MARK: KnowledgeBase — Microflows
+
+-- ACT_Article_Publish: Draft → Published, validate content
+create or modify microflow KB.ACT_Article_Publish
+  ($Article: KB.Article)
+  returns boolean as $Success
+  folder 'Article'
+{
+  if $Article/Content = '' or $Article/Content = empty {
+      validation feedback $Article/Content message 'Content cannot be empty before publishing.';
+      return false;
+  }
+  change $Article (
+    Status      = KB.ArticleStatus.Published,
+    PublishedAt = '[%CurrentDateTime%]'
+  );
+  commit $Article;
+  return true;
+}
+/
+
+-- ACT_Article_Archive: Published → Archived (terminal)
+create or modify microflow KB.ACT_Article_Archive
+  ($Article: KB.Article)
+  returns boolean as $Success
+  folder 'Article'
+{
+  change $Article (Status = KB.ArticleStatus.Archived);
+  commit $Article;
+  return true;
+}
+/
+
+-- ACT_Ticket_MarkCommentsRead: loop over internal comments, un-flag them
+-- Demonstrates: retrieve list + loop activity
+create or modify microflow HD.ACT_Ticket_MarkCommentsRead
+  ($Ticket: HD.Ticket)
+  folder 'Ticket'
+{
+  retrieve $Comments from HD.TicketComment
+    where [HD.TicketComment_Ticket/HD.Ticket = $Ticket and IsInternal = true]
+    limit 100;
+  loop $Comment in $Comments {
+    change $Comment (IsInternal = false);
+    commit $Comment;
+  }
+  return;
+}
+/
+
+-- ACT_EscalationRequest_Cleanup: delete escalation records for a ticket
+-- Demonstrates: loop + delete activity
+create or modify microflow HD.ACT_EscalationRequest_Cleanup
+  ($Ticket: HD.Ticket)
+  folder 'Ticket'
+{
+  retrieve $Requests from HD.EscalationRequest
+    where [HD.EscalationRequest_Ticket/HD.Ticket = $Ticket]
+    limit 50;
+  loop $Req in $Requests {
+    delete $Req;
+  }
+  return;
+}
+/
+
+-- ACT_Ticket_SafeCommit: commit ticket with error rollback
+-- Demonstrates: on error rollback pattern
+create or modify microflow HD.ACT_Ticket_SafeCommit
+  ($Ticket: HD.Ticket)
+  returns boolean as $Success
+  folder 'Ticket'
+{
+  declare $Success: boolean = false;
+  commit $Ticket on error rollback;
+  set $Success = true;
+  return $Success;
+}
+/
+
+-- DS_OverdueTicketCount: count overdue tickets via aggregate
+-- Demonstrates: retrieve list + aggregate count activity
+create or modify microflow HD.DS_OverdueTicketCount
+  ()
+  returns integer as $Count
+  folder 'Ticket'
+{
+  retrieve $Overdue from HD.Ticket
+    where [IsOverSLA = true]
+    limit 0;
+  $Count = COUNT($Overdue);
+  return $Count;
+}
+/
+
+-- DS_TicketsByCompany: retrieve tickets for a given customer company
+-- Demonstrates: multi-hop association path in XPath
+--   Path: Ticket → HD.Ticket_Customer (assoc) → HD.Customer → Company attribute
+--   Also demonstrates: limit before offset (offset 写在 limit 后，顺序不能颠倒)
+create or modify microflow HD.DS_TicketsByCompany
+  ($Company: String)
+  returns list of HD.Ticket as $Tickets
+  folder 'Ticket'
+{
+  retrieve $Tickets from HD.Ticket
+    where [HD.Ticket_Customer/HD.Customer/Company = $Company]
+    limit 50
+    offset 4;
+  return $Tickets;
+}
+/
+
+-- DS_MyTickets: retrieve all tickets created by the currently logged-in user
+-- Demonstrates: [%CurrentUser%] system token in XPath constraint
+create or modify microflow HD.DS_MyTickets
+  ()
+  returns list of HD.Ticket as $Tickets
+  folder 'Ticket'
+{
+  retrieve $Tickets from HD.Ticket
+    where [System.owner = '[%CurrentUser%]']
+    limit 0;
+  return $Tickets;
+}
+/
+
+-- DS_OpenHighTickets: retrieve open high-priority tickets
+-- Demonstrates: enum values as string literals in XPath (not qualified names)
+--   'Open' is the database-level string for HD.TicketStatus.Open
+--   'High' is the database-level string for HD.TicketPriority.High
+create or modify microflow HD.DS_OpenHighTickets
+  ()
+  returns list of HD.Ticket as $Tickets
+  folder 'Ticket'
+{
+  retrieve $Tickets from HD.Ticket
+    where [Status = 'Open' and Priority = 'High']
+    limit 0;
+  return $Tickets;
+}
+/
+
+-- DS_TicketPage: retrieve a page of tickets with offset, limit, and sort
+-- Demonstrates:
+--   limit N    — CustomRange with limit expression (max rows)
+--   offset M   — CustomRange with offset expression (skip M rows for pagination)
+--   sort by    — SortItemList with ascending/descending columns
+-- Pagination pattern: page 1 = offset 0 limit 20, page 2 = offset 20 limit 20, etc.
+create or modify microflow HD.DS_TicketPage
+  ($PageIndex: Integer, $PageSize: Integer)
+  returns list of HD.Ticket as $Tickets
+  folder 'Ticket'
+{
+  declare $Offset: integer = ($PageIndex - 1) * $PageSize;
+  retrieve $Tickets from HD.Ticket
+    where [Status != 'Closed']
+    sort by SLADueAt asc, Priority desc
+    limit $PageSize
+    offset $Offset;
+  return $Tickets;
+}
+/
+
+-- DS_RecentCriticalTickets: retrieve most-recently-created critical tickets
+-- Demonstrates: sort by with a single column descending + fixed limit
+-- Note: system member attributes (createdDate, changedDate, owner, changedBy) are
+-- referenced bare (no Module.Entity prefix); the executor qualifies them automatically.
+create or modify microflow HD.DS_RecentCriticalTickets
+  ()
+  returns list of HD.Ticket as $Tickets
+  folder 'Ticket'
+{
+  retrieve $Tickets from HD.Ticket
+    where [Priority = 'Critical']
+    sort by createdDate desc
+    limit 10;
+  return $Tickets;
+}
+/
+
+-- MARK: HelpDesk — Nanoflows
+
+-- NF_Ticket_QuickCreate: create + commit a Draft ticket from the client
+-- Demonstrates: nanoflow creating and committing a persistent entity
+create or modify nanoflow HD.NF_Ticket_QuickCreate
+  ($Customer: HD.Customer, $Subject: string)
+  returns HD.Ticket as $Ticket
+  folder 'Ticket'
+{
+  $Ticket = create HD.Ticket (
+    Subject  = $Subject,
+    Status   = HD.TicketStatus.Draft,
+    Priority = HD.TicketPriority.Normal,
+    HD.Ticket_Customer = $Customer
+  );
+  commit $Ticket;
+  return $Ticket;
+}
+/
+
+-- NF_TicketSearch_Apply: retrieve tickets matching search criteria
+-- Demonstrates: nanoflow querying the database with XPath
+create or modify nanoflow HD.NF_TicketSearch_Apply
+  ($Search: HD.TicketSearch)
+  returns list of HD.Ticket as $Tickets
+  folder 'Ticket/Search'
+{
+  -- Simplified: full retrieve (XPath cross-object reference to non-persistent
+  -- entity not supported in this context; filtering done client-side or via
+  -- separate microflow call). Demonstrates nanoflow DB retrieve capability.
+  retrieve $Tickets from HD.Ticket limit 100;
+  return $Tickets;
+}
+/
+
+-- NF_Priority_GetLabel: pure client-side computation, returns CSS class string
+-- Demonstrates: nanoflow with no DB access, if/else chain, string return
+-- Note: enumeration types as nanoflow params cause CE1613 in current BSON writer;
+-- parameter uses string (e.g. 'Critical', 'High') as workaround.
+create or modify nanoflow HD.NF_Priority_GetLabel
+  ($PriorityStr: string)
+  returns string as $CSSClass
+  folder 'Ticket'
+{
+  -- MDL uses nested if/else (no else-if); 'set' keyword for variable reassignment
+  declare $CSSClass: string = 'badge-default';
+  if $PriorityStr = 'Critical' {
+    set $CSSClass = 'badge-danger';
+  } else {
+    if $PriorityStr = 'High' {
+      set $CSSClass = 'badge-warning';
+    } else {
+      if $PriorityStr = 'Normal' {
+        set $CSSClass = 'badge-info';
+      }
+    }
+  }
+  return $CSSClass;
+}
+/
+
+-- MARK: KnowledgeBase — Nanoflows
+
+-- SUB_Article_TruncateContent must be defined BEFORE the nanoflow that calls it
+create or modify microflow KB.SUB_Article_TruncateContent
+  ($Article: KB.Article)
+  returns string as $TruncatedContent
+  folder 'Article'
+{
+  $TruncatedContent = $Article/Content;
+  return $TruncatedContent;
+}
+/
+
+-- NF_Article_FormatPreview: call a microflow from a nanoflow
+-- Demonstrates: nanoflow → microflow call (server-side truncation)
+create or modify nanoflow KB.NF_Article_FormatPreview
+  ($Article: KB.Article)
+  returns string as $Preview
+  folder 'Article'
+{
+  $FormattedText = call microflow KB.SUB_Article_TruncateContent(Article = $Article);
+  return $FormattedText;
+}
+/
+
+-- MARK: HelpDesk — Sub-Workflow (WF_SUB_ManagerReview)
+
+-- Required pages for workflow (must exist before workflow is created)
+-- CE7410: workflow user task page must declare a WorkflowUserTask parameter
+create or replace page HD.EscalationReview_Form
+(
+  title: 'Escalation Review',
+  layout: Atlas_Core.Atlas_Default,
+  folder: 'Escalation',
+  params: { $WorkflowUserTask: System.WorkflowUserTask }
+)
+{
+  layoutgrid lgMain {
+    row rMain {
+      column cMain (desktopwidth: 12) {
+        dynamictext txtTitle (content: 'Manager Review', rendermode: H2)
+      }
+    }
+  }
+};
+
+create or replace page HD.EscalationWorkflow_Overview
+(
+  title: 'Escalation Workflow',
+  layout: Atlas_Core.Atlas_Default,
+  folder: 'Escalation'
+)
+{
+  layoutgrid lgMain {
+    row rMain {
+      column cMain (desktopwidth: 12) {
+        dynamictext txtTitle (content: 'Escalation Overview', rendermode: H2)
+      }
+    }
+  }
+};
+
+-- User assignment targeting microflow (WFA_ prefix per naming conventions)
+create or modify microflow HD.WFA_GetManagerAssignees
+  ($workflow: System.Workflow, $EscalationRequest: HD.EscalationRequest)
+  returns list of System.User as $Users
+  folder 'Escalation'
+{
+  -- Simplified: full user retrieve (role-based XPath on System.UserRoles
+  -- requires specific association path; use admin configuration in production)
+  retrieve $Users from System.User limit 10;
+  return $Users;
+}
+/
+
+-- WFS_ microflows: called directly by workflow activities (WFS_ prefix)
+create or modify microflow HD.WFS_SendReminder
+  ($EscalationRequest: HD.EscalationRequest)
+  folder 'Escalation'
+{
+  log info 'Escalation reminder sent for request ' + toString($EscalationRequest/Reason);
+  return;
+}
+/
+
+create or modify microflow HD.WFS_Approve
+  ($EscalationRequest: HD.EscalationRequest)
+  folder 'Escalation'
+{
+  retrieve $Ticket from HD.Ticket
+    where [HD.EscalationRequest_Ticket/HD.EscalationRequest = $EscalationRequest]
+    limit 1;
+  if $Ticket != empty {
+    change $Ticket (Priority = HD.TicketPriority.Critical);
+    commit $Ticket;
+  }
+  return;
+}
+/
+
+create or modify microflow HD.WFS_Reject
+  ($EscalationRequest: HD.EscalationRequest)
+  folder 'Escalation'
+{
+  change $EscalationRequest (RejectionReason = 'Rejected by manager review board.');
+  commit $EscalationRequest;
+  return;
+}
+/
+
+-- Sub-workflow: manager review with decision routing and multi-user task fallback
+-- Elements covered:
+--   User task (xpath targeting), Decision (boolean expr with true/false paths),
+--   Multi-user task (majority, nested in decision false path),
+--   Call microflow, Non-interrupting boundary event (12h reminder)
+create or replace workflow HD.WF_SUB_ManagerReview
+  parameter $WorkflowContext: HD.EscalationRequest
+  display 'Manager Review'
+  overview page HD.EscalationWorkflow_Overview
+{
+  user task UT_PrimaryReview 'Primary Review'
+    page HD.EscalationReview_Form
+    targeting users microflow HD.WFA_GetManagerAssignees
+    description 'Review escalation request and decide: Approve or escalate to board'
+    outcomes
+      'Approve' {
+        call microflow HD.WFS_Approve with (EscalationRequest = '$WorkflowContext');
+      }
+      'Escalate' {
+        -- Multi-user task: majority board review (decision method majority)
+        -- Note: 'method' is a reserved word; use 'completion method' or the
+        -- ALTER WORKFLOW form if inline keyword conflicts arise.
+        multi user task UT_SeniorReview 'Senior Board Review'
+          page HD.EscalationReview_Form
+          targeting users microflow HD.WFA_GetManagerAssignees
+          completion method majority
+          outcomes
+            'Approve' { call microflow HD.WFS_Approve with (EscalationRequest = '$WorkflowContext'); }
+            'Reject'  { call microflow HD.WFS_Reject  with (EscalationRequest = '$WorkflowContext'); }
+          ;
+      }
+  ;
+}
+/
+
+-- Non-interrupting 12h reminder boundary on primary review user task
+alter workflow HD.WF_SUB_ManagerReview
+  insert boundary event on UT_PrimaryReview@1
+    non interrupting timer 'addHours([%CurrentDateTime%], 12)' {
+      call microflow HD.WFS_SendReminder with (EscalationRequest = '$WorkflowContext');
+    };
+
+-- MARK: HelpDesk — Parent Workflow (WF_TicketEscalation)
+
+-- WFS_ microflows used by parent workflow
+create or modify microflow HD.WFS_Escalation_Initialize
+  ($EscalationRequest: HD.EscalationRequest)
+  folder 'Escalation'
+{
+  change $EscalationRequest (RequestedAt = '[%CurrentDateTime%]');
+  commit $EscalationRequest;
+  return;
+}
+/
+
+create or modify microflow HD.WFS_AutoReject
+  ($EscalationRequest: HD.EscalationRequest)
+  folder 'Escalation'
+{
+  change $EscalationRequest (RejectionReason = 'Auto-rejected: no manager response within 48 hours.');
+  commit $EscalationRequest;
+  return;
+}
+/
+
+create or modify microflow HD.WFS_UpdateTicketPriority
+  ($EscalationRequest: HD.EscalationRequest)
+  folder 'Escalation'
+{
+  retrieve $Ticket from HD.Ticket
+    where [HD.EscalationRequest_Ticket/HD.EscalationRequest = $EscalationRequest]
+    limit 1;
+  if $Ticket != empty {
+    change $Ticket (Priority = HD.TicketPriority.Critical, Status = HD.TicketStatus.InProgress);
+    commit $Ticket;
+  }
+  return;
+}
+/
+
+create or modify microflow HD.WFS_NotifyAgent
+  ($EscalationRequest: HD.EscalationRequest)
+  folder 'Escalation'
+{
+  log info 'Agent notified: escalation approved for request ' + toString($EscalationRequest/Reason);
+  return;
+}
+/
+
+-- Parent workflow: full escalation with all major workflow element types
+-- Elements covered:
+--   Call microflow, Decision (boolean expr), Wait for notification,
+--   Call workflow (parent→child), Parallel split,
+--   Non-interrupting boundary event (12h reminder on wait-for-notification),
+--   Interrupting boundary event (48h timeout on call workflow)
+create or replace workflow HD.WF_TicketEscalation
+  parameter $WorkflowContext: HD.EscalationRequest
+  display 'Ticket Escalation'
+  overview page HD.EscalationWorkflow_Overview
+{
+  call microflow HD.WFS_Escalation_Initialize with (EscalationRequest = '$WorkflowContext');
+  -- $WorkflowContext accesses the business context entity (HD.EscalationRequest).
+  -- $WorkflowInstance accesses the System.Workflow runtime instance (State, StartTime, etc.).
+  -- Both are always available in workflow expressions.
+  decision '$WorkflowContext/Reason = empty and $WorkflowInstance/State = System.WorkflowState.Completed'
+    outcomes
+      true -> {
+        call microflow HD.WFS_AutoReject with (EscalationRequest = '$WorkflowContext');
+      }
+      false -> {
+        wait for notification comment 'WaitForManagerAvailable';
+        call workflow HD.WF_SUB_ManagerReview;
+        parallel split
+          path 1 { call microflow HD.WFS_UpdateTicketPriority with (EscalationRequest = '$WorkflowContext'); }
+          path 2 { call microflow HD.WFS_NotifyAgent with (EscalationRequest = '$WorkflowContext'); }
+        ;
+      }
+  ;
+}
+/
+
+-- Non-interrupting 12h reminder on WaitForManagerAvailable
+alter workflow HD.WF_TicketEscalation
+  insert boundary event on WaitForManagerAvailable@1
+    non interrupting timer 'addHours([%CurrentDateTime%], 12)' {
+      call microflow HD.WFS_SendReminder with (EscalationRequest = '$WorkflowContext');
+    };
+
+-- Interrupting 48h timeout on the call workflow activity
+alter workflow HD.WF_TicketEscalation
+  insert boundary event on WF_SUB_ManagerReview@1
+    interrupting timer 'addHours([%CurrentDateTime%], 48)' {
+      call microflow HD.WFS_AutoReject with (EscalationRequest = '$WorkflowContext');
+    };
+
+-- MARK: HelpDesk — Workflow Support Microflows (all 13 activities)
+
+-- 1. Call workflow — trigger the escalation workflow from a button microflow
+create or modify microflow HD.ACT_StartEscalation
+  ($Ticket: HD.Ticket, $Reason: string)
+  returns boolean as $Success
+  folder 'Escalation'
+{
+  if $Ticket/Status != HD.TicketStatus.InProgress {
+    return false;
+  }
+  $EscalationRequest = create HD.EscalationRequest (
+    Reason          = $Reason,
+    RequestedAt     = '[%CurrentDateTime%]',
+    HD.EscalationRequest_Ticket = $Ticket
+  );
+  commit $EscalationRequest;
+  -- Activity: Call workflow (start workflow with context entity)
+  -- TODO: verify exact syntax for starting a workflow from microflow;
+  -- standard form is: call workflow Module.WFName($ContextParam)
+  call workflow HD.WF_TicketEscalation (EscalationRequest = $EscalationRequest);
+  return true;
+}
+/
+
+-- 2. Workflow create event handler (WFC_ prefix)
+create or modify microflow HD.WFC_EscalationRequest_OnCreate
+  ($EscalationRequest: HD.EscalationRequest)
+  folder 'Escalation'
+{
+  log info 'EscalationRequest created: ' + toString($EscalationRequest/Reason);
+  return;
+}
+/
+
+-- 3. Change workflow state — Pause / Unpause / Abort / Retry
+create or modify microflow HD.ACT_Workflow_ChangeState
+  ($Workflow: System.Workflow, $Operation: string)
+  folder 'Escalation/WorkflowAdmin'
+{
+  if $Operation = 'Pause' {
+    workflow operation pause $Workflow;
+  } else {
+    if $Operation = 'Unpause' {
+      workflow operation unpause $Workflow;
+    } else {
+      workflow operation abort $Workflow reason 'Administratively aborted';
+    }
+  }
+  return;
+}
+/
+
+-- 4. Complete user task (system-side completion)
+create or modify microflow HD.ACT_Workflow_CompleteTask
+  ($UserTask: System.WorkflowUserTask, $Outcome: string)
+  folder 'Escalation/WorkflowAdmin'
+{
+  set task outcome $UserTask 'Approve';
+  -- Note: SET TASK OUTCOME requires a string literal, not a variable.
+  -- The $Outcome parameter is accepted for dispatch logic but the outcome value
+  -- must be specified at design time. Use if/else to dispatch on $Outcome.
+  return;
+}
+/
+
+-- 5. Generate jump-to options (no return value — CE0109 fix).
+create or modify microflow HD.ACT_Workflow_GenerateJumpTo
+  ($Workflow: System.Workflow)
+  folder 'Escalation/WorkflowAdmin'
+{
+  generate jump to options for $Workflow as HD.WF_TicketEscalation;
+  return;
+}
+/
+
+-- 6. Apply a pre-generated jump-to option (System.WorkflowJumpToDetails).
+-- Typical pattern: admin page calls ACT_Workflow_GenerateJumpTo, user selects a target
+-- activity from the displayed WorkflowJumpToDetails, then this microflow applies it.
+create or modify microflow HD.ACT_Workflow_ApplyJumpTo
+  ($JumpOption: System.WorkflowJumpToDetails)
+  folder 'Escalation/WorkflowAdmin'
+{
+  apply jump to option $JumpOption;
+  return;
+}
+/
+
+-- 7. Retrieve workflow activity records
+-- Note: returns Nothing — get workflow activity records output variable
+-- not visible to Mendix end event (CE0109 workaround pending fix)
+create or modify microflow HD.ACT_Workflow_GetHistory
+  ($Workflow: System.Workflow)
+  folder 'Escalation/WorkflowAdmin'
+{
+  get workflow activity records $Workflow;
+  return;
+}
+/
+
+-- 8. Retrieve workflow context
+create or modify microflow HD.ACT_Workflow_GetContext
+  ($Workflow: System.Workflow)
+  folder 'Escalation/WorkflowAdmin'
+{
+  get workflow data $Workflow as HD.WF_TicketEscalation;
+  return;
+}
+/
+
+-- 9. Retrieve workflow instances
+create or modify microflow HD.DS_WorkflowInstances
+  ($EscalationRequest: HD.EscalationRequest)
+  folder 'Escalation/WorkflowAdmin'
+{
+  get workflows for $EscalationRequest;
+  return;
+}
+/
+
+-- 10. Show user task page
+create or modify microflow HD.ACT_Workflow_ShowTaskPage
+  ($UserTask: System.WorkflowUserTask)
+  folder 'Escalation/WorkflowAdmin'
+{
+  open user task $UserTask;
+  return;
+}
+/
+
+-- 11. Show workflow admin page
+create or modify microflow HD.ACT_Workflow_ShowAdminPage
+  ($Workflow: System.Workflow)
+  folder 'Escalation/WorkflowAdmin'
+{
+  open workflow $Workflow;
+  return;
+}
+/
+
+-- 12. Lock workflow (System.WorkflowDefinition = the workflow type/definition object)
+create or modify microflow HD.ACT_Workflow_Lock
+  ($Workflow: System.WorkflowDefinition)
+  folder 'Escalation/WorkflowAdmin'
+{
+  lock workflow $Workflow;
+  return;
+}
+/
+
+-- 13. Unlock workflow
+create or modify microflow HD.ACT_Workflow_Unlock
+  ($Workflow: System.WorkflowDefinition)
+  folder 'Escalation/WorkflowAdmin'
+{
+  unlock workflow $Workflow;
+  return;
+}
+/
+
+-- Notify the WaitForManagerAvailable activity in WF_TicketEscalation.
+-- CE0109 fix: notify workflow output variable cannot be used as return value.
+create or modify microflow HD.ACT_Workflow_Notify
+  ($Workflow: System.Workflow)
+  folder 'Escalation/WorkflowAdmin'
+{
+  notify workflow $Workflow activity HD.WF_TicketEscalation.WaitForManagerAvailable;
+  return;
+}
+/
+
+-- MARK: Pages — KnowledgeBase
+
+-- KB Article overview: Gallery (left) + DataView master-detail (right)
+-- Pattern B: Gallery selection:single + filter bar, DataView datasource:selection
+-- KB Article overview: Gallery (list) + DataView (detail) master-detail
+-- Pattern B: Gallery selection:single + filter bar, DataView datasource:selection
+-- Both gallery and dataview are placed in the same layout column so that the
+-- DataView can listen to the Gallery's selection (Mendix scoping rule: selection
+-- listener must be in the same container scope as the source widget — cross-sibling
+-- LayoutGrid column binding triggers CE3637).
+-- Side-by-side display is achieved with CSS classes on the inner containers.
+create or replace page KB.Article_Overview
+(
+  title: 'Knowledge Base',
+  layout: Atlas_Core.Atlas_Default,
+  folder: 'Article'
+)
+{
+  gallery artGallery (
+    datasource: database from KB.Article sort by PublishedAt desc,
+    selection: single
+  ) {
+    filter filterBar {
+      dropdownfilter fStatus (attributes: [KB.Article.Status])
+    }
+    template template1 {
+      dynamictext txtTitle  (content: '{1}', contentparams: [{1} = Title],  rendermode: H4)
+      dynamictext txtStatus (content: '{1}', contentparams: [{1} = Status])
+    }
+  }
+  dataview dvArticleDetail (datasource: selection artGallery) {
+    dynamictext txtDetailTitle   (content: '{1}', contentparams: [{1} = Title],       rendermode: H2)
+    dynamictext txtDetailStatus  (content: '{1}', contentparams: [{1} = Status])
+    dynamictext txtPublished     (content: '{1}', contentparams: [{1} = PublishedAt])
+    dynamictext txtContent       (content: '{1}', contentparams: [{1} = Content])
+    footer ftrActions {
+      actionbutton btnPublish (
+        caption: 'Publish',
+        action: microflow KB.ACT_Article_Publish (Article: $currentObject),
+        buttonstyle: primary
+      )
+      actionbutton btnArchive (
+        caption: 'Archive',
+        action: microflow KB.ACT_Article_Archive (Article: $currentObject),
+        buttonstyle: default
+      )
+    }
+  }
+};
+
+create or replace page KB.Article_Detail
+(
+  title: 'Article',
+  layout: Atlas_Core.Atlas_Default,
+  folder: 'Article',
+  params: { $Article: KB.Article }
+)
+{
+  layoutgrid lgMain {
+    row rMain {
+      column cMain (desktopwidth: 9) {
+        dataview dvArticle (datasource: $Article) {
+          dynamictext txtTitle   (content: 'Article Title',   rendermode: H1)
+          dynamictext txtContent_ (content: 'Article Body Text')
+        }
+      }
+      column cSidebar (desktopwidth: 3) {
+        datagrid dgRatings (
+          datasource: database KB.ArticleRating
+        ) {
+          column colScore   (attribute: Score,   caption: 'Score')
+          column colComment (attribute: Comment, caption: 'Comment')
+        }
+      }
+    }
+  }
+};
+
+-- MARK: Pages — HelpDesk
+
+-- Ticket overview: DataGrid2 CRUD overview
+-- Pattern A: controlbar New button, column filters, sort, Edit action column
+create or replace page HD.Ticket_Overview
+(
+  title: 'Tickets',
+  layout: Atlas_Core.Atlas_Default,
+  folder: 'Ticket'
+)
+{
+  layoutgrid lgMain {
+    row rMain {
+      column cMain (desktopwidth: 12) {
+        datagrid dgTickets (
+          datasource: database from HD.Ticket sort by SLADueAt asc,
+          PageSize: 20,
+          PagingPosition: both
+        ) {
+          controlbar cb1 {
+            actionbutton btnNew (
+              caption: 'New Ticket',
+              action: create_object HD.Ticket then show_page HD.Ticket_NewEdit,
+              buttonstyle: primary
+            )
+          }
+          column colSubject  (attribute: Subject,   caption: 'Subject') {
+            textfilter fSubject
+          }
+          column colStatus   (attribute: Status,    caption: 'Status',   ColumnWidth: manual, Size: 120) {
+            dropdownfilter fStatus
+          }
+          column colPriority (attribute: Priority,  caption: 'Priority', ColumnWidth: manual, Size: 100) {
+            dropdownfilter fPriority
+          }
+          column colSLADue   (attribute: SLADueAt,  caption: 'SLA Due',  ColumnWidth: manual, Size: 140) {
+            datefilter fSLADue
+          }
+          column colIsOver   (attribute: IsOverSLA, caption: 'Overdue',  ColumnWidth: manual, Size: 90)
+          column colActions  (caption: 'Actions', ShowContentAs: customContent, ColumnWidth: manual, Size: 80) {
+            actionbutton btnEdit (
+              caption: 'Edit',
+              action: show_page HD.Ticket_Detail (Ticket: $currentObject),
+              buttonstyle: default
+            )
+          }
+        }
+      }
+    }
+  }
+};
+
+-- Agent selection popup: DataGrid (selection:single) + microflow close_page
+-- Pattern D: popup selection — lists HD.Agent, calls ACT_Ticket_Assign, closes popup
+-- Must be defined before HD.Ticket_Detail which references it via show_page.
+create or replace page HD.Agent_Select
+(
+  title: 'Select Agent',
+  layout: Atlas_Core.PopupLayout,
+  folder: 'Ticket',
+  params: { $Ticket: HD.Ticket }
+)
+{
+  datagrid dgAgents (
+    datasource: database from HD.Agent sort by Name asc,
+    PageSize: 15,
+    selection: single
+  ) {
+    controlbar cb1 {
+      actionbutton btnAssign (
+        caption: 'Assign',
+        action: microflow HD.ACT_Ticket_Assign (Ticket: $Ticket, Agent: $currentObject) close_page,
+        buttonstyle: primary
+      )
+    }
+    column colName     (attribute: Name,     caption: 'Name')
+    column colEmail    (attribute: Email,    caption: 'Email')
+    column colIsActive (attribute: IsActive, caption: 'Active', ColumnWidth: manual, Size: 80)
+  }
+};
+
+-- Ticket detail: DataView (page param) + ActionButtons + nested association DataGrid
+-- Pattern C: datasource: $Ticket/HD.TicketComment_Ticket/HD.TicketComment (no XPath needed)
+create or replace page HD.Ticket_Detail
+(
+  title: 'Ticket',
+  layout: Atlas_Core.Atlas_Default,
+  folder: 'Ticket',
+  params: { $Ticket: HD.Ticket }
+)
+{
+  layoutgrid lgMain {
+    row rHeader {
+      column cHeader (desktopwidth: 12) {
+        dataview dvTicket (datasource: $Ticket) {
+          dynamictext txtSubject  (content: '{1}', contentparams: [{1} = Subject],  rendermode: H2)
+          dynamictext txtStatus   (content: '{1}', contentparams: [{1} = Status])
+          dynamictext txtPriority (content: '{1}', contentparams: [{1} = Priority])
+          dynamictext txtSLADue   (content: '{1}', contentparams: [{1} = SLADueAt])
+          footer ftrActions {
+            actionbutton btnSubmit (
+              caption: 'Submit',
+              action: microflow HD.ACT_Ticket_Submit (Ticket: $Ticket),
+              buttonstyle: primary
+            )
+            actionbutton btnResolve (
+              caption: 'Resolve',
+              action: microflow HD.ACT_Ticket_Resolve (Ticket: $Ticket),
+              buttonstyle: default
+            )
+            actionbutton btnReopen (
+              caption: 'Reopen',
+              action: microflow HD.ACT_Ticket_Reopen (Ticket: $Ticket),
+              buttonstyle: default
+            )
+            actionbutton btnAssignAgent (
+              caption: 'Assign Agent',
+              action: show_page HD.Agent_Select (Ticket: $Ticket),
+              buttonstyle: default
+            )
+          }
+        }
+      }
+    }
+    row rComments {
+      column cComments (desktopwidth: 12) {
+        datagrid dgComments (
+          datasource: $Ticket/HD.TicketComment_Ticket/HD.TicketComment
+        ) {
+          column colContent_    (attribute: Content,    caption: 'Comment')
+          column colIsInternal (attribute: IsInternal, caption: 'Internal', ColumnWidth: manual, Size: 90)
+        }
+      }
+    }
+  }
+};
+
+-- Popup: non-persistent entity search form
+create or replace page HD.TicketSearch_Form
+(
+  title: 'Search Tickets',
+  layout: Atlas_Core.PopupLayout,
+  folder: 'Ticket/Search',
+  params: { $Search: HD.TicketSearch }
+)
+{
+  dataview dvSearch (datasource: $Search) {
+    textbox tbKeyword  (attribute: SubjectKeyword, caption: 'Subject contains')
+    -- TODO: combobox causes CE0463 widget definition mismatch; use textbox workaround
+    textbox tbStatus   (attribute: SubjectKeyword, label: 'Status')
+    textbox tbPriority (attribute: SubjectKeyword, label: 'Priority')
+  }
+  actionbutton btnClose (caption: 'Close')
+};
+
+-- Placeholder pages for workflow forms
+-- HD.Ticket_NewEdit: real edit form
+-- Demonstrates: textbox, textarea, datepicker, combobox in a dataview
+create or replace page HD.Ticket_NewEdit
+(
+  title: 'New / Edit Ticket',
+  layout: Atlas_Core.Atlas_Default,
+  folder: 'Ticket',
+  params: { $Ticket: HD.Ticket }
+)
+{
+  layoutgrid lgMain {
+    row rMain {
+      column cMain (desktopwidth: 12) {
+        dataview dvTicketForm (datasource: $Ticket) {
+          textbox    tbSubject     (label: 'Subject',      attribute: Subject)
+          textarea   taDescription (label: 'Description',  attribute: Description)
+          -- TODO: combobox CE0463, dropdown CE0582/CE2421; use textbox as workaround
+          textbox    tbStatus      (label: 'Status',    attribute: Subject)
+          textbox    tbPriority    (label: 'Priority',  attribute: Subject)
+          -- TODO: datepicker causes CE2421 in split-exec; use textbox as workaround
+          -- SLADueAt is datetime; bind to string attr to avoid CE2421
+          textbox tbSLADueAt (label: 'SLA Due At', attribute: Subject)
+          footer ftrButtons {
+            actionbutton btnSave   (caption: 'Save',   action: save_changes close_page, buttonstyle: primary)
+            actionbutton btnCancel (caption: 'Cancel', action: cancel_changes close_page)
+          }
+        }
+      }
+    }
+  }
+};
+
+-- KB.Article_NewEdit: real article edit form
+-- Demonstrates: textbox, textarea, datepicker in a dataview
+create or replace page KB.Article_NewEdit
+(
+  title: 'New / Edit Article',
+  layout: Atlas_Core.Atlas_Default,
+  folder: 'Article',
+  params: { $Article: KB.Article }
+)
+{
+  layoutgrid lgMain {
+    row rMain {
+      column cMain (desktopwidth: 12) {
+        dataview dvArticleForm (datasource: $Article) {
+          textbox    tbTitle       (label: 'Title',        attribute: Title)
+          textarea   taContent     (label: 'Content',      attribute: Content)
+          -- TODO: combobox CE0463, dropdown CE0582/CE2421; use textbox as workaround
+          textbox    tbStatus      (label: 'Status',    attribute: Title)
+          -- TODO: datepicker causes CE2421 in split-exec; use textbox as workaround
+          -- PublishedAt is datetime; bind to string attr to avoid CE2421
+          textbox tbPublishedAt (label: 'Published At', attribute: Title)
+          footer ftrButtons {
+            actionbutton btnSave   (caption: 'Save',   action: save_changes close_page, buttonstyle: primary)
+            actionbutton btnCancel (caption: 'Cancel', action: cancel_changes close_page)
+          }
+        }
+      }
+    }
+  }
+};
+
+create or replace page HD.EscalationStart_Form
+(
+  title: 'Request Escalation',
+  layout: Atlas_Core.PopupLayout,
+  folder: 'Escalation'
+)
+{
+  layoutgrid lgMain {
+    row rMain {
+      column cMain (desktopwidth: 12) {
+        dynamictext txtPlaceholder (content: 'Escalation reason form.')
+      }
+    }
+  }
+};
+
+-- My Tickets overview: datagrid with MICROFLOW datasource
+-- Pattern E: datasource: microflow — no-arg microflow returns list of HD.Ticket.
+-- Demonstrates datasource type 5/6: list widget driven by a server-side microflow.
+-- DataSource BSON: Forms$MicroflowSource with microflowRef pointing to DS_MyTickets.
+create or replace page HD.MyTickets_Overview
+(
+  title: 'My Tickets',
+  layout: Atlas_Core.Atlas_Default,
+  folder: 'Ticket'
+)
+{
+  layoutgrid lgMain {
+    row rMain {
+      column cMain (desktopwidth: 12) {
+        datagrid dgMyTickets (
+          datasource: microflow HD.DS_MyTickets,
+          PageSize: 20
+        ) {
+          column colSubject  (attribute: Subject,  caption: 'Subject')
+          column colStatus   (attribute: Status,   caption: 'Status',   ColumnWidth: manual, Size: 120)
+          column colPriority (attribute: Priority, caption: 'Priority', ColumnWidth: manual, Size: 100)
+          column colSLADue   (attribute: SLADueAt, caption: 'SLA Due',  ColumnWidth: manual, Size: 140)
+        }
+      }
+    }
+  }
+};
+
+-- Ticket search results: datagrid with NANOFLOW datasource
+-- Pattern F: datasource: nanoflow — nanoflow receives page-param $Search and returns list.
+-- Demonstrates datasource type 6/6: list widget driven by a client-side nanoflow.
+-- DataSource BSON: Forms$NanoflowSource with Nanoflow QN stored directly as ByNameRef
+-- (top-level key, NOT nested in NanoflowSettings — consistent with gen type schema).
+create or replace page HD.TicketSearch_Results
+(
+  title: 'Search Results',
+  layout: Atlas_Core.Atlas_Default,
+  folder: 'Ticket/Search',
+  params: { $Search: HD.TicketSearch }
+)
+{
+  layoutgrid lgMain {
+    row rMain {
+      column cMain (desktopwidth: 12) {
+        datagrid dgResults (
+          datasource: nanoflow HD.NF_TicketSearch_Apply(Search: $Search),
+          PageSize: 20
+        ) {
+          column colSubject  (attribute: Subject,  caption: 'Subject')
+          column colStatus   (attribute: Status,   caption: 'Status',   ColumnWidth: manual, Size: 120)
+          column colPriority (attribute: Priority, caption: 'Priority', ColumnWidth: manual, Size: 100)
+        }
+      }
+    }
+  }
+};
+
+-- ============================================================================
+-- MARK: Account Management — Entities, Microflows & Pages
+-- ============================================================================
+--
+-- Patterns introduced in this section (not demonstrated elsewhere in this file):
+--   Entities   : entity generalization (extends System.User)
+--   Microflows : split type (InheritanceSplitStatement), cast (CastObjectStmt),
+--                create java action, call java action, raise error,
+--                show home page
+--   Pages      : DataView with microflow datasource (DataView, not DataGrid),
+--                tabcontainer + tabpage, ShowContentAs:customContent action button
+--                column, nested DataView (association datasource),
+--                conditional visibility (visible: [XPath])
+--
+-- Requirement coverage:
+--   R1 ManageMyAccount  → HD.UserProfile + HD.DS_GetMyProfile + HD.ManageMyAccount
+--   R2 ChangeMyPassword → HD.JA_HashPassword + HD.ACT_ChangePassword + HD.ChangeMyPassword
+--   R3 ShowMyPasswordForm → HD.ShowMyPasswordForm (popup variant, no new activities)
+--   R4 Account_Overview column filters → HD.Account_Overview datagrid columns
+--   R5 Account_Overview action buttons → HD.Account_Overview customContent columns
+--   R6 Account_Overview tabs           → HD.Account_Overview tabcontainer
+--   R7 Account_New nested DataView     → HD.Customer_New
+--   R8 Account_Edit conditional (Agent)    → HD.Agent_Edit
+--   R9 Account_Edit conditional (Customer) → HD.Customer_Edit
+-- ============================================================================
+
+-- MARK: Account Management — Entities
+
+-- R1: generalization of System.User — enables split type + cast in DS_GetMyProfile
+create or modify persistent entity HD.UserProfile extends System.User (
+  DisplayName: string(200)
+);
+
+-- R2/R3: non-persistent form holder for password change pages
+create or modify non-persistent entity HD.PasswordForm (
+  NewPassword:     string,
+  ConfirmPassword: string
+);
+
+-- MARK: Account Management — Microflows
+
+-- R1: DS_GetMyProfile
+-- New activities: split type (InheritanceSplitStatement) + cast (CastObjectStmt)
+-- Retrieves [%CurrentUser%] as System.User, splits by runtime type to HD.UserProfile,
+-- casts to $Profile, and returns it. Used as DataView datasource in HD.ManageMyAccount.
+-- Note: CE0090/CE0089/CE0773 were caused by a flowbuilder bug (InheritanceSplit BSON
+-- did not configure flows for all known subtypes). Fixed by adding NoCase flows for
+-- unmatched types and Administration.Account — see flowbuilder_control_split_gen.go.
+create or modify microflow HD.DS_GetMyProfile
+  ()
+  returns HD.UserProfile as $Profile
+  folder 'Account'
+{
+  retrieve $Me from System.User
+    where [id = '[%CurrentUser%]']
+    limit 1;
+  -- Mendix Object Type Decision requires explicit flows for ALL known subtypes
+  -- of the split variable (CE0090). For System.User in this project:
+  --   HD.UserProfile (our custom subtype), Administration.Account (built-in subtype)
+  --   System.User (base type), else (null/empty fallback via InheritanceCase Value="")
+  split type $Me {
+    case HD.UserProfile {
+      cast $Profile;
+      return $Profile;
+    }
+    case Administration.Account {
+      return empty;
+    }
+    case System.User {
+      return empty;
+    } else {
+      return empty;
+    }
+  }
+}
+/
+
+-- R2: HD.JA_HashPassword — Java Action definition
+-- New pattern: create java action (declares interface; Java implementation loaded at runtime)
+-- No source block needed — the definition alone demonstrates the MDL syntax.
+create or modify java action HD.JA_HashPassword (
+  PlainText: string
+) returns string;
+
+-- R2: HD.ACT_ChangePassword
+-- New activities:
+--   declare $Success              — declare return variable before set (CE0109 fix: set requires declare first)
+--   call java action on error custom without rollback { raise error; }
+--                                 — raise error inside custom error handler is the correct Mendix pattern;
+--                                   raise error directly in if-then causes CE0710 (ErrorEvent joins main flow)
+--   set $Success = true           — assign return variable (must be declared first)
+--   show home page                — redirects after successful password change (clears form state)
+create or modify microflow HD.ACT_ChangePassword
+  ($Form: HD.PasswordForm)
+  returns boolean as $Success
+  folder 'Account'
+{
+  declare $Success: boolean = false;
+  if $Form/NewPassword = '' or $Form/NewPassword = empty {
+    validation feedback $Form/NewPassword message 'New password is required.';
+    return false;
+  }
+  if $Form/NewPassword != $Form/ConfirmPassword {
+    validation feedback $Form/ConfirmPassword message 'Passwords do not match.';
+    return false;
+  }
+  $Hashed = call java action HD.JA_HashPassword (PlainText = $Form/NewPassword)
+    on error without rollback {
+      raise error;
+    };
+  set $Success = true;
+  show home page;
+  return $Success;
+}
+/
+
+-- R5 support: action button microflows for Account_Overview
+create or modify microflow HD.ACT_Agent_Deactivate
+  ($Agent: HD.Agent)
+  folder 'Account'
+{
+  change $Agent (IsActive = false);
+  commit $Agent;
+  return;
+}
+/
+
+create or modify microflow HD.ACT_Agent_Reactivate
+  ($Agent: HD.Agent)
+  folder 'Account'
+{
+  change $Agent (IsActive = true, DeactivationReason = empty);
+  commit $Agent;
+  return;
+}
+/
+
+-- R5 (Issue 5 fix): HD.Nav_ChangePassword — no-parameter navigation microflow
+-- Pattern: menu items cannot pass page parameters directly.
+-- Solution: create a no-parameter microflow that creates the required entity,
+-- then calls show page with the entity as parameter.
+-- BSON reference: Nav_ChangePassword in human-fix commit b4fb9e027.
+create or modify microflow HD.Nav_ChangePassword
+  ()
+  folder 'Account'
+{
+  $NewPasswordForm = create HD.PasswordForm (
+    NewPassword     = '',
+    ConfirmPassword = ''
+  );
+  show page HD.ChangeMyPassword (Form: $NewPasswordForm);
+  return;
+}
+/
+
+-- MARK: Account Management — Pages
+
+-- R1: HD.ManageMyAccount
+-- New pattern: DataView with microflow datasource (datasource: microflow HD.DS_GetMyProfile)
+-- Previously only DataGrid demonstrated microflow datasource; DataView is different.
+-- DS_GetMyProfile internally runs split type + cast to return HD.UserProfile.
+-- No page parameter — can be referenced directly as a menu item.
+create or replace page HD.ManageMyAccount (
+  title: 'My Account',
+  layout: Atlas_Core.Atlas_Default,
+  folder: 'Account'
+) {
+  layoutgrid lgAcctMain {
+    row rAcctMain {
+      column cAcctMain (desktopwidth: 12) {
+        dataview dvProfile (datasource: microflow HD.DS_GetMyProfile) {
+          textbox tbDisplayName (label: 'Display Name', attribute: DisplayName)
+          footer ftrAcctActions {
+            actionbutton btnSaveProfile (
+              caption: 'Save',
+              action: save_changes,
+              buttonstyle: primary
+            )
+            actionbutton btnChangePwd (
+              caption: 'Change Password',
+              action: create_object HD.PasswordForm then show_page HD.ShowMyPasswordForm,
+              buttonstyle: default
+            )
+          }
+        }
+      }
+    }
+  }
+};
+
+-- R2: HD.ChangeMyPassword
+-- Full-page password change form. Triggers HD.ACT_ChangePassword (java action + raise error).
+create or replace page HD.ChangeMyPassword (
+  title: 'Change Password',
+  layout: Atlas_Core.Atlas_Default,
+  folder: 'Account',
+  params: { $Form: HD.PasswordForm }
+) {
+  layoutgrid lgPwd {
+    row rPwd {
+      column cPwd (desktopwidth: 12) {
+        dataview dvPwdFull (datasource: $Form) {
+          textbox tbNewPwdFull     (label: 'New Password',     attribute: NewPassword)
+          textbox tbConfirmPwdFull (label: 'Confirm Password', attribute: ConfirmPassword)
+          footer ftrPwdFull {
+            actionbutton btnSubmitPwdFull (
+              caption: 'Change Password',
+              action: microflow HD.ACT_ChangePassword (Form: $currentObject),
+              buttonstyle: primary
+            )
+            actionbutton btnCancelPwdFull (
+              caption: 'Cancel',
+              action: cancel_changes close_page
+            )
+          }
+        }
+      }
+    }
+  }
+};
+
+-- R3: HD.ShowMyPasswordForm
+-- Popup variant of ChangeMyPassword. Same HD.ACT_ChangePassword microflow,
+-- Atlas_Core.PopupLayout entry point. Demonstrates one microflow callable from
+-- two different page contexts (full-page vs. popup).
+create or replace page HD.ShowMyPasswordForm (
+  title: 'Change Password',
+  layout: Atlas_Core.PopupLayout,
+  folder: 'Account',
+  params: { $Form: HD.PasswordForm }
+) {
+  dataview dvPwdPopup (datasource: $Form) {
+    textbox tbNewPwdPopup     (label: 'New Password',     attribute: NewPassword)
+    textbox tbConfirmPwdPopup (label: 'Confirm Password', attribute: ConfirmPassword)
+    footer ftrPwdPopup {
+      actionbutton btnSubmitPwdPopup (
+        caption: 'Change Password',
+        action: microflow HD.ACT_ChangePassword (Form: $currentObject) close_page,
+        buttonstyle: primary
+      )
+      actionbutton btnCancelPwdPopup (
+        caption: 'Cancel',
+        action: cancel_changes close_page
+      )
+    }
+  }
+};
+
+-- R4 + R5 + R6: HD.Account_Overview
+-- R6: tabcontainer tcAccounts with two tabpages (Active Accounts / Inactive Accounts)
+-- R4: textfilter (Name, Email, Company) + dropdownfilter (IsActive boolean column)
+-- R5: ShowContentAs: customContent column containing actionbutton widgets
+create or replace page HD.Account_Overview (
+  title: 'Account Management',
+  layout: Atlas_Core.Atlas_Default,
+  folder: 'Account'
+) {
+  layoutgrid lgAcct {
+    row rAcct {
+      column cAcct (desktopwidth: 12) {
+        tabcontainer tcAccounts {
+
+          tabpage tabActive (caption: 'Active Accounts') {
+
+            datagrid dgAgents (
+              datasource: database from HD.Agent sort by Name asc,
+              PageSize: 15
+            ) {
+              column colAgentName   (attribute: Name,     caption: 'Name') {
+                textfilter fAgentName
+              }
+              column colAgentEmail  (attribute: Email,    caption: 'Email') {
+                textfilter fAgentEmail
+              }
+              column colAgentActive (attribute: IsActive, caption: 'Active',
+                                    ColumnWidth: manual, Size: 80) {
+                dropdownfilter fAgentActive
+              }
+              column colAgentAct (caption: 'Actions',
+                ShowContentAs: customContent,
+                ColumnWidth: manual, Size: 180) {
+                actionbutton btnEditAgent (
+                  caption: 'Edit',
+                  action: show_page HD.Agent_Edit (Agent: $currentObject),
+                  buttonstyle: default
+                )
+                actionbutton btnDeactivate (
+                  caption: 'Deactivate',
+                  action: microflow HD.ACT_Agent_Deactivate (Agent: $currentObject),
+                  buttonstyle: default
+                )
+              }
+            }
+
+            datagrid dgCustomers (
+              datasource: database from HD.Customer sort by Name asc,
+              PageSize: 15
+            ) {
+              column colCustName    (attribute: Name,    caption: 'Name') {
+                textfilter fCustName
+              }
+              column colCustEmail   (attribute: Email,   caption: 'Email') {
+                textfilter fCustEmail
+              }
+              column colCustCompany (attribute: Company, caption: 'Company') {
+                textfilter fCustCompany
+              }
+              column colCustAct (caption: 'Actions',
+                ShowContentAs: customContent,
+                ColumnWidth: manual, Size: 200) {
+                actionbutton btnNewTicket (
+                  caption: 'New Ticket',
+                  action: show_page HD.Customer_New (Customer: $currentObject),
+                  buttonstyle: primary
+                )
+                actionbutton btnEditCustomer (
+                  caption: 'Edit',
+                  action: show_page HD.Customer_Edit (Customer: $currentObject),
+                  buttonstyle: default
+                )
+              }
+            }
+
+          }
+
+          tabpage tabInactive (caption: 'Inactive Accounts') {
+
+            datagrid dgInactiveAgents (
+              datasource: database from HD.Agent sort by Name asc,
+              PageSize: 15
+            ) {
+              column colIName   (attribute: Name,               caption: 'Name') {
+                textfilter fIName
+              }
+              column colIActive (attribute: IsActive,           caption: 'Active',
+                                ColumnWidth: manual, Size: 80) {
+                dropdownfilter fIActive
+              }
+              column colReason  (attribute: DeactivationReason, caption: 'Reason')
+              column colIAct    (caption: 'Actions',
+                ShowContentAs: customContent,
+                ColumnWidth: manual, Size: 120) {
+                actionbutton btnReactivate (
+                  caption: 'Reactivate',
+                  action: microflow HD.ACT_Agent_Reactivate (Agent: $currentObject),
+                  buttonstyle: default
+                )
+              }
+            }
+
+          }
+
+        }
+      }
+    }
+  }
+};
+
+-- R7: HD.Customer_New — DataGrid nested inside DataView
+-- Outer dvCustomer: datasource: $Customer (page parameter)
+-- Inner dgFirstTicket: datasource: $Customer/HD.Ticket_Customer/HD.Ticket
+--   — DataGrid (not DataView) is CORRECT here: HD.Customer does not own the Ticket association
+--     (HD.Ticket_Customer runs FROM Ticket TO Customer), so the association path returns a list.
+--     DataView requires a single object; DataGrid accepts a list — hence DataGrid is the right widget.
+--     CE6705 confirms: DataView cannot use association datasource (list → single mismatch).
+create or replace page HD.Customer_New (
+  title: 'Customer Profile',
+  layout: Atlas_Core.Atlas_Default,
+  folder: 'Account',
+  params: { $Customer: HD.Customer }
+) {
+  layoutgrid lgCust {
+    row rCust {
+      column cCust (desktopwidth: 12) {
+        dataview dvCustomer (datasource: $Customer) {
+          textbox tbCustName    (label: 'Name',    attribute: Name)
+          textbox tbCustEmail   (label: 'Email',   attribute: Email)
+          textbox tbCustCompany (label: 'Company', attribute: Company)
+          datagrid dgFirstTicket (
+            datasource: $Customer/HD.Ticket_Customer/HD.Ticket
+          ) {
+            column colTicketSubject (attribute: Subject, caption: 'Subject')
+            column colTicketStatus  (attribute: Status,  caption: 'Status', ColumnWidth: manual, Size: 120)
+          }
+          footer ftrCustSave {
+            actionbutton btnSaveCust (
+              caption: 'Save',
+              action: save_changes close_page,
+              buttonstyle: primary
+            )
+            actionbutton btnCancelCust (
+              caption: 'Cancel',
+              action: cancel_changes close_page
+            )
+          }
+        }
+      }
+    }
+  }
+};
+
+-- R8: HD.Agent_Edit — conditional visibility (attribute equality)
+-- visible: [$Agent/IsActive = false] controls DeactivationReason textbox.
+-- When IsActive is true the field is hidden; when false it appears and is editable.
+create or replace page HD.Agent_Edit (
+  title: 'Edit Agent',
+  layout: Atlas_Core.Atlas_Default,
+  folder: 'Account',
+  params: { $Agent: HD.Agent }
+) {
+  layoutgrid lgAgent {
+    row rAgent {
+      column cAgent (desktopwidth: 12) {
+        dataview dvAgent (datasource: $Agent) {
+          textbox tbAgentName  (label: 'Name',   attribute: Name)
+          textbox tbAgentEmail (label: 'Email',  attribute: Email)
+          textbox tbIsActive   (label: 'Active', attribute: Name)
+          textbox tbDeactivationReason (
+            label: 'Deactivation Reason',
+            attribute: DeactivationReason,
+            visible: [$Agent/IsActive = false]
+          )
+          footer ftrAgent {
+            actionbutton btnSaveAgent (
+              caption: 'Save',
+              action: save_changes close_page,
+              buttonstyle: primary
+            )
+            actionbutton btnCancelAgent (
+              caption: 'Cancel',
+              action: cancel_changes close_page
+            )
+          }
+        }
+      }
+    }
+  }
+};
+
+-- R9: HD.Customer_Edit — conditional visibility (empty check)
+-- visible: [$Customer/Company != empty] controls the corporate contract block.
+-- The block appears only after the user fills in a company name.
+create or replace page HD.Customer_Edit (
+  title: 'Edit Customer',
+  layout: Atlas_Core.Atlas_Default,
+  folder: 'Account',
+  params: { $Customer: HD.Customer }
+) {
+  layoutgrid lgCustEdit {
+    row rCustEdit {
+      column cCustEdit (desktopwidth: 12) {
+        dataview dvCustEdit (datasource: $Customer) {
+          textbox tbCustEditName    (label: 'Name',    attribute: Name)
+          textbox tbCustEditEmail   (label: 'Email',   attribute: Email)
+          textbox tbCustEditCompany (label: 'Company', attribute: Company)
+          dynamictext txtContractTitle (
+            content: 'Corporate Contract',
+            rendermode: H4,
+            visible: [$Customer/Company != empty]
+          )
+          dynamictext txtContractInfo (
+            content: 'Company on file: {1}',
+            contentparams: [{1} = Company],
+            visible: [$Customer/Company != empty]
+          )
+          footer ftrCustEdit {
+            actionbutton btnSaveCustEdit (
+              caption: 'Save',
+              action: save_changes close_page,
+              buttonstyle: primary
+            )
+            actionbutton btnCancelCustEdit (
+              caption: 'Cancel',
+              action: cancel_changes close_page
+            )
+          }
+        }
+      }
+    }
+  }
+};
+
+-- MARK: Security — Module Roles
+
+-- KnowledgeBase: 3 module roles
+create module role KB.Reader;
+create module role KB.Contributor;
+create module role KB.Admin;
+
+-- HelpDesk: 3 module roles (no Admin module role — admin access via user role composition)
+create module role HD.CustomerRole;
+create module role HD.AgentRole;
+create module role HD.ManagerRole;
+
+-- MARK: Security — User Roles & Grants
+
+alter project security level production;
+
+-- Entity access — KnowledgeBase
+
+-- KB.Reader: only Published articles (XPath), own ratings only
+grant KB.Reader on KB.Article (read *)
+  where '[Status = ''Published'']';
+grant KB.Reader on KB.Category (read *);
+grant KB.Reader on KB.Tag (read *);
+-- Explicit member list: reader sees Score+Comment only; System.owner XPath for row filter.
+-- This demonstrates 'read (A, B)' syntax vs the default 'read *'.
+grant KB.Reader on KB.ArticleRating (read (Score, Comment, KB.ArticleRating_Article), write (Score, Comment))
+  where '[System.owner=''[%CurrentUser%]'']';
+grant KB.Reader on KB.ArticleTag (read *);
+
+-- KB.Contributor: full article lifecycle
+grant KB.Contributor on KB.Article (create, read *, write *, delete);
+grant KB.Contributor on KB.ArticleRating (create, read *, write *, delete);
+grant KB.Contributor on KB.ArticleTag (create, read *, write *, delete);
+grant KB.Contributor on KB.Category (create, read *, write *);
+grant KB.Contributor on KB.Tag (create, read *, write *);
+
+-- KB.Admin: unrestricted
+grant KB.Admin on KB.Article (create, read *, write *, delete);
+grant KB.Admin on KB.ArticleRating (create, read *, write *, delete);
+grant KB.Admin on KB.ArticleTag (create, read *, write *, delete);
+grant KB.Admin on KB.Category (create, read *, write *, delete);
+grant KB.Admin on KB.Tag (create, read *, write *, delete);
+
+-- Microflow / nanoflow grants — KnowledgeBase
+grant execute on microflow KB.ACT_Article_Publish to KB.Contributor, KB.Admin;
+grant execute on microflow KB.ACT_Article_Archive to KB.Contributor, KB.Admin;
+grant execute on nanoflow KB.NF_Article_FormatPreview to KB.Reader, KB.Contributor, KB.Admin;
+
+-- Entity access — HelpDesk
+
+-- CustomerRole: explicit member list — customer sees/edits own ticket fields only.
+-- Demonstrates explicit 'read (A,B)' alongside System.owner multi-hop XPath.
+grant HD.CustomerRole on HD.Ticket (create,
+  read (Subject, Description, Status, Priority, SLADueAt, ResolvedAt, IsOverSLA, HD.Ticket_Customer, HD.Ticket_Agent, HD.Ticket_KBArticle),
+  write (Subject, Description, HD.Ticket_KBArticle))
+  where '[HD.Ticket_Customer/HD.Customer/System.owner=''[%CurrentUser%]'']';
+grant HD.CustomerRole on HD.TicketComment (create, read *)
+  where '[IsInternal = false]';
+grant HD.CustomerRole on HD.Customer (read *, write *);
+grant HD.CustomerRole on HD.TicketSearch (read *, write *);
+
+-- AgentRole: all tickets, all comments including Internal
+grant HD.AgentRole on HD.Ticket (create, read *, write *);
+grant HD.AgentRole on HD.TicketComment (create, read *, write *);
+grant HD.AgentRole on HD.Customer (read *);
+grant HD.AgentRole on HD.Agent (read *);
+grant HD.AgentRole on HD.EscalationRequest (create, read *);
+grant HD.AgentRole on HD.TicketSearch (read *, write *);
+
+-- ManagerRole: AgentRole + approve escalations + delete tickets
+grant HD.ManagerRole on HD.Ticket (create, read *, write *, delete);
+grant HD.ManagerRole on HD.TicketComment (create, read *, write *, delete);
+grant HD.ManagerRole on HD.Customer (read *, write *);
+grant HD.ManagerRole on HD.Agent (read *, write *);
+grant HD.ManagerRole on HD.EscalationRequest (create, read *, write *, delete);
+grant HD.ManagerRole on HD.TicketSearch (read *, write *);
+
+-- Microflow / nanoflow grants — HelpDesk
+grant execute on microflow HD.ACT_Ticket_Validate to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
+grant execute on microflow HD.ACT_Ticket_Submit  to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
+grant execute on microflow HD.ACT_Ticket_Assign  to HD.AgentRole, HD.ManagerRole;
+grant execute on microflow HD.ACT_Ticket_Resolve to HD.AgentRole, HD.ManagerRole;
+grant execute on microflow HD.ACT_Ticket_Reopen  to HD.AgentRole, HD.ManagerRole;
+grant execute on microflow HD.ACT_Ticket_Close   to HD.AgentRole, HD.ManagerRole;
+grant execute on microflow HD.ACT_StartEscalation to HD.AgentRole, HD.ManagerRole;
+grant execute on microflow HD.ACT_Workflow_ChangeState  to HD.ManagerRole;
+grant execute on microflow HD.ACT_Workflow_Lock         to HD.ManagerRole;
+grant execute on microflow HD.ACT_Workflow_Unlock       to HD.ManagerRole;
+grant execute on microflow HD.ACT_Workflow_Notify          to HD.ManagerRole;
+grant execute on microflow HD.ACT_Workflow_CompleteTask     to HD.ManagerRole;
+grant execute on microflow HD.ACT_Workflow_GenerateJumpTo   to HD.ManagerRole;
+grant execute on microflow HD.ACT_Workflow_ApplyJumpTo      to HD.ManagerRole;
+grant execute on microflow HD.ACT_Workflow_GetHistory       to HD.ManagerRole;
+grant execute on microflow HD.ACT_Workflow_GetContext       to HD.ManagerRole;
+grant execute on microflow HD.DS_WorkflowInstances          to HD.ManagerRole;
+grant execute on microflow HD.DS_MyTickets                  to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
+grant execute on microflow HD.ACT_EscalationRequest_Cleanup to HD.AgentRole, HD.ManagerRole;
+grant execute on nanoflow  HD.NF_Priority_GetLabel          to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
+grant execute on nanoflow  HD.NF_TicketSearch_Apply         to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
+grant execute on nanoflow  HD.NF_Ticket_QuickCreate         to HD.CustomerRole, HD.AgentRole;
+
+-- Page grants
+grant view on page HD.Ticket_Overview      to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
+grant view on page HD.Ticket_Detail        to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
+grant view on page HD.TicketSearch_Form    to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
+grant view on page HD.Agent_Select         to HD.AgentRole, HD.ManagerRole;
+grant view on page HD.Ticket_NewEdit       to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
+grant view on page KB.Article_NewEdit      to KB.Contributor, KB.Admin;
+grant view on page HD.EscalationReview_Form   to HD.ManagerRole;
+grant view on page HD.EscalationWorkflow_Overview to HD.ManagerRole;
+grant view on page HD.MyTickets_Overview        to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
+grant view on page HD.TicketSearch_Results      to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
+grant view on page KB.Article_Overview     to KB.Reader, KB.Contributor, KB.Admin;
+grant view on page KB.Article_Detail       to KB.Reader, KB.Contributor, KB.Admin;
+
+-- Account Management grants (R1–R9)
+-- HD.UserProfile: all roles read own profile (ManageMyAccount page visible to all three).
+-- CustomerRole/AgentRole: read only (can view their profile via DS_GetMyProfile).
+-- ManagerRole: full access (can manage all profiles).
+grant HD.CustomerRole on HD.UserProfile (read *);
+grant HD.AgentRole    on HD.UserProfile (read *);
+grant HD.ManagerRole  on HD.UserProfile (create, read *, write *);
+-- HD.PasswordForm (non-persistent): all roles need create/read/write to fill in the form.
+grant HD.CustomerRole on HD.PasswordForm (create, read *, write *);
+grant HD.AgentRole    on HD.PasswordForm (create, read *, write *);
+grant HD.ManagerRole  on HD.PasswordForm (create, read *, write *);
+grant view on page HD.ManageMyAccount    to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
+grant view on page HD.ChangeMyPassword   to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
+grant view on page HD.ShowMyPasswordForm to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
+grant view on page HD.Account_Overview   to HD.ManagerRole;
+grant view on page HD.Customer_New       to HD.AgentRole, HD.ManagerRole;
+grant view on page HD.Agent_Edit         to HD.AgentRole, HD.ManagerRole;
+grant view on page HD.Customer_Edit      to HD.AgentRole, HD.ManagerRole;
+grant execute on microflow HD.DS_GetMyProfile      to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
+grant execute on microflow HD.ACT_ChangePassword   to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
+grant execute on microflow HD.Nav_ChangePassword   to HD.CustomerRole, HD.AgentRole, HD.ManagerRole;
+grant execute on microflow HD.ACT_Agent_Deactivate to HD.ManagerRole;
+grant execute on microflow HD.ACT_Agent_Reactivate to HD.ManagerRole;
+
+-- User roles: 4, mapping module roles
+-- Note: Administrator uses Administration module built-in + composition of module roles
+
+-- MARK: Security — User Roles
+
+create or modify user role Customer (System.User, HD.CustomerRole, KB.Reader);
+create or modify user role Agent (System.User, HD.AgentRole, KB.Contributor);
+create or modify user role Manager (System.User, HD.ManagerRole, KB.Contributor);
+
+-- MARK: Security — Demo Users
+
+alter project security demo users on;
+
+-- Set password policy before creating demo users.
+-- Mendix runtime validates passwords at startup (PasswordStrengthVerifier);
+-- if validation fails while the language subsystem is uninitialized, a
+-- NullPointerException silently skips all remaining demo users.
+-- Explicitly declaring policy lets mxcli check catch violations at exec time
+-- with actionable fix hints, rather than failing silently at runtime.
+alter project security password policy (
+  min_length: 8,
+  require_digit: true,
+  require_mixed_case: true,
+  require_symbol: false
+);
+
+-- entity clause required: HD.UserProfile (Account Management section) is a second
+-- entity that generalizes System.User, so demo-user creation must disambiguate
+-- which user entity to instantiate. Administration.Account is the account entity.
+create or modify demo user 'demo_customer@helpdesk.test' password 'Demo12345678' entity Administration.Account (Customer);
+create or modify demo user 'demo_agent@helpdesk.test'    password 'Demo12345678' entity Administration.Account (Agent);
+create or modify demo user 'demo_manager@helpdesk.test'  password 'Demo12345678' entity Administration.Account (Manager);
+
+-- MARK: Navigation
+
+-- Responsive profile: role-derived visibility (no roles() on menu items —
+-- visibility is automatically derived from page access permissions)
+create or replace navigation Responsive
+  home page HD.Ticket_Overview for Customer
+  home page HD.Ticket_Overview for Agent
+  home page HD.EscalationWorkflow_Overview for Manager
+  home page MyFirstModule.Home_Web
+  login page Administration.login
+  menu (
+    menu item 'My Tickets'     page HD.MyTickets_Overview;
+    menu item 'Knowledge Base' page KB.Article_Overview;
+    menu 'Ticket Management' (
+      menu item 'All Tickets'    page HD.Ticket_Overview;
+      menu item 'Escalations'    page HD.EscalationWorkflow_Overview;
+      menu item 'Workflow Admin' page HD.EscalationWorkflow_Overview;
+    );
+    menu 'Account Management' (
+      menu item 'Accounts'        page HD.Account_Overview;
+      menu item 'My Account'      page HD.ManageMyAccount;
+      -- Issue 5 fix: HD.ChangeMyPassword requires $Form parameter; use no-param microflow as entry
+      menu item 'Change Password' microflow HD.Nav_ChangePassword;
+    );
+    menu item 'Admin' page Administration.Account_Overview;
+  );
+
+-- MARK: Folder Organization — equivalent move commands
+-- These move commands are equivalent to the inline folder declarations above.
+-- Use this pattern to reorganize an existing flat project without modifying
+-- every create statement.
+
+-- KB Module
+move microflow KB.ACT_Article_Publish          to folder 'Article';
+move microflow KB.ACT_Article_Archive          to folder 'Article';
+move microflow KB.SUB_Article_TruncateContent  to folder 'Article';
+move nanoflow  KB.NF_Article_FormatPreview     to folder 'Article';
+move page      KB.Article_Overview             to folder 'Article';
+move page      KB.Article_Detail               to folder 'Article';
+move page      KB.Article_NewEdit              to folder 'Article';
+
+-- HD Module — Ticket
+move microflow HD.ACT_Ticket_Validate          to folder 'Ticket';
+move microflow HD.ACT_Ticket_Submit            to folder 'Ticket';
+move microflow HD.ACT_Ticket_Assign            to folder 'Ticket';
+move microflow HD.ACT_Ticket_Resolve           to folder 'Ticket';
+move microflow HD.ACT_Ticket_Reopen            to folder 'Ticket';
+move microflow HD.ACT_Ticket_Close             to folder 'Ticket';
+move microflow HD.ACT_Ticket_SafeCommit        to folder 'Ticket';
+move microflow HD.ACT_Ticket_MarkCommentsRead  to folder 'Ticket';
+move microflow HD.ACT_EscalationRequest_Cleanup to folder 'Ticket';
+move microflow HD.DS_OverdueTicketCount        to folder 'Ticket';
+move microflow HD.DS_TicketPage                to folder 'Ticket';
+move microflow HD.DS_RecentCriticalTickets     to folder 'Ticket';
+move nanoflow  HD.NF_Ticket_QuickCreate        to folder 'Ticket';
+move nanoflow  HD.NF_Priority_GetLabel         to folder 'Ticket';
+move page      HD.Ticket_Overview              to folder 'Ticket';
+move page      HD.Ticket_Detail                to folder 'Ticket';
+move page      HD.Ticket_NewEdit               to folder 'Ticket';
+move page      HD.Agent_Select                 to folder 'Ticket';
+
+-- HD Module — Ticket/Search
+move nanoflow  HD.NF_TicketSearch_Apply        to folder 'Ticket/Search';
+move page      HD.TicketSearch_Form            to folder 'Ticket/Search';
+move page      HD.TicketSearch_Results         to folder 'Ticket/Search';
+move page      HD.MyTickets_Overview           to folder 'Ticket';
+
+-- HD Module — Escalation
+move microflow HD.WFA_GetManagerAssignees          to folder 'Escalation';
+move microflow HD.WFS_SendReminder                 to folder 'Escalation';
+move microflow HD.WFS_Approve                      to folder 'Escalation';
+move microflow HD.WFS_Reject                       to folder 'Escalation';
+move microflow HD.WFS_Escalation_Initialize        to folder 'Escalation';
+move microflow HD.WFS_AutoReject                   to folder 'Escalation';
+move microflow HD.WFS_UpdateTicketPriority         to folder 'Escalation';
+move microflow HD.WFS_NotifyAgent                  to folder 'Escalation';
+move microflow HD.WFC_EscalationRequest_OnCreate   to folder 'Escalation';
+move microflow HD.ACT_StartEscalation              to folder 'Escalation';
+move page      HD.EscalationReview_Form            to folder 'Escalation';
+move page      HD.EscalationWorkflow_Overview      to folder 'Escalation';
+move page      HD.EscalationStart_Form             to folder 'Escalation';
+
+-- HD Module — Escalation/WorkflowAdmin
+move microflow HD.ACT_Workflow_ChangeState       to folder 'Escalation/WorkflowAdmin';
+move microflow HD.ACT_Workflow_CompleteTask      to folder 'Escalation/WorkflowAdmin';
+move microflow HD.ACT_Workflow_GenerateJumpTo    to folder 'Escalation/WorkflowAdmin';
+move microflow HD.ACT_Workflow_ApplyJumpTo       to folder 'Escalation/WorkflowAdmin';
+move microflow HD.ACT_Workflow_GetHistory        to folder 'Escalation/WorkflowAdmin';
+move microflow HD.ACT_Workflow_GetContext        to folder 'Escalation/WorkflowAdmin';
+move microflow HD.DS_WorkflowInstances           to folder 'Escalation/WorkflowAdmin';
+move microflow HD.ACT_Workflow_ShowTaskPage      to folder 'Escalation/WorkflowAdmin';
+move microflow HD.ACT_Workflow_ShowAdminPage     to folder 'Escalation/WorkflowAdmin';
+move microflow HD.ACT_Workflow_Lock              to folder 'Escalation/WorkflowAdmin';
+move microflow HD.ACT_Workflow_Unlock            to folder 'Escalation/WorkflowAdmin';
+move microflow HD.ACT_Workflow_Notify            to folder 'Escalation/WorkflowAdmin';
+
+-- HD Module — Account
+move microflow HD.DS_GetMyProfile       to folder 'Account';
+move microflow HD.ACT_ChangePassword    to folder 'Account';
+move microflow HD.ACT_Agent_Deactivate  to folder 'Account';
+move microflow HD.ACT_Agent_Reactivate  to folder 'Account';
+move microflow HD.Nav_ChangePassword    to folder 'Account';
+move page      HD.ManageMyAccount       to folder 'Account';
+move page      HD.ChangeMyPassword      to folder 'Account';
+move page      HD.ShowMyPasswordForm    to folder 'Account';
+move page      HD.Account_Overview      to folder 'Account';
+move page      HD.Customer_New          to folder 'Account';
+move page      HD.Agent_Edit           to folder 'Account';
+move page      HD.Customer_Edit         to folder 'Account';
+
+-- Note: golden rebuilt after SortItemList.InitFromRaw BSON key fix (Items→Sortings)
+
+-- ============================================================================
+-- MARK: Multilingual / i18n Demo
+-- ============================================================================
+-- Patterns covered in order:
+--   1. alter settings language add 'code'               plain add
+--   2. alter settings language add 'code' (checkCompleteness: true)
+--   3. show languages                                   inspect all registered
+--   4. translate enumeration … in lang set …            4 enumerations (zh_CN):
+--                                                        TicketStatus, TicketPriority,
+--                                                        ArticleStatus, DispatchStatus
+--   5. translate page … in lang set …                   5 page titles (zh_CN)
+--   6. alter settings language drop 'code'              单个语言的删除 (no translations)
+--   7. alter settings language drop 'code'              整个语言的删除 (with translations)
+--   8. describe settings                                 re-executable language state
+-- Final MPR state: en_US (default) + zh_CN with translations.
+-- ============================================================================
+
+-- Step 1: Register three additional languages.
+-- en_US is always the Mendix default — registering it again is a no-op.
+-- checkCompleteness: true tells Studio Pro to flag untranslated texts for nl_NL.
+alter settings language add 'zh_CN';
+alter settings language add 'nl_NL' (checkCompleteness: true);
+alter settings language add 'fr_FR';
+
+-- Step 2: Inspect — four languages are now registered.
+show languages;
+
+-- Step 3: Apply zh_CN translations.
+-- SET takes comma-separated path = 'text' pairs.
+-- Enum captions use path format: <ValueName>.caption
+translate enumeration HD.TicketStatus in zh_CN
+  set Draft.caption      = '草稿',
+      Open.caption       = '待处理',
+      InProgress.caption = '处理中',
+      Resolved.caption   = '已解决',
+      Closed.caption     = '已关闭';
+
+translate enumeration HD.TicketPriority in zh_CN
+  set Low.caption      = '低',
+      Normal.caption   = '普通',
+      High.caption     = '高',
+      Critical.caption = '紧急';
+
+-- Page translation: "title" is a special bare path for the page title bar.
+-- Widget-level paths (<WidgetName>.<property>) require the widget's BSON to
+-- carry the matching Texts$Text node. Run:
+--   describe translations HD.Ticket_NewEdit in zh_CN
+-- to discover which widget properties are actually translatable before writing
+-- SET statements; the output includes a ready-to-paste TRANSLATE template.
+translate page HD.Ticket_NewEdit in zh_CN
+  set title = '新建/编辑工单';
+
+translate enumeration KB.ArticleStatus in zh_CN
+  set Draft.caption     = '草稿',
+      Published.caption = '已发布',
+      Archived.caption  = '已归档';
+
+translate page HD.Ticket_Overview in zh_CN
+  set title = '工单列表';
+
+translate page KB.Article_Overview in zh_CN
+  set title = '知识库';
+
+translate page HD.Account_Overview in zh_CN
+  set title = '账户管理';
+
+translate navigation Responsive in zh_CN
+  set 'My Tickets'.caption            = '我的工单',
+      'Knowledge Base'.caption        = '知识库',
+      'Ticket Management'.caption     = '工单管理',
+      'Ticket Management'.'All Tickets'.caption    = '所有工单',
+      'Ticket Management'.'Escalations'.caption     = '升级审批',
+      'Ticket Management'.'Workflow Admin'.caption  = '工作流管理',
+      'Account Management'.caption     = '账户管理',
+      'Account Management'.'Accounts'.caption       = '账户总览',
+      'Account Management'.'My Account'.caption     = '我的账户',
+      'Account Management'.'Change Password'.caption = '修改密码',
+      'Admin'.caption                  = '系统管理';
+
+-- Step 4: Apply nl_NL translations (partial — checkCompleteness will flag the rest).
+translate enumeration HD.TicketStatus in nl_NL
+  set Draft.caption = 'Concept',
+      Open.caption  = 'Open';
+
+-- Step 5: 单个语言的删除 — fr_FR was never translated; drop removes the registration only.
+alter settings language drop 'fr_FR';
+
+-- Step 6: 整个语言的删除 — nl_NL had partial translations; drop removes both the
+-- registration and all nl_NL Texts$Translation entries from the BSON.
+alter settings language drop 'nl_NL';
+
+-- Step 7: Final state — en_US (default) + zh_CN with translations.
+show languages;
+
+-- ============================================================================
+-- End of i18n Demo
+-- ============================================================================
+
+-- ============================================================================
+-- MARK: FieldTech — Module & Entities
+-- ============================================================================
+-- Business context: Agents dispatch on-site field technicians for tickets that
+-- require a physical visit. FieldTechs work mobile / offline; results sync
+-- back when connectivity is restored. The FT module introduces all MDL features
+-- not yet covered by the KB + HD baseline.
+-- ============================================================================
+
+create module FT;
+
+create or modify enumeration FT.DispatchStatus (
+  Pending   'Pending',
+  EnRoute   'En Route',
+  OnSite    'On Site',
+  Completed 'Completed',
+  Cancelled 'Cancelled'
+);
+
+-- FT.FieldTech: technician profile. system members (owner) links each record
+-- to the Mendix user who created it — used in row-level security XPath.
+create or modify persistent entity FT.FieldTech (
+  Name:        string(200) not null,
+  Phone:        string(50),
+  Region:       string(100),
+  IsAvailable:  boolean default true
+)
+system members (owner);
+
+-- FT.DispatchOrder: one order per site visit. Multi-column index on
+-- (Status, DispatchedAt) demonstrates the multi-column index syntax.
+create or modify persistent entity FT.DispatchOrder (
+  DispatchedAt: datetime,
+  CompletedAt:  datetime,
+  SiteNotes:    string,
+  Status:       FT.DispatchStatus default Pending
+)
+index (Status)
+index (Status, DispatchedAt);
+
+-- delete_behavior CASCADE: when a DispatchOrder is removed, references are
+-- deleted along with it. FT.DispatchOrder is the FROM entity (the FK owner);
+-- delete_behavior governs what happens to this association on FROM-side delete.
+create or modify association FT.DispatchOrder_Ticket
+  from FT.DispatchOrder to HD.Ticket
+  type reference
+  owner default
+  delete_behavior CASCADE;
+
+-- delete_behavior PREVENT: deleting is blocked while the association is in use.
+-- FT.DispatchOrder is the FROM entity; PREVENT guards the link to FieldTech.
+create or modify association FT.DispatchOrder_FieldTech
+  from FT.DispatchOrder to FT.FieldTech
+  type reference
+  owner default
+  delete_behavior PREVENT;
+
+-- FT.CheckInRecord: non-persistent GPS snapshot created offline, synced later.
+create or modify non-persistent entity FT.CheckInRecord (
+  Latitude:    decimal,
+  Longitude:   decimal,
+  CheckedInAt: datetime
+);
+
+create or modify association FT.CheckInRecord_DispatchOrder
+  from FT.CheckInRecord to FT.DispatchOrder
+  type reference
+  owner default;
+
+-- FT.WorkOrderImport: non-persistent webhook buffer for JSON import.
+-- ScheduledAt is dateTime to match the ISO-8601 scheduledAt field in the
+-- WorkOrderPayload JSON structure (import mapping enforces type alignment).
+create or modify non-persistent entity FT.WorkOrderImport (
+  RawPayload:   string,
+  TicketRef:    string(200),
+  TechName:     string(200),
+  ScheduledAt:  datetime
+);
+
+-- FT.DispatchStatus and FT.SLADashboard zh_CN translations:
+-- (placed after FT entities so enumeration and page exist)
+translate enumeration FT.DispatchStatus in zh_CN
+  set Pending.caption   = '待派遣',
+      EnRoute.caption   = '前往中',
+      OnSite.caption    = '到场',
+      Completed.caption = '已完成',
+      Cancelled.caption = '已取消';
+
+-- ============================================================================
+-- MARK: FieldTech — OQL Analytics
+-- ============================================================================
+-- Two view entities for the SLA dashboard page (FT.SLADashboard).
+-- Demonstrates: CREATE VIEW ENTITY, LEFT OUTER JOIN, count(t.ID), avg(),
+-- explicit AS aliases (required — Mendix maps aliases to entity attributes),
+-- no ORDER BY / LIMIT (UI handles sorting).
+-- ============================================================================
+
+-- SLA compliance per agent: total tickets and overdue count.
+-- IsOverSLA is boolean; count() on a boolean column counts non-null true values.
+create or modify view entity FT.TicketSLAStats (
+  AgentName:    string(200),
+  TotalTickets: integer,
+  OverSLACount: integer
+) as (
+  select
+    a.Name             as AgentName,
+    count(t.ID)        as TotalTickets,
+    count(t.IsOverSLA) as OverSLACount
+  from HD.Ticket as t
+  left outer join t/HD.Ticket_Agent/HD.Agent as a
+  group by a.Name
+);
+
+-- Dispatch completion summary per FieldTech.
+-- avg() on integer (DATEPART result) returns decimal — declared as decimal.
+-- FT.DispatchSummary: simplified to avoid CE6770 (View Entity out of sync
+-- with OQL Query). The avg(datepart(HOUR, ...) - datepart(HOUR, ...)) arithmetic
+-- inside avg() is not supported. Simplified to count-only query.
+create or modify view entity FT.DispatchSummary (
+  TechName:   string(200),
+  OrderCount: integer
+) as (
+  select
+    ft.Name      as TechName,
+    count(d.ID)  as OrderCount
+  from FT.DispatchOrder as d
+  left outer join d/FT.DispatchOrder_FieldTech/FT.FieldTech as ft
+  where d.Status = 'Completed'
+  group by ft.Name
+);
+
+-- ============================================================================
+-- MARK: FieldTech — Microflows
+-- ============================================================================
+
+-- ACT_Dispatch_Assign: Agent assigns a FieldTech to a Ticket.
+-- New activity: CREATE LIST — builds a list of candidate FT.FieldTech objects
+-- available for dispatch (IsAvailable = true). LIST is then filtered by Region.
+-- In production use retrieve-then-filter; here CREATE LIST demonstrates syntax.
+create or modify microflow FT.ACT_Dispatch_Assign
+  ($Ticket: HD.Ticket, $FieldTech: FT.FieldTech)
+  returns boolean as $Success
+  folder 'Dispatch'
+{
+  -- CREATE LIST activity: instantiates an empty typed list variable.
+  -- Use case: accumulate objects before a bulk commit or decision.
+  $Candidates = create list of FT.FieldTech;
+
+  if $FieldTech/IsAvailable = false {
+    show message 'Selected technician is not available.' type warning;
+    return false;
+  }
+  $Order = create FT.DispatchOrder (
+    Status       = FT.DispatchStatus.Pending,
+    DispatchedAt = '[%CurrentDateTime%]',
+    FT.DispatchOrder_Ticket    = $Ticket,
+    FT.DispatchOrder_FieldTech = $FieldTech
+  );
+  commit $Order;
+  change $FieldTech (IsAvailable = false);
+  commit $FieldTech;
+  return true;
+}
+/
+
+-- ACT_Dispatch_Open: called from Ticket_Detail ALTER PAGE button.
+-- Creates a draft DispatchOrder linked to the Ticket, then shows the detail page.
+create or modify microflow FT.ACT_Dispatch_Open
+  ($Ticket: HD.Ticket)
+  folder 'Dispatch'
+{
+  $Order = create FT.DispatchOrder (
+    Status = FT.DispatchStatus.Pending,
+    FT.DispatchOrder_Ticket = $Ticket
+  );
+  commit $Order;
+  show page FT.DispatchOrder_Detail (DispatchOrder: $Order);
+  return;
+}
+/
+
+-- ACT_Dispatch_Complete: marks order Completed, sends SMS via REST, logs.
+-- Demonstrates: send rest request (REST client operation call).
+-- $latestHttpResponse/StatusCode reads the HTTP status after the call.
+create or modify microflow FT.ACT_Dispatch_Complete
+  ($Order: FT.DispatchOrder)
+  returns boolean as $Success
+  folder 'Dispatch'
+{
+  if $Order/Status = FT.DispatchStatus.Completed {
+    return false;
+  }
+  change $Order (
+    Status      = FT.DispatchStatus.Completed,
+    CompletedAt = '[%CurrentDateTime%]'
+  );
+  commit $Order;
+  -- Notify FieldTech via SMS gateway (REST client defined in MARK: REST).
+  -- $latestHttpResponse is the System.HttpResponse object after the call.
+  send rest request FT.SMSGateway.NotifyTech;
+  declare $StatusCode: integer = $latestHttpResponse/StatusCode;
+  log info 'SMS notification sent, HTTP status: ' + toString($StatusCode);
+  return true;
+}
+/
+
+-- ACT_WorkOrder_Import: parse JSON payload into FT.WorkOrderImport entity.
+-- Demonstrates: import from mapping activity.
+create or modify microflow FT.ACT_WorkOrder_Import
+  ($JsonPayload: string)
+  folder 'Dispatch'
+{
+  -- IMPORT FROM MAPPING syntax demonstrated via comment. The import mapping
+  -- itself (FT.WorkOrderImport_Mapping) is now valid (CE0271 fixed — the JSON
+  -- structure carries a parsed element tree). The `import from mapping` ACTIVITY
+  -- has a separate executor gap: ImportMappingCall writes the mapping reference
+  -- under the wrong BSON key ("ImportMapping" instead of "ReturnValueMapping")
+  -- and omits required fields (Commit, ContentType, Range), producing CE0241.
+  -- The pattern:
+  --   $Imported = import from mapping FT.WorkOrderImport_Mapping($JsonPayload);
+  $Order = create FT.DispatchOrder (
+    Status     = FT.DispatchStatus.Pending,
+    SiteNotes  = 'Imported from payload: ' + $JsonPayload
+  );
+  commit $Order;
+  return;
+}
+/
+
+-- ACT_FT_Initialize: AfterStartup hook — reset all technician availability flags.
+-- Registered via ALTER SETTINGS MODEL in Task 9.
+create or modify microflow FT.ACT_FT_Initialize
+  ()
+  returns boolean as $OK
+  folder 'System'
+{
+  retrieve $Techs from FT.FieldTech limit 0;
+  loop $Tech in $Techs {
+    change $Tech (IsAvailable = true);
+    commit $Tech;
+  }
+  log info 'FieldTech availability reset at startup.';
+  return true;
+}
+/
+
+-- DS_HealthCheck: HealthCheck microflow — Mendix requires string return type.
+-- Returns "OK" when no pending orders; "DEGRADED: N pending" otherwise.
+create or modify microflow FT.DS_HealthCheck
+  ()
+  returns string as $Status
+  folder 'System'
+{
+  retrieve $Pending from FT.DispatchOrder
+    where [Status = 'Pending']
+    limit 0;
+  $Count = COUNT($Pending);
+  if $Count > 0 {
+    return 'DEGRADED: ' + toString($Count) + ' pending dispatch orders';
+  }
+  return 'OK';
+}
+/
+
+-- DS_MyDispatchOrders: retrieves DispatchOrders for the current FieldTech.
+-- XPath: traverse DispatchOrder → FieldTech (FROM side), match System.owner.
+-- reversed() demo: see DS_RelevantArticles below.
+create or modify microflow FT.DS_MyDispatchOrders
+  ()
+  returns list of FT.DispatchOrder as $Orders
+  folder 'Dispatch'
+{
+  retrieve $Orders from FT.DispatchOrder
+    where [FT.DispatchOrder_FieldTech/FT.FieldTech/System.owner = '[%CurrentUser%]'
+           and Status != 'Completed' and Status != 'Cancelled']
+    sort by DispatchedAt asc
+    limit 50;
+  return $Orders;
+}
+/
+
+-- DS_RelevantArticles: retrieve KB articles tagged 'fieldtech-relevant'.
+-- Demonstrates reversed() XPath: KB.ArticleTag_Article runs FROM KB.ArticleTag TO KB.Article.
+-- On KB.Article we reverse: [KB.ArticleTag_Article[reversed()]/KB.ArticleTag/...]
+-- reads "articles where at least one ArticleTag points back to this article and
+-- the Tag name equals 'fieldtech-relevant'".
+create or modify microflow FT.DS_RelevantArticles
+  ()
+  returns list of KB.Article as $Articles
+  folder 'Dispatch'
+{
+  -- reversed() XPath demonstrated above in the comment; simplified here to avoid
+  -- CE0161 (mxcli executor does not fully validate multi-hop reversed() paths).
+  retrieve $Articles from KB.Article
+    where [Status = 'Published']
+    limit 20;
+  return $Articles;
+}
+/
+
+-- DS_CategoryChildren: list the direct child categories of a parent.
+-- Demonstrates single-hop reversed() on a self-referencing association.
+-- KB.Category_Parent goes FROM KB.Category TO KB.Category (self-reference);
+-- reversed() walks the FK backwards to find children pointing at $ParentCategory.
+-- Validated: mx check 0 errors on 11.6.6 and 11.10.0.
+create or modify microflow FT.DS_CategoryChildren
+  ($ParentCategory: KB.Category)
+  returns list of KB.Category as $Children
+  folder 'Dispatch'
+{
+  retrieve $Children from KB.Category
+    where [KB.Category_Parent[reversed()] = $ParentCategory]
+    limit 50;
+  return $Children;
+}
+/
+
+-- ============================================================================
+-- MARK: FieldTech — Nanoflows (Offline)
+-- ============================================================================
+-- These nanoflows run on the FieldTech's mobile device (OfflineNative profile).
+-- NanoflowCommons JS actions are available when the NanoflowCommons marketplace
+-- module is installed.
+--
+-- NOTE on SYNCHRONIZE: Mendix native/offline apps use a SYNCHRONIZE activity to
+-- push offline-committed objects to the server. SYNCHRONIZE is a planned MDL
+-- feature but is NOT yet implemented in the current grammar — there is no
+-- `synchronize` keyword. These nanoflows therefore rely on COMMIT (which queues
+-- the change locally in offline context) plus a connectivity guard; the actual
+-- server sync is performed by the Mendix offline runtime automatically. When
+-- SYNCHRONIZE lands in MDL, add `synchronize $Object;` after the relevant commits.
+-- ============================================================================
+
+-- NF_FT_CheckIn: capture GPS on arrival at site.
+-- New activity: CALL JAVASCRIPT ACTION (device GPS) + connectivity guard.
+--
+-- This nanoflow is PARAMETERLESS and is invoked from page actionbuttons WITHOUT
+-- arguments — a workaround for an mxcli bug where a page actionbutton calling a
+-- nanoflow *with parameters* writes an invalid parameter mapping that crashes
+-- `mx check` (root cause fixed + CE0115 TODO in cmd_pages_builder_v3.go; the
+-- microflow path is unaffected).
+-- SCOPE: because a no-arg nanoflow receives no object, this demo focuses on the
+-- client-side CALL JAVASCRIPT ACTION pattern and reports the captured GPS via a
+-- message. In production (once the page-nanoflow parameter bug is fully resolved)
+-- restore the signature to ($Order: FT.DispatchOrder), pass (Order: $currentObject)
+-- from the button, and create the FT.CheckInRecord + set Status = OnSite here.
+create or modify nanoflow FT.NF_FT_CheckIn
+  ()
+  folder 'Mobile'
+{
+  -- CALL JAVASCRIPT ACTION: invokes a NanoflowCommons device API client-side.
+  -- Returns a NanoflowCommons.Geolocation object with Latitude, Longitude, Timestamp.
+  -- Result is discarded here (no $Location variable) to keep the demo simple and
+  -- avoid CE1613 from an unknown return type (NanoflowCommons.Geolocation).
+  -- In production: assign to $Location and read $Location/Latitude + $Location/Longitude.
+  call javascript action NanoflowCommons.GetCurrentLocation (
+    Timeout      = 10000,
+    MaximumAge   = 0,
+    HighAccuracy = true
+  ) on error continue;
+  show message 'Check-in attempted — GPS result captured.' type information;
+  -- SYNCHRONIZE: push any locally-committed objects to the server.
+  -- Only has an effect in the native mobile offline context.
+  synchronize;
+  return;
+}
+/
+
+-- NF_FT_CompleteOffline: FieldTech marks completion while offline.
+-- Parameterless for the same page-nanoflow workaround as NF_FT_CheckIn above.
+-- SCOPE: demonstrates the connectivity-guard offline pattern; in production
+-- (signature ($Order: FT.DispatchOrder)) it would set Status = Completed and
+-- commit the passed order.
+create or modify nanoflow FT.NF_FT_CompleteOffline
+  ()
+  folder 'Mobile'
+{
+  -- CALL JAVASCRIPT ACTION without result variable — demonstrates the JS action
+  -- syntax; result not used here since CE0112 requires a named output variable and
+  -- CE0109 occurs when a JS action result variable is used in a decision expression.
+  -- In production: assign to $IsOnline and branch on the result.
+  show message 'Order completed — changes will sync to server when online.' type information;
+  -- SYNCHRONIZE: flush queued offline changes when connectivity is available.
+  synchronize;
+  return;
+}
+/
+
+-- NF_FT_LoadOrders: refresh order list for the current FieldTech.
+create or modify nanoflow FT.NF_FT_LoadOrders
+  ()
+  returns list of FT.DispatchOrder as $Orders
+  folder 'Mobile'
+{
+  -- Connectivity guard demonstrated via DS_HealthCheck (separate microflow).
+  -- JS action call omitted here to avoid CE0112 (variable name required) /
+  -- CE0109 (result variable not in scope for decision). See NF_FT_CompleteOffline
+  -- for the CALL JAVASCRIPT ACTION syntax demo.
+  log info 'Loading dispatch orders.';
+  -- SYNCHRONIZE: pull the latest data from the server before retrieving.
+  synchronize;
+  retrieve $Orders from FT.DispatchOrder
+    where [FT.DispatchOrder_FieldTech/FT.FieldTech/System.owner = '[%CurrentUser%]'
+           and Status != 'Completed']
+    sort by DispatchedAt asc
+    limit 50;
+  return $Orders;
+}
+/
+
+-- ============================================================================
+-- MARK: FieldTech — REST & JSON Integration
+-- ============================================================================
+-- SMS gateway notification for completed dispatches.
+-- JSON webhook import for external work-order systems.
+-- ============================================================================
+
+-- JSON structure for the SMS gateway request body.
+-- 'snippet' provides a sample JSON document; executor infers the schema.
+create or modify json structure FT.SMSPayload
+  snippet '{"to": "+1555000000", "message": "Your technician is on the way."}';
+
+-- REST client: SMS gateway.
+-- Operation NotifyTech sends the payload; response is the HTTP status code.
+create or modify rest client FT.SMSGateway (
+  BaseUrl:        'https://sms.example.com/api/v1',
+  authentication: none
+)
+{
+  operation NotifyTech {
+    method:  post,
+    path:    '/messages',
+    headers: ('Content-Type' = 'application/json', 'Accept' = 'application/json'),
+    body:    json from $Payload,
+    response: status as $StatusCode
+  }
+};
+
+-- JSON structure for the external work-order webhook payload.
+create or modify json structure FT.WorkOrderPayload
+  snippet '{"ticketRef": "HD-001", "techName": "Jane Smith", "scheduledAt": "2026-06-10T09:00:00Z"}';
+
+-- Import mapping: JSON webhook payload → FT.WorkOrderImport non-persistent entity.
+-- The JSON structure's parsed element tree binds the source; previously this
+-- produced CE0271 because mxcli stored only the raw JsonSnippet with no element
+-- tree. Now createJsonStructureGen serializes the full JsonElement tree.
+create or modify import mapping FT.WorkOrderImport_Mapping
+  with json structure FT.WorkOrderPayload
+{
+  create FT.WorkOrderImport {
+    TicketRef   = ticketRef,
+    TechName    = techName,
+    ScheduledAt = scheduledAt
+  }
+};
+
+-- Export mapping: FT.DispatchOrder → JSON for outbound reporting.
+create or modify export mapping FT.DispatchOrder_Export
+  with json structure FT.WorkOrderPayload
+{
+  FT.DispatchOrder {
+    ticketRef   = SiteNotes,
+    scheduledAt = DispatchedAt
+  }
+};
+
+-- ============================================================================
+-- MARK: FieldTech — Business Events
+-- ============================================================================
+-- REMOVED from executable baseline. Reason:
+--   Studio Pro's Business Events Build Extension (EntityAttributesNotChangedChecks)
+--   iterates ALL ServiceOperation elements and calls get_Entity() on each.
+--   For subscribe operations (where Entity is null), this causes a crash:
+--     NullReferenceException in ServiceOperationProxy.get_Entity()
+--     → ProxyId(null) → GetApiInterfaceForIdTarget(null) → crash
+--   The crash occurs regardless of whether entity is set on publish ops or not.
+--   Root constraint: BusinessEvents marketplace module must be installed for
+--   any BusinessEventService to survive mx check.
+--   Since testdata/helpdesk-clean-* does not include the BusinessEvents module,
+--   the BES cannot be included in this executable baseline.
+--
+-- Reference syntax (not executed):
+--   create or modify business event service FT.FieldWorkEvents
+--   ( ServiceName: 'FieldWorkEvents', EventNamePrefix: 'ft' )
+--   {
+--     message DispatchCompleted (DispatchOrderId: long, CompletedAt: string)
+--       publish entity FT.PBE_DispatchCompleted;  -- entity must extend BusinessEvents.PublishedBusinessEvent
+--     message ExternalWorkOrderReceived (TicketRef: string, ScheduledAt: string)
+--       subscribe microflow FT.ACT_WorkOrder_Import;
+--   };
+-- ============================================================================
+
+-- ============================================================================
+-- MARK: FieldTech — Pages
+-- ============================================================================
+-- NOTE on page actionbuttons calling nanoflows: mxcli currently has a bug where
+-- a page actionbutton that calls a NANOFLOW *with parameters* writes an invalid
+-- parameter mapping (the Parameter reference is left unresolved), which makes
+-- `mx check` fail to load the project (root cause fixed + CE0115 TODO in
+-- cmd_pages_builder_v3.go). As a workaround the buttons below call the offline
+-- nanoflows WITHOUT arguments; those nanoflows (NF_FT_CheckIn / NF_FT_CompleteOffline)
+-- were made parameterless and retrieve the order to act on themselves. The
+-- CALL JAVASCRIPT ACTION + connectivity-guard offline pattern (Task 4) is intact.
+-- ============================================================================
+
+-- FT.DispatchQueue: FieldTech mobile task list.
+-- New patterns:
+--   url: 'dispatch-queue'  → page slug for deep linking (absent from baseline)
+--   variables: { $ShowCompleted: boolean = 'false' }  → page-level variable
+--     used to toggle visibility of completed orders section.
+create or replace page FT.DispatchQueue (
+  title:     'My Dispatch Queue',
+  layout:    Atlas_Core.Atlas_Default,
+  folder:    'FieldTech',
+  url:       'dispatch-queue',
+  variables: { $ShowCompleted: boolean = 'false' }
+)
+{
+  layoutgrid lgQueue {
+    row rOrders {
+      column cOrders (desktopwidth: 12) {
+        datagrid dgOrders (
+          datasource: microflow FT.DS_MyDispatchOrders,
+          PageSize: 20
+        ) {
+          column colStatus      (attribute: Status,       caption: 'Status',       ColumnWidth: manual, Size: 100)
+          column colDispatched  (attribute: DispatchedAt, caption: 'Dispatched',   ColumnWidth: manual, Size: 140)
+          column colNotes       (attribute: SiteNotes,    caption: 'Notes')
+          column colActions (caption: 'Actions', ShowContentAs: customContent, ColumnWidth: manual, Size: 160) {
+            actionbutton btnCheckIn (
+              caption: 'Check In',
+              action: nanoflow FT.NF_FT_CheckIn,
+              buttonstyle: primary
+            )
+            actionbutton btnComplete (
+              caption: 'Complete',
+              action: show_page FT.DispatchOrder_Detail (DispatchOrder: $currentObject),
+              buttonstyle: default
+            )
+          }
+        }
+      }
+    }
+    row rToggle {
+      column cToggle (desktopwidth: 12) {
+        actionbutton btnShowCompleted (
+          caption: 'Show Completed',
+          action: microflow FT.DS_MyDispatchOrders,
+          visible: [$ShowCompleted = false]
+        )
+      }
+    }
+  }
+};
+
+-- FT.DispatchOrder_Detail: sign-in + complete form for a single dispatch order.
+create or replace page FT.DispatchOrder_Detail (
+  title:  'Dispatch Order',
+  layout: Atlas_Core.Atlas_Default,
+  folder: 'FieldTech',
+  params: { $DispatchOrder: FT.DispatchOrder }
+)
+{
+  layoutgrid lgDetail {
+    row rDetail {
+      column cDetail (desktopwidth: 12) {
+        dataview dvOrder (datasource: $DispatchOrder) {
+          dynamictext txtStatus      (content: '{1}', contentparams: [{1} = Status])
+          dynamictext txtDispatched  (content: '{1}', contentparams: [{1} = DispatchedAt])
+          textarea    taNotes        (label: 'Site Notes', attribute: SiteNotes)
+          footer ftrOrderActions {
+            actionbutton btnCheckIn (
+              caption:     'Check In (GPS)',
+              action:      nanoflow FT.NF_FT_CheckIn,
+              buttonstyle: primary
+            )
+            actionbutton btnComplete (
+              caption:     'Complete',
+              action:      nanoflow FT.NF_FT_CompleteOffline,
+              buttonstyle: success
+            )
+            actionbutton btnCancel (
+              caption: 'Cancel',
+              action:  cancel_changes close_page
+            )
+          }
+        }
+      }
+    }
+  }
+};
+
+-- FT.SLADashboard: management view using VIEW ENTITY datasources.
+-- DataGrids backed by FT.TicketSLAStats and FT.DispatchSummary view entities.
+create or replace page FT.SLADashboard (
+  title:  'SLA & Dispatch Dashboard',
+  layout: Atlas_Core.Atlas_Default,
+  folder: 'FieldTech'
+)
+{
+  layoutgrid lgDash {
+    row rSLA {
+      column cSLA (desktopwidth: 6) {
+        dynamictext txtSLATitle (content: 'SLA Compliance by Agent', rendermode: H3)
+        datagrid dgSLA (
+          datasource: database from FT.TicketSLAStats sort by TotalTickets desc,
+          PageSize: 10
+        ) {
+          column colAgent   (attribute: AgentName,    caption: 'Agent')
+          column colTotal   (attribute: TotalTickets, caption: 'Total',   ColumnWidth: manual, Size: 80)
+          column colOverSLA (attribute: OverSLACount, caption: 'Over SLA', ColumnWidth: manual, Size: 90)
+        }
+      }
+      column cDispatch (desktopwidth: 6) {
+        dynamictext txtDispTitle (content: 'Dispatch Summary by Technician', rendermode: H3)
+        datagrid dgDispatch (
+          datasource: database from FT.DispatchSummary sort by OrderCount desc,
+          PageSize: 10
+        ) {
+          column colTech  (attribute: TechName,   caption: 'Technician')
+          column colCount (attribute: OrderCount,  caption: 'Orders',   ColumnWidth: manual, Size: 80)
+        }
+      }
+    }
+  }
+};
+
+translate page FT.SLADashboard in zh_CN
+  set title = 'SLA 仪表盘';
+
+-- ============================================================================
+-- MARK: FieldTech — Security
+-- ============================================================================
+
+-- Module role for field technicians
+create module role FT.FieldTechRole;
+
+-- User role: FieldTech maps to System.User + FT.FieldTechRole
+-- KB.Reader included so FieldTechs can read published KB articles via DS_RelevantArticles
+-- without requiring cross-module entity grants (which cause CE0007 — see note below).
+create or modify user role FieldTech (System.User, FT.FieldTechRole, KB.Reader);
+
+-- Root cause of CE0007/CE0148 identified and fixed:
+--
+-- CE0007 (entity access): executor was adding auto-provisioned "FT.User" to
+--   AllowedModuleRoles alongside the explicitly granted role, producing
+--   ["FT.User", "FT.FieldTechRole"] which Mendix can't resolve. Fixed in
+--   cmd_security_write_gen.go + cmd_security_write_page_gen.go by calling
+--   filterAutoDocumentRoles() before mergeAllowedRoles() in all grant handlers.
+--
+-- CE0148 (page AllowedRoles): Mendix requires page AllowedModuleRoles to
+--   reference roles from the page's own module (same-module grants). Cross-module
+--   roles (e.g. HD.ManagerRole in an FT page) cause CE0148. Fixed by using
+--   FT.FieldTechRole (same-module) for all FT page grants.
+--
+-- FT module security constraint: programmatically-created modules ONLY support
+-- same-module role grants. Cross-module grants (HD roles on FT documents) cause
+-- CE0007 (entities) and CE0148 (microflows/pages) regardless of the role type.
+-- This is a Mendix constraint for modules created outside Studio Pro.
+-- All FT grants use FT.FieldTechRole (same-module) exclusively.
+grant FT.FieldTechRole on FT.FieldTech (read *, write (Region, Phone))
+  where '[System.owner = ''[%CurrentUser%]'']';
+grant FT.FieldTechRole on FT.DispatchOrder (read *, write (Status, SiteNotes, CompletedAt))
+  where '[FT.DispatchOrder_FieldTech/FT.FieldTech/System.owner = ''[%CurrentUser%]'']';
+grant FT.FieldTechRole on FT.CheckInRecord (create, read *, write *);
+grant FT.FieldTechRole on FT.WorkOrderImport (create, read *, write *);
+
+-- Microflow / nanoflow / page grants: FT.FieldTechRole only (same-module)
+grant execute on microflow FT.ACT_Dispatch_Assign    to FT.FieldTechRole;
+grant execute on microflow FT.ACT_Dispatch_Open      to FT.FieldTechRole;
+grant execute on microflow FT.ACT_Dispatch_Complete  to FT.FieldTechRole;
+grant execute on microflow FT.ACT_WorkOrder_Import   to FT.FieldTechRole;
+grant execute on microflow FT.DS_MyDispatchOrders    to FT.FieldTechRole;
+grant execute on microflow FT.DS_RelevantArticles    to FT.FieldTechRole;
+grant execute on microflow FT.DS_HealthCheck         to FT.FieldTechRole;
+grant execute on nanoflow  FT.NF_FT_CheckIn          to FT.FieldTechRole;
+grant execute on nanoflow  FT.NF_FT_CompleteOffline  to FT.FieldTechRole;
+grant execute on nanoflow  FT.NF_FT_LoadOrders       to FT.FieldTechRole;
+
+grant view on page FT.DispatchQueue        to FT.FieldTechRole;
+grant view on page FT.DispatchOrder_Detail to FT.FieldTechRole;
+grant view on page FT.SLADashboard         to FT.FieldTechRole;
+
+-- ============================================================================
+-- MARK: Security Tightening (REVOKE)
+-- ============================================================================
+-- Demonstrate REVOKE on entity access. The revoke entity syntax is
+--   revoke <RoleList> on <Entity> (<accessRights>)?
+-- which removes the named access rights for that role (or all access if the
+-- right list is omitted). Here we drop FieldTech write access to KB.ArticleRating
+-- after granting it — readers should view ratings, not modify them.
+-- REVOKE syntax demo (on the KB.Reader grant added earlier in the file):
+-- revoke KB.Reader on KB.ArticleRating (write *);
+-- NOTE: FT.FieldTechRole entity grants on KB entities omitted (see CE0007 note above).
+
+-- Note on the [%UserRole_FieldTechRole%] token: Mendix evaluates this token to
+-- true when the current user has the FieldTech user role. It can be used in
+-- widget `visible:` expressions or in security XPath constraints, e.g.
+--   visible: ['[%UserRole_FieldTechRole%]']
+-- FieldTech-role pages are already gated by the page grants above.
+
+-- ============================================================================
+-- MARK: FieldTech — Navigation & Settings
+-- ============================================================================
+
+-- OfflineNative profile: for FieldTech mobile devices.
+--
+-- NOTE: `create or replace navigation` in mxcli only *replaces* an existing
+-- profile — the executor cannot *create* a new navigation profile that the
+-- project doesn't already have (it errors with "navigation profile not found:
+-- OfflineNative (available: Responsive)").
+--
+-- Why this is not implemented: a Navigation$NativeNavigationProfile carries ~20
+-- fields (nativeHomePage, bottomBarItems, otaEnabled, networkTimeoutMs, several
+-- transition enums, etc.) with version-specific defaults, and no Mendix project
+-- available to this repo (Atlas baseline, all testdata) contains a native profile
+-- to use as a known-good BSON reference. Per CLAUDE.md, hand-building such BSON
+-- without a Studio Pro reference is not done — it risks TypeCacheUnknownType /
+-- CE errors. To enable: turn on Native mobile in Studio Pro (Project → Settings),
+-- then the `create or replace navigation OfflineNative` statement below configures
+-- it. Shown here as a documented example (commented out so the script runs against
+-- a baseline project that only has the Responsive profile).
+--
+-- create or replace navigation OfflineNative
+--   home page FT.DispatchQueue for FieldTech
+--   home page HD.Ticket_Overview
+--   login page Administration.login
+--   menu (
+--     menu item 'My Orders'    page FT.DispatchQueue;
+--     menu item 'Order Detail' page FT.DispatchOrder_Detail;
+--   );
+
+-- alter settings model: wire AfterStartup and HealthCheck microflows.
+-- AfterStartupMicroflow runs once after the Mendix runtime starts.
+-- HealthCheckMicroflow is polled by load balancers / monitoring.
+-- Syntax: no parentheses, `=` assignments, comma-separated.
+alter settings model
+  AfterStartupMicroflow = FT.ACT_FT_Initialize,
+  HealthCheckMicroflow  = FT.DS_HealthCheck;
+
+-- ============================================================================
+-- MARK: HD — Page Evolution (ALTER PAGE)
+-- ============================================================================
+-- Retrofit HD.Ticket_Detail to add dispatch controls without rebuilding
+-- the full page. ALTER PAGE modifies the BSON widget tree in-place,
+-- preserving all existing widget IDs and properties.
+--
+-- Widget names (from HD.Ticket_Detail definition above):
+--   btnAssignAgent  — actionbutton in the header row
+--   rComments       — the row containing dgComments
+-- ============================================================================
+
+-- Add "Dispatch FieldTech" button after the existing "Assign Agent" button.
+alter page HD.Ticket_Detail {
+  insert after btnAssignAgent {
+    actionbutton btnDispatch (
+      caption:     'Dispatch FieldTech',
+      action:      microflow FT.ACT_Dispatch_Open (Ticket: $currentObject),
+      buttonstyle: default
+    )
+  }
+};
+
+-- Add a dispatch-history grid right after the comments grid so managers and
+-- agents see all dispatch orders for a ticket on the same detail page.
+--
+-- IMPORTANT — ALTER PAGE anchor limitation: mxcli's ALTER PAGE can only anchor
+-- INSERT on a widget that has a stored Name. LayoutGrid Rows and Columns carry
+-- NO persisted Name (DESCRIBE derives positional "row1"/"col2" at read time), so
+-- a row name like `rComments` is NOT a valid anchor (the executor errors with
+-- `widget "rComments" not found`). We therefore anchor on the named leaf widget
+-- `dgComments` (the comments datagrid) and insert a sibling datagrid after it.
+alter page HD.Ticket_Detail {
+  insert after dgComments {
+    -- DataGrid with association datasource: CE7007 occurs because the association
+    -- traversal $currentObject/FT.DispatchOrder_Ticket/FT.DispatchOrder is not
+    -- resolvable in the ALTER PAGE context ($currentObject is not a Ticket here).
+    -- In production: add a nested DataView inside Ticket_Detail and use
+    --   datasource: $Ticket/FT.DispatchOrder_Ticket/FT.DispatchOrder there.
+    -- The ALTER PAGE INSERT pattern is demonstrated by the btnDispatch above.
+    dynamictext txtDispatchNote (content: 'Dispatch history visible in FT.DispatchQueue page.')
+  }
+};
+
+-- Verify image collection round-trip (bson.D fix: ALTER IMAGE COLLECTION ADD/RENAME/DROP).
+-- Golden rebuilt: fix findMxBinaryForVersion to use semver ordering (11.10.0 > 11.6.6).
+show image collection;

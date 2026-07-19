@@ -977,18 +977,8 @@ func (o *AttributeCapabilities) InitFromRaw(raw bson.Raw) {
 
 type AttributeRef struct {
 	element.Base
-	entityRef *property.Part[element.Element]
 	attribute *property.ByNameRef[element.Element]
-}
-
-// EntityRef returns the value of the entityRef property.
-func (o *AttributeRef) EntityRef() element.Element {
-	return o.entityRef.Get()
-}
-
-// SetEntityRef sets the value of the entityRef property.
-func (o *AttributeRef) SetEntityRef(v element.Element) {
-	o.entityRef.Set(v)
+	entityRef *property.Part[element.Element]
 }
 
 // AttributeQualifiedName returns the value of the attribute property.
@@ -1001,16 +991,26 @@ func (o *AttributeRef) SetAttributeQualifiedName(v string) {
 	o.attribute.SetQualifiedName(v)
 }
 
+// EntityRef returns the value of the entityRef property.
+func (o *AttributeRef) EntityRef() element.Element {
+	return o.entityRef.Get()
+}
+
+// SetEntityRef sets the value of the entityRef property.
+func (o *AttributeRef) SetEntityRef(v element.Element) {
+	o.entityRef.Set(v)
+}
+
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 // NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *AttributeRef) InitFromRaw(raw bson.Raw) {
-	if child, err := codec.DecodeChild(raw, "EntityRef"); err == nil {
-		o.entityRef.SetFromDecode(child)
-	}
 	if val, err := raw.LookupErr("Attribute"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
 			o.attribute.SetFromDecode(s)
 		}
+	}
+	if child, err := codec.DecodeChild(raw, "EntityRef"); err == nil {
+		o.entityRef.SetFromDecode(child)
 	}
 }
 
@@ -3675,11 +3675,11 @@ func NewAttributeCapabilities() *AttributeCapabilities {
 func initAttributeRef() *AttributeRef {
 	o := &AttributeRef{}
 	o.SetTypeName("DomainModels$AttributeRef")
-	o.entityRef = property.NewPart[element.Element]("EntityRef")
-	o.entityRef.Bind(&o.Base, 0)
 	o.attribute = property.NewByNameRef[element.Element]("Attribute", "DomainModels$Attribute")
-	o.attribute.Bind(&o.Base, 1)
-	o.SetProperties([]element.Property{o.entityRef, o.attribute})
+	o.attribute.Bind(&o.Base, 0)
+	o.entityRef = property.NewPart[element.Element]("EntityRef")
+	o.entityRef.Bind(&o.Base, 1)
+	o.SetProperties([]element.Property{o.attribute, o.entityRef})
 	return o
 }
 

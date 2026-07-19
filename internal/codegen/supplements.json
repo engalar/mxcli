@@ -148,6 +148,31 @@
       "exportLevel",
       "name",
       "oql"
+    ],
+    "Microflows$DatabaseRetrieveSource": [
+      "entity",
+      "sortItemList",
+      "range",
+      "xPathConstraint"
+    ],
+    "DomainModels$AttributeRef": [
+      "attribute",
+      "entityRef"
+    ],
+    "Microflows$RetrieveAction": [
+      "errorHandlingType",
+      "outputVariableName",
+      "retrieveSource"
+    ],
+    "Microflows$ActionActivity": [
+      "action",
+      "autoGenerateCaption",
+      "backgroundColor",
+      "caption",
+      "disabled",
+      "documentation",
+      "relativeMiddlePoint",
+      "size"
     ]
   },
   "ref_list_version3_fields": [
@@ -537,6 +562,8 @@
     "JavaAction.parameters",
     "JavaAction.typeParameters",
     "JavaScriptAction.parameters",
-    "ProjectSecurity.demoUsers"
+    "ProjectSecurity.demoUsers",
+    "SortItemList.items",
+    "SequenceFlow.caseValues"
   ]
 }
