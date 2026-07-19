@@ -237,6 +237,40 @@ func TestBuildFlowGraphGenListReturnTypeEmitsCreateListAction(t *testing.T) {
 	}
 }
 
+// TestBuildFlowGraphGenNanoflowSkipsSyntheticDeclare verifies that
+// nanoflows do NOT get a synthetic CreateVariableAction/CreateListAction
+// for the return variable. The 11.12.1+ validator requires a graph-level
+// declaration for microflows (CE0109 fix), but adding one to nanoflows
+// corrupts the BSON graph — ResolvePostponedProperties cannot find the
+// subsequent ActionActivity $IDs → KeyNotFoundException.
+//
+// Regression guard for the && !fb.isNanoflow gate on line 78.
+func TestBuildFlowGraphGenNanoflowSkipsSyntheticDeclare(t *testing.T) {
+	fb := newGraphTestFb()
+	fb.isNanoflow = true
+	body := []ast.MicroflowStatement{} // no explicit declare
+	returns := &ast.MicroflowReturnType{
+		Type:     ast.DataType{Kind: ast.TypeBoolean},
+		Variable: "R",
+	}
+	oc := fb.buildFlowGraphGen(body, returns)
+	if oc == nil {
+		t.Fatal("expected non-nil ObjectCollection")
+	}
+	for _, obj := range oc.ObjectsItems() {
+		aa, ok := obj.(*genMf.ActionActivity)
+		if !ok {
+			continue
+		}
+		if _, isCreateVar := aa.Action().(*genMf.CreateVariableAction); isCreateVar {
+			t.Errorf("nanoflow must not emit CreateVariableAction for return var, got %T", aa.Action())
+		}
+		if _, isCreateList := aa.Action().(*genMf.CreateListAction); isCreateList {
+			t.Errorf("nanoflow must not emit CreateListAction for return var, got %T", aa.Action())
+		}
+	}
+}
+
 // TestResetLayoutProducesValidCoordinates verifies that RESET LAYOUT does not
 // clear RelativeMiddlePoint to "". buildFlowGraphGen computes valid "x;y"
 // coordinates for every activity; the RESET LAYOUT option just means
