@@ -7,6 +7,13 @@ import (
 	"github.com/mendixlabs/mxcli/model"
 )
 
+// CacheInvalidator provides cache invalidation for backend storage.
+// Extracted from FullBackend because it cross-cuts all domains — any
+// mutation operation may need to invalidate storage-level caches.
+type CacheInvalidator interface {
+	InvalidateCache()
+}
+
 // RenameBackend provides cross-cutting rename and reference-update operations.
 type RenameBackend interface {
 	UpdateQualifiedNameInAllUnits(oldName, newName string) (int, error)

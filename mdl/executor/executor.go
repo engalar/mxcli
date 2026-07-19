@@ -827,6 +827,7 @@ type ExecContext struct {
 	ServiceLister               backend.ServiceLister
 	ServiceWriter               backend.ServiceWriter
 	MetadataReader              backend.MetadataReader
+	CacheInvalidator            backend.CacheInvalidator
 	ConnectionManager           backend.ConnectionManager
 	FolderManager               backend.FolderManager
 	ModuleSettingsReader        backend.ModuleSettingsReader
@@ -984,11 +985,8 @@ func (ctx *ExecContext) InvalidateCache() {
 	if ctx.MetadataReader != nil {
 		ctx.MetadataReader.InvalidateCache()
 	}
-	// Also invalidate sub-backend caches through the metadata reader.
-	// MprBackend.InvalidateCache() overrides MetadataReader.InvalidateCache()
-	// and clears sub-backend caches (microflow, page, domainmodel, etc.).
-	if ctx.Backend != nil {
-		ctx.Backend.InvalidateCache()
+	if ctx.CacheInvalidator != nil {
+		ctx.CacheInvalidator.InvalidateCache()
 	}
 }
 

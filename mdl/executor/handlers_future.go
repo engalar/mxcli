@@ -2947,6 +2947,11 @@ func NewExecContext(ctx context.Context, deps *HandlerDeps) *ExecContext {
 	} else if deps.Backend != nil {
 		ectx.ConnectionManager = deps.Backend
 	}
+	if deps.CacheInvalidator != nil {
+		ectx.CacheInvalidator = deps.CacheInvalidator
+	} else if deps.Backend != nil {
+		ectx.CacheInvalidator = deps.Backend
+	}
 	ectx.ModuleLister = deps.ModuleLister
 	ectx.ModuleWriter = deps.ModuleWriter
 	ectx.DomainModelReader = deps.DomainModelReader

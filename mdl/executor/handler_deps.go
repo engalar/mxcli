@@ -59,6 +59,7 @@ type HandlerDeps struct {
 	ServiceLister          backend.ServiceLister
 	ServiceWriter          backend.ServiceWriter
 	MetadataReader         backend.MetadataReader
+	CacheInvalidator       backend.CacheInvalidator
 	RenameManager          backend.RenameManager
 	SecurityProjectManager      backend.SecurityProjectManager
 	SecurityModuleManager       backend.SecurityModuleManager

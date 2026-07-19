@@ -20,6 +20,7 @@ import (
 )
 
 var _ backend.FullBackend = (*MockBackend)(nil)
+var _ backend.CacheInvalidator = (*MockBackend)(nil)
 
 // MockBackend implements backend.FullBackend. Every interface method is
 // backed by a public function field. If the field is nil the method
