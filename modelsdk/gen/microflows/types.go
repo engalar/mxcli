@@ -1088,18 +1088,8 @@ func (o *RetrieveSource) InitFromRaw(raw bson.Raw) {
 
 type AssociationRetrieveSource struct {
 	element.Base
-	startVariableName *property.Primitive[string]
 	association       *property.ByNameRef[element.Element]
-}
-
-// StartVariableName returns the value of the startVariableName property.
-func (o *AssociationRetrieveSource) StartVariableName() string {
-	return o.startVariableName.Get()
-}
-
-// SetStartVariableName sets the value of the startVariableName property.
-func (o *AssociationRetrieveSource) SetStartVariableName(v string) {
-	o.startVariableName.Set(v)
+	startVariableName *property.Primitive[string]
 }
 
 // AssociationQualifiedName returns the value of the association property.
@@ -1112,15 +1102,25 @@ func (o *AssociationRetrieveSource) SetAssociationQualifiedName(v string) {
 	o.association.SetQualifiedName(v)
 }
 
+// StartVariableName returns the value of the startVariableName property.
+func (o *AssociationRetrieveSource) StartVariableName() string {
+	return o.startVariableName.Get()
+}
+
+// SetStartVariableName sets the value of the startVariableName property.
+func (o *AssociationRetrieveSource) SetStartVariableName(v string) {
+	o.startVariableName.Set(v)
+}
+
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 // NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *AssociationRetrieveSource) InitFromRaw(raw bson.Raw) {
-	o.startVariableName.Init(raw)
 	if val, err := raw.LookupErr("AssociationId"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
 			o.association.SetFromDecode(s)
 		}
 	}
+	o.startVariableName.Init(raw)
 }
 
 // ────────────────────────────────────────────────────────
@@ -1374,18 +1374,8 @@ func (o *Line) InitFromRaw(raw bson.Raw) {
 
 type BezierCurve struct {
 	element.Base
-	originControlVector      *property.Primitive[string]
 	destinationControlVector *property.Primitive[string]
-}
-
-// OriginControlVector returns the value of the originControlVector property.
-func (o *BezierCurve) OriginControlVector() string {
-	return o.originControlVector.Get()
-}
-
-// SetOriginControlVector sets the value of the originControlVector property.
-func (o *BezierCurve) SetOriginControlVector(v string) {
-	o.originControlVector.Set(v)
+	originControlVector      *property.Primitive[string]
 }
 
 // DestinationControlVector returns the value of the destinationControlVector property.
@@ -1398,11 +1388,21 @@ func (o *BezierCurve) SetDestinationControlVector(v string) {
 	o.destinationControlVector.Set(v)
 }
 
+// OriginControlVector returns the value of the originControlVector property.
+func (o *BezierCurve) OriginControlVector() string {
+	return o.originControlVector.Get()
+}
+
+// SetOriginControlVector sets the value of the originControlVector property.
+func (o *BezierCurve) SetOriginControlVector(v string) {
+	o.originControlVector.Set(v)
+}
+
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 // NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *BezierCurve) InitFromRaw(raw bson.Raw) {
-	o.originControlVector.Init(raw)
 	o.destinationControlVector.Init(raw)
+	o.originControlVector.Init(raw)
 }
 
 // ────────────────────────────────────────────────────────
@@ -2630,12 +2630,32 @@ func (o *CreateListAction) InitFromRaw(raw bson.Raw) {
 
 type CreateObjectAction struct {
 	element.Base
+	commit             *property.Enum[string]
+	entity             *property.ByNameRef[element.Element]
 	errorHandlingType  *property.Enum[string]
 	items              *property.PartList[element.Element]
 	refreshInClient    *property.Primitive[bool]
-	commit             *property.Enum[string]
-	entity             *property.ByNameRef[element.Element]
 	outputVariableName *property.Primitive[string]
+}
+
+// Commit returns the value of the commit property.
+func (o *CreateObjectAction) Commit() string {
+	return o.commit.Get()
+}
+
+// SetCommit sets the value of the commit property.
+func (o *CreateObjectAction) SetCommit(v string) {
+	o.commit.Set(v)
+}
+
+// EntityQualifiedName returns the value of the entity property.
+func (o *CreateObjectAction) EntityQualifiedName() string {
+	return o.entity.QualifiedName()
+}
+
+// SetEntityQualifiedName sets the value of the entity property.
+func (o *CreateObjectAction) SetEntityQualifiedName(v string) {
+	o.entity.SetQualifiedName(v)
 }
 
 // ErrorHandlingType returns the value of the errorHandlingType property.
@@ -2673,26 +2693,6 @@ func (o *CreateObjectAction) SetRefreshInClient(v bool) {
 	o.refreshInClient.Set(v)
 }
 
-// Commit returns the value of the commit property.
-func (o *CreateObjectAction) Commit() string {
-	return o.commit.Get()
-}
-
-// SetCommit sets the value of the commit property.
-func (o *CreateObjectAction) SetCommit(v string) {
-	o.commit.Set(v)
-}
-
-// EntityQualifiedName returns the value of the entity property.
-func (o *CreateObjectAction) EntityQualifiedName() string {
-	return o.entity.QualifiedName()
-}
-
-// SetEntityQualifiedName sets the value of the entity property.
-func (o *CreateObjectAction) SetEntityQualifiedName(v string) {
-	o.entity.SetQualifiedName(v)
-}
-
 // OutputVariableName returns the value of the outputVariableName property.
 func (o *CreateObjectAction) OutputVariableName() string {
 	return o.outputVariableName.Get()
@@ -2706,6 +2706,16 @@ func (o *CreateObjectAction) SetOutputVariableName(v string) {
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 // NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *CreateObjectAction) InitFromRaw(raw bson.Raw) {
+	if val, err := raw.LookupErr("Commit"); err == nil {
+		if s, ok := val.StringValueOK(); ok {
+			o.commit.SetFromDecode(s)
+		}
+	}
+	if val, err := raw.LookupErr("Entity"); err == nil {
+		if s, ok := val.StringValueOK(); ok {
+			o.entity.SetFromDecode(s)
+		}
+	}
 	if val, err := raw.LookupErr("ErrorHandlingType"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
 			o.errorHandlingType.SetFromDecode(s)
@@ -2717,16 +2727,6 @@ func (o *CreateObjectAction) InitFromRaw(raw bson.Raw) {
 		}
 	}
 	o.refreshInClient.Init(raw)
-	if val, err := raw.LookupErr("Commit"); err == nil {
-		if s, ok := val.StringValueOK(); ok {
-			o.commit.SetFromDecode(s)
-		}
-	}
-	if val, err := raw.LookupErr("Entity"); err == nil {
-		if s, ok := val.StringValueOK(); ok {
-			o.entity.SetFromDecode(s)
-		}
-	}
 	o.outputVariableName.Init(raw)
 }
 
@@ -3459,51 +3459,11 @@ func (o *EmailMessage) InitFromRaw(raw bson.Raw) {
 
 type EndEvent struct {
 	element.Base
-	relativeMiddlePoint *property.Primitive[string]
-	size                *property.Primitive[string]
-	returnValue         *property.Primitive[string]
-	returnValueModel    *property.Part[element.Element]
 	documentation       *property.Primitive[string]
-}
-
-// RelativeMiddlePoint returns the value of the relativeMiddlePoint property.
-func (o *EndEvent) RelativeMiddlePoint() string {
-	return o.relativeMiddlePoint.Get()
-}
-
-// SetRelativeMiddlePoint sets the value of the relativeMiddlePoint property.
-func (o *EndEvent) SetRelativeMiddlePoint(v string) {
-	o.relativeMiddlePoint.Set(v)
-}
-
-// Size returns the value of the size property.
-func (o *EndEvent) Size() string {
-	return o.size.Get()
-}
-
-// SetSize sets the value of the size property.
-func (o *EndEvent) SetSize(v string) {
-	o.size.Set(v)
-}
-
-// ReturnValue returns the value of the returnValue property.
-func (o *EndEvent) ReturnValue() string {
-	return o.returnValue.Get()
-}
-
-// SetReturnValue sets the value of the returnValue property.
-func (o *EndEvent) SetReturnValue(v string) {
-	o.returnValue.Set(v)
-}
-
-// ReturnValueModel returns the value of the returnValueModel property.
-func (o *EndEvent) ReturnValueModel() element.Element {
-	return o.returnValueModel.Get()
-}
-
-// SetReturnValueModel sets the value of the returnValueModel property.
-func (o *EndEvent) SetReturnValueModel(v element.Element) {
-	o.returnValueModel.Set(v)
+	relativeMiddlePoint *property.Primitive[string]
+	returnValue         *property.Primitive[string]
+	size                *property.Primitive[string]
+	returnValueModel    *property.Part[element.Element]
 }
 
 // Documentation returns the value of the documentation property.
@@ -3516,16 +3476,56 @@ func (o *EndEvent) SetDocumentation(v string) {
 	o.documentation.Set(v)
 }
 
+// RelativeMiddlePoint returns the value of the relativeMiddlePoint property.
+func (o *EndEvent) RelativeMiddlePoint() string {
+	return o.relativeMiddlePoint.Get()
+}
+
+// SetRelativeMiddlePoint sets the value of the relativeMiddlePoint property.
+func (o *EndEvent) SetRelativeMiddlePoint(v string) {
+	o.relativeMiddlePoint.Set(v)
+}
+
+// ReturnValue returns the value of the returnValue property.
+func (o *EndEvent) ReturnValue() string {
+	return o.returnValue.Get()
+}
+
+// SetReturnValue sets the value of the returnValue property.
+func (o *EndEvent) SetReturnValue(v string) {
+	o.returnValue.Set(v)
+}
+
+// Size returns the value of the size property.
+func (o *EndEvent) Size() string {
+	return o.size.Get()
+}
+
+// SetSize sets the value of the size property.
+func (o *EndEvent) SetSize(v string) {
+	o.size.Set(v)
+}
+
+// ReturnValueModel returns the value of the returnValueModel property.
+func (o *EndEvent) ReturnValueModel() element.Element {
+	return o.returnValueModel.Get()
+}
+
+// SetReturnValueModel sets the value of the returnValueModel property.
+func (o *EndEvent) SetReturnValueModel(v element.Element) {
+	o.returnValueModel.Set(v)
+}
+
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 // NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *EndEvent) InitFromRaw(raw bson.Raw) {
+	o.documentation.Init(raw)
 	o.relativeMiddlePoint.Init(raw)
-	o.size.Init(raw)
 	o.returnValue.Init(raw)
+	o.size.Init(raw)
 	if child, err := codec.DecodeChild(raw, "ReturnValueModel"); err == nil {
 		o.returnValueModel.SetFromDecode(child)
 	}
-	o.documentation.Init(raw)
 }
 
 // ────────────────────────────────────────────────────────
@@ -8447,28 +8447,33 @@ func (o *MicroflowPrimitiveParameterUrlSegment) InitFromRaw(raw bson.Raw) {
 
 type Nanoflow struct {
 	element.Base
-	name                        *property.Primitive[string]
+	allowedModuleRoles          *property.ByNameRefList[element.Element]
 	documentation               *property.Primitive[string]
 	excluded                    *property.Primitive[bool]
 	exportLevel                 *property.Enum[string]
-	objectCollection            *property.Part[element.Element]
 	flows                       *property.PartList[element.Element]
-	returnType                  *property.Primitive[string]
-	microflowReturnType         *property.Part[element.Element]
 	markAsUsed                  *property.Primitive[bool]
+	microflowReturnType         *property.Part[element.Element]
+	name                        *property.Primitive[string]
+	objectCollection            *property.Part[element.Element]
 	returnVariableName          *property.Primitive[string]
-	allowedModuleRoles          *property.ByNameRefList[element.Element]
 	useListParameterByReference *property.Primitive[bool]
+	returnType                  *property.Primitive[string]
 }
 
-// Name returns the value of the name property.
-func (o *Nanoflow) Name() string {
-	return o.name.Get()
+// AllowedModuleRolesQualifiedNames returns the value of the allowedModuleRoles property.
+func (o *Nanoflow) AllowedModuleRolesQualifiedNames() []string {
+	return o.allowedModuleRoles.QualifiedNames()
 }
 
-// SetName sets the value of the name property.
-func (o *Nanoflow) SetName(v string) {
-	o.name.Set(v)
+// SetAllowedModuleRolesQualifiedNames sets the value of the allowedModuleRoles property.
+func (o *Nanoflow) SetAllowedModuleRolesQualifiedNames(v []string) {
+	o.allowedModuleRoles.SetQualifiedNames(v)
+}
+
+// AddAllowedModuleRoles appends a child element to the allowedModuleRoles list.
+func (o *Nanoflow) AddAllowedModuleRoles(v string) {
+	o.allowedModuleRoles.Append(v)
 }
 
 // Documentation returns the value of the documentation property.
@@ -8501,16 +8506,6 @@ func (o *Nanoflow) SetExportLevel(v string) {
 	o.exportLevel.Set(v)
 }
 
-// ObjectCollection returns the value of the objectCollection property.
-func (o *Nanoflow) ObjectCollection() element.Element {
-	return o.objectCollection.Get()
-}
-
-// SetObjectCollection sets the value of the objectCollection property.
-func (o *Nanoflow) SetObjectCollection(v element.Element) {
-	o.objectCollection.Set(v)
-}
-
 // FlowsItems returns the value of the flows property.
 func (o *Nanoflow) FlowsItems() []element.Element {
 	return o.flows.Items()
@@ -8526,14 +8521,14 @@ func (o *Nanoflow) RemoveFlows(index int) {
 	o.flows.Remove(index)
 }
 
-// ReturnType returns the value of the returnType property.
-func (o *Nanoflow) ReturnType() string {
-	return o.returnType.Get()
+// MarkAsUsed returns the value of the markAsUsed property.
+func (o *Nanoflow) MarkAsUsed() bool {
+	return o.markAsUsed.Get()
 }
 
-// SetReturnType sets the value of the returnType property.
-func (o *Nanoflow) SetReturnType(v string) {
-	o.returnType.Set(v)
+// SetMarkAsUsed sets the value of the markAsUsed property.
+func (o *Nanoflow) SetMarkAsUsed(v bool) {
+	o.markAsUsed.Set(v)
 }
 
 // MicroflowReturnType returns the value of the microflowReturnType property.
@@ -8546,14 +8541,24 @@ func (o *Nanoflow) SetMicroflowReturnType(v element.Element) {
 	o.microflowReturnType.Set(v)
 }
 
-// MarkAsUsed returns the value of the markAsUsed property.
-func (o *Nanoflow) MarkAsUsed() bool {
-	return o.markAsUsed.Get()
+// Name returns the value of the name property.
+func (o *Nanoflow) Name() string {
+	return o.name.Get()
 }
 
-// SetMarkAsUsed sets the value of the markAsUsed property.
-func (o *Nanoflow) SetMarkAsUsed(v bool) {
-	o.markAsUsed.Set(v)
+// SetName sets the value of the name property.
+func (o *Nanoflow) SetName(v string) {
+	o.name.Set(v)
+}
+
+// ObjectCollection returns the value of the objectCollection property.
+func (o *Nanoflow) ObjectCollection() element.Element {
+	return o.objectCollection.Get()
+}
+
+// SetObjectCollection sets the value of the objectCollection property.
+func (o *Nanoflow) SetObjectCollection(v element.Element) {
+	o.objectCollection.Set(v)
 }
 
 // ReturnVariableName returns the value of the returnVariableName property.
@@ -8566,21 +8571,6 @@ func (o *Nanoflow) SetReturnVariableName(v string) {
 	o.returnVariableName.Set(v)
 }
 
-// AllowedModuleRolesQualifiedNames returns the value of the allowedModuleRoles property.
-func (o *Nanoflow) AllowedModuleRolesQualifiedNames() []string {
-	return o.allowedModuleRoles.QualifiedNames()
-}
-
-// SetAllowedModuleRolesQualifiedNames sets the value of the allowedModuleRoles property.
-func (o *Nanoflow) SetAllowedModuleRolesQualifiedNames(v []string) {
-	o.allowedModuleRoles.SetQualifiedNames(v)
-}
-
-// AddAllowedModuleRoles appends a child element to the allowedModuleRoles list.
-func (o *Nanoflow) AddAllowedModuleRoles(v string) {
-	o.allowedModuleRoles.Append(v)
-}
-
 // UseListParameterByReference returns the value of the useListParameterByReference property.
 func (o *Nanoflow) UseListParameterByReference() bool {
 	return o.useListParameterByReference.Get()
@@ -8591,31 +8581,19 @@ func (o *Nanoflow) SetUseListParameterByReference(v bool) {
 	o.useListParameterByReference.Set(v)
 }
 
+// ReturnType returns the value of the returnType property.
+func (o *Nanoflow) ReturnType() string {
+	return o.returnType.Get()
+}
+
+// SetReturnType sets the value of the returnType property.
+func (o *Nanoflow) SetReturnType(v string) {
+	o.returnType.Set(v)
+}
+
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 // NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *Nanoflow) InitFromRaw(raw bson.Raw) {
-	o.name.Init(raw)
-	o.documentation.Init(raw)
-	o.excluded.Init(raw)
-	if val, err := raw.LookupErr("ExportLevel"); err == nil {
-		if s, ok := val.StringValueOK(); ok {
-			o.exportLevel.SetFromDecode(s)
-		}
-	}
-	if child, err := codec.DecodeChild(raw, "ObjectCollection"); err == nil {
-		o.objectCollection.SetFromDecode(child)
-	}
-	if children, err := codec.DecodeChildren(raw, "Flows"); err == nil {
-		for _, child := range children {
-			o.flows.AppendFromDecode(child)
-		}
-	}
-	o.returnType.Init(raw)
-	if child, err := codec.DecodeChild(raw, "MicroflowReturnType"); err == nil {
-		o.microflowReturnType.SetFromDecode(child)
-	}
-	o.markAsUsed.Init(raw)
-	o.returnVariableName.Init(raw)
 	if val, err := raw.LookupErr("AllowedModuleRoles"); err == nil {
 		if arr, ok := val.ArrayOK(); ok {
 			vals, _ := arr.Values()
@@ -8628,7 +8606,29 @@ func (o *Nanoflow) InitFromRaw(raw bson.Raw) {
 			o.allowedModuleRoles.SetFromDecode(qnames)
 		}
 	}
+	o.documentation.Init(raw)
+	o.excluded.Init(raw)
+	if val, err := raw.LookupErr("ExportLevel"); err == nil {
+		if s, ok := val.StringValueOK(); ok {
+			o.exportLevel.SetFromDecode(s)
+		}
+	}
+	if children, err := codec.DecodeChildren(raw, "Flows"); err == nil {
+		for _, child := range children {
+			o.flows.AppendFromDecode(child)
+		}
+	}
+	o.markAsUsed.Init(raw)
+	if child, err := codec.DecodeChild(raw, "MicroflowReturnType"); err == nil {
+		o.microflowReturnType.SetFromDecode(child)
+	}
+	o.name.Init(raw)
+	if child, err := codec.DecodeChild(raw, "ObjectCollection"); err == nil {
+		o.objectCollection.SetFromDecode(child)
+	}
+	o.returnVariableName.Init(raw)
 	o.useListParameterByReference.Init(raw)
+	o.returnType.Init(raw)
 }
 
 // ────────────────────────────────────────────────────────
@@ -10600,27 +10600,42 @@ func (o *SendExternalObject) InitFromRaw(raw bson.Raw) {
 
 type SequenceFlow struct {
 	element.Base
-	origin                     *property.ByIdRef[element.Element]
-	destination                *property.ByIdRef[element.Element]
-	originConnectionIndex      *property.Primitive[int32]
+	caseValues                 *property.PartList[element.Element]
 	destinationConnectionIndex *property.Primitive[int32]
+	destination                *property.ByIdRef[element.Element]
+	isErrorHandler             *property.Primitive[bool]
+	line                       *property.Part[element.Element]
+	originConnectionIndex      *property.Primitive[int32]
+	origin                     *property.ByIdRef[element.Element]
 	originBezierVector         *property.Primitive[string]
 	destinationBezierVector    *property.Primitive[string]
 	lineType                   *property.Enum[string]
-	line                       *property.Part[element.Element]
 	caseValue                  *property.Part[element.Element]
-	caseValues                 *property.PartList[element.Element]
-	isErrorHandler             *property.Primitive[bool]
 }
 
-// OriginRefID returns the value of the origin property.
-func (o *SequenceFlow) OriginRefID() element.ID {
-	return o.origin.RefID()
+// CaseValuesItems returns the value of the caseValues property.
+func (o *SequenceFlow) CaseValuesItems() []element.Element {
+	return o.caseValues.Items()
 }
 
-// SetOriginID sets the value of the origin property.
-func (o *SequenceFlow) SetOriginID(v element.ID) {
-	o.origin.SetID(v)
+// AddCaseValues appends a child element to the caseValues list.
+func (o *SequenceFlow) AddCaseValues(v element.Element) {
+	o.caseValues.Append(v)
+}
+
+// RemoveCaseValues removes the element at the given index from the caseValues list.
+func (o *SequenceFlow) RemoveCaseValues(index int) {
+	o.caseValues.Remove(index)
+}
+
+// DestinationConnectionIndex returns the value of the destinationConnectionIndex property.
+func (o *SequenceFlow) DestinationConnectionIndex() int32 {
+	return o.destinationConnectionIndex.Get()
+}
+
+// SetDestinationConnectionIndex sets the value of the destinationConnectionIndex property.
+func (o *SequenceFlow) SetDestinationConnectionIndex(v int32) {
+	o.destinationConnectionIndex.Set(v)
 }
 
 // DestinationRefID returns the value of the destination property.
@@ -10633,6 +10648,26 @@ func (o *SequenceFlow) SetDestinationID(v element.ID) {
 	o.destination.SetID(v)
 }
 
+// IsErrorHandler returns the value of the isErrorHandler property.
+func (o *SequenceFlow) IsErrorHandler() bool {
+	return o.isErrorHandler.Get()
+}
+
+// SetIsErrorHandler sets the value of the isErrorHandler property.
+func (o *SequenceFlow) SetIsErrorHandler(v bool) {
+	o.isErrorHandler.Set(v)
+}
+
+// Line returns the value of the line property.
+func (o *SequenceFlow) Line() element.Element {
+	return o.line.Get()
+}
+
+// SetLine sets the value of the line property.
+func (o *SequenceFlow) SetLine(v element.Element) {
+	o.line.Set(v)
+}
+
 // OriginConnectionIndex returns the value of the originConnectionIndex property.
 func (o *SequenceFlow) OriginConnectionIndex() int32 {
 	return o.originConnectionIndex.Get()
@@ -10643,14 +10678,14 @@ func (o *SequenceFlow) SetOriginConnectionIndex(v int32) {
 	o.originConnectionIndex.Set(v)
 }
 
-// DestinationConnectionIndex returns the value of the destinationConnectionIndex property.
-func (o *SequenceFlow) DestinationConnectionIndex() int32 {
-	return o.destinationConnectionIndex.Get()
+// OriginRefID returns the value of the origin property.
+func (o *SequenceFlow) OriginRefID() element.ID {
+	return o.origin.RefID()
 }
 
-// SetDestinationConnectionIndex sets the value of the destinationConnectionIndex property.
-func (o *SequenceFlow) SetDestinationConnectionIndex(v int32) {
-	o.destinationConnectionIndex.Set(v)
+// SetOriginID sets the value of the origin property.
+func (o *SequenceFlow) SetOriginID(v element.ID) {
+	o.origin.SetID(v)
 }
 
 // OriginBezierVector returns the value of the originBezierVector property.
@@ -10683,16 +10718,6 @@ func (o *SequenceFlow) SetLineType(v string) {
 	o.lineType.Set(v)
 }
 
-// Line returns the value of the line property.
-func (o *SequenceFlow) Line() element.Element {
-	return o.line.Get()
-}
-
-// SetLine sets the value of the line property.
-func (o *SequenceFlow) SetLine(v element.Element) {
-	o.line.Set(v)
-}
-
 // CaseValue returns the value of the caseValue property.
 func (o *SequenceFlow) CaseValue() element.Element {
 	return o.caseValue.Get()
@@ -10703,41 +10728,15 @@ func (o *SequenceFlow) SetCaseValue(v element.Element) {
 	o.caseValue.Set(v)
 }
 
-// CaseValuesItems returns the value of the caseValues property.
-func (o *SequenceFlow) CaseValuesItems() []element.Element {
-	return o.caseValues.Items()
-}
-
-// AddCaseValues appends a child element to the caseValues list.
-func (o *SequenceFlow) AddCaseValues(v element.Element) {
-	o.caseValues.Append(v)
-}
-
-// RemoveCaseValues removes the element at the given index from the caseValues list.
-func (o *SequenceFlow) RemoveCaseValues(index int) {
-	o.caseValues.Remove(index)
-}
-
-// IsErrorHandler returns the value of the isErrorHandler property.
-func (o *SequenceFlow) IsErrorHandler() bool {
-	return o.isErrorHandler.Get()
-}
-
-// SetIsErrorHandler sets the value of the isErrorHandler property.
-func (o *SequenceFlow) SetIsErrorHandler(v bool) {
-	o.isErrorHandler.Set(v)
-}
-
 // InitFromRaw populates lazy-decoded property holders from raw BSON.
 // NOTE: BSONKey for PartList/Part fields respects property_key_overrides from supplements.json.
 func (o *SequenceFlow) InitFromRaw(raw bson.Raw) {
-	if val, err := raw.LookupErr("OriginPointer"); err == nil {
-		if s, ok := val.StringValueOK(); ok {
-			o.origin.SetFromDecode(element.ID(s))
-		} else if _, bdata, bok := val.BinaryOK(); bok {
-			o.origin.SetFromDecode(element.ID(codec.BinaryToUUID(bdata)))
+	if children, err := codec.DecodeChildren(raw, "CaseValues"); err == nil {
+		for _, child := range children {
+			o.caseValues.AppendFromDecode(child)
 		}
 	}
+	o.destinationConnectionIndex.Init(raw)
 	if val, err := raw.LookupErr("DestinationPointer"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
 			o.destination.SetFromDecode(element.ID(s))
@@ -10745,8 +10744,18 @@ func (o *SequenceFlow) InitFromRaw(raw bson.Raw) {
 			o.destination.SetFromDecode(element.ID(codec.BinaryToUUID(bdata)))
 		}
 	}
+	o.isErrorHandler.Init(raw)
+	if child, err := codec.DecodeChild(raw, "Line"); err == nil {
+		o.line.SetFromDecode(child)
+	}
 	o.originConnectionIndex.Init(raw)
-	o.destinationConnectionIndex.Init(raw)
+	if val, err := raw.LookupErr("OriginPointer"); err == nil {
+		if s, ok := val.StringValueOK(); ok {
+			o.origin.SetFromDecode(element.ID(s))
+		} else if _, bdata, bok := val.BinaryOK(); bok {
+			o.origin.SetFromDecode(element.ID(codec.BinaryToUUID(bdata)))
+		}
+	}
 	o.originBezierVector.Init(raw)
 	o.destinationBezierVector.Init(raw)
 	if val, err := raw.LookupErr("LineType"); err == nil {
@@ -10754,18 +10763,9 @@ func (o *SequenceFlow) InitFromRaw(raw bson.Raw) {
 			o.lineType.SetFromDecode(s)
 		}
 	}
-	if child, err := codec.DecodeChild(raw, "Line"); err == nil {
-		o.line.SetFromDecode(child)
-	}
 	if child, err := codec.DecodeChild(raw, "CaseValue"); err == nil {
 		o.caseValue.SetFromDecode(child)
 	}
-	if children, err := codec.DecodeChildren(raw, "CaseValues"); err == nil {
-		for _, child := range children {
-			o.caseValues.AppendFromDecode(child)
-		}
-	}
-	o.isErrorHandler.Init(raw)
 }
 
 // ────────────────────────────────────────────────────────
@@ -12825,11 +12825,11 @@ func NewApplyJumpToOptionAction() *ApplyJumpToOptionAction {
 func initAssociationRetrieveSource() *AssociationRetrieveSource {
 	o := &AssociationRetrieveSource{}
 	o.SetTypeName("Microflows$AssociationRetrieveSource")
-	o.startVariableName = property.NewPrimitive[string]("StartVariableName", property.DecodeString)
-	o.startVariableName.Bind(&o.Base, 0)
 	o.association = property.NewByNameRef[element.Element]("AssociationId", "DomainModels$AssociationBase")
-	o.association.Bind(&o.Base, 1)
-	o.SetProperties([]element.Property{o.startVariableName, o.association})
+	o.association.Bind(&o.Base, 0)
+	o.startVariableName = property.NewPrimitive[string]("StartVariableName", property.DecodeString)
+	o.startVariableName.Bind(&o.Base, 1)
+	o.SetProperties([]element.Property{o.association, o.startVariableName})
 	return o
 }
 
@@ -12942,11 +12942,11 @@ func NewBasicJavaActionParameterValue() *BasicJavaActionParameterValue {
 func initBezierCurve() *BezierCurve {
 	o := &BezierCurve{}
 	o.SetTypeName("Microflows$BezierCurve")
-	o.originControlVector = property.NewPrimitive[string]("OriginControlVector", property.DecodeString)
-	o.originControlVector.Bind(&o.Base, 0)
 	o.destinationControlVector = property.NewPrimitive[string]("DestinationControlVector", property.DecodeString)
-	o.destinationControlVector.Bind(&o.Base, 1)
-	o.SetProperties([]element.Property{o.originControlVector, o.destinationControlVector})
+	o.destinationControlVector.Bind(&o.Base, 0)
+	o.originControlVector = property.NewPrimitive[string]("OriginControlVector", property.DecodeString)
+	o.originControlVector.Bind(&o.Base, 1)
+	o.SetProperties([]element.Property{o.destinationControlVector, o.originControlVector})
 	return o
 }
 
@@ -13411,19 +13411,19 @@ func NewCreateListAction() *CreateListAction {
 func initCreateObjectAction() *CreateObjectAction {
 	o := &CreateObjectAction{}
 	o.SetTypeName("Microflows$CreateChangeAction")
-	o.errorHandlingType = property.NewEnum[string]("ErrorHandlingType")
-	o.errorHandlingType.Bind(&o.Base, 0)
-	o.items = property.NewPartList[element.Element]("Items")
-	o.items.Bind(&o.Base, 1)
-	o.refreshInClient = property.NewPrimitive[bool]("RefreshInClient", property.DecodeBool)
-	o.refreshInClient.Bind(&o.Base, 2)
 	o.commit = property.NewEnum[string]("Commit")
-	o.commit.Bind(&o.Base, 3)
+	o.commit.Bind(&o.Base, 0)
 	o.entity = property.NewByNameRef[element.Element]("Entity", "DomainModels$Entity")
-	o.entity.Bind(&o.Base, 4)
+	o.entity.Bind(&o.Base, 1)
+	o.errorHandlingType = property.NewEnum[string]("ErrorHandlingType")
+	o.errorHandlingType.Bind(&o.Base, 2)
+	o.items = property.NewPartListV2[element.Element]("Items")
+	o.items.Bind(&o.Base, 3)
+	o.refreshInClient = property.NewPrimitive[bool]("RefreshInClient", property.DecodeBool)
+	o.refreshInClient.Bind(&o.Base, 4)
 	o.outputVariableName = property.NewPrimitive[string]("VariableName", property.DecodeString)
 	o.outputVariableName.Bind(&o.Base, 5)
-	o.SetProperties([]element.Property{o.errorHandlingType, o.items, o.refreshInClient, o.commit, o.entity, o.outputVariableName})
+	o.SetProperties([]element.Property{o.commit, o.entity, o.errorHandlingType, o.items, o.refreshInClient, o.outputVariableName})
 	return o
 }
 
@@ -13737,17 +13737,17 @@ func NewEmailMessage() *EmailMessage {
 func initEndEvent() *EndEvent {
 	o := &EndEvent{}
 	o.SetTypeName("Microflows$EndEvent")
+	o.documentation = property.NewPrimitive[string]("Documentation", property.DecodeString)
+	o.documentation.Bind(&o.Base, 0)
 	o.relativeMiddlePoint = property.NewPrimitive[string]("RelativeMiddlePoint", property.DecodeString)
-	o.relativeMiddlePoint.Bind(&o.Base, 0)
-	o.size = property.NewPrimitive[string]("Size", property.DecodeString)
-	o.size.Bind(&o.Base, 1)
+	o.relativeMiddlePoint.Bind(&o.Base, 1)
 	o.returnValue = property.NewPrimitive[string]("ReturnValue", property.DecodeString)
 	o.returnValue.Bind(&o.Base, 2)
+	o.size = property.NewPrimitive[string]("Size", property.DecodeString)
+	o.size.Bind(&o.Base, 3)
 	o.returnValueModel = property.NewPart[element.Element]("ReturnValueModel")
-	o.returnValueModel.Bind(&o.Base, 3)
-	o.documentation = property.NewPrimitive[string]("Documentation", property.DecodeString)
-	o.documentation.Bind(&o.Base, 4)
-	o.SetProperties([]element.Property{o.relativeMiddlePoint, o.size, o.returnValue, o.returnValueModel, o.documentation})
+	o.returnValueModel.Bind(&o.Base, 4)
+	o.SetProperties([]element.Property{o.documentation, o.relativeMiddlePoint, o.returnValue, o.size, o.returnValueModel})
 	return o
 }
 
@@ -15486,31 +15486,31 @@ func NewMicroflowPrimitiveParameterUrlSegment() *MicroflowPrimitiveParameterUrlS
 func initNanoflow() *Nanoflow {
 	o := &Nanoflow{}
 	o.SetTypeName("Microflows$Nanoflow")
-	o.name = property.NewPrimitive[string]("Name", property.DecodeString)
-	o.name.Bind(&o.Base, 0)
+	o.allowedModuleRoles = property.NewByNameRefList[element.Element]("AllowedModuleRoles", "Security$ModuleRole")
+	o.allowedModuleRoles.Bind(&o.Base, 0)
 	o.documentation = property.NewPrimitive[string]("Documentation", property.DecodeString)
 	o.documentation.Bind(&o.Base, 1)
 	o.excluded = property.NewPrimitive[bool]("Excluded", property.DecodeBool)
 	o.excluded.Bind(&o.Base, 2)
 	o.exportLevel = property.NewEnum[string]("ExportLevel")
 	o.exportLevel.Bind(&o.Base, 3)
-	o.objectCollection = property.NewPart[element.Element]("ObjectCollection")
-	o.objectCollection.Bind(&o.Base, 4)
 	o.flows = property.NewPartList[element.Element]("Flows")
-	o.flows.Bind(&o.Base, 5)
-	o.returnType = property.NewPrimitive[string]("ReturnType", property.DecodeString)
-	o.returnType.Bind(&o.Base, 6)
-	o.microflowReturnType = property.NewPart[element.Element]("MicroflowReturnType")
-	o.microflowReturnType.Bind(&o.Base, 7)
+	o.flows.Bind(&o.Base, 4)
 	o.markAsUsed = property.NewPrimitive[bool]("MarkAsUsed", property.DecodeBool)
-	o.markAsUsed.Bind(&o.Base, 8)
+	o.markAsUsed.Bind(&o.Base, 5)
+	o.microflowReturnType = property.NewPart[element.Element]("MicroflowReturnType")
+	o.microflowReturnType.Bind(&o.Base, 6)
+	o.name = property.NewPrimitive[string]("Name", property.DecodeString)
+	o.name.Bind(&o.Base, 7)
+	o.objectCollection = property.NewPart[element.Element]("ObjectCollection")
+	o.objectCollection.Bind(&o.Base, 8)
 	o.returnVariableName = property.NewPrimitive[string]("ReturnVariableName", property.DecodeString)
 	o.returnVariableName.Bind(&o.Base, 9)
-	o.allowedModuleRoles = property.NewByNameRefList[element.Element]("AllowedModuleRoles", "Security$ModuleRole")
-	o.allowedModuleRoles.Bind(&o.Base, 10)
 	o.useListParameterByReference = property.NewPrimitive[bool]("UseListParameterByReference", property.DecodeBool)
-	o.useListParameterByReference.Bind(&o.Base, 11)
-	o.SetProperties([]element.Property{o.name, o.documentation, o.excluded, o.exportLevel, o.objectCollection, o.flows, o.returnType, o.microflowReturnType, o.markAsUsed, o.returnVariableName, o.allowedModuleRoles, o.useListParameterByReference})
+	o.useListParameterByReference.Bind(&o.Base, 10)
+	o.returnType = property.NewPrimitive[string]("ReturnType", property.DecodeString)
+	o.returnType.Bind(&o.Base, 11)
+	o.SetProperties([]element.Property{o.allowedModuleRoles, o.documentation, o.excluded, o.exportLevel, o.flows, o.markAsUsed, o.microflowReturnType, o.name, o.objectCollection, o.returnVariableName, o.useListParameterByReference, o.returnType})
 	return o
 }
 
@@ -16349,29 +16349,29 @@ func NewSendExternalObject() *SendExternalObject {
 func initSequenceFlow() *SequenceFlow {
 	o := &SequenceFlow{}
 	o.SetTypeName("Microflows$SequenceFlow")
-	o.origin = property.NewByIdRef[element.Element]("OriginPointer")
-	o.origin.Bind(&o.Base, 0)
-	o.destination = property.NewByIdRef[element.Element]("DestinationPointer")
-	o.destination.Bind(&o.Base, 1)
-	o.originConnectionIndex = property.NewPrimitive[int32]("OriginConnectionIndex", property.DecodeInt32)
-	o.originConnectionIndex.Bind(&o.Base, 2)
-	o.destinationConnectionIndex = property.NewPrimitive[int32]("DestinationConnectionIndex", property.DecodeInt32)
-	o.destinationConnectionIndex.Bind(&o.Base, 3)
-	o.originBezierVector = property.NewPrimitive[string]("OriginBezierVector", property.DecodeString)
-	o.originBezierVector.Bind(&o.Base, 4)
-	o.destinationBezierVector = property.NewPrimitive[string]("DestinationBezierVector", property.DecodeString)
-	o.destinationBezierVector.Bind(&o.Base, 5)
-	o.lineType = property.NewEnum[string]("LineType")
-	o.lineType.Bind(&o.Base, 6)
-	o.line = property.NewPart[element.Element]("Line")
-	o.line.Bind(&o.Base, 7)
-	o.caseValue = property.NewPart[element.Element]("CaseValue")
-	o.caseValue.Bind(&o.Base, 8)
 	o.caseValues = property.NewPartListV2[element.Element]("CaseValues")
-	o.caseValues.Bind(&o.Base, 9)
+	o.caseValues.Bind(&o.Base, 0)
+	o.destinationConnectionIndex = property.NewPrimitive[int32]("DestinationConnectionIndex", property.DecodeInt32)
+	o.destinationConnectionIndex.Bind(&o.Base, 1)
+	o.destination = property.NewByIdRef[element.Element]("DestinationPointer")
+	o.destination.Bind(&o.Base, 2)
 	o.isErrorHandler = property.NewPrimitive[bool]("IsErrorHandler", property.DecodeBool)
-	o.isErrorHandler.Bind(&o.Base, 10)
-	o.SetProperties([]element.Property{o.origin, o.destination, o.originConnectionIndex, o.destinationConnectionIndex, o.originBezierVector, o.destinationBezierVector, o.lineType, o.line, o.caseValue, o.caseValues, o.isErrorHandler})
+	o.isErrorHandler.Bind(&o.Base, 3)
+	o.line = property.NewPart[element.Element]("Line")
+	o.line.Bind(&o.Base, 4)
+	o.originConnectionIndex = property.NewPrimitive[int32]("OriginConnectionIndex", property.DecodeInt32)
+	o.originConnectionIndex.Bind(&o.Base, 5)
+	o.origin = property.NewByIdRef[element.Element]("OriginPointer")
+	o.origin.Bind(&o.Base, 6)
+	o.originBezierVector = property.NewPrimitive[string]("OriginBezierVector", property.DecodeString)
+	o.originBezierVector.Bind(&o.Base, 7)
+	o.destinationBezierVector = property.NewPrimitive[string]("DestinationBezierVector", property.DecodeString)
+	o.destinationBezierVector.Bind(&o.Base, 8)
+	o.lineType = property.NewEnum[string]("LineType")
+	o.lineType.Bind(&o.Base, 9)
+	o.caseValue = property.NewPart[element.Element]("CaseValue")
+	o.caseValue.Bind(&o.Base, 10)
+	o.SetProperties([]element.Property{o.caseValues, o.destinationConnectionIndex, o.destination, o.isErrorHandler, o.line, o.originConnectionIndex, o.origin, o.originBezierVector, o.destinationBezierVector, o.lineType, o.caseValue})
 	return o
 }
 

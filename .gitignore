@@ -79,6 +79,9 @@ vscode-mdl/
 vscode-mdl/*.vsix
 .mxcli
 
+# Golden test encoder output (regenerated via GOLDEN_WRITE=1)
+modelsdk/codec/golden/testdata/*.bson
+
 # Test temp dirs on the same filesystem (created by SameFSTempDir)
 .mxcli-tmp-*/
 profile/

@@ -4,19 +4,33 @@ package golden
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/mendixlabs/mxcli/modelsdk/codec"
+	"github.com/mendixlabs/mxcli/modelsdk/version"
 )
 
 func TestGoldenBSON(t *testing.T) {
 	for _, entry := range Registry() {
 		t.Run(entry.Name, func(t *testing.T) {
 			obj := entry.Builder()
-			enc := &codec.Encoder{}
+			ver := version.Parse("11.12.1")
+			enc := &codec.Encoder{Version: ver}
 			got, err := enc.Encode(obj)
 			if err != nil {
 				t.Fatalf("Encode: %v", err)
+			}
+
+			// GOLDEN_WRITE=1 dumps encoder output as .bson next to the golden .mxunit.
+			if os.Getenv("GOLDEN_WRITE") == "1" {
+				bsonPath := filepath.Join("testdata", entry.Name+".bson")
+				if err := os.WriteFile(bsonPath, got, 0644); err != nil {
+					t.Logf("Error writing %s: %v", bsonPath, err)
+				} else {
+					t.Logf("Wrote %s (%d bytes)", bsonPath, len(got))
+				}
 			}
 
 			skipFields := entry.SkipFields

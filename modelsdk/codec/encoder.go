@@ -172,15 +172,37 @@ func (e *Encoder) buildDoc(elem element.Element) (bson.D, error) {
 				continue
 			}
 			idx := findRebuild(bytesOf(prop.Name()))
-			if idx < 0 {
+			if idx >= 0 {
+				val, err := e.encodeEntry(rebuild[idx])
+				if err != nil {
+					return nil, err
+				}
+				if val != nil {
+					doc = append(doc, bson.E{Key: prop.Name(), Value: val})
+				}
 				continue
 			}
-			val, err := e.encodeEntry(rebuild[idx])
-			if err != nil {
-				return nil, err
-			}
-			if val != nil {
-				doc = append(doc, bson.E{Key: prop.Name(), Value: val})
+			// Property not dirty — emit empty lists / nil parts as zero values.
+			switch p := prop.(type) {
+			case element.ChildListProperty:
+				if children := p.ChildElements(); len(children) == 0 {
+					doc = append(doc, bson.E{Key: prop.Name(), Value: bson.A{versionMarkerOf(p)}})
+				}
+			case element.ChildProperty:
+				if p.ChildElement() == nil {
+					doc = append(doc, bson.E{Key: prop.Name(), Value: nil})
+				}
+			default:
+				if wp, ok := prop.(element.WritableProperty); ok {
+					if val := wp.BSONValue(); val != nil {
+						// Only emit list-valued defaults (ByNameRefList marker, etc.).
+						// Match both bson.A and []any — property.BSONValue may return either.
+						switch val.(type) {
+						case bson.A, []any:
+							doc = append(doc, bson.E{Key: prop.Name(), Value: val})
+						}
+					}
+				}
 			}
 		}
 		return doc, nil
@@ -307,6 +329,19 @@ func (e *Encoder) encodeEntry(rb rebuildEntry) (any, error) {
 		return idToBinary(id), nil
 	}
 	return val, nil
+}
+
+// versionMarkerOf returns the BSON array version prefix for a list property.
+type hasVersionMarker interface{ VersionMarker() int32 }
+
+func versionMarkerOf(clp element.ChildListProperty) int32 {
+	vm := int32(3)
+	if pv, ok := clp.(hasVersionMarker); ok {
+		if m := pv.VersionMarker(); m > 0 {
+			vm = m
+		}
+	}
+	return vm
 }
 
 // anyChildDirty reports whether any element in the ChildListProperty is dirty.

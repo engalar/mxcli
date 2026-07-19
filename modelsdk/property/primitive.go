@@ -264,7 +264,8 @@ func (p *StringListPrimitive) SetList(vs []string) {
 // BSONValue returns the list as a BSON array for serialization.
 func (p *StringListPrimitive) BSONValue() any {
 	p.load()
-	arr := bson.A{}
+	// Mendix stores string lists as versioned arrays with marker int32(1).
+	arr := bson.A{int32(1)}
 	for _, s := range p.val {
 		arr = append(arr, s)
 	}

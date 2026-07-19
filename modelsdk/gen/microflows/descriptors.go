@@ -155,8 +155,8 @@ func init() {
 	codec.DefaultDescRegistry.Register("Microflows$AssociationRetrieveSource", &codec.TypeDesc{
 		TypeName: "Microflows$AssociationRetrieveSource",
 		Properties: []codec.PropDesc{
-			{Name: "startVariableName", BSONKey: "StartVariableName", Kind: codec.PropKindString, RefType: ""},
 			{Name: "association", BSONKey: "AssociationId", Kind: codec.PropKindByNameRef, RefType: "DomainModels$AssociationBase"},
+			{Name: "startVariableName", BSONKey: "StartVariableName", Kind: codec.PropKindString, RefType: ""},
 		},
 	})
 	codec.DefaultDescRegistry.Register("Microflows$AuthenticationConfig", &codec.TypeDesc{
@@ -197,8 +197,8 @@ func init() {
 	codec.DefaultDescRegistry.Register("Microflows$BezierCurve", &codec.TypeDesc{
 		TypeName: "Microflows$BezierCurve",
 		Properties: []codec.PropDesc{
-			{Name: "originControlVector", BSONKey: "OriginControlVector", Kind: codec.PropKindString, RefType: ""},
 			{Name: "destinationControlVector", BSONKey: "DestinationControlVector", Kind: codec.PropKindString, RefType: ""},
+			{Name: "originControlVector", BSONKey: "OriginControlVector", Kind: codec.PropKindString, RefType: ""},
 		},
 	})
 	codec.DefaultDescRegistry.Register("Microflows$ListOperation", &codec.TypeDesc{
@@ -387,22 +387,22 @@ func init() {
 	codec.DefaultDescRegistry.Register("Microflows$CreateObjectAction", &codec.TypeDesc{
 		TypeName: "Microflows$CreateObjectAction",
 		Properties: []codec.PropDesc{
+			{Name: "commit", BSONKey: "Commit", Kind: codec.PropKindEnum, RefType: ""},
+			{Name: "entity", BSONKey: "Entity", Kind: codec.PropKindByNameRef, RefType: "DomainModels$Entity"},
 			{Name: "errorHandlingType", BSONKey: "ErrorHandlingType", Kind: codec.PropKindEnum, RefType: ""},
 			{Name: "items", BSONKey: "Items", Kind: codec.PropKindPartList, RefType: ""},
 			{Name: "refreshInClient", BSONKey: "RefreshInClient", Kind: codec.PropKindBool, RefType: ""},
-			{Name: "commit", BSONKey: "Commit", Kind: codec.PropKindEnum, RefType: ""},
-			{Name: "entity", BSONKey: "Entity", Kind: codec.PropKindByNameRef, RefType: "DomainModels$Entity"},
 			{Name: "outputVariableName", BSONKey: "VariableName", Kind: codec.PropKindString, RefType: ""},
 		},
 	})
 	codec.DefaultDescRegistry.Register("Microflows$CreateChangeAction", &codec.TypeDesc{
 		TypeName: "Microflows$CreateChangeAction",
 		Properties: []codec.PropDesc{
+			{Name: "commit", BSONKey: "Commit", Kind: codec.PropKindEnum, RefType: ""},
+			{Name: "entity", BSONKey: "Entity", Kind: codec.PropKindByNameRef, RefType: "DomainModels$Entity"},
 			{Name: "errorHandlingType", BSONKey: "ErrorHandlingType", Kind: codec.PropKindEnum, RefType: ""},
 			{Name: "items", BSONKey: "Items", Kind: codec.PropKindPartList, RefType: ""},
 			{Name: "refreshInClient", BSONKey: "RefreshInClient", Kind: codec.PropKindBool, RefType: ""},
-			{Name: "commit", BSONKey: "Commit", Kind: codec.PropKindEnum, RefType: ""},
-			{Name: "entity", BSONKey: "Entity", Kind: codec.PropKindByNameRef, RefType: "DomainModels$Entity"},
 			{Name: "outputVariableName", BSONKey: "VariableName", Kind: codec.PropKindString, RefType: ""},
 		},
 	})
@@ -507,11 +507,11 @@ func init() {
 	codec.DefaultDescRegistry.Register("Microflows$EndEvent", &codec.TypeDesc{
 		TypeName: "Microflows$EndEvent",
 		Properties: []codec.PropDesc{
-			{Name: "relativeMiddlePoint", BSONKey: "RelativeMiddlePoint", Kind: codec.PropKindString, RefType: ""},
-			{Name: "size", BSONKey: "Size", Kind: codec.PropKindString, RefType: ""},
-			{Name: "returnValue", BSONKey: "ReturnValue", Kind: codec.PropKindString, RefType: ""},
-			{Name: "returnValueModel", BSONKey: "ReturnValueModel", Kind: codec.PropKindPart, RefType: ""},
 			{Name: "documentation", BSONKey: "Documentation", Kind: codec.PropKindString, RefType: ""},
+			{Name: "relativeMiddlePoint", BSONKey: "RelativeMiddlePoint", Kind: codec.PropKindString, RefType: ""},
+			{Name: "returnValue", BSONKey: "ReturnValue", Kind: codec.PropKindString, RefType: ""},
+			{Name: "size", BSONKey: "Size", Kind: codec.PropKindString, RefType: ""},
+			{Name: "returnValueModel", BSONKey: "ReturnValueModel", Kind: codec.PropKindPart, RefType: ""},
 		},
 	})
 	codec.DefaultDescRegistry.Register("Microflows$EntityTypeCodeActionParameterValue", &codec.TypeDesc{
@@ -1170,18 +1170,18 @@ func init() {
 	codec.DefaultDescRegistry.Register("Microflows$Nanoflow", &codec.TypeDesc{
 		TypeName: "Microflows$Nanoflow",
 		Properties: []codec.PropDesc{
-			{Name: "name", BSONKey: "Name", Kind: codec.PropKindString, RefType: ""},
+			{Name: "allowedModuleRoles", BSONKey: "AllowedModuleRoles", Kind: codec.PropKindByNameList, RefType: "Security$ModuleRole"},
 			{Name: "documentation", BSONKey: "Documentation", Kind: codec.PropKindString, RefType: ""},
 			{Name: "excluded", BSONKey: "Excluded", Kind: codec.PropKindBool, RefType: ""},
 			{Name: "exportLevel", BSONKey: "ExportLevel", Kind: codec.PropKindEnum, RefType: ""},
-			{Name: "objectCollection", BSONKey: "ObjectCollection", Kind: codec.PropKindPart, RefType: ""},
 			{Name: "flows", BSONKey: "Flows", Kind: codec.PropKindPartList, RefType: ""},
-			{Name: "returnType", BSONKey: "ReturnType", Kind: codec.PropKindString, RefType: ""},
-			{Name: "microflowReturnType", BSONKey: "MicroflowReturnType", Kind: codec.PropKindPart, RefType: ""},
 			{Name: "markAsUsed", BSONKey: "MarkAsUsed", Kind: codec.PropKindBool, RefType: ""},
+			{Name: "microflowReturnType", BSONKey: "MicroflowReturnType", Kind: codec.PropKindPart, RefType: ""},
+			{Name: "name", BSONKey: "Name", Kind: codec.PropKindString, RefType: ""},
+			{Name: "objectCollection", BSONKey: "ObjectCollection", Kind: codec.PropKindPart, RefType: ""},
 			{Name: "returnVariableName", BSONKey: "ReturnVariableName", Kind: codec.PropKindString, RefType: ""},
-			{Name: "allowedModuleRoles", BSONKey: "AllowedModuleRoles", Kind: codec.PropKindByNameList, RefType: "Security$ModuleRole"},
 			{Name: "useListParameterByReference", BSONKey: "UseListParameterByReference", Kind: codec.PropKindBool, RefType: ""},
+			{Name: "returnType", BSONKey: "ReturnType", Kind: codec.PropKindString, RefType: ""},
 		},
 	})
 	codec.DefaultDescRegistry.Register("Microflows$NanoflowCall", &codec.TypeDesc{
@@ -1456,17 +1456,17 @@ func init() {
 	codec.DefaultDescRegistry.Register("Microflows$SequenceFlow", &codec.TypeDesc{
 		TypeName: "Microflows$SequenceFlow",
 		Properties: []codec.PropDesc{
-			{Name: "origin", BSONKey: "OriginPointer", Kind: codec.PropKindByIdRef, RefType: ""},
-			{Name: "destination", BSONKey: "DestinationPointer", Kind: codec.PropKindByIdRef, RefType: ""},
-			{Name: "originConnectionIndex", BSONKey: "OriginConnectionIndex", Kind: codec.PropKindInt32, RefType: ""},
+			{Name: "caseValues", BSONKey: "CaseValues", Kind: codec.PropKindPartList, RefType: ""},
 			{Name: "destinationConnectionIndex", BSONKey: "DestinationConnectionIndex", Kind: codec.PropKindInt32, RefType: ""},
+			{Name: "destination", BSONKey: "DestinationPointer", Kind: codec.PropKindByIdRef, RefType: ""},
+			{Name: "isErrorHandler", BSONKey: "IsErrorHandler", Kind: codec.PropKindBool, RefType: ""},
+			{Name: "line", BSONKey: "Line", Kind: codec.PropKindPart, RefType: ""},
+			{Name: "originConnectionIndex", BSONKey: "OriginConnectionIndex", Kind: codec.PropKindInt32, RefType: ""},
+			{Name: "origin", BSONKey: "OriginPointer", Kind: codec.PropKindByIdRef, RefType: ""},
 			{Name: "originBezierVector", BSONKey: "OriginBezierVector", Kind: codec.PropKindString, RefType: ""},
 			{Name: "destinationBezierVector", BSONKey: "DestinationBezierVector", Kind: codec.PropKindString, RefType: ""},
 			{Name: "lineType", BSONKey: "LineType", Kind: codec.PropKindEnum, RefType: ""},
-			{Name: "line", BSONKey: "Line", Kind: codec.PropKindPart, RefType: ""},
 			{Name: "caseValue", BSONKey: "CaseValue", Kind: codec.PropKindPart, RefType: ""},
-			{Name: "caseValues", BSONKey: "CaseValues", Kind: codec.PropKindPartList, RefType: ""},
-			{Name: "isErrorHandler", BSONKey: "IsErrorHandler", Kind: codec.PropKindBool, RefType: ""},
 		},
 	})
 	codec.DefaultDescRegistry.Register("Microflows$SetTaskOutcomeAction", &codec.TypeDesc{

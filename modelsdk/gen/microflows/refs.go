@@ -203,8 +203,8 @@ func init() {
 		{Prop: "Parameter", Kind: codec.RefByName, Target: "Microflows$RuleParameter"},
 	})
 	codec.DefaultRefRegistry.RegisterRefs("Microflows$SequenceFlow", []codec.RefMeta{
-		{Prop: "OriginPointer", Kind: codec.RefById, Target: ""},
 		{Prop: "DestinationPointer", Kind: codec.RefById, Target: ""},
+		{Prop: "OriginPointer", Kind: codec.RefById, Target: ""},
 	})
 	codec.DefaultRefRegistry.RegisterRefs("Microflows$SetTaskOutcomeAction", []codec.RefMeta{
 		{Prop: "Outcome", Kind: codec.RefByName, Target: "Workflows$UserTaskOutcome"},

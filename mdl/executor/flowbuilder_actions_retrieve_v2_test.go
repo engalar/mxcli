@@ -25,6 +25,7 @@ import (
 	"testing"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
+	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 )
 
@@ -153,8 +154,12 @@ func TestAddRetrieveActionGenSortBuildsItemList(t *testing.T) {
 		t.Fatalf("items = %d, want 2", len(items))
 	}
 	si1 := items[0].(*genMf.SortItem)
-	if si1.AttributePath() != "Sales.Order.Amount" {
-		t.Fatalf("item 1 path = %q", si1.AttributePath())
+	if si1.AttributeRef() == nil {
+		t.Fatalf("item 1 has nil AttributeRef")
+	}
+	ar1 := si1.AttributeRef().(*genDm.AttributeRef)
+	if ar1.AttributeQualifiedName() != "Sales.Order.Amount" {
+		t.Fatalf("item 1 attribute = %q, want %q", ar1.AttributeQualifiedName(), "Sales.Order.Amount")
 	}
 	if si1.SortOrder() != "Ascending" {
 		t.Fatalf("item 1 order = %q", si1.SortOrder())

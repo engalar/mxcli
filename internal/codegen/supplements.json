@@ -149,6 +149,60 @@
       "name",
       "oql"
     ],
+    "Microflows$Nanoflow": [
+      "allowedModuleRoles",
+      "documentation",
+      "excluded",
+      "exportLevel",
+      "flows",
+      "markAsUsed",
+      "microflowReturnType",
+      "name",
+      "objectCollection",
+      "returnVariableName",
+      "useListParameterByReference"
+    ],
+    "Microflows$StartEvent": [
+      "documentation",
+      "relativeMiddlePoint",
+      "size"
+    ],
+    "Microflows$EndEvent": [
+      "documentation",
+      "relativeMiddlePoint",
+      "returnValue",
+      "size"
+    ],
+    "Microflows$SequenceFlow": [
+      "caseValues",
+      "destinationConnectionIndex",
+      "destination",
+      "isErrorHandler",
+      "line",
+      "originConnectionIndex",
+      "origin"
+    ],
+    "Microflows$SynchronizeAction": [
+      "errorHandlingType",
+      "type",
+      "variableNames"
+    ],
+    "Microflows$CreateObjectAction": [
+      "commit",
+      "entity",
+      "errorHandlingType",
+      "items",
+      "refreshInClient",
+      "outputVariableName"
+    ],
+    "Microflows$AssociationRetrieveSource": [
+      "association",
+      "startVariableName"
+    ],
+    "Microflows$BezierCurve": [
+      "destinationControlVector",
+      "originControlVector"
+    ],
     "Microflows$DatabaseRetrieveSource": [
       "entity",
       "sortItemList",
@@ -564,6 +618,7 @@
     "JavaScriptAction.parameters",
     "ProjectSecurity.demoUsers",
     "SortItemList.items",
-    "SequenceFlow.caseValues"
+    "SequenceFlow.caseValues",
+    "CreateObjectAction.items"
   ]
 }
