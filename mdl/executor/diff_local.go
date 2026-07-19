@@ -292,14 +292,17 @@ func bsonToMDL(ctx *ExecContext, unitType, unitID string, content []byte) string
 	}
 
 	switch {
-	case strings.Contains(unitType, "DomainModel"):
-		return domainModelBsonToMDL(ctx, raw, qualifiedName)
-	case strings.Contains(unitType, "Entity"):
-		return entityBsonToMDL(ctx, content, qualifiedName)
-	case strings.Contains(unitType, "Microflow"):
-		return microflowBsonToMDL(ctx, content, qualifiedName)
+	// Order matters: more specific types must come before less specific.
+	// "Microflows$Nanoflow" matches both "Nanoflow" and "Microflow";
+	// check Nanoflow first so it dispatches correctly.
 	case strings.Contains(unitType, "Nanoflow"):
 		return nanoflowBsonToMDL(ctx, content, qualifiedName)
+	case strings.Contains(unitType, "Microflow"):
+		return microflowBsonToMDL(ctx, content, qualifiedName)
+	case strings.Contains(unitType, "Entity"):
+		return entityBsonToMDL(ctx, content, qualifiedName)
+	case strings.Contains(unitType, "DomainModel"):
+		return domainModelBsonToMDL(ctx, raw, qualifiedName)
 	case strings.Contains(unitType, "Enumeration"):
 		return enumerationBsonToMDL(ctx, raw, qualifiedName)
 	case strings.Contains(unitType, "Page"):

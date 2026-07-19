@@ -35,6 +35,10 @@ type GoldenEntry struct {
 	// encoded by the test runner and compared against BSON.
 	Builder func() element.Element
 
+	// SetupMDL, if non-empty, is executed before the described MDL
+	// in the roundtrip test to create prerequisite modules/entities.
+	SetupMDL string
+
 	// SkipFields lists BSON paths whose values are not compared.
 	// The path format is a dot-separated key traversal with array
 	// indices in brackets, e.g. "$.ObjectCollection.Objects[4].$ID".
