@@ -75,7 +75,7 @@ func (fb *flowBuilderGen) buildFlowGraphGen(stmts []ast.MicroflowStatement, retu
 	// ReturnVariableName metadata field on the microflow.
 	// List-typed variables require CreateListAction; all other types
 	// use CreateVariableAction (see flowbuilder_actions_v2.go:76-95).
-	if returns != nil && returns.Variable != "" && !bodyHasDeclareFor(stmts, returns.Variable) {
+	if returns != nil && returns.Variable != "" && !fb.isNanoflow && !bodyHasDeclareFor(stmts, returns.Variable) {
 		var declAction element.Element
 		if returns.Type.Kind == ast.TypeListOf {
 			entityQN := ""
