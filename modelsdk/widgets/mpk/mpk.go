@@ -90,9 +90,9 @@ type xmlWidget struct {
 	OfflineCapable     string         `xml:"offlineCapable,attr"`
 	NeedsEntityContext string         `xml:"needsEntityContext,attr"`
 	SupportedPlatform  string         `xml:"supportedPlatform,attr"`
-	HelpURL            string         `xml:"helpUrl,attr"`
-	StudioCategory     string         `xml:"studioCategory,attr"`
-	StudioProCategory  string         `xml:"studioProCategory,attr"`
+	HelpURL            string         `xml:"helpUrl"`
+	StudioCategory     string         `xml:"studioCategory"`
+	StudioProCategory  string         `xml:"studioProCategory"`
 	Name               string         `xml:"name"`
 	Description        string         `xml:"description"`
 	PropertyGroups     []xmlPropGroup `xml:"properties>propertyGroup"`
