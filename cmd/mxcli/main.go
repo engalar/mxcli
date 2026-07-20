@@ -417,6 +417,7 @@ func init() {
 	rootCmd.AddCommand(oqlCmd)
 	rootCmd.AddCommand(sqlCmd)
 	rootCmd.AddCommand(initCmd)
+	rootCmd.AddCommand(newCmd)
 	rootCmd.AddCommand(buildCmd())
 	rootCmd.AddCommand(runCmd())
 	rootCmd.AddCommand(reloadCmd())

@@ -34,17 +34,16 @@ Examples:
   mxcli new --list-versions
 `,
 	Args: cobra.MaximumNArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		listVersions, _ := cmd.Flags().GetBool("list-versions")
 		if listVersions {
 			listMendixVersions()
-			return
+			return nil
 		}
 
 		if len(args) < 1 {
-			fmt.Fprintln(os.Stderr, "Error: app name is required")
 			fmt.Fprintln(os.Stderr, "Usage: mxcli new <app-name> [--version X.Y.Z]")
-			os.Exit(1)
+			return fmt.Errorf("app name is required")
 		}
 		appName := args[0]
 		mendixVersion, _ := cmd.Flags().GetString("version")
@@ -53,8 +52,7 @@ Examples:
 		force, _ := cmd.Flags().GetBool("force")
 
 		if mendixVersion == "" {
-			fmt.Fprintln(os.Stderr, "Error: --version is required (e.g., --version 11.8.0)")
-			os.Exit(1)
+			return fmt.Errorf("--version is required (e.g., --version 11.8.0)")
 		}
 
 		// Resolve output directory
@@ -63,8 +61,7 @@ Examples:
 		}
 		absDir, err := filepath.Abs(outputDir)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error resolving path: %v\n", err)
-			os.Exit(1)
+			return fmt.Errorf("resolving path: %w", err)
 		}
 
 		// Check if directory already exists and has content
@@ -72,9 +69,7 @@ Examples:
 			if force {
 				fmt.Printf("  Directory %s is not empty (--force), proceeding...\n", absDir)
 			} else {
-				fmt.Fprintf(os.Stderr, "Error: directory %s already exists and is not empty\n", absDir)
-				fmt.Fprintf(os.Stderr, "  Use --force to override, or choose a different --output-dir\n")
-				os.Exit(1)
+				return fmt.Errorf("directory %s already exists and is not empty\nUse --force to override, or choose a different --output-dir", absDir)
 			}
 		}
 
@@ -85,18 +80,16 @@ Examples:
 		fmt.Printf("Step 1/4: Resolving MxBuild %s...\n", mendixVersion)
 		mxPath, err := docker.ResolveMxForNewProject(mendixVersion, os.Stdout)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error: could not find mx binary for version %s: %v\n", mendixVersion, err)
 			if runtime.GOOS == "darwin" {
-				fmt.Fprintf(os.Stderr, "  On macOS, install Mendix Studio Pro %s from the Mendix Marketplace.\n", mendixVersion)
+				return fmt.Errorf("could not find mx binary for version %s: %w\nOn macOS, install Mendix Studio Pro %s from the Mendix Marketplace", mendixVersion, err, mendixVersion)
 			}
-			os.Exit(1)
+			return fmt.Errorf("could not find mx binary for version %s: %w", mendixVersion, err)
 		}
 
 		// Step 2: Create project
 		fmt.Printf("\nStep 2/4: Creating Mendix project '%s'...\n", appName)
 		if err := os.MkdirAll(absDir, 0755); err != nil {
-			fmt.Fprintf(os.Stderr, "Error creating directory: %v\n", err)
-			os.Exit(1)
+			return fmt.Errorf("creating directory: %w", err)
 		}
 
 		mxCmd := exec.Command(mxPath, "create-project", "--app-name", appName)
@@ -104,8 +97,7 @@ Examples:
 		mxCmd.Stdout = os.Stdout
 		mxCmd.Stderr = os.Stderr
 		if err := mxCmd.Run(); err != nil {
-			fmt.Fprintf(os.Stderr, "Error creating project: %v\n", err)
-			os.Exit(1)
+			return fmt.Errorf("creating project: %w", err)
 		}
 
 		// Clean up duplicate locale files that mx create-project generates.
@@ -128,8 +120,7 @@ Examples:
 				if len(matches) > 0 {
 					mprPath = matches[0]
 				} else {
-					fmt.Fprintf(os.Stderr, "Error: mx create-project did not produce an .mpr file in %s\n", absDir)
-					os.Exit(1)
+					return fmt.Errorf("mx create-project did not produce an .mpr file in %s", absDir)
 				}
 			}
 		}
@@ -172,6 +163,7 @@ Examples:
 		fmt.Println("  1. Open the project folder in VS Code")
 		fmt.Println("  2. Reopen in Dev Container when prompted")
 		fmt.Printf("  3. Run './mxcli -p %s' to start working\n", filepath.Base(mprPath))
+		return nil
 	},
 }
 
@@ -317,6 +309,4 @@ func init() {
 	newCmd.Flags().String("output-dir", "", "Output directory (default: ./<app-name>)")
 	newCmd.Flags().Bool("skip-init", false, "Skip AI tooling initialization (mxcli init)")
 	newCmd.Flags().Bool("force", false, "Allow creating project in a non-empty directory")
-
-	rootCmd.AddCommand(newCmd)
 }
