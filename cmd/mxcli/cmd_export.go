@@ -26,25 +26,22 @@ Examples:
   mxcli export -p app.mpr --output ./export-dir --module MyFirstModule
   mxcli export -p app.mpr --output ./export-dir --dry-run
 `,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		projectPath, _ := cmd.Flags().GetString("project")
 		outputDir, _ := cmd.Flags().GetString("output")
 		moduleFilter, _ := cmd.Flags().GetString("module")
 		dryRun, _ := cmd.Flags().GetBool("dry-run")
 
 		if projectPath == "" {
-			fmt.Fprintln(os.Stderr, "Error: --project (-p) is required")
-			os.Exit(1)
+			return fmt.Errorf("--project (-p) is required")
 		}
 		if outputDir == "" {
-			fmt.Fprintln(os.Stderr, "Error: --output is required")
-			os.Exit(1)
+			return fmt.Errorf("--output is required")
 		}
 
 		be, err := mprbackend.NewFromPath(projectPath)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error connecting to %s: %v\n", projectPath, err)
-			os.Exit(1)
+			return fmt.Errorf("connecting to %s: %w", projectPath, err)
 		}
 		defer func() { _ = be.Disconnect() }()
 
@@ -64,8 +61,7 @@ Examples:
 		}
 
 		if err := exec.ExportProject(outputDir, opts); err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-			os.Exit(1)
+			return fmt.Errorf("exporting project: %w", err)
 		}
 
 		if dryRun {
@@ -73,6 +69,7 @@ Examples:
 		} else {
 			fmt.Fprintf(os.Stderr, "Done in %.1fs\n", time.Since(start).Seconds())
 		}
+		return nil
 	},
 }
 

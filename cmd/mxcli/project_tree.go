@@ -63,25 +63,20 @@ Example:
   mxcli project-tree -p app.mpr
   mxcli project-tree -p app.mpr | python3 -m json.tool
 `,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		projectPath, _ := cmd.Flags().GetString("project")
 		if projectPath == "" {
-			fmt.Fprintln(os.Stderr, "Error: --project (-p) is required")
-			os.Exit(1)
+			return fmt.Errorf("--project (-p) is required")
 		}
 
 		tree, err := buildProjectTree(projectPath)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-			os.Exit(1)
+			return fmt.Errorf("building project tree: %w", err)
 		}
 
 		enc := json.NewEncoder(os.Stdout)
 		enc.SetIndent("", "  ")
-		if err := enc.Encode(tree); err != nil {
-			fmt.Fprintf(os.Stderr, "Error encoding JSON: %v\n", err)
-			os.Exit(1)
-		}
+		return enc.Encode(tree)
 	},
 }
 

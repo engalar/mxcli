@@ -17,13 +17,14 @@ var changelogCmd = &cobra.Command{
 	Use:   "changelog",
 	Short: "Show release notes",
 	Long:  "Display the mxcli changelog. Use --latest to show only the most recent version.",
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		latest, _ := cmd.Flags().GetBool("latest")
 		if latest {
 			fmt.Print(extractLatestVersion(changelogContent))
 		} else {
 			fmt.Print(changelogContent)
 		}
+		return nil
 	},
 }
 
@@ -51,5 +52,4 @@ func extractLatestVersion(content string) string {
 
 func init() {
 	changelogCmd.Flags().BoolP("latest", "l", false, "Show only the most recent version")
-	rootCmd.AddCommand(changelogCmd)
 }

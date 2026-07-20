@@ -34,7 +34,7 @@ Examples:
   mxcli diag --bundle     # Create tar.gz with logs + env dump + error stacks
   mxcli diag --bundle -p app.mpr  # Also include project metadata
 `,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		logPath, _ := cmd.Flags().GetBool("log-path")
 		bundle, _ := cmd.Flags().GetBool("bundle")
 		tail, _ := cmd.Flags().GetInt("tail")
@@ -43,13 +43,13 @@ Examples:
 
 		if logPath {
 			fmt.Println(logDir)
-			return
+			return nil
 		}
 
 		if bundle {
 			projectPath, _ := cmd.Root().PersistentFlags().GetString("project")
 			runDiagBundle(logDir, projectPath)
-			return
+			return nil
 		}
 
 		checkUnits, _ := cmd.Flags().GetBool("check-units")
@@ -57,19 +57,18 @@ Examples:
 		if checkUnits {
 			projectPath, _ := cmd.Flags().GetString("project")
 			if projectPath == "" {
-				fmt.Fprintln(os.Stderr, "Error: --check-units requires -p <project.mpr>")
-				os.Exit(1)
+				return fmt.Errorf("--check-units requires -p <project.mpr>")
 			}
-			runCheckUnits(projectPath, fix)
-			return
+			return runCheckUnits(projectPath, fix)
 		}
 
 		if tail > 0 {
 			runDiagTail(logDir, tail)
-			return
+			return nil
 		}
 
 		runDiagInfo(logDir)
+		return nil
 	},
 }
 
@@ -141,7 +140,7 @@ func runDiagBundle(logDir, mprPath string) {
 	f, err := os.Create(outFile)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error creating bundle: %v\n", err)
-		os.Exit(1)
+		return
 	}
 	defer f.Close()
 
@@ -414,25 +413,23 @@ func collectProjectMeta(mprPath string) string {
 
 // runCheckUnits checks for orphan units (Unit table entry without mxunit file)
 // and stale mxunit files (file exists but no Unit table entry). MPR v2 only.
-func runCheckUnits(mprPath string, fix bool) {
+func runCheckUnits(mprPath string, fix bool) error {
 	reader, err := mmpr.Open(mprPath)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("opening project: %w", err)
 	}
 	defer reader.Close()
 
 	contentsDir := reader.ContentsDir()
 	if contentsDir == "" {
 		fmt.Println("Not an MPR v2 project (no mprcontents directory)")
-		return
+		return nil
 	}
 
 	// Build set of unit UUIDs from database
 	unitIDs, err := reader.ListAllUnitIDs()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error listing units: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("listing units: %w", err)
 	}
 	unitSet := make(map[string]bool, len(unitIDs))
 	for _, id := range unitIDs {
@@ -442,8 +439,7 @@ func runCheckUnits(mprPath string, fix bool) {
 	// Scan mxunit files
 	files, err := filepath.Glob(filepath.Join(contentsDir, "*", "*", "*.mxunit"))
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error scanning mxunit files: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("scanning mxunit files: %w", err)
 	}
 	fileSet := make(map[string]string, len(files)) // uuid → filepath
 	for _, f := range files {
@@ -486,4 +482,5 @@ func runCheckUnits(mprPath string, fix bool) {
 	if stale > 0 && !fix {
 		fmt.Println("Run with --fix to auto-remove stale files")
 	}
+	return nil
 }
