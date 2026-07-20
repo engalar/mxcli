@@ -62,7 +62,7 @@ func TestMultipleParametersHaveDistinctPositions(t *testing.T) {
 		},
 	}
 
-	if err := ExecCreateMicroflowGenFn(ctx, stmt, execContextToDeps(ctx)); err != nil {
+	if err := ExecCreateMicroflowGenFn(ctx, stmt, ctx.Deps); err != nil {
 		t.Fatalf("execCreateMicroflowGen failed: %v", err)
 	}
 	if capturedMF == nil {
@@ -110,22 +110,22 @@ func TestMultipleParametersHaveDistinctPositions(t *testing.T) {
 }
 
 func TestExecCreateMicroflowGenRejectsEmptyName(t *testing.T) {
-	ctx := &ExecContext{}
+	ctx := &ExecContext{Deps: &HandlerDeps{}}
 	stmt := &ast.CreateMicroflowStmt{
 		Name: ast.QualifiedName{Module: "M", Name: ""},
 	}
-	err := ExecCreateMicroflowGenFn(ctx, stmt, execContextToDeps(ctx))
+	err := ExecCreateMicroflowGenFn(ctx, stmt, ctx.Deps)
 	if err == nil {
 		t.Fatal("expected error for empty microflow name")
 	}
 }
 
 func TestExecCreateMicroflowGenRejectsWhitespaceName(t *testing.T) {
-	ctx := &ExecContext{}
+	ctx := &ExecContext{Deps: &HandlerDeps{}}
 	stmt := &ast.CreateMicroflowStmt{
 		Name: ast.QualifiedName{Module: "M", Name: "   "},
 	}
-	err := ExecCreateMicroflowGenFn(ctx, stmt, execContextToDeps(ctx))
+	err := ExecCreateMicroflowGenFn(ctx, stmt, ctx.Deps)
 	if err == nil {
 		t.Fatal("expected error for whitespace-only microflow name")
 	}
@@ -133,11 +133,11 @@ func TestExecCreateMicroflowGenRejectsWhitespaceName(t *testing.T) {
 
 func TestExecCreateMicroflowGenRejectsNotConnected(t *testing.T) {
 	// Without ConnectedForWrite, execCreateMicroflowGen should refuse.
-	ctx := &ExecContext{}
+	ctx := &ExecContext{Deps: &HandlerDeps{}}
 	stmt := &ast.CreateMicroflowStmt{
 		Name: ast.QualifiedName{Module: "M", Name: "NewMF"},
 	}
-	err := ExecCreateMicroflowGenFn(ctx, stmt, execContextToDeps(ctx))
+	err := ExecCreateMicroflowGenFn(ctx, stmt, ctx.Deps)
 	if err == nil {
 		t.Fatal("expected error when not connected for write")
 	}
@@ -202,7 +202,7 @@ func TestExecCreateMicroflowGenEntityParamEnumRefPopulatesVarTypes(t *testing.T)
 		},
 	}
 
-	if err := ExecCreateMicroflowGenFn(ctx, stmt, execContextToDeps(ctx)); err != nil {
+	if err := ExecCreateMicroflowGenFn(ctx, stmt, ctx.Deps); err != nil {
 		t.Fatalf("execCreateMicroflowGen failed: %v", err)
 	}
 	if capturedMF == nil {
@@ -292,7 +292,7 @@ func TestExecCreateMicroflowGen_WarnsOnRemovedParam(t *testing.T) {
 	}
 
 	// 允许 error（backend 未完整配置），但警告应在 output 里
-	_ = ExecCreateMicroflowGenFn(ctx, stmt, execContextToDeps(ctx))
+	_ = ExecCreateMicroflowGenFn(ctx, stmt, ctx.Deps)
 
 	output := buf.String()
 	if !strings.Contains(output, "OldParam") {

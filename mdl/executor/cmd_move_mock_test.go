@@ -23,7 +23,7 @@ func TestMove_NotConnected(t *testing.T) {
 	err := execMoveFn(ctx, &ast.MoveStmt{
 		DocumentType: ast.DocumentTypePage,
 		Name:         ast.QualifiedName{Module: "MyModule", Name: "MyPage"},
-	}, execContextToDeps(ctx))
+	}, ctx.Deps)
 	assertError(t, err)
 	assertContainsStr(t, err.Error(), "not connected")
 }
@@ -58,7 +58,7 @@ func TestMove_Page_ToFolder(t *testing.T) {
 		DocumentType: ast.DocumentTypePage,
 		Name:         ast.QualifiedName{Module: "MyModule", Name: "MyPage"},
 		Folder:       "Admin",
-	}, execContextToDeps(ctx)))
+	}, ctx.Deps))
 	if movedID == "" {
 		t.Fatal("Expected MovePageGen to be called")
 	}
@@ -86,7 +86,7 @@ func TestMove_Page_NotFound(t *testing.T) {
 		DocumentType: ast.DocumentTypePage,
 		Name:         ast.QualifiedName{Module: "MyModule", Name: "NonExistent"},
 		Folder:       "SomeFolder",
-	}, execContextToDeps(ctx))
+	}, ctx.Deps)
 	assertError(t, err)
 	assertContainsStr(t, err.Error(), "not found")
 }
@@ -118,7 +118,7 @@ func TestMove_Page_CrossModule(t *testing.T) {
 		DocumentType: ast.DocumentTypePage,
 		Name:         ast.QualifiedName{Module: "SrcModule", Name: "MyPage"},
 		TargetModule: "DstModule",
-	}, execContextToDeps(ctx)))
+	}, ctx.Deps))
 	if !moved {
 		t.Fatal("Expected MovePageGen to be called")
 	}
@@ -145,7 +145,7 @@ func TestMove_UnsupportedType(t *testing.T) {
 	err := execMoveFn(ctx, &ast.MoveStmt{
 		DocumentType: "UNKNOWN",
 		Name:         ast.QualifiedName{Module: "MyModule", Name: "Thing"},
-	}, execContextToDeps(ctx))
+	}, ctx.Deps)
 	assertError(t, err)
 	assertContainsStr(t, err.Error(), "unsupported")
 }
@@ -169,7 +169,7 @@ func TestMove_Page_BackendError(t *testing.T) {
 	err := execMoveFn(ctx, &ast.MoveStmt{
 		DocumentType: ast.DocumentTypePage,
 		Name:         ast.QualifiedName{Module: "MyModule", Name: "MyPage"},
-	}, execContextToDeps(ctx))
+	}, ctx.Deps)
 	assertError(t, err)
 	assertContainsStr(t, err.Error(), "move page")
 }

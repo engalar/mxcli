@@ -27,7 +27,7 @@ func TestExecShowInstalledWidgets_NoWidgetsDir(t *testing.T) {
 		MprPath: filepath.Join(tmp, "app.mpr"),
 	}
 	ctx.initRoles()
-	err := execShowInstalledWidgetsFn(ctx, &ast.ShowInstalledWidgetsStmt{}, execContextToDeps(ctx))
+	err := execShowInstalledWidgetsFn(ctx, &ast.ShowInstalledWidgetsStmt{}, ctx.Deps)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -56,7 +56,7 @@ func TestExecShowInstalledWidgets_FindsMpk(t *testing.T) {
 	}
 	ctx.initRoles()
 
-	err := execShowInstalledWidgetsFn(ctx, &ast.ShowInstalledWidgetsStmt{}, execContextToDeps(ctx))
+	err := execShowInstalledWidgetsFn(ctx, &ast.ShowInstalledWidgetsStmt{}, ctx.Deps)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

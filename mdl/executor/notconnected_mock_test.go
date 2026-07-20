@@ -141,7 +141,7 @@ func TestExecDropMicroflow_Mock_NotConnected(t *testing.T) {
 	ctx, _ := newMockCtx(t, withBackend(disconnectedBackend()))
 	assertError(t, ExecDropMicroflowFn(ctx, &ast.DropMicroflowStmt{
 		Name: ast.QualifiedName{Module: "M", Name: "F"},
-	}, execContextToDeps(ctx)))
+	}, ctx.Deps))
 }
 
 func TestExecDropPage_Mock_NotConnected(t *testing.T) {
@@ -169,7 +169,7 @@ func TestExecDropJavaAction_Mock_NotConnected(t *testing.T) {
 	ctx, _ := newMockCtx(t, withBackend(disconnectedBackend()))
 	assertError(t, execDropJavaActionGenFn(ctx, &ast.DropJavaActionStmt{
 		Name: ast.QualifiedName{Module: "M", Name: "J"},
-	}, execContextToDeps(ctx)))
+	}, ctx.Deps))
 }
 
 func TestExecDropFolder_Mock_NotConnected(t *testing.T) {
@@ -177,5 +177,5 @@ func TestExecDropFolder_Mock_NotConnected(t *testing.T) {
 	assertError(t, execDropFolderFn(ctx, &ast.DropFolderStmt{
 		FolderPath: "Resources/Images",
 		Module:     "M",
-	}, execContextToDeps(ctx)))
+	}, ctx.Deps))
 }

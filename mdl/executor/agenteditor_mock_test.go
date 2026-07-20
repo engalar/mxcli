@@ -105,7 +105,7 @@ func TestCreateConsumedMCPService_Mock(t *testing.T) {
 		Name:            ast.QualifiedName{Module: "M", Name: "WebSearch"},
 		ProtocolVersion: "v2025_03_26",
 		Version:         "1.0",
-	}, execContextToDeps(ctx))
+	}, ctx.Deps)
 	assertNoError(t, err)
 	assertContainsStr(t, buf.String(), "Created consumed mcp service: M.WebSearch")
 	if !called {
@@ -137,7 +137,7 @@ func TestDropConsumedMCPService_Mock(t *testing.T) {
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
 	err := ExecDropConsumedMCPServiceFn(ctx, &ast.DropConsumedMCPServiceStmt{
 		Name: ast.QualifiedName{Module: "M", Name: "WebSearch"},
-	}, execContextToDeps(ctx))
+	}, ctx.Deps)
 	assertNoError(t, err)
 	assertContainsStr(t, buf.String(), "Dropped consumed mcp service: M.WebSearch")
 	if !called {
@@ -174,7 +174,7 @@ func TestCreateKnowledgeBase_Mock(t *testing.T) {
 		Name:     ast.QualifiedName{Module: "M", Name: "ProductDocs"},
 		Provider: "MxCloudGenAI",
 		Key:      &key,
-	}, execContextToDeps(ctx))
+	}, ctx.Deps)
 	assertNoError(t, err)
 	assertContainsStr(t, buf.String(), "Created knowledge base: M.ProductDocs")
 	if !called {
@@ -206,7 +206,7 @@ func TestDropKnowledgeBase_Mock(t *testing.T) {
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
 	err := ExecDropKnowledgeBaseFn(ctx, &ast.DropKnowledgeBaseStmt{
 		Name: ast.QualifiedName{Module: "M", Name: "ProductDocs"},
-	}, execContextToDeps(ctx))
+	}, ctx.Deps)
 	assertNoError(t, err)
 	assertContainsStr(t, buf.String(), "Dropped knowledge base: M.ProductDocs")
 	if !called {
@@ -249,7 +249,7 @@ func TestCreateAgent_Mock(t *testing.T) {
 		Model:        &modelRef,
 		SystemPrompt: "Summarize in 3 sentences.",
 		UserPrompt:   "Enter text.",
-	}, execContextToDeps(ctx))
+	}, ctx.Deps)
 	assertNoError(t, err)
 	assertContainsStr(t, buf.String(), "Created agent: M.Summarizer")
 	if !called {
@@ -281,7 +281,7 @@ func TestDropAgent_Mock(t *testing.T) {
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
 	err := ExecDropAgentFn(ctx, &ast.DropAgentStmt{
 		Name: ast.QualifiedName{Module: "M", Name: "Summarizer"},
-	}, execContextToDeps(ctx))
+	}, ctx.Deps)
 	assertNoError(t, err)
 	assertContainsStr(t, buf.String(), "Dropped agent: M.Summarizer")
 	if !called {
@@ -617,7 +617,7 @@ func TestDropConsumedMCPService_Mock_NotFound(t *testing.T) {
 	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
 	assertError(t, ExecDropConsumedMCPServiceFn(ctx, &ast.DropConsumedMCPServiceStmt{
 		Name: ast.QualifiedName{Module: "M", Name: "NonExistent"},
-	}, execContextToDeps(ctx)))
+	}, ctx.Deps))
 }
 
 func TestDropKnowledgeBase_Mock_NotFound(t *testing.T) {
@@ -631,7 +631,7 @@ func TestDropKnowledgeBase_Mock_NotFound(t *testing.T) {
 	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
 	assertError(t, ExecDropKnowledgeBaseFn(ctx, &ast.DropKnowledgeBaseStmt{
 		Name: ast.QualifiedName{Module: "M", Name: "NonExistent"},
-	}, execContextToDeps(ctx)))
+	}, ctx.Deps))
 }
 
 func TestDropAgent_Mock_NotFound(t *testing.T) {
@@ -645,7 +645,7 @@ func TestDropAgent_Mock_NotFound(t *testing.T) {
 	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
 	assertError(t, ExecDropAgentFn(ctx, &ast.DropAgentStmt{
 		Name: ast.QualifiedName{Module: "M", Name: "NonExistent"},
-	}, execContextToDeps(ctx)))
+	}, ctx.Deps))
 }
 
 // ---------------------------------------------------------------------------
@@ -781,7 +781,7 @@ func TestCreateConsumedMCPService_OrModify_PreservesID(t *testing.T) {
 		Name:            ast.QualifiedName{Module: "M", Name: "WebSearch"},
 		ProtocolVersion: "v2025_03_26",
 		CreateOrModify:  true,
-	}, execContextToDeps(ctx))
+	}, ctx.Deps)
 	assertNoError(t, err)
 	assertContainsStr(t, buf.String(), "Modified consumed mcp service")
 	if updatedID != existingID {
@@ -814,7 +814,7 @@ func TestCreateKnowledgeBase_OrModify_PreservesID(t *testing.T) {
 		Name:           ast.QualifiedName{Module: "M", Name: "Docs"},
 		Provider:       "MxCloudGenAI",
 		CreateOrModify: true,
-	}, execContextToDeps(ctx))
+	}, ctx.Deps)
 	assertNoError(t, err)
 	assertContainsStr(t, buf.String(), "Modified knowledge base")
 	if updatedID != existingID {
@@ -854,7 +854,7 @@ func TestCreateAgent_OrModify_PreservesID(t *testing.T) {
 		Name:           ast.QualifiedName{Module: "M", Name: "Assistant"},
 		UsageType:      "UserInitiated",
 		CreateOrModify: true,
-	}, execContextToDeps(ctx))
+	}, ctx.Deps)
 	assertNoError(t, err)
 	assertContainsStr(t, buf.String(), "Modified agent")
 	if updatedID != existingID {

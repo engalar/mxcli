@@ -29,7 +29,7 @@ func TestImport_NotConnected(t *testing.T) {
 		SourceAlias:  "mydb",
 		Query:        "SELECT * FROM users",
 		TargetEntity: "MyModule.User",
-	}, execContextToDeps(ctx))
+	}, ctx.Deps)
 	assertError(t, err)
 	assertContainsStr(t, err.Error(), "not connected")
 }

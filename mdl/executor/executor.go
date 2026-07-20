@@ -835,7 +835,7 @@ type ExecContext struct {
 	SyncGraph        func(*graphcatalog.ProjectGraph)
 
 	// Deps carries the *HandlerDeps equivalent. Populated during construction
-	// by newExecContext and NewExecContext. This replaces execContextToDeps().
+	// by newExecContext and NewExecContext.
 	Deps *HandlerDeps
 }
 
@@ -896,11 +896,13 @@ func (ctx *ExecContext) initRoles() {
 		ctx.WidgetBuilder = bf.WidgetBuilder()
 		ctx.ScriptTransactionManager = bf.ScriptTransactionManager()
 		ctx.AgentEditorOperator = bf.AgentEditorOperator()
+		ctx.Deps = ctx.buildDeps()
 		return
 	}
 	// Fallback: ctx.Backend (deprecated FullBackend).
 	// Kept for mock backends that don't implement BackendFactory.
 	if ctx.Backend == nil {
+		ctx.Deps = ctx.buildDeps()
 		return
 	}
 	ctx.ModuleLister = ctx.Backend
@@ -947,6 +949,90 @@ func (ctx *ExecContext) initRoles() {
 	ctx.WidgetBuilder = ctx.Backend
 	ctx.ScriptTransactionManager = ctx.Backend
 	ctx.AgentEditorOperator = ctx.Backend
+	ctx.Deps = ctx.buildDeps()
+}
+
+// buildDeps constructs a HandlerDeps from the ExecContext's current state.
+// Called by initRoles() to keep ctx.Deps in sync with role-specific fields.
+func (ctx *ExecContext) buildDeps() *HandlerDeps {
+	return &HandlerDeps{
+		Output:       ctx.Output,
+		StatusOutput: ctx.StatusOutput,
+		Logger:       ctx.Logger,
+		Quiet:        ctx.Quiet,
+		ConnectionManager:          ctx.ConnectionManager,
+		ModuleLister:               ctx.ModuleLister,
+		ModuleWriter:               ctx.ModuleWriter,
+		DomainModelReader:          ctx.DomainModelReader,
+		DomainModelWriter:          ctx.DomainModelWriter,
+		MicroflowReader:            ctx.MicroflowReader,
+		MicroflowWriter:            ctx.MicroflowWriter,
+		WorkflowReader:             ctx.WorkflowReader,
+		WorkflowWriter:             ctx.WorkflowWriter,
+		PageReader:                 ctx.PageReader,
+		PageWriter:                 ctx.PageWriter,
+		JavaActionReader:           ctx.JavaActionReader,
+		JavaActionWriter:           ctx.JavaActionWriter,
+		JavaScriptActionWriter:     ctx.JavaScriptActionWriter,
+		EnumerationReader:          ctx.EnumerationReader,
+		EnumerationWriter:          ctx.EnumerationWriter,
+		ConstantReader:             ctx.ConstantReader,
+		ConstantWriter:             ctx.ConstantWriter,
+		SettingsReader:             ctx.SettingsReader,
+		SettingsWriter:             ctx.SettingsWriter,
+		MapperReader:               ctx.MappingReader,
+		MapperWriter:               ctx.MappingWriter,
+		UnitReader:                 ctx.UnitReader,
+		UnitWriter:                 ctx.UnitWriter,
+		NavigationReader:           ctx.NavigationReader,
+		NavigationWriter:           ctx.NavigationWriter,
+		ImageCollectionWriter:      ctx.ImageCollectionWriter,
+		ScheduledEventReader:       ctx.ScheduledEventReader,
+		ServiceLister:              ctx.ServiceLister,
+		ServiceWriter:              ctx.ServiceWriter,
+		MetadataReader:             ctx.MetadataReader,
+		FolderManager:              ctx.FolderManager,
+		ModuleSettingsReader:       ctx.ModuleSettingsReader,
+		ModuleSettingsWriter:       ctx.ModuleSettingsWriter,
+		RenameManager:              ctx.RenameManager,
+		SecurityProjectManager:     ctx.SecurityProjectManager,
+		SecurityModuleManager:      ctx.SecurityModuleManager,
+		SecurityEntityAccessManager: ctx.SecurityEntityAccessManager,
+		PageModelAccess:            ctx.PageModelAccess,
+		PageMutationOperator:       ctx.PageMutationOperator,
+		WorkflowMutationOperator:   ctx.WorkflowMutationOperator,
+		WidgetBuilder:              ctx.WidgetBuilder,
+		ScriptTransactionManager:   ctx.ScriptTransactionManager,
+		AgentEditorOperator:        ctx.AgentEditorOperator,
+		ImageBackend:               ctx.Backend,
+		BusinessEventBackend:       ctx.Backend,
+		DomainModels:               ctx.DomainModels,
+		MicroflowRepo:              ctx.Microflows,
+		NanoflowRepo:               ctx.Nanoflows,
+		PageRepo:                   ctx.Pages,
+		LayoutRepo:                 ctx.Layouts,
+		SnippetRepo:                ctx.Snippets,
+		JavaActionRepo:             ctx.JavaActions,
+		JavaScriptActionRepo:       ctx.JavaScriptActions,
+		WorkflowRepo:               ctx.Workflows,
+		Security:                   ctx.Security,
+		SqlMgr:                     ctx.SqlMgr,
+		Cache:                      ctx.Cache,
+		Session:                    ctx.Session,
+		Fragments:                  ctx.Fragments,
+		Settings:                   ctx.Settings,
+		Format:                     ctx.Format,
+		MprPath:                    ctx.MprPath,
+		Graph:                      ctx.Graph,
+		Perf:                       ctx.Perf,
+		ScriptDepth:                ctx.ScriptDepth,
+		DescribingMicroflowHasReturnValue: ctx.DescribingMicroflowHasReturnValue,
+		ThemeRegistry:              ctx.ThemeRegistry,
+		ExecuteFn:                  ctx.ExecuteFn,
+		ExecuteProgramFn:           ctx.ExecuteProgramFn,
+		FinalizeFn:                 ctx.FinalizeFn,
+		SyncGraph:                  ctx.SyncGraph,
+	}
 }
 
 // Connected returns true if a project is connected.

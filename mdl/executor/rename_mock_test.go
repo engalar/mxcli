@@ -28,7 +28,7 @@ func TestRename_NotConnected(t *testing.T) {
 		ObjectType: "entity",
 		Name:       ast.QualifiedName{Module: "MyModule", Name: "OldName"},
 		NewName:    "NewName",
-	}, execContextToDeps(ctx))
+	}, ctx.Deps)
 	assertError(t, err)
 	assertContainsStr(t, err.Error(), "not connected")
 }
@@ -44,7 +44,7 @@ func TestRename_UnsupportedType(t *testing.T) {
 		ObjectType: "snippet",
 		Name:       ast.QualifiedName{Module: "M", Name: "N"},
 		NewName:    "X",
-	}, execContextToDeps(ctx))
+	}, ctx.Deps)
 	assertError(t, err)
 	assertContainsStr(t, err.Error(), "not supported")
 }
@@ -73,7 +73,7 @@ func TestRename_Entity_Success(t *testing.T) {
 		ObjectType: "entity",
 		Name:       ast.QualifiedName{Module: "MyModule", Name: "OldEntity"},
 		NewName:    "NewEntity",
-	}, execContextToDeps(ctx)))
+	}, ctx.Deps))
 	if !dmUpdated {
 		t.Error("Expected UpdateDomainModel to be called")
 	}
@@ -101,7 +101,7 @@ func TestRename_Entity_NotFound(t *testing.T) {
 		ObjectType: "entity",
 		Name:       ast.QualifiedName{Module: "MyModule", Name: "Missing"},
 		NewName:    "New",
-	}, execContextToDeps(ctx))
+	}, ctx.Deps)
 	assertError(t, err)
 	assertContainsStr(t, err.Error(), "not found")
 }
@@ -132,7 +132,7 @@ func TestRename_Entity_DryRun(t *testing.T) {
 		Name:       ast.QualifiedName{Module: "MyModule", Name: "OldEntity"},
 		NewName:    "NewEntity",
 		DryRun:     true,
-	}, execContextToDeps(ctx)))
+	}, ctx.Deps))
 	assertContainsStr(t, buf.String(), "Would rename")
 	assertContainsStr(t, buf.String(), "Page1")
 }
@@ -179,7 +179,7 @@ func TestRename_Microflow_Success(t *testing.T) {
 		ObjectType: "microflow",
 		Name:       ast.QualifiedName{Module: "MyModule", Name: "OldMF"},
 		NewName:    "NewMF",
-	}, execContextToDeps(ctx)))
+	}, ctx.Deps))
 	if !renameCalled {
 		t.Error("Expected RenameDocumentByName to be called")
 	}
@@ -207,7 +207,7 @@ func TestRename_Page_NotFound(t *testing.T) {
 		ObjectType: "page",
 		Name:       ast.QualifiedName{Module: "MyModule", Name: "Missing"},
 		NewName:    "New",
-	}, execContextToDeps(ctx))
+	}, ctx.Deps)
 	assertError(t, err)
 	assertContainsStr(t, err.Error(), "not found")
 }
@@ -239,7 +239,7 @@ func TestRename_Module_Success(t *testing.T) {
 		ObjectType: "module",
 		Name:       ast.QualifiedName{Module: "OldModule"},
 		NewName:    "NewModule",
-	}, execContextToDeps(ctx)))
+	}, ctx.Deps))
 	if !moduleUpdated {
 		t.Error("Expected UpdateModule to be called")
 	}
@@ -273,7 +273,7 @@ func TestRename_Association_Success(t *testing.T) {
 		ObjectType: "association",
 		Name:       ast.QualifiedName{Module: "MyModule", Name: "OldAssoc"},
 		NewName:    "NewAssoc",
-	}, execContextToDeps(ctx)))
+	}, ctx.Deps))
 	if !dmUpdated {
 		t.Error("Expected UpdateDomainModel to be called")
 	}
@@ -298,7 +298,7 @@ func TestRename_Association_NotFound(t *testing.T) {
 		ObjectType: "association",
 		Name:       ast.QualifiedName{Module: "MyModule", Name: "Missing"},
 		NewName:    "New",
-	}, execContextToDeps(ctx))
+	}, ctx.Deps)
 	assertError(t, err)
 	assertContainsStr(t, err.Error(), "not found")
 }
@@ -325,7 +325,7 @@ func TestRename_Entity_BackendError(t *testing.T) {
 		ObjectType: "entity",
 		Name:       ast.QualifiedName{Module: "MyModule", Name: "Ent"},
 		NewName:    "New",
-	}, execContextToDeps(ctx))
+	}, ctx.Deps)
 	assertError(t, err)
 	assertContainsStr(t, err.Error(), "scan references")
 }
@@ -366,7 +366,7 @@ func TestRename_JavaAction_Success(t *testing.T) {
 		ObjectType: "javaaction",
 		Name:       ast.QualifiedName{Module: "MyModule", Name: "OldHelper"},
 		NewName:    "NewHelper",
-	}, execContextToDeps(ctx)))
+	}, ctx.Deps))
 	if !documentRenamed {
 		t.Error("Expected RenameDocumentByName to be called")
 	}
@@ -398,7 +398,7 @@ func TestRename_JavaAction_NotFound(t *testing.T) {
 		ObjectType: "javaaction",
 		Name:       ast.QualifiedName{Module: "MyModule", Name: "Missing"},
 		NewName:    "New",
-	}, execContextToDeps(ctx))
+	}, ctx.Deps)
 	assertError(t, err)
 	assertContainsStr(t, err.Error(), "not found")
 }
@@ -430,7 +430,7 @@ func TestRename_Workflow_Success(t *testing.T) {
 		ObjectType: "workflow",
 		Name:       ast.QualifiedName{Module: "BPModule", Name: "OldProcess"},
 		NewName:    "NewProcess",
-	}, execContextToDeps(ctx)))
+	}, ctx.Deps))
 	if !renameCalled {
 		t.Error("Expected RenameDocumentByName to be called")
 	}
@@ -486,7 +486,7 @@ func TestRename_Nanoflow_CollisionError(t *testing.T) {
 		ObjectType: "nanoflow",
 		Name:       ast.QualifiedName{Module: "MyModule", Name: "NF1"},
 		NewName:    "NF2",
-	}, execContextToDeps(ctx))
+	}, ctx.Deps)
 	assertError(t, err)
 	assertContainsStr(t, err.Error(), "already exists")
 }
@@ -523,7 +523,7 @@ func TestRename_Microflow_CollisionError(t *testing.T) {
 		ObjectType: "microflow",
 		Name:       ast.QualifiedName{Module: "MyModule", Name: "MF1"},
 		NewName:    "MF2",
-	}, execContextToDeps(ctx))
+	}, ctx.Deps)
 	assertError(t, err)
 	assertContainsStr(t, err.Error(), "already exists")
 }
@@ -544,7 +544,7 @@ func TestRename_Entity_CollisionError(t *testing.T) {
 		ObjectType: "entity",
 		Name:       ast.QualifiedName{Module: "MyModule", Name: "EntityA"},
 		NewName:    "EntityB",
-	}, execContextToDeps(ctx))
+	}, ctx.Deps)
 	assertError(t, err)
 	assertContainsStr(t, err.Error(), "already exists")
 }
@@ -563,7 +563,7 @@ func TestRename_Workflow_NotFound(t *testing.T) {
 		ObjectType: "workflow",
 		Name:       ast.QualifiedName{Module: "BPModule", Name: "Missing"},
 		NewName:    "New",
-	}, execContextToDeps(ctx))
+	}, ctx.Deps)
 	assertError(t, err)
 	assertContainsStr(t, err.Error(), "not found")
 }

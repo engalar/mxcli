@@ -18,7 +18,7 @@ func TestShowDesignProperties_NotConnected(t *testing.T) {
 		IsConnectedFunc: func() bool { return false },
 	}
 	ctx, _ := newMockCtx(t, withBackend(mb))
-	err := execShowDesignPropertiesFn(ctx, &ast.ShowDesignPropertiesStmt{}, execContextToDeps(ctx))
+	err := execShowDesignPropertiesFn(ctx, &ast.ShowDesignPropertiesStmt{}, ctx.Deps)
 	assertError(t, err)
 	assertContainsStr(t, err.Error(), "not connected")
 }
@@ -29,7 +29,7 @@ func TestShowDesignProperties_NoMprPath(t *testing.T) {
 	}
 	ctx, _ := newMockCtx(t, withBackend(mb))
 	ctx.MprPath = ""
-	err := execShowDesignPropertiesFn(ctx, &ast.ShowDesignPropertiesStmt{}, execContextToDeps(ctx))
+	err := execShowDesignPropertiesFn(ctx, &ast.ShowDesignPropertiesStmt{}, ctx.Deps)
 	assertError(t, err)
 	assertContainsStr(t, err.Error(), "project path")
 }
@@ -50,7 +50,7 @@ func TestDescribeStyling_NotConnected(t *testing.T) {
 	err := execDescribeStylingFn(ctx, &ast.DescribeStylingStmt{
 		ContainerType: "page",
 		ContainerName: ast.QualifiedName{Module: "Mod", Name: "Home"},
-	}, execContextToDeps(ctx))
+	}, ctx.Deps)
 	assertError(t, err)
 	assertContainsStr(t, err.Error(), "not connected")
 }
@@ -73,7 +73,7 @@ func TestAlterStyling_NotConnected(t *testing.T) {
 		ContainerType: "page",
 		ContainerName: ast.QualifiedName{Module: "Mod", Name: "Home"},
 		WidgetName:    "container1",
-	}, execContextToDeps(ctx))
+	}, ctx.Deps)
 	assertError(t, err)
 	assertContainsStr(t, err.Error(), "not connected")
 }

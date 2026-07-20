@@ -18,7 +18,7 @@ func TestLint_NotConnected(t *testing.T) {
 		IsConnectedFunc: func() bool { return false },
 	}
 	ctx, _ := newMockCtx(t, withBackend(mb))
-	err := ExecLintFn(ctx, &ast.LintStmt{}, execContextToDeps(ctx))
+	err := ExecLintFn(ctx, &ast.LintStmt{}, ctx.Deps)
 	assertError(t, err)
 	assertContainsStr(t, err.Error(), "not connected")
 }
@@ -37,7 +37,7 @@ func TestLint_ShowRules(t *testing.T) {
 		IsConnectedFunc: func() bool { return true },
 	}
 	ctx, buf := newMockCtx(t, withBackend(mb))
-	err := ExecLintFn(ctx, &ast.LintStmt{ShowRules: true}, execContextToDeps(ctx))
+	err := ExecLintFn(ctx, &ast.LintStmt{ShowRules: true}, ctx.Deps)
 	assertNoError(t, err)
 	out := buf.String()
 	if len(out) == 0 {

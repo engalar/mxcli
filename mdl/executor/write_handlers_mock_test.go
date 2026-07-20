@@ -172,7 +172,7 @@ func TestExecDropMicroflow_Mock(t *testing.T) {
 	)
 	err := ExecDropMicroflowFn(ctx, &ast.DropMicroflowStmt{
 		Name: ast.QualifiedName{Module: "MyModule", Name: "DoSomething"},
-	}, execContextToDeps(ctx))
+	}, ctx.Deps)
 	assertNoError(t, err)
 	assertContainsStr(t, buf.String(), "Dropped microflow:")
 	if len(mfRepo.Deleted) != 1 || mfRepo.Deleted[0] != model.ID(mf.ID()) {
@@ -299,7 +299,7 @@ func TestExecDropJavaAction_Mock(t *testing.T) {
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
 	err := execDropJavaActionGenFn(ctx, &ast.DropJavaActionStmt{
 		Name: ast.QualifiedName{Module: "MyModule", Name: "MyAction"},
-	}, execContextToDeps(ctx))
+	}, ctx.Deps)
 	assertNoError(t, err)
 	assertContainsStr(t, buf.String(), "Dropped java action:")
 	if !called {
@@ -338,7 +338,7 @@ func TestExecDropFolder_Mock(t *testing.T) {
 	err := execDropFolderFn(ctx, &ast.DropFolderStmt{
 		FolderPath: "Resources",
 		Module:     "MyModule",
-	}, execContextToDeps(ctx))
+	}, ctx.Deps)
 	assertNoError(t, err)
 	assertContainsStr(t, buf.String(), "Dropped folder:")
 	if !called {
@@ -407,7 +407,7 @@ func TestExecDropMicroflow_Mock_NotFound(t *testing.T) {
 	// is the expected error path for this test.
 	assertError(t, ExecDropMicroflowFn(ctx, &ast.DropMicroflowStmt{
 		Name: ast.QualifiedName{Module: "MyModule", Name: "NonExistent"},
-	}, execContextToDeps(ctx)))
+	}, ctx.Deps))
 }
 
 func TestExecDropPage_Mock_NotFound(t *testing.T) {
@@ -529,7 +529,7 @@ func TestDropThenCreatePreservesMicroflowUnitID(t *testing.T) {
 
 	if err := ExecDropMicroflowFn(ctx, &ast.DropMicroflowStmt{
 		Name: ast.QualifiedName{Module: "MyModule", Name: "DoSomething"},
-	}, execContextToDeps(ctx)); err != nil {
+	}, ctx.Deps); err != nil {
 		t.Fatalf("DROP MICROFLOW failed: %v", err)
 	}
 
@@ -547,7 +547,7 @@ func TestDropThenCreatePreservesMicroflowUnitID(t *testing.T) {
 		CreateOrModify: true,
 		Body:           nil, // empty body is fine for this test
 	}
-	if err := ExecCreateMicroflowGenFn(ctx, createStmt, execContextToDeps(ctx)); err != nil {
+	if err := ExecCreateMicroflowGenFn(ctx, createStmt, ctx.Deps); err != nil {
 		t.Fatalf("CREATE OR MODIFY MICROFLOW failed: %v", err)
 	}
 
@@ -613,7 +613,7 @@ func TestCreateOrModifyMicroflowPreservesAllowedRoles(t *testing.T) {
 	if err := ExecCreateMicroflowGenFn(ctx, &ast.CreateMicroflowStmt{
 		Name:           ast.QualifiedName{Module: "MyModule", Name: "DoSomething"},
 		CreateOrModify: true,
-	}, execContextToDeps(ctx)); err != nil {
+	}, ctx.Deps); err != nil {
 		t.Fatalf("CREATE OR MODIFY MICROFLOW failed: %v", err)
 	}
 

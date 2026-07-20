@@ -43,6 +43,7 @@ func newMockCtx(t *testing.T, opts ...mockCtxOption) (*ExecContext, *bytes.Buffe
 	for _, opt := range opts {
 		opt(ctx)
 	}
+	ctx.Deps = ctx.buildDeps()
 	return ctx, &buf
 }
 
@@ -50,6 +51,7 @@ func withBackend(b *mock.MockBackend) mockCtxOption {
 	return func(ctx *ExecContext) {
 		ctx.Backend = b
 		ctx.initRoles()
+		ctx.Deps = ctx.buildDeps()
 	}
 }
 
