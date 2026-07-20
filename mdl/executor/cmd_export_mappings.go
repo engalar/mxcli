@@ -80,7 +80,7 @@ func listExportMappingsFn(ctx context.Context, inModule string, deps *HandlerDep
 
 // listExportMappings prints a table of all export mapping documents.
 func listExportMappings(ctx *ExecContext, inModule string) error {
-	return listExportMappingsFn(ctx, inModule, execContextToDeps(ctx))
+	return listExportMappingsFn(ctx, inModule, ctx.Deps)
 }
 
 // describeExportMappingFn handles DESCRIBE EXPORT MAPPING with HandlerDeps.
@@ -136,7 +136,7 @@ func describeExportMappingFn(ctx context.Context, name ast.QualifiedName, deps *
 
 // describeExportMapping prints the MDL representation of an export mapping.
 func describeExportMapping(ctx *ExecContext, name ast.QualifiedName) error {
-	return describeExportMappingFn(ctx, name, execContextToDeps(ctx))
+	return describeExportMappingFn(ctx, name, ctx.Deps)
 }
 
 func printExportMappingElement(w io.Writer, elem *model.ExportMappingElement, depth int, isRoot bool) {

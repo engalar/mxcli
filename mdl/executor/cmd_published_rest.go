@@ -368,17 +368,17 @@ func execAlterPublishedRestServiceFn(ctx context.Context, s *ast.AlterPublishedR
 // ────────────────────────────────────────────────────────────
 
 func listPublishedRestServices(ctx *ExecContext, moduleName string) error {
-	deps := execContextToDeps(ctx)
+	deps := ctx.Deps
 	return listPublishedRestServicesFn(ctx, deps.Output, deps.Format, deps, moduleName)
 }
 
 func describePublishedRestService(ctx *ExecContext, name ast.QualifiedName) error {
-	deps := execContextToDeps(ctx)
+	deps := ctx.Deps
 	return describePublishedRestServiceFn(ctx, deps.Output, deps, name)
 }
 
 func findPublishedRestService(ctx *ExecContext, moduleName, name string) (*model.PublishedRestService, error) {
-	return findPublishedRestServiceFn(execContextToDeps(ctx), moduleName, name)
+	return findPublishedRestServiceFn(ctx.Deps, moduleName, name)
 }
 
 

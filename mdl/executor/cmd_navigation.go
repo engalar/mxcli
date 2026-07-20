@@ -40,31 +40,23 @@ func profileNames(nav *types.NavigationDocument) string {
 }
 
 // listNavigation handles SHOW NAVIGATION command.
-// Displays an overview of all navigation profiles with their home pages and menu item counts.
 func listNavigation(ctx *ExecContext) error {
-	deps := execContextToDeps(ctx)
-	return listNavigationFn(ctx, deps.Output, deps)
+	return listNavigationFn(ctx, ctx.Deps.Output, ctx.Deps)
 }
 
 // listNavigationMenu handles SHOW NAVIGATION MENU [profile] command.
-// Displays the menu tree for a specific profile, or all profiles if none specified.
 func listNavigationMenu(ctx *ExecContext, profileName *ast.QualifiedName) error {
-	deps := execContextToDeps(ctx)
-	return listNavigationMenuFn(ctx, deps.Output, deps, profileName)
+	return listNavigationMenuFn(ctx, ctx.Deps.Output, ctx.Deps, profileName)
 }
 
 // listNavigationHomes handles SHOW NAVIGATION HOMES command.
-// Displays all home page configurations including role-based overrides.
 func listNavigationHomes(ctx *ExecContext) error {
-	deps := execContextToDeps(ctx)
-	return listNavigationHomesFn(ctx, deps.Output, deps)
+	return listNavigationHomesFn(ctx, ctx.Deps.Output, ctx.Deps)
 }
 
 // describeNavigation handles DESCRIBE NAVIGATION [profile] command.
-// Outputs a complete MDL-style description of a navigation profile.
 func describeNavigation(ctx *ExecContext, name ast.QualifiedName) error {
-	deps := execContextToDeps(ctx)
-	return describeNavigationFn(ctx, deps.Output, deps, name)
+	return describeNavigationFn(ctx, ctx.Deps.Output, ctx.Deps, name)
 }
 
 // countMenuItems counts the total number of menu items recursively.

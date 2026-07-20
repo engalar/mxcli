@@ -57,6 +57,7 @@ func (e *Executor) newExecContext(ctx context.Context) *ExecContext {
 		FinalizeFn:       e.finalizeProgramExecution,
 	}
 	execCtx.initRoles()
+	execCtx.Deps = e.buildHandlerDeps()
 	return execCtx
 }
 

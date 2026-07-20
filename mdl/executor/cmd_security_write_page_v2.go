@@ -173,5 +173,5 @@ func lookupCreatedPageIDFn(ctx context.Context, deps *HandlerDeps, qualifiedName
 
 // lookupCreatedPageID finds a session-created page by qualified name.
 func lookupCreatedPageID(ctx *ExecContext, qualifiedName string) (model.ID, error) {
-	return lookupCreatedPageIDFn(ctx, execContextToDeps(ctx), qualifiedName)
+	return lookupCreatedPageIDFn(ctx, ctx.Deps, qualifiedName)
 }

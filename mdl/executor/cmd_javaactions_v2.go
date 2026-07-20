@@ -85,7 +85,7 @@ import (
 // units from listJavaActionsWithContainerGen. Mirrors listJavaActions in
 // output shape; only the type source changes.
 func listJavaActionsGen(ctx *ExecContext, moduleName string) error {
-	return listJavaActionsGenFn(ctx, moduleName, execContextToDeps(ctx))
+	return listJavaActionsGenFn(ctx, moduleName, ctx.Deps)
 }
 
 // listJavaActionsGenFn is the HandlerDeps version of listJavaActionsGen.
@@ -151,7 +151,7 @@ func modelIDFromElementID(id element.ID) model.ID {
 // data. Mirrors the legacy describeJavaAction output format byte-for-byte
 // where possible; differences are noted inline.
 func describeJavaActionGen(ctx *ExecContext, name ast.QualifiedName) error {
-	return describeJavaActionGenFn(ctx, name, execContextToDeps(ctx))
+	return describeJavaActionGenFn(ctx, name, ctx.Deps)
 }
 
 // describeJavaActionGenFn is the HandlerDeps version of describeJavaActionGen.
@@ -315,7 +315,7 @@ func describeJavaActionGenFn(ctx context.Context, name ast.QualifiedName, deps *
 // qualified-name/module/name/folder columns; unset Platform renders as
 // "All" (legacy convention).
 func listJavaScriptActionsGen(ctx *ExecContext, moduleName string) error {
-	return listJavaScriptActionsGenFn(ctx, moduleName, execContextToDeps(ctx))
+	return listJavaScriptActionsGenFn(ctx, moduleName, ctx.Deps)
 }
 
 // listJavaScriptActionsGenFn is the HandlerDeps version of listJavaScriptActionsGen.
@@ -381,7 +381,7 @@ func listJavaScriptActionsGenFn(ctx context.Context, moduleName string, deps *Ha
 // in gen, or none in legacy fixtures), Platform renders as a `PLATFORM`
 // clause, and the source body comes from javascriptsource/<module>/actions.
 func describeJavaScriptActionGen(ctx *ExecContext, name ast.QualifiedName) error {
-	return describeJavaScriptActionGenFn(ctx, name, execContextToDeps(ctx))
+	return describeJavaScriptActionGenFn(ctx, name, ctx.Deps)
 }
 
 // describeJavaScriptActionGenFn is the HandlerDeps version of describeJavaScriptActionGen.

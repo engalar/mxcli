@@ -235,16 +235,16 @@ func ExecSQLDescribeTableFn(ctx context.Context, s *ast.SQLDescribeTableStmt, de
 
 // ensureSQLManager lazily initializes the SQL connection manager.
 func ensureSQLManager(ctx *ExecContext) *sqllib.Manager {
-	return ensureSQLManagerFn(execContextToDeps(ctx))
+	return ensureSQLManagerFn(ctx.Deps)
 }
 
 func getOrAutoConnect(ctx *ExecContext, alias string) (*sqllib.Connection, error) {
-	return getOrAutoConnectFn(execContextToDeps(ctx), alias)
+	return getOrAutoConnectFn(ctx.Deps, alias)
 }
 
 
 func autoConnect(ctx *ExecContext, alias string) error {
-	return autoConnectFn(execContextToDeps(ctx), alias)
+	return autoConnectFn(ctx.Deps, alias)
 }
 
 

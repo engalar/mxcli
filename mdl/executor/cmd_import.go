@@ -102,7 +102,7 @@ func ExecImportFn(ctx context.Context, s *ast.ImportStmt, deps *HandlerDeps) err
 // resolveImportLinks resolves LINK mappings from the AST into AssocInfo structs
 // by looking up association metadata from the MPR and the Mendix system tables.
 func resolveImportLinks(ctx *ExecContext, goCtx context.Context, mendixConn *sqllib.Connection, s *ast.ImportStmt) ([]*sqllib.AssocInfo, error) {
-	deps := execContextToDeps(ctx)
+	deps := ctx.Deps
 	return resolveImportLinksFn(ctx, deps, goCtx, mendixConn, s)
 }
 
@@ -178,7 +178,7 @@ func resolveOneLink(
 	h *ContainerHierarchy,
 	entityNames map[string]string,
 ) (*sqllib.AssocInfo, error) {
-	return resolveOneLinkFn(ctx, execContextToDeps(ctx), goCtx, mendixConn, link, targetModule, dms, h, entityNames)
+	return resolveOneLinkFn(ctx, ctx.Deps, goCtx, mendixConn, link, targetModule, dms, h, entityNames)
 }
 
 // resolveOneLinkFn is the HandlerDeps version of resolveOneLink.
@@ -339,7 +339,7 @@ func getParentEntityName(a *genDm.Association, ca *genDm.CrossAssociation, entit
 
 // ensureMendixDBConnection reads the project settings and auto-connects to the Mendix app DB.
 func ensureMendixDBConnection(ctx *ExecContext) (*sqllib.Connection, error) {
-	return ensureMendixDBConnectionFn(ctx, execContextToDeps(ctx))
+	return ensureMendixDBConnectionFn(ctx, ctx.Deps)
 }
 
 // ensureMendixDBConnectionFn is the HandlerDeps version of ensureMendixDBConnection.

@@ -86,7 +86,7 @@ func execSetFn(ctx context.Context, s *ast.SetStmt, deps *HandlerDeps) error {
 
 // execSet handles SET statements.
 func execSet(ctx *ExecContext, s *ast.SetStmt) error {
-	deps := execContextToDeps(ctx)
+	deps := ctx.Deps
 	err := execSetFn(ctx, s, deps)
 	ctx.Format = deps.Format
 	if len(deps.Settings) > 0 {

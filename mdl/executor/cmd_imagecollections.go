@@ -373,17 +373,17 @@ func findModuleFn(ml backend.ModuleLister, name string) (*model.Module, error) {
 
 
 func describeImageCollection(ctx *ExecContext, name ast.QualifiedName) error {
-	deps := execContextToDeps(ctx)
+	deps := ctx.Deps
 	return describeImageCollectionFn(ctx, deps.Output, deps, name)
 }
 
 func listImageCollections(ctx *ExecContext, moduleName string) error {
-	deps := execContextToDeps(ctx)
+	deps := ctx.Deps
 	return listImageCollectionsFn(ctx, deps.Output, deps.Format, deps, moduleName)
 }
 
 func findImageCollection(ctx *ExecContext, moduleName, collectionName string) *types.ImageCollection {
-	return findImageCollectionFn(execContextToDeps(ctx), moduleName, collectionName)
+	return findImageCollectionFn(ctx.Deps, moduleName, collectionName)
 }
 
 

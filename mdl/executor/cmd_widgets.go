@@ -367,7 +367,7 @@ func findMatchingWidgets(ctx *ExecContext, filters []ast.WidgetFilter, module st
 }
 
 func updateWidgetsInContainer(ctx *ExecContext, containerID string, widgetRefs []widgetRef, assignments []ast.WidgetPropertyAssignment, dryRun bool) (int, error) {
-	return updateWidgetsInContainerFn(execContextToDeps(ctx), containerID, widgetRefs, assignments, dryRun)
+	return updateWidgetsInContainerFn(ctx.Deps, containerID, widgetRefs, assignments, dryRun)
 }
 
 
@@ -380,7 +380,7 @@ func showInstalledWidgetsFromMPK(ctx *ExecContext) error {
 }
 
 func describeWidget(ctx *ExecContext, name ast.QualifiedName) error {
-	deps := execContextToDeps(ctx)
+	deps := ctx.Deps
 	return describeWidgetFn(ctx, deps.Output, deps, name)
 }
 

@@ -81,7 +81,7 @@ func listImportMappingsFn(ctx context.Context, inModule string, deps *HandlerDep
 
 // listImportMappings prints a table of all import mapping documents.
 func listImportMappings(ctx *ExecContext, inModule string) error {
-	return listImportMappingsFn(ctx, inModule, execContextToDeps(ctx))
+	return listImportMappingsFn(ctx, inModule, ctx.Deps)
 }
 
 // describeImportMapping prints the MDL representation of an import mapping.
@@ -132,7 +132,7 @@ func describeImportMappingFn(ctx context.Context, name ast.QualifiedName, deps *
 }
 
 func describeImportMapping(ctx *ExecContext, name ast.QualifiedName) error {
-	return describeImportMappingFn(ctx, name, execContextToDeps(ctx))
+	return describeImportMappingFn(ctx, name, ctx.Deps)
 }
 
 // handlingKeyword returns the MDL keyword for a Mendix ObjectHandling value.

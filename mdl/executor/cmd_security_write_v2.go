@@ -437,11 +437,11 @@ func validateModuleRoleFn(deps *HandlerDeps, role ast.QualifiedName) (bool, erro
 
 
 func cascadeRemoveRoleFromMicroflowsGen(ctx *ExecContext, moduleID model.ID, qualifiedRole string) error {
-	return cascadeRemoveRoleFromMicroflowsGenFn(ctx, execContextToDeps(ctx), moduleID, qualifiedRole)
+	return cascadeRemoveRoleFromMicroflowsGenFn(ctx, ctx.Deps, moduleID, qualifiedRole)
 }
 
 func cascadeRemoveRoleFromNanoflowsGen(ctx *ExecContext, moduleID model.ID, qualifiedRole string) error {
-	return cascadeRemoveRoleFromNanoflowsGenFn(ctx, execContextToDeps(ctx), moduleID, qualifiedRole)
+	return cascadeRemoveRoleFromNanoflowsGenFn(ctx, ctx.Deps, moduleID, qualifiedRole)
 }
 
 // ─────────────────────────────────────────────────────────────

@@ -21,7 +21,7 @@ func ExecCreateViewEntity(ctx *ExecContext, s *ast.CreateViewEntityStmt) error {
 
 // execAlterEntity now routes directly through the gen-native path.
 func execAlterEntity(ctx *ExecContext, s *ast.AlterEntityStmt) error {
-	return ExecAlterEntityGenFn(ctx, s, execContextToDeps(ctx))
+	return ExecAlterEntityGenFn(ctx, s, ctx.Deps)
 }
 
 // ExecDropEntity now routes directly through the gen-native drop path. The

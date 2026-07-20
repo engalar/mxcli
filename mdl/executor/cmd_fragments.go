@@ -135,16 +135,16 @@ func fragmentsFromDeps(deps *HandlerDeps) map[string]*ast.DefineFragmentStmt {
 // execDefineFragment stores a fragment definition in the executor's session state.
 
 func listFragments(ctx *ExecContext) error {
-	return listFragmentsFn(ctx, execContextToDeps(ctx))
+	return listFragmentsFn(ctx, ctx.Deps)
 }
 
 func describeFragment(ctx *ExecContext, name ast.QualifiedName) error {
-	deps := execContextToDeps(ctx)
+	deps := ctx.Deps
 	return describeFragmentFn(ctx, deps.Output, deps, name)
 }
 
 func describeFragmentFrom(ctx *ExecContext, s *ast.DescribeFragmentFromStmt) error {
-	return ExecDescribeFragmentFromFn(ctx, s, execContextToDeps(ctx))
+	return ExecDescribeFragmentFromFn(ctx, s, ctx.Deps)
 }
 
 // findRawWidgetByName recursively searches the widget tree for a widget with the given name.

@@ -2970,6 +2970,7 @@ func NewExecContext(ctx context.Context, deps *HandlerDeps) *ExecContext {
 	ectx.WidgetBuilder = deps.WidgetBuilder
 	ectx.ScriptTransactionManager = deps.ScriptTransactionManager
 	ectx.AgentEditorOperator = deps.AgentEditorOperator
+	ectx.Deps = deps
 	return ectx
 }
 

@@ -833,6 +833,10 @@ type ExecContext struct {
 	ExecuteProgramFn func(*ast.Program) error
 	FinalizeFn       func() error
 	SyncGraph        func(*graphcatalog.ProjectGraph)
+
+	// Deps carries the *HandlerDeps equivalent. Populated during construction
+	// by newExecContext and NewExecContext. This replaces execContextToDeps().
+	Deps *HandlerDeps
 }
 
 // initRoles populates the role-specific backend fields. Prefers

@@ -208,17 +208,17 @@ func findJsonStructureFn(deps *HandlerDeps, moduleName, structName string) *type
 }
 
 func listJsonStructures(ctx *ExecContext, moduleName string) error {
-	return listJsonStructuresFn(ctx, execContextToDeps(ctx), moduleName)
+	return listJsonStructuresFn(ctx, ctx.Deps, moduleName)
 }
 
 func describeJsonStructure(ctx *ExecContext, name ast.QualifiedName) error {
-	return describeJsonStructureFn(ctx, execContextToDeps(ctx), name)
+	return describeJsonStructureFn(ctx, ctx.Deps, name)
 }
 
 
 
 func findJsonStructure(ctx *ExecContext, moduleName, structName string) *types.JsonStructure {
-	return findJsonStructureFn(execContextToDeps(ctx), moduleName, structName)
+	return findJsonStructureFn(ctx.Deps, moduleName, structName)
 }
 
 // collectCustomNameMappings walks the element tree and returns JSON key → ExposedName

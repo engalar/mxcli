@@ -366,11 +366,11 @@ func printOneProperty(ctx *ExecContext, p ThemeProperty) {
 
 
 func alterStylingOnPage(ctx *ExecContext, s *ast.AlterStylingStmt, h *ContainerHierarchy) error {
-	return alterStylingOnPageFn(ctx, s, h, execContextToDeps(ctx))
+	return alterStylingOnPageFn(ctx, s, h, ctx.Deps)
 }
 
 func alterStylingOnSnippet(ctx *ExecContext, s *ast.AlterStylingStmt, h *ContainerHierarchy) error {
-	return alterStylingOnSnippetFn(ctx, s, h, execContextToDeps(ctx))
+	return alterStylingOnSnippetFn(ctx, s, h, ctx.Deps)
 }
 
 // ────────────────────────────────────────────────────────────

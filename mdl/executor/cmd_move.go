@@ -80,11 +80,6 @@ func execMoveFn(ctx context.Context, s *ast.MoveStmt, deps *HandlerDeps) error {
 	return nil
 }
 
-// updateQualifiedNameRefs updates all BY_NAME references to an element after a cross-module move.
-func updateQualifiedNameRefs(ctx *ExecContext, name ast.QualifiedName, newModule string) error {
-	return updateQualifiedNameRefsFn(ctx, execContextToDeps(ctx), name, newModule)
-}
-
 // updateQualifiedNameRefsFn is the HandlerDeps version of updateQualifiedNameRefs.
 func updateQualifiedNameRefsFn(ctx context.Context, deps *HandlerDeps, name ast.QualifiedName, newModule string) error {
 	oldQN := name.String()
@@ -162,7 +157,4 @@ func moveEntityFn(ctx context.Context, deps *HandlerDeps, name ast.QualifiedName
 	return nil
 }
 
-// moveEntity handles MOVE ENTITY using ExecContext (backward compat).
-func moveEntity(ctx *ExecContext, name ast.QualifiedName, sourceModule, targetModule *model.Module) error {
-	return moveEntityFn(ctx, execContextToDeps(ctx), name, sourceModule, targetModule)
-}
+

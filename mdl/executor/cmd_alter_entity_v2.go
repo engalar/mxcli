@@ -13,21 +13,6 @@ import (
 	genRest "github.com/mendixlabs/mxcli/modelsdk/gen/rest"
 )
 
-func canExecAlterEntityGen(ctx *ExecContext, s *ast.AlterEntityStmt) bool {
-	if ctx == nil || s == nil {
-		return false
-	}
-	return canExecAlterEntityGenFn(execContextToDeps(ctx), s)
-}
-
-func loadAlterEntityGenTarget(ctx *ExecContext, s *ast.AlterEntityStmt) (*genDm.Entity, *genDm.DomainModel, *model.Module, bool) {
-	if ctx == nil || s == nil {
-		return nil, nil, nil, false
-	}
-	deps := execContextToDeps(ctx)
-	return loadAlterEntityGenTargetFn(ctx, deps, s)
-}
-
 func findAttributeGenByName(entity *genDm.Entity, name string) *genDm.Attribute {
 	attr, _ := findAttributeGenWithIndexByName(entity, name)
 	return attr

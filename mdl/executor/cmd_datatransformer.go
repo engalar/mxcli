@@ -14,7 +14,7 @@ import (
 
 // listDataTransformers handles LIST DATA TRANSFORMERS [IN module].
 func listDataTransformers(ctx *ExecContext, moduleName string) error {
-	deps := execContextToDeps(ctx)
+	deps := ctx.Deps
 	return listDataTransformersFn(ctx, moduleName, deps)
 }
 
@@ -63,7 +63,7 @@ func listDataTransformersFn(ctx context.Context, moduleName string, deps *Handle
 
 // describeDataTransformer handles DESCRIBE DATA TRANSFORMER Module.Name.
 func describeDataTransformer(ctx *ExecContext, name ast.QualifiedName) error {
-	deps := execContextToDeps(ctx)
+	deps := ctx.Deps
 	return describeDataTransformerFn(ctx, name, deps)
 }
 
@@ -172,7 +172,7 @@ func execCreateDataTransformerFn(ctx context.Context, s *ast.CreateDataTransform
 
 // findDataTransformer looks up a data transformer by module and name, returning the struct and its ID.
 func findDataTransformer(ctx *ExecContext, moduleName, name string) (*model.DataTransformer, model.ID) {
-	return findDataTransformerFn(execContextToDeps(ctx), moduleName, name)
+	return findDataTransformerFn(ctx.Deps, moduleName, name)
 }
 
 // findDataTransformerFn is the HandlerDeps version of findDataTransformer.
