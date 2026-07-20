@@ -3061,33 +3061,27 @@ func ExecDropBusinessEventServiceFuture(ctx context.Context, stmt ast.Statement,
 }
 
 func ExecCreateODataClientFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := NewExecContext(ctx, deps)
-	return createODataClient(ectx, stmt.(*ast.CreateODataClientStmt))
+	return ExecCreateODataClientFn(ctx, stmt.(*ast.CreateODataClientStmt), deps)
 }
 
 func ExecAlterODataClientFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := NewExecContext(ctx, deps)
-	return alterODataClient(ectx, stmt.(*ast.AlterODataClientStmt))
+	return ExecAlterODataClientFn(ctx, stmt.(*ast.AlterODataClientStmt), deps)
 }
 
 func ExecDropODataClientFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := NewExecContext(ctx, deps)
-	return dropODataClient(ectx, stmt.(*ast.DropODataClientStmt))
+	return ExecDropODataClientFn(ctx, stmt.(*ast.DropODataClientStmt), deps)
 }
 
 func ExecCreateODataServiceFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := NewExecContext(ctx, deps)
-	return createODataService(ectx, stmt.(*ast.CreateODataServiceStmt))
+	return ExecCreateODataServiceFn(ctx, stmt.(*ast.CreateODataServiceStmt), deps)
 }
 
 func ExecAlterODataServiceFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := NewExecContext(ctx, deps)
-	return alterODataService(ectx, stmt.(*ast.AlterODataServiceStmt))
+	return ExecAlterODataServiceFn(ctx, stmt.(*ast.AlterODataServiceStmt), deps)
 }
 
 func ExecDropODataServiceFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := NewExecContext(ctx, deps)
-	return dropODataService(ectx, stmt.(*ast.DropODataServiceStmt))
+	return ExecDropODataServiceFn(ctx, stmt.(*ast.DropODataServiceStmt), deps)
 }
 
 func ExecCreateJsonStructureFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
@@ -3115,18 +3109,15 @@ func ExecDropExportMappingFuture(ctx context.Context, stmt ast.Statement, deps *
 }
 
 func ExecCreateRestClientFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := NewExecContext(ctx, deps)
-	return createRestClient(ectx, stmt.(*ast.CreateRestClientStmt))
+	return ExecCreateRestClientFn(ctx, stmt.(*ast.CreateRestClientStmt), deps)
 }
 
 func ExecDropRestClientFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := NewExecContext(ctx, deps)
-	return dropRestClient(ectx, stmt.(*ast.DropRestClientStmt))
+	return ExecDropRestClientFn(ctx, stmt.(*ast.DropRestClientStmt), deps)
 }
 
 func ExecDescribeContractFromOpenAPIFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := NewExecContext(ctx, deps)
-	return describeContractFromOpenAPI(ectx, stmt.(*ast.DescribeContractFromOpenAPIStmt))
+	return ExecDescribeContractFromOpenAPIFn(ctx, stmt.(*ast.DescribeContractFromOpenAPIStmt), deps)
 }
 
 func ExecCreatePublishedRestServiceFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
@@ -3142,13 +3133,11 @@ func ExecAlterPublishedRestServiceFuture(ctx context.Context, stmt ast.Statement
 }
 
 func ExecCreateExternalEntityFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := NewExecContext(ctx, deps)
-	return execCreateExternalEntity(ectx, stmt.(*ast.CreateExternalEntityStmt))
+	return ExecCreateExternalEntityFn(ctx, stmt.(*ast.CreateExternalEntityStmt), deps)
 }
 
 func ExecCreateExternalEntitiesFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := NewExecContext(ctx, deps)
-	return createExternalEntities(ectx, stmt.(*ast.CreateExternalEntitiesStmt))
+	return ExecCreateExternalEntitiesFn(ctx, stmt.(*ast.CreateExternalEntitiesStmt), deps)
 }
 
 func ExecCreateDataTransformerFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {

@@ -3,6 +3,7 @@
 package executor
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -848,6 +849,191 @@ func fetchSpecBytes(specPath, baseDir string) ([]byte, string, error) {
 		return nil, normalised, fmt.Errorf("read spec response: %w", err)
 	}
 	return data, normalised, nil
+}
+
+// ============================================================================
+// ExecCreateRestClientFn — HandlerDeps version of createRestClient
+// ============================================================================
+
+func ExecCreateRestClientFn(ctx context.Context, s *ast.CreateRestClientStmt, deps *HandlerDeps) error {
+	if s.OpenApiPath != "" {
+		ectx := NewExecContext(ctx, deps)
+		return createRestClientFromSpec(ectx, s)
+	}
+
+	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
+		return mdlerrors.NewNotConnected()
+	}
+
+	if err := checkFeatureFn(ctx, deps, "integration", "rest_client_basic",
+		"create rest client",
+		"upgrade your project to 10.1+"); err != nil {
+		return err
+	}
+
+	moduleName := s.Name.Module
+	ectx := NewExecContext(ctx, deps)
+	module, err := findModule(ectx, moduleName)
+	if err != nil {
+		return mdlerrors.NewNotFound("module", moduleName)
+	}
+
+	existingServices, err := deps.ServiceLister.ListConsumedRestServices()
+	if err != nil {
+		return mdlerrors.NewBackend("list rest clients", err)
+	}
+	h, err := getHierarchy(ectx)
+	if err != nil {
+		return mdlerrors.NewBackend("build hierarchy", err)
+	}
+
+	var preservedID model.ID
+	wasModified := false
+	for _, existing := range existingServices {
+		existModID := h.FindModuleID(existing.ContainerID)
+		existModName := h.GetModuleName(existModID)
+		if strings.EqualFold(existModName, moduleName) && strings.EqualFold(existing.Name, s.Name.Name) {
+			if s.CreateOrModify {
+				preservedID = existing.ID
+				wasModified = true
+				if err := deps.ServiceWriter.DeleteConsumedRestService(existing.ID); err != nil {
+					return mdlerrors.NewBackend("delete existing rest client", err)
+				}
+			} else {
+				return mdlerrors.NewAlreadyExistsMsg("rest client", moduleName+"."+s.Name.Name, fmt.Sprintf("rest client already exists: %s.%s (use create or modify to overwrite)", moduleName, s.Name.Name))
+			}
+		}
+	}
+
+	containerID := module.ID
+	if s.Folder != "" {
+		folderID, err := resolveFolder(ectx, module.ID, s.Folder, nil)
+		if err != nil {
+			return mdlerrors.NewBackend(fmt.Sprintf("resolve folder '%s'", s.Folder), err)
+		}
+		containerID = folderID
+	}
+
+	svc := &model.ConsumedRestService{
+		ContainerID:   containerID,
+		Name:          s.Name.Name,
+		Documentation: s.Documentation,
+		BaseUrl:       s.BaseUrl,
+	}
+	if preservedID != "" {
+		svc.ID = preservedID
+	}
+
+	if s.Authentication != nil {
+		auth := &model.RestAuthentication{
+			Scheme: s.Authentication.Scheme,
+		}
+		if strings.HasPrefix(s.Authentication.Username, "$") {
+			name := strings.TrimPrefix(s.Authentication.Username, "$")
+			if !strings.Contains(name, ".") {
+				name = moduleName + "." + name
+			}
+			auth.Username = "$" + name
+		} else if s.Authentication.Username != "" {
+			constName := s.Name.Name + "_Username"
+			if err := ensureConstant(ectx, moduleName, containerID, constName, s.Authentication.Username); err != nil {
+				return fmt.Errorf("failed to create username constant: %w", err)
+			}
+			auth.Username = "$" + moduleName + "." + constName
+		}
+		if strings.HasPrefix(s.Authentication.Password, "$") {
+			name := strings.TrimPrefix(s.Authentication.Password, "$")
+			if !strings.Contains(name, ".") {
+				name = moduleName + "." + name
+			}
+			auth.Password = "$" + name
+		} else if s.Authentication.Password != "" {
+			constName := s.Name.Name + "_Password"
+			if err := ensureConstant(ectx, moduleName, containerID, constName, s.Authentication.Password); err != nil {
+				return fmt.Errorf("failed to create password constant: %w", err)
+			}
+			auth.Password = "$" + moduleName + "." + constName
+		}
+		svc.Authentication = auth
+	}
+
+	for _, opDef := range s.Operations {
+		op := buildRestClientOperation(opDef)
+		svc.Operations = append(svc.Operations, op)
+	}
+
+	if err := deps.ServiceWriter.CreateConsumedRestService(svc); err != nil {
+		return mdlerrors.NewBackend("create rest client", err)
+	}
+
+	verb := "Created"
+	if wasModified {
+		verb = "Modified"
+	}
+	fmt.Fprintf(deps.Output, "%s rest client: %s.%s (%d operations)\n", verb, moduleName, s.Name.Name, len(svc.Operations))
+	return nil
+}
+
+// ExecDropRestClientFn is the HandlerDeps version of dropRestClient.
+func ExecDropRestClientFn(ctx context.Context, s *ast.DropRestClientStmt, deps *HandlerDeps) error {
+	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
+		return mdlerrors.NewNotConnected()
+	}
+
+	services, err := deps.ServiceLister.ListConsumedRestServices()
+	if err != nil {
+		return mdlerrors.NewBackend("list consumed rest services", err)
+	}
+
+	ectx := NewExecContext(ctx, deps)
+	h, err := getHierarchy(ectx)
+	if err != nil {
+		return mdlerrors.NewBackend("build hierarchy", err)
+	}
+
+	for _, svc := range services {
+		modID := h.FindModuleID(svc.ContainerID)
+		moduleName := h.GetModuleName(modID)
+		if strings.EqualFold(moduleName, s.Name.Module) && strings.EqualFold(svc.Name, s.Name.Name) {
+			if err := deps.ServiceWriter.DeleteConsumedRestService(svc.ID); err != nil {
+				return mdlerrors.NewBackend("delete rest client", err)
+			}
+			fmt.Fprintf(deps.Output, "Dropped rest client: %s.%s\n", moduleName, svc.Name)
+			return nil
+		}
+	}
+
+	return mdlerrors.NewNotFound("rest client", s.Name.String())
+}
+
+// ExecDescribeContractFromOpenAPIFn is the HandlerDeps version of describeContractFromOpenAPI.
+func ExecDescribeContractFromOpenAPIFn(ctx context.Context, s *ast.DescribeContractFromOpenAPIStmt, deps *HandlerDeps) error {
+	mprDir := ""
+	if deps.MprPath != "" {
+		mprDir = filepath.Dir(deps.MprPath)
+	}
+	specBytes, rawURL, err := fetchSpecBytes(s.SpecPath, mprDir)
+	if err != nil {
+		return fmt.Errorf("failed to read OpenAPI spec: %w", err)
+	}
+
+	spec, err := openapi.ParseSpecFromURL(specBytes, rawURL)
+	if err != nil {
+		return fmt.Errorf("failed to parse OpenAPI spec: %w", err)
+	}
+
+	serviceName := sanitizeModuleName(spec.Info.Title)
+	parsed, warnings, err := openapi.ToRestClientModel(spec, serviceName, "")
+	if err != nil {
+		return fmt.Errorf("failed to convert OpenAPI spec: %w", err)
+	}
+	for _, w := range warnings {
+		fmt.Fprintf(deps.Output, "-- Warning: %s\n", w)
+	}
+
+	svc := convertOpenAPIToModel(parsed, "")
+	ectx := NewExecContext(ctx, deps)
+	return outputConsumedRestServiceMDL(ectx, svc, "MyModule")
 }
 
 // Executor wrappers for unmigrated callers.

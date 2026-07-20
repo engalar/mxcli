@@ -3,6 +3,7 @@
 package executor
 
 import (
+	"context"
 	"fmt"
 	"sort"
 	"strings"
@@ -1527,6 +1528,225 @@ func asyncTypeString(p *types.AsyncAPIProperty) string {
 		return p.Type + " (" + p.Format + ")"
 	}
 	return p.Type
+}
+
+// ExecCreateExternalEntitiesFn is the HandlerDeps version of createExternalEntities.
+func ExecCreateExternalEntitiesFn(ctx context.Context, s *ast.CreateExternalEntitiesStmt, deps *HandlerDeps) error {
+	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
+		return mdlerrors.NewNotConnected()
+	}
+
+	ectx := NewExecContext(ctx, deps)
+	doc, svcQN, err := parseServiceContract(ectx, s.ServiceRef)
+	if err != nil {
+		return err
+	}
+
+	esMap := make(map[string]string)
+	esByType := make(map[string]*types.EdmEntitySet)
+	for _, es := range doc.EntitySets {
+		esMap[es.EntityType] = es.Name
+		esByType[es.EntityType] = es
+	}
+
+	filterSet := make(map[string]bool)
+	for _, name := range s.EntityNames {
+		filterSet[strings.ToLower(name)] = true
+	}
+
+	targetModule := s.TargetModule
+	if targetModule == "" {
+		targetModule = s.ServiceRef.Module
+	}
+
+	module, err := findModule(ectx, targetModule)
+	if err != nil {
+		return err
+	}
+	dm, err := getDomainModelGenCached(ectx, module.ID)
+	if err != nil {
+		return mdlerrors.NewBackend("get domain model", err)
+	}
+	if dm == nil {
+		return mdlerrors.NewBackend("get domain model", nil)
+	}
+
+	existing := make(map[string]*genDm.Entity)
+	for _, item := range dm.EntitiesItems() {
+		ent, ok := item.(*genDm.Entity)
+		if ok {
+			existing[ent.Name()] = ent
+		}
+	}
+
+	typeByQualified := make(map[string]*types.EdmEntityType)
+	for _, schema := range doc.Schemas {
+		for _, et := range schema.EntityTypes {
+			typeByQualified[schema.Namespace+"."+et.Name] = et
+		}
+	}
+
+	serviceRef := s.ServiceRef.String()
+	var created, updated, skipped, failed int
+
+	for _, schema := range doc.Schemas {
+		for _, et := range schema.EntityTypes {
+			entitySet := esByType[schema.Namespace+"."+et.Name]
+			entitySetName := ""
+			if entitySet != nil {
+				entitySetName = entitySet.Name
+			}
+			isTopLevel := entitySetName != ""
+
+			mendixName := et.Name
+			if isTopLevel {
+				mendixName = entitySetName
+			}
+
+			if len(filterSet) > 0 && !filterSet[strings.ToLower(et.Name)] && !filterSet[strings.ToLower(mendixName)] {
+				continue
+			}
+
+			mergedProps, keyProps := mergedPropertiesWithKey(et, typeByQualified)
+
+			keyPropSet := make(map[string]bool)
+			for _, k := range keyProps {
+				keyPropSet[k] = true
+			}
+
+			var keyParts []*genRest.ODataKeyPart
+			for _, keyName := range keyProps {
+				var keyProp *types.EdmProperty
+				for _, p := range mergedProps {
+					if p.Name == keyName {
+						keyProp = p
+						break
+					}
+				}
+				if keyProp == nil {
+					continue
+				}
+				keyPart := genRest.NewODataKeyPart()
+				keyPart.SetName(keyName)
+				keyPart.SetEntityKeyPartName(attrNameForOData(keyName, et.Name))
+				keyPart.SetRemoteType(keyProp.Type)
+				keyPart.SetFilterable(true)
+				keyPart.SetType(edmToAttributeTypeGen(keyProp, true))
+				keyParts = append(keyParts, keyPart)
+			}
+
+			defaultCreatable := false
+			defaultUpdatable := false
+			if !isTopLevel {
+				defaultCreatable = true
+				defaultUpdatable = true
+			}
+			if entitySet != nil && entitySet.Insertable != nil {
+				defaultCreatable = *entitySet.Insertable
+			}
+			if entitySet != nil && entitySet.Updatable != nil {
+				defaultUpdatable = *entitySet.Updatable
+			}
+			nonInsertable := make(map[string]bool)
+			nonUpdatable := make(map[string]bool)
+			if entitySet != nil {
+				for _, name := range entitySet.NonInsertableProperties {
+					nonInsertable[name] = true
+				}
+				for _, name := range entitySet.NonUpdatableProperties {
+					nonUpdatable[name] = true
+				}
+			}
+
+			var attrs []*genDm.Attribute
+			for _, p := range mergedProps {
+				if strings.HasPrefix(p.Type, "Collection(") {
+					continue
+				}
+				if !strings.HasPrefix(p.Type, "Edm.") {
+					continue
+				}
+				if p.Type == "Edm.Duration" {
+					continue
+				}
+
+				creatable := defaultCreatable
+				updatable := defaultUpdatable
+				if nonInsertable[p.Name] || p.Computed {
+					creatable = false
+				}
+				if nonUpdatable[p.Name] || p.Computed || p.Immutable {
+					updatable = false
+				}
+
+				attrName := attrNameForOData(p.Name, et.Name)
+				attr := genDm.NewAttribute()
+				attr.SetID(element.ID(types.GenerateID()))
+				attr.SetName(attrName)
+				attr.SetType(edmToAttributeTypeGen(p, keyPropSet[p.Name]))
+				mapped := genRest.NewODataMappedValue()
+				mapped.SetRemoteName(p.Name)
+				mapped.SetRemoteType(p.Type)
+				mapped.SetFilterable(true)
+				mapped.SetSortable(true)
+				mapped.SetCreatable(creatable)
+				mapped.SetUpdatable(updatable)
+				attr.SetValue(mapped)
+				attrs = append(attrs, attr)
+			}
+
+			if existingEntity, ok := existing[mendixName]; ok {
+				if !s.CreateOrModify {
+					fmt.Fprintf(deps.Output, "  SKIPPED: %s.%s (already exists; use create or modify to update)\n", targetModule, mendixName)
+					skipped++
+					continue
+				}
+				applyExternalEntityFields(existingEntity, et, isTopLevel, serviceRef, entitySet, keyParts, attrs)
+				if err := deps.DomainModelWriter.UpdateEntityGen(model.ID(dm.ID()), existingEntity); err != nil {
+					fmt.Fprintf(deps.Output, "  FAILED: %s.%s — %v\n", targetModule, mendixName, err)
+					failed++
+					continue
+				}
+				updated++
+				continue
+			}
+
+			newEntity := genDm.NewEntity()
+			newEntity.SetID(element.ID(types.GenerateID()))
+			newEntity.SetName(mendixName)
+			newEntity.SetLocation(layoutPos(100+(created+updated)*150, 100))
+			applyExternalEntityFields(newEntity, et, isTopLevel, serviceRef, entitySet, keyParts, attrs)
+			if err := deps.DomainModelWriter.CreateEntityGen(model.ID(dm.ID()), newEntity); err != nil {
+				fmt.Fprintf(deps.Output, "  FAILED: %s.%s — %v\n", targetModule, mendixName, err)
+				failed++
+				continue
+			}
+			created++
+		}
+	}
+
+	invalidateDomainModelGenForModule(ectx, module.ID)
+	dm, err = getDomainModelGenCached(ectx, module.ID)
+	if err == nil {
+		npesCreated := createPrimitiveCollectionNPEs(ectx, dm, doc, typeByQualified, esMap, serviceRef)
+		if npesCreated > 0 {
+			fmt.Fprintf(deps.Output, "Created %d primitive-collection NPEs\n", npesCreated)
+		}
+	}
+
+	invalidateDomainModelGenForModule(ectx, module.ID)
+	dm, err = getDomainModelGenCached(ectx, module.ID)
+	if err == nil {
+		assocsCreated := createNavigationAssociations(ectx, dm, doc, typeByQualified, esMap, serviceRef)
+		if assocsCreated > 0 {
+			fmt.Fprintf(deps.Output, "Created %d navigation associations\n", assocsCreated)
+		}
+	}
+
+	fmt.Fprintf(deps.Output, "\nFrom %s into %s: %d created, %d updated, %d skipped, %d failed\n",
+		svcQN, targetModule, created, updated, skipped, failed)
+
+	return nil
 }
 
 // --- Executor method wrappers for backward compatibility ---

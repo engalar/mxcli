@@ -3,6 +3,7 @@
 package executor
 
 import (
+	"context"
 	"crypto/sha256"
 	"fmt"
 	"io"
@@ -1660,6 +1661,637 @@ func fetchODataMetadata(metadataUrl string) (metadata string, hash string, err e
 	h := sha256.Sum256(body)
 	hash = fmt.Sprintf("%x", h)
 	return metadata, hash, nil
+}
+
+// ============================================================================
+// ExecCreateODataClientFn — HandlerDeps version of createODataClient
+// ============================================================================
+
+func ExecCreateODataClientFn(ctx context.Context, s *ast.CreateODataClientStmt, deps *HandlerDeps) error {
+	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
+		return mdlerrors.NewNotConnected()
+	}
+
+	if s.Name.Module == "" {
+		return mdlerrors.NewValidation("module name required: use create odata client Module.Name (...)")
+	}
+
+	if err := validateMetadataURL(s.MetadataUrl); err != nil {
+		return err
+	}
+
+	ectx := NewExecContext(ctx, deps)
+	module, err := findModule(ectx, s.Name.Module)
+	if err != nil {
+		return err
+	}
+
+	// Check if client already exists
+	services, err := deps.ServiceLister.ListConsumedODataServices()
+	if err == nil {
+		h, _ := getHierarchy(ectx)
+		for _, svc := range services {
+			modID := h.FindModuleID(svc.ContainerID)
+			modName := h.GetModuleName(modID)
+			if strings.EqualFold(modName, s.Name.Module) && strings.EqualFold(svc.Name, s.Name.Name) {
+				if s.CreateOrModify {
+					svc.Documentation = s.Documentation
+					if s.Version != "" {
+						svc.Version = s.Version
+					}
+					if s.ODataVersion != "" {
+						svc.ODataVersion = s.ODataVersion
+					}
+					if s.MetadataUrl != "" {
+						svc.MetadataUrl = s.MetadataUrl
+					}
+					if s.TimeoutExpression != "" {
+						svc.TimeoutExpression = s.TimeoutExpression
+					}
+					if s.ProxyType != "" {
+						svc.ProxyType = s.ProxyType
+					}
+					if s.Description != "" {
+						svc.Description = s.Description
+					}
+					if s.ConfigurationMicroflow != "" {
+						svc.ConfigurationMicroflow = extractMicroflowRef(s.ConfigurationMicroflow)
+					}
+					if s.ErrorHandlingMicroflow != "" {
+						svc.ErrorHandlingMicroflow = extractMicroflowRef(s.ErrorHandlingMicroflow)
+					}
+					if s.ProxyHost != "" {
+						svc.ProxyHost = s.ProxyHost
+					}
+					if s.ProxyPort != "" {
+						svc.ProxyPort = s.ProxyPort
+					}
+					if s.ProxyUsername != "" {
+						svc.ProxyUsername = s.ProxyUsername
+					}
+					if s.ProxyPassword != "" {
+						svc.ProxyPassword = s.ProxyPassword
+					}
+					if s.ServiceUrl != "" || s.UseAuthentication || s.HttpUsername != "" ||
+						s.HttpPassword != "" || s.ClientCertificate != "" || len(s.Headers) > 0 {
+						if svc.HttpConfiguration == nil {
+							svc.HttpConfiguration = &model.HttpConfiguration{}
+						}
+						if s.ServiceUrl != "" {
+							if err := validateServiceURL(s.ServiceUrl); err != nil {
+								return err
+							}
+							svc.HttpConfiguration.OverrideLocation = true
+							svc.HttpConfiguration.CustomLocation = s.ServiceUrl
+						}
+						svc.HttpConfiguration.UseAuthentication = s.UseAuthentication
+						if s.HttpUsername != "" {
+							svc.HttpConfiguration.Username = s.HttpUsername
+						}
+						if s.HttpPassword != "" {
+							svc.HttpConfiguration.Password = s.HttpPassword
+						}
+						if s.ClientCertificate != "" {
+							svc.HttpConfiguration.ClientCertificate = s.ClientCertificate
+						}
+						if len(s.Headers) > 0 {
+							svc.HttpConfiguration.HeaderEntries = nil
+							for _, h := range s.Headers {
+								svc.HttpConfiguration.HeaderEntries = append(svc.HttpConfiguration.HeaderEntries, &model.HttpHeaderEntry{
+									Key:   h.Key,
+									Value: h.Value,
+								})
+							}
+						}
+					}
+					if err := deps.ServiceWriter.UpdateConsumedODataService(svc); err != nil {
+						return mdlerrors.NewBackend("update OData client", err)
+					}
+					invalidateHierarchy(ectx)
+					fmt.Fprintf(deps.Output, "Modified OData client: %s.%s\n", modName, svc.Name)
+					return nil
+				}
+				return mdlerrors.NewAlreadyExistsMsg("OData client", modName+"."+svc.Name, fmt.Sprintf("OData client already exists: %s.%s (use create or modify to update)", modName, svc.Name))
+			}
+		}
+	}
+
+	containerID := module.ID
+	if s.Folder != "" {
+		folderID, err := resolveFolder(ectx, module.ID, s.Folder, nil)
+		if err != nil {
+			return mdlerrors.NewBackend(fmt.Sprintf("resolve folder %s", s.Folder), err)
+		}
+		containerID = folderID
+	}
+
+	timeout := s.TimeoutExpression
+	if timeout == "" {
+		timeout = "300"
+	}
+
+	newSvc := &model.ConsumedODataService{
+		ContainerID:            containerID,
+		Name:                   s.Name.Name,
+		ServiceName:            s.Name.Name,
+		Documentation:          s.Documentation,
+		Version:                s.Version,
+		ODataVersion:           s.ODataVersion,
+		MetadataUrl:            s.MetadataUrl,
+		TimeoutExpression:      timeout,
+		ProxyType:              s.ProxyType,
+		Description:            s.Description,
+		ConfigurationMicroflow: extractMicroflowRef(s.ConfigurationMicroflow),
+		ErrorHandlingMicroflow: extractMicroflowRef(s.ErrorHandlingMicroflow),
+		ProxyHost:              s.ProxyHost,
+		ProxyPort:              s.ProxyPort,
+		ProxyUsername:          s.ProxyUsername,
+		ProxyPassword:          s.ProxyPassword,
+	}
+
+	if s.ServiceUrl != "" || s.UseAuthentication || s.HttpUsername != "" ||
+		s.HttpPassword != "" || s.ClientCertificate != "" || len(s.Headers) > 0 {
+		cfg := &model.HttpConfiguration{
+			UseAuthentication: s.UseAuthentication,
+			Username:          s.HttpUsername,
+			Password:          s.HttpPassword,
+			ClientCertificate: s.ClientCertificate,
+		}
+		if s.ServiceUrl != "" {
+			if !strings.HasPrefix(s.ServiceUrl, "@") {
+				return fmt.Errorf(`ServiceUrl must now be a constant reference (e.g., '@Module.ApiLocation').
+Previously literal URLs were allowed; this enforces the Mendix best practice of externalizing configuration.
+Create a constant first:
+  CREATE CONSTANT Module.ApiLocation TYPE String DEFAULT 'https://api.example.com/';
+Then reference it:
+  ServiceUrl: '@Module.ApiLocation'
+Got: %s`, s.ServiceUrl)
+			}
+			cfg.OverrideLocation = true
+			cfg.CustomLocation = s.ServiceUrl
+		}
+		for _, h := range s.Headers {
+			cfg.HeaderEntries = append(cfg.HeaderEntries, &model.HttpHeaderEntry{
+				Key:   h.Key,
+				Value: h.Value,
+			})
+		}
+		newSvc.HttpConfiguration = cfg
+	}
+
+	if newSvc.MetadataUrl != "" {
+		mprDir := ""
+		if deps.MprPath != "" {
+			mprDir = filepath.Dir(deps.MprPath)
+		}
+
+		normalizedUrl, err := pathutil.NormalizeURL(newSvc.MetadataUrl, mprDir)
+		if err != nil {
+			return fmt.Errorf("failed to normalize MetadataUrl: %w", err)
+		}
+		newSvc.MetadataUrl = normalizedUrl
+
+		metadata, hash, err := fetchODataMetadata(normalizedUrl)
+		if err != nil {
+			fmt.Fprintf(deps.Output, "Warning: could not fetch $metadata: %v\n", err)
+		} else if metadata != "" {
+			newSvc.Metadata = metadata
+			newSvc.MetadataHash = hash
+			newSvc.Validated = true
+		}
+	}
+
+	if err := deps.ServiceWriter.CreateConsumedODataService(newSvc); err != nil {
+		return mdlerrors.NewBackend("create OData client", err)
+	}
+	invalidateHierarchy(ectx)
+	fmt.Fprintf(deps.Output, "Created OData client: %s.%s\n", s.Name.Module, s.Name.Name)
+	if newSvc.Metadata != "" {
+		if doc, err := types.ParseEdmx(newSvc.Metadata); err == nil {
+			entityCount := 0
+			actionCount := 0
+			for _, sch := range doc.Schemas {
+				entityCount += len(sch.EntityTypes)
+			}
+			actionCount = len(doc.Actions)
+			fmt.Fprintf(deps.Output, "  Cached $metadata: %d entity types, %d actions\n", entityCount, actionCount)
+		}
+	}
+	return nil
+}
+
+// ExecAlterODataClientFn is the HandlerDeps version of alterODataClient.
+func ExecAlterODataClientFn(ctx context.Context, s *ast.AlterODataClientStmt, deps *HandlerDeps) error {
+	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
+		return mdlerrors.NewNotConnected()
+	}
+
+	services, err := deps.ServiceLister.ListConsumedODataServices()
+	if err != nil {
+		return mdlerrors.NewBackend("list consumed OData services", err)
+	}
+
+	ectx := NewExecContext(ctx, deps)
+	h, err := getHierarchy(ectx)
+	if err != nil {
+		return mdlerrors.NewBackend("build hierarchy", err)
+	}
+
+	for _, svc := range services {
+		modID := h.FindModuleID(svc.ContainerID)
+		modName := h.GetModuleName(modID)
+		if strings.EqualFold(modName, s.Name.Module) && strings.EqualFold(svc.Name, s.Name.Name) {
+			for key, val := range s.Changes {
+				strVal := fmt.Sprintf("%v", val)
+				switch strings.ToLower(key) {
+				case "version":
+					svc.Version = strVal
+				case "odataversion":
+					svc.ODataVersion = strVal
+				case "metadataurl":
+					svc.MetadataUrl = strVal
+				case "timeout":
+					svc.TimeoutExpression = strVal
+				case "proxytype":
+					svc.ProxyType = strVal
+				case "description":
+					svc.Description = strVal
+				case "serviceurl":
+					if err := validateServiceURL(strVal); err != nil {
+						return err
+					}
+					if svc.HttpConfiguration == nil {
+						svc.HttpConfiguration = &model.HttpConfiguration{}
+					}
+					svc.HttpConfiguration.OverrideLocation = true
+					svc.HttpConfiguration.CustomLocation = strVal
+				case "useauthentication":
+					if svc.HttpConfiguration == nil {
+						svc.HttpConfiguration = &model.HttpConfiguration{}
+					}
+					svc.HttpConfiguration.UseAuthentication = strings.EqualFold(strVal, "true") || strings.EqualFold(strVal, "yes")
+				case "httpusername":
+					if svc.HttpConfiguration == nil {
+						svc.HttpConfiguration = &model.HttpConfiguration{}
+					}
+					svc.HttpConfiguration.Username = strVal
+				case "httppassword":
+					if svc.HttpConfiguration == nil {
+						svc.HttpConfiguration = &model.HttpConfiguration{}
+					}
+					svc.HttpConfiguration.Password = strVal
+				case "clientcertificate":
+					if svc.HttpConfiguration == nil {
+						svc.HttpConfiguration = &model.HttpConfiguration{}
+					}
+					svc.HttpConfiguration.ClientCertificate = strVal
+				case "configurationmicroflow":
+					svc.ConfigurationMicroflow = extractMicroflowRef(strVal)
+				case "errorhandlingmicroflow":
+					svc.ErrorHandlingMicroflow = extractMicroflowRef(strVal)
+				case "proxyhost":
+					svc.ProxyHost = strVal
+				case "proxyport":
+					svc.ProxyPort = strVal
+				case "proxyusername":
+					svc.ProxyUsername = strVal
+				case "proxypassword":
+					svc.ProxyPassword = strVal
+				default:
+					return mdlerrors.NewUnsupported(fmt.Sprintf("unknown OData client property: %s", key))
+				}
+			}
+			if err := deps.ServiceWriter.UpdateConsumedODataService(svc); err != nil {
+				return mdlerrors.NewBackend("alter OData client", err)
+			}
+			invalidateHierarchy(ectx)
+			fmt.Fprintf(deps.Output, "Altered OData client: %s.%s\n", modName, svc.Name)
+			return nil
+		}
+	}
+
+	return mdlerrors.NewNotFoundMsg("OData client", fmt.Sprint(s.Name), fmt.Sprintf("OData client not found: %s", s.Name))
+}
+
+// ExecDropODataClientFn is the HandlerDeps version of dropODataClient.
+func ExecDropODataClientFn(ctx context.Context, s *ast.DropODataClientStmt, deps *HandlerDeps) error {
+	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
+		return mdlerrors.NewNotConnected()
+	}
+
+	services, err := deps.ServiceLister.ListConsumedODataServices()
+	if err != nil {
+		return mdlerrors.NewBackend("list consumed OData services", err)
+	}
+
+	ectx := NewExecContext(ctx, deps)
+	h, err := getHierarchy(ectx)
+	if err != nil {
+		return mdlerrors.NewBackend("build hierarchy", err)
+	}
+
+	for _, svc := range services {
+		modID := h.FindModuleID(svc.ContainerID)
+		modName := h.GetModuleName(modID)
+		if strings.EqualFold(modName, s.Name.Module) && strings.EqualFold(svc.Name, s.Name.Name) {
+			serviceRef := modName + "." + svc.Name
+			module, findErr := findModule(ectx, s.Name.Module)
+			if findErr != nil {
+				return findErr
+			}
+			dm, dmErr := getDomainModelGenCached(ectx, module.ID)
+			if dmErr != nil {
+				return mdlerrors.NewBackend("get domain model for cascade", dmErr)
+			}
+			var externalEntityIDs []model.ID
+			for _, entityElem := range dm.EntitiesItems() {
+				entity, ok := entityElem.(*genDm.Entity)
+				if ok && strings.EqualFold(entity.RemoteSourceDocumentQualifiedName(), serviceRef) {
+					externalEntityIDs = append(externalEntityIDs, model.ID(entity.ID()))
+				}
+			}
+			for _, entityID := range externalEntityIDs {
+				if err := deps.DomainModelWriter.DeleteEntity(model.ID(dm.ID()), entityID); err != nil {
+					return mdlerrors.NewBackend("cascade delete external entity", err)
+				}
+			}
+			if len(externalEntityIDs) > 0 {
+				invalidateDomainModelGenForModule(ectx, module.ID)
+			}
+
+			if err := deps.ServiceWriter.DeleteConsumedODataService(svc.ID); err != nil {
+				return mdlerrors.NewBackend("drop OData client", err)
+			}
+			invalidateHierarchy(ectx)
+			fmt.Fprintf(deps.Output, "Dropped OData client: %s.%s\n", modName, svc.Name)
+			return nil
+		}
+	}
+
+	return mdlerrors.NewNotFoundMsg("OData client", fmt.Sprint(s.Name), fmt.Sprintf("OData client not found: %s", s.Name))
+}
+
+// ExecCreateODataServiceFn is the HandlerDeps version of createODataService.
+func ExecCreateODataServiceFn(ctx context.Context, s *ast.CreateODataServiceStmt, deps *HandlerDeps) error {
+	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
+		return mdlerrors.NewNotConnected()
+	}
+
+	if s.Name.Module == "" {
+		return mdlerrors.NewValidation("module name required: use create odata service Module.Name (...)")
+	}
+
+	ectx := NewExecContext(ctx, deps)
+	module, err := findModule(ectx, s.Name.Module)
+	if err != nil {
+		return err
+	}
+
+	services, err := deps.ServiceLister.ListPublishedODataServices()
+	if err == nil {
+		h, _ := getHierarchy(ectx)
+		for _, svc := range services {
+			modID := h.FindModuleID(svc.ContainerID)
+			modName := h.GetModuleName(modID)
+			if strings.EqualFold(modName, s.Name.Module) && strings.EqualFold(svc.Name, s.Name.Name) {
+				if s.CreateOrModify {
+					svc.Documentation = s.Documentation
+					if s.Path != "" {
+						svc.Path = s.Path
+					}
+					if s.Version != "" {
+						svc.Version = s.Version
+					}
+					if s.ODataVersion != "" {
+						svc.ODataVersion = s.ODataVersion
+					}
+					if s.Namespace != "" {
+						svc.Namespace = s.Namespace
+					}
+					if s.ServiceName != "" {
+						svc.ServiceName = s.ServiceName
+					}
+					if s.Summary != "" {
+						svc.Summary = s.Summary
+					}
+					if s.Description != "" {
+						svc.Description = s.Description
+					}
+					svc.PublishAssociations = s.PublishAssociations
+					if len(s.AuthenticationTypes) > 0 {
+						svc.AuthenticationTypes = s.AuthenticationTypes
+					}
+					if err := deps.ServiceWriter.UpdatePublishedODataService(svc); err != nil {
+						return mdlerrors.NewBackend("update OData service", err)
+					}
+					invalidateHierarchy(ectx)
+					fmt.Fprintf(deps.Output, "Modified OData service: %s.%s\n", modName, svc.Name)
+					return nil
+				}
+				return mdlerrors.NewAlreadyExistsMsg("OData service", modName+"."+svc.Name, fmt.Sprintf("OData service already exists: %s.%s (use create or modify to update)", modName, svc.Name))
+			}
+		}
+	}
+
+	containerID := module.ID
+	if s.Folder != "" {
+		folderID, err := resolveFolder(ectx, module.ID, s.Folder, nil)
+		if err != nil {
+			return mdlerrors.NewBackend(fmt.Sprintf("resolve folder %s", s.Folder), err)
+		}
+		containerID = folderID
+	}
+
+	newSvc := &model.PublishedODataService{
+		ContainerID:         containerID,
+		Name:                s.Name.Name,
+		Documentation:       s.Documentation,
+		Path:                s.Path,
+		Version:             s.Version,
+		ODataVersion:        s.ODataVersion,
+		Namespace:           s.Namespace,
+		ServiceName:         s.ServiceName,
+		Summary:             s.Summary,
+		Description:         s.Description,
+		PublishAssociations: s.PublishAssociations,
+		AuthenticationTypes: s.AuthenticationTypes,
+	}
+
+	for _, entityDef := range s.Entities {
+		entityType, entitySet := astEntityDefToModel(entityDef)
+		newSvc.EntityTypes = append(newSvc.EntityTypes, entityType)
+		newSvc.EntitySets = append(newSvc.EntitySets, entitySet)
+	}
+
+	if err := deps.ServiceWriter.CreatePublishedODataService(newSvc); err != nil {
+		return mdlerrors.NewBackend("create OData service", err)
+	}
+	invalidateHierarchy(ectx)
+	fmt.Fprintf(deps.Output, "Created OData service: %s.%s\n", s.Name.Module, s.Name.Name)
+	return nil
+}
+
+// ExecAlterODataServiceFn is the HandlerDeps version of alterODataService.
+func ExecAlterODataServiceFn(ctx context.Context, s *ast.AlterODataServiceStmt, deps *HandlerDeps) error {
+	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
+		return mdlerrors.NewNotConnected()
+	}
+
+	services, err := deps.ServiceLister.ListPublishedODataServices()
+	if err != nil {
+		return mdlerrors.NewBackend("list published OData services", err)
+	}
+
+	ectx := NewExecContext(ctx, deps)
+	h, err := getHierarchy(ectx)
+	if err != nil {
+		return mdlerrors.NewBackend("build hierarchy", err)
+	}
+
+	for _, svc := range services {
+		modID := h.FindModuleID(svc.ContainerID)
+		modName := h.GetModuleName(modID)
+		if strings.EqualFold(modName, s.Name.Module) && strings.EqualFold(svc.Name, s.Name.Name) {
+			for key, val := range s.Changes {
+				strVal := fmt.Sprintf("%v", val)
+				switch strings.ToLower(key) {
+				case "path":
+					svc.Path = strVal
+				case "version":
+					svc.Version = strVal
+				case "odataversion":
+					svc.ODataVersion = strVal
+				case "namespace":
+					svc.Namespace = strVal
+				case "servicename":
+					svc.ServiceName = strVal
+				case "summary":
+					svc.Summary = strVal
+				case "description":
+					svc.Description = strVal
+				case "publishassociations":
+					svc.PublishAssociations = strings.EqualFold(strVal, "true") || strings.EqualFold(strVal, "yes")
+				default:
+					return mdlerrors.NewUnsupported(fmt.Sprintf("unknown OData service property: %s", key))
+				}
+			}
+			if err := deps.ServiceWriter.UpdatePublishedODataService(svc); err != nil {
+				return mdlerrors.NewBackend("alter OData service", err)
+			}
+			invalidateHierarchy(ectx)
+			fmt.Fprintf(deps.Output, "Altered OData service: %s.%s\n", modName, svc.Name)
+			return nil
+		}
+	}
+
+	return mdlerrors.NewNotFoundMsg("OData service", fmt.Sprint(s.Name), fmt.Sprintf("OData service not found: %s", s.Name))
+}
+
+// ExecDropODataServiceFn is the HandlerDeps version of dropODataService.
+func ExecDropODataServiceFn(ctx context.Context, s *ast.DropODataServiceStmt, deps *HandlerDeps) error {
+	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
+		return mdlerrors.NewNotConnected()
+	}
+
+	services, err := deps.ServiceLister.ListPublishedODataServices()
+	if err != nil {
+		return mdlerrors.NewBackend("list published OData services", err)
+	}
+
+	ectx := NewExecContext(ctx, deps)
+	h, err := getHierarchy(ectx)
+	if err != nil {
+		return mdlerrors.NewBackend("build hierarchy", err)
+	}
+
+	for _, svc := range services {
+		modID := h.FindModuleID(svc.ContainerID)
+		modName := h.GetModuleName(modID)
+		if strings.EqualFold(modName, s.Name.Module) && strings.EqualFold(svc.Name, s.Name.Name) {
+			if err := deps.ServiceWriter.DeletePublishedODataService(svc.ID); err != nil {
+				return mdlerrors.NewBackend("drop OData service", err)
+			}
+			invalidateHierarchy(ectx)
+			fmt.Fprintf(deps.Output, "Dropped OData service: %s.%s\n", modName, svc.Name)
+			return nil
+		}
+	}
+
+	return mdlerrors.NewNotFoundMsg("OData service", fmt.Sprint(s.Name), fmt.Sprintf("OData service not found: %s", s.Name))
+}
+
+// ExecCreateExternalEntityFn is the HandlerDeps version of execCreateExternalEntity.
+func ExecCreateExternalEntityFn(ctx context.Context, s *ast.CreateExternalEntityStmt, deps *HandlerDeps) error {
+	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
+		return mdlerrors.NewNotConnected()
+	}
+
+	if s.Name.Module == "" {
+		return mdlerrors.NewValidation("module name required: use create external entity Module.Name from odata client ...")
+	}
+
+	ectx := NewExecContext(ctx, deps)
+	module, err := findModule(ectx, s.Name.Module)
+	if err != nil {
+		return err
+	}
+
+	if err := validateODataClientExists(ectx, s.ServiceRef); err != nil {
+		return err
+	}
+
+	dm, err := getDomainModelGenCached(ectx, module.ID)
+	if err != nil {
+		return mdlerrors.NewBackend("get domain model", err)
+	}
+	if dm == nil {
+		return mdlerrors.NewBackend("get domain model", nil)
+	}
+
+	var existingEntity *genDm.Entity
+	for _, item := range dm.EntitiesItems() {
+		entity, ok := item.(*genDm.Entity)
+		if ok && entity.Name() == s.Name.Name {
+			existingEntity = entity
+			break
+		}
+	}
+
+	if existingEntity != nil && !s.CreateOrModify {
+		return mdlerrors.NewAlreadyExistsMsg("entity", s.Name.Module+"."+s.Name.Name, fmt.Sprintf("entity already exists: %s.%s (use create or modify to update)", s.Name.Module, s.Name.Name))
+	}
+
+	attrs := buildExternalEntityAttributesGen(s.Attributes)
+	serviceRef := s.ServiceRef.String()
+
+	if existingEntity != nil {
+		applyExternalEntityStmtToGen(existingEntity, s, serviceRef)
+		if len(attrs) > 0 {
+			replaceExternalEntityAttributesGen(existingEntity, attrs)
+		}
+		if err := deps.DomainModelWriter.UpdateEntityGen(model.ID(dm.ID()), existingEntity); err != nil {
+			return mdlerrors.NewBackend("update external entity", err)
+		}
+		invalidateDomainModelGenForModule(ectx, module.ID)
+		fmt.Fprintf(deps.Output, "Modified external entity: %s.%s\n", s.Name.Module, s.Name.Name)
+		return nil
+	}
+
+	newEntity := genDm.NewEntity()
+	newEntity.SetID(element.ID(types.GenerateID()))
+	newEntity.SetName(s.Name.Name)
+	newEntity.SetLocation(layoutPos(100+len(dm.EntitiesItems())*150, 100))
+	applyExternalEntityStmtToGen(newEntity, s, serviceRef)
+	for _, attr := range attrs {
+		newEntity.AddAttributes(attr)
+	}
+
+	if err := deps.DomainModelWriter.CreateEntityGen(model.ID(dm.ID()), newEntity); err != nil {
+		return mdlerrors.NewBackend("create external entity", err)
+	}
+	invalidateDomainModelGenForModule(ectx, module.ID)
+	fmt.Fprintf(deps.Output, "Created external entity: %s.%s\n", s.Name.Module, s.Name.Name)
+	return nil
 }
 
 // Executor wrappers for unmigrated callers.
