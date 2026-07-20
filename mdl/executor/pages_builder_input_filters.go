@@ -120,5 +120,23 @@ func (pb *pageBuilder) findAttributeType(attrPath string) element.Element {
 		}
 	}
 
+	// Fallback: if we have entity context info from page params, try to find
+	// by scanning all domain models without module name filtering.
+	for _, pair := range pairs {
+		for _, entityElem := range pair.DM.EntitiesItems() {
+			entity, ok := entityElem.(*genDm.Entity)
+			if !ok || entity.Name() != entityShortName {
+				continue
+			}
+			for _, attrElem := range entity.AttributesItems() {
+				attr, ok := attrElem.(*genDm.Attribute)
+				if !ok || attr.Name() != attrName {
+					continue
+				}
+				return attr.Type()
+			}
+		}
+	}
+
 	return nil
 }

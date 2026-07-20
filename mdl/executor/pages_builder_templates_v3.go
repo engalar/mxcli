@@ -101,15 +101,16 @@ func (pb *pageBuilder) resolveTemplateAttributePathFull(attrRef string, param *g
 			param.SetExpression(attrRef)
 			return
 		}
-		if pb.isNonStringAttribute(resolved) {
-			// Non-string attributes (enum, datetime, etc.) need explicit toString().
-			param.SetExpression("toString($currentObject/" + attrRef + ")")
-		} else {
-			// String attributes: use expression format so the describe code and
-			// Mendix validator can read the binding. AttributePath alone is not
-			// checked by the describe and causes CE0402 "No value specified".
-			param.SetExpression("$currentObject/" + attrRef)
-		}
+	if pb.isNonStringAttribute(resolved) {
+		// Non-string attributes (enum, datetime, etc.) need explicit toString().
+		param.SetExpression("toString($currentObject/" + attrRef + ")")
+	} else {
+		// CE0117: wrap in toString() even for "string" attributes when we cannot
+		// definitively resolve the type — mx check rejects bare $currentObject/X
+		// for enum/datetime attributes that isNonStringAttribute misses (e.g. when
+		// entityContext is not set for FT module entities).
+		param.SetExpression("toString($currentObject/" + attrRef + ")")
+	}
 		return
 	}
 	// $var/attr is already in Mendix expression form; use SetExpression so the

@@ -129,9 +129,7 @@ func (fb *flowBuilderGen) addCallJavaScriptActionActionGen(s *ast.CallJavaScript
 	for _, arg := range s.Arguments {
 		mapping := genMf.NewJavaScriptActionParameterMapping()
 		assignFreshID(mapping)
-		// Lowercase first letter to match Studio Pro convention
-		argName := strings.ToLower(arg.Name[:1]) + arg.Name[1:]
-		mapping.SetParameterQualifiedName(actionQN + "." + argName)
+		mapping.SetParameterQualifiedName(actionQN + "." + arg.Name)
 
 		value := genMf.NewBasicCodeActionParameterValue()
 		assignFreshID(value)

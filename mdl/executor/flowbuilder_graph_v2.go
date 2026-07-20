@@ -75,46 +75,63 @@ func (fb *flowBuilderGen) buildFlowGraphGen(stmts []ast.MicroflowStatement, retu
 	// ReturnVariableName metadata field on the microflow.
 	// List-typed variables require CreateListAction; all other types
 	// use CreateVariableAction (see flowbuilder_actions_v2.go:76-95).
+	// CE0111 guard: skip synthetic declaration when the body's first
+	// activity (retrieve/aggregate/cast/set) already declares the same
+	// variable — having both creates "Duplicate variable name" errors.
 	if returns != nil && returns.Variable != "" && !fb.isNanoflow && !bodyHasDeclareFor(stmts, returns.Variable) {
-		var declAction element.Element
-		if returns.Type.Kind == ast.TypeListOf {
-			entityQN := ""
-			if returns.Type.EntityRef != nil {
-				entityQN = returns.Type.EntityRef.Module + "." + returns.Type.EntityRef.Name
-			}
-			listAct := genMf.NewCreateListAction()
-			assignFreshID(listAct)
-			listAct.SetErrorHandlingType(fb.ehTypeGen(nil))
-			listAct.SetOutputVariableName(returns.Variable)
-			listAct.SetEntityQualifiedName(entityQN)
-			declAction = listAct
-			if fb.varTypes != nil && entityQN != "" {
-				fb.varTypes[returns.Variable] = "List of " + entityQN
-			}
-			if fb.declaredVars != nil {
-				fb.declaredVars[returns.Variable] = "List of " + entityQN
-			}
-		} else {
-			declAct := genMf.NewCreateVariableAction()
-			assignFreshID(declAct)
-			declAct.SetErrorHandlingType(fb.ehTypeGen(nil))
-			declAct.SetVariableName(returns.Variable)
-			if dt := convertASTToGenDataType(returns.Type); dt != nil {
-				declAct.SetVariableType(dt)
-			}
-			declAct.SetInitialValue(mendixExprValue(defaultInitialValue(returns.Type)))
-			declAction = declAct
-			if ref := paramEntityRef(returns.Type); ref != nil && ref.Module != "" {
-				if fb.varTypes != nil {
-					fb.varTypes[returns.Variable] = ref.Module + "." + ref.Name
+		if !retVarUsedInStmts(stmts, returns.Variable) {
+			var declAction element.Element
+			if returns.Type.Kind == ast.TypeListOf {
+				entityQN := ""
+				if returns.Type.EntityRef != nil {
+					entityQN = returns.Type.EntityRef.Module + "." + returns.Type.EntityRef.Name
 				}
-			} else if fb.declaredVars != nil {
-				fb.declaredVars[returns.Variable] = returns.Type.Kind.String()
+				listAct := genMf.NewCreateListAction()
+				assignFreshID(listAct)
+				listAct.SetErrorHandlingType(fb.ehTypeGen(nil))
+				listAct.SetOutputVariableName(returns.Variable)
+				listAct.SetEntityQualifiedName(entityQN)
+				declAction = listAct
+				if fb.varTypes != nil && entityQN != "" {
+					fb.varTypes[returns.Variable] = "List of " + entityQN
+				}
+				if fb.declaredVars != nil {
+					fb.declaredVars[returns.Variable] = "List of " + entityQN
+				}
+			} else {
+				declAct := genMf.NewCreateVariableAction()
+				assignFreshID(declAct)
+				declAct.SetErrorHandlingType(fb.ehTypeGen(nil))
+				declAct.SetVariableName(returns.Variable)
+				if dt := convertASTToGenDataType(returns.Type); dt != nil {
+					declAct.SetVariableType(dt)
+				}
+				declAct.SetInitialValue(mendixExprValue(defaultInitialValue(returns.Type)))
+				declAction = declAct
+				if ref := paramEntityRef(returns.Type); ref != nil && ref.Module != "" {
+					if fb.varTypes != nil {
+						fb.varTypes[returns.Variable] = ref.Module + "." + ref.Name
+					}
+				} else if fb.declaredVars != nil {
+					fb.declaredVars[returns.Variable] = returns.Type.Kind.String()
+				}
+			}
+			declID := fb.genActivityWrap(declAction, nil, "")
+			fb.flows = append(fb.flows, newHorizontalFlowGen(lastID, declID))
+			lastID = declID
+		} else if fb.varTypes != nil {
+			// Register return variable type so the executor knows the type
+			// without needing a synthetic declaration node.
+			if returns.Type.Kind == ast.TypeListOf {
+				entityQN := ""
+				if returns.Type.EntityRef != nil {
+					entityQN = returns.Type.EntityRef.Module + "." + returns.Type.EntityRef.Name
+				}
+				fb.varTypes[returns.Variable] = "List of " + entityQN
+			} else if ref := paramEntityRef(returns.Type); ref != nil && ref.Module != "" {
+				fb.varTypes[returns.Variable] = ref.Module + "." + ref.Name
 			}
 		}
-		declID := fb.genActivityWrap(declAction, nil, "")
-		fb.flows = append(fb.flows, newHorizontalFlowGen(lastID, declID))
-		lastID = declID
 	}
 
 	// Iterate body statements via the dispatcher (h1).
@@ -225,4 +242,59 @@ func defaultInitialValue(dt ast.DataType) string {
 	default:
 		return "empty"
 	}
+}
+
+// retVarUsedInStmts checks recursively if any statement uses varName as its
+// output/result variable. Handles compound statements (if/loop/split).
+func retVarUsedInStmts(stmts []ast.MicroflowStatement, varName string) bool {
+	for _, stmt := range stmts {
+		switch s := stmt.(type) {
+		case *ast.RetrieveStmt:
+			if s.Variable == varName {
+				return true
+			}
+		case *ast.AggregateListStmt:
+			if s.OutputVariable == varName {
+				return true
+			}
+		case *ast.CastObjectStmt:
+			if s.OutputVariable == varName {
+				return true
+			}
+		case *ast.IfStmt:
+			if retVarUsedInStmts(s.ThenBody, varName) {
+				return true
+			}
+			if s.HasElse && retVarUsedInStmts(s.ElseBody, varName) {
+				return true
+			}
+		case *ast.LoopStmt:
+			if retVarUsedInStmts(s.Body, varName) {
+				return true
+			}
+		case *ast.WhileStmt:
+			if retVarUsedInStmts(s.Body, varName) {
+				return true
+			}
+		case *ast.InheritanceSplitStmt:
+			for _, c := range s.Cases {
+				if retVarUsedInStmts(c.Body, varName) {
+					return true
+				}
+			}
+			if retVarUsedInStmts(s.ElseBody, varName) {
+				return true
+			}
+		case *ast.EnumSplitStmt:
+			for _, c := range s.Cases {
+				if retVarUsedInStmts(c.Body, varName) {
+					return true
+				}
+			}
+			if retVarUsedInStmts(s.ElseBody, varName) {
+				return true
+			}
+		}
+	}
+	return false
 }
