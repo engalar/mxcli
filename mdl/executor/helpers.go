@@ -909,6 +909,7 @@ func newMinimalExecCtx(ctx context.Context, deps *HandlerDeps) *ExecContext {
 		SecurityModuleManager:       deps.SecurityModuleManager,
 		SecurityEntityAccessManager: deps.SecurityEntityAccessManager,
 		ScriptTransactionManager:    deps.ScriptTransactionManager,
+		WorkflowMutationOperator:    deps.WorkflowMutationOperator,
 		Deps:                        deps,
 	}
 }
