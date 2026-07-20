@@ -241,40 +241,16 @@ func findEntityInDMsDeps(ctx context.Context, deps *HandlerDeps, qn ast.Qualifie
 
 // listDomainModelsWithContainerGenDeps is the HandlerDeps version of listDomainModelsWithContainerGen.
 func listDomainModelsWithContainerGenDeps(ctx context.Context, deps *HandlerDeps) ([]DomainModelGenWithContainer, error) {
-	if deps == nil || deps.DomainModels == nil {
+	if deps == nil || deps.Cache == nil {
 		return nil, nil
 	}
-	if deps.Cache != nil && deps.Cache.domainModelsWithContainerGen != nil {
-		return deps.Cache.domainModelsWithContainerGen, nil
+	// Lazy-init the domain cache if not yet wired.
+	if deps.Cache.domainModelsWithContainerGen == nil {
+		deps.Cache.domainModelsWithContainerGen = newDomainCache(func() ([]DomainModelGenWithContainer, error) {
+			return loadDomainModelsWithContainerGen(deps)
+		})
 	}
-
-	mods, err := deps.ModuleLister.ListModules()
-	if err != nil {
-		return nil, err
-	}
-	moduleIDs := make(map[model.ID]bool, len(mods))
-	for _, m := range mods {
-		moduleIDs[m.ID] = true
-	}
-
-	pairs, err := deps.DomainModels.ListAllWithContainerID()
-	if err != nil {
-		return nil, err
-	}
-	out := make([]DomainModelGenWithContainer, 0, len(pairs))
-	for _, p := range pairs {
-		if p.DM == nil {
-			continue
-		}
-		if !moduleIDs[p.ContainerID] {
-			continue
-		}
-		out = append(out, DomainModelGenWithContainer{DM: p.DM, ContainerID: p.ContainerID})
-	}
-	if deps.Cache != nil {
-		deps.Cache.domainModelsWithContainerGen = out
-	}
-	return out, nil
+	return deps.Cache.domainModelsWithContainerGen.Get()
 }
 
 // ExecCreateAssociation handles CREATE ASSOCIATION statements.

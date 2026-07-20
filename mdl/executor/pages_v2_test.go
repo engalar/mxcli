@@ -30,7 +30,7 @@ func newListPagesTestCtx(t *testing.T, pages []*genPg.Page) *ExecContext {
 		Pages: repo,
 		Output: &buf, Format: FormatTable,
 	}
-	ctx.ensureCache()
+	rebuildDeps(ctx)
 	return ctx
 }
 
@@ -104,7 +104,7 @@ func TestListLayoutsGen_OutputsHeaderAndSummary(t *testing.T) {
 		Layouts: repo,
 		Output: &buf, Format: FormatTable,
 	}
-	ctx.ensureCache()
+	rebuildDeps(ctx)
 
 	if err := listLayoutsGen(ctx, ""); err != nil {
 		t.Fatalf("listLayoutsGen: %v", err)
@@ -139,7 +139,7 @@ func TestListSnippetsGen_OutputsHeaderAndSummary(t *testing.T) {
 		Snippets: repo,
 		Output: &buf, Format: FormatTable,
 	}
-	ctx.ensureCache()
+	rebuildDeps(ctx)
 
 	if err := listSnippetsGen(ctx, ""); err != nil {
 		t.Fatalf("listSnippetsGen: %v", err)

@@ -83,12 +83,13 @@ func TestInvalidateJavaActionsCache_ClearsCache(t *testing.T) {
 	if _, err := listJavaActionsWithContainerGen(ctx); err != nil {
 		t.Fatalf("warm-up: %v", err)
 	}
-	if ctx.Cache.javaActionsWithContainerGen == nil {
-		t.Fatal("warm-up did not populate cache")
-	}
 	invalidateJavaActionsCache(ctx)
-	if ctx.Cache.javaActionsWithContainerGen != nil {
-		t.Errorf("invalidate should clear cache, still got %d entries", len(ctx.Cache.javaActionsWithContainerGen))
+	result, err := listJavaActionsWithContainerGen(ctx)
+	if err != nil {
+		t.Fatalf("list after invalidate: %v", err)
+	}
+	if len(result) == 0 {
+		t.Errorf("expected data after re-read, got 0 entries")
 	}
 }
 

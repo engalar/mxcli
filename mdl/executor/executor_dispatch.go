@@ -17,7 +17,7 @@ func (e *Executor) executeInner(ctx context.Context, stmt ast.Statement) error {
 // Populates ALL fields, including role-specific backend interfaces.
 func (e *Executor) newExecContext(ctx context.Context) *ExecContext {
 	if e.cache == nil {
-		e.cache = &executorCache{}
+		e.cache = newExecutorCache()
 	}
 	if e.graphCatalog != nil {
 		warmCacheFromGraph(e.cache, e.graphCatalog)

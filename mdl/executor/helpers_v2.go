@@ -147,32 +147,26 @@ type NanoflowGenWithContainer struct {
 	ContainerUUID model.ID
 }
 
-// listMicroflowsWithContainerGen returns every microflow in the
-// project paired with its container UUID, caching the result on
-// ctx.Cache.microflowsWithContainerGen for the duration of the
-// session.
-//
-// Why this exists (Followup E1, [[Executor cache pattern]]):
-// Migrating production callers from the legacy sdk-typed
-// ctx.Backend.ListMicroflows() to the gen-typed
-// ctx.Microflows.ListAll() lost the inline ContainerID field
-// (codec roundtrip drops Container linkage by design). The naive
-// fix — calling ctx.Microflows.GetContainerUUID(mf.ID()) inside the
-// loop — turns every list-and-filter pass into O(N²) SQL on large
-// projects. This helper resolves all containers once and caches the
-// pairing so the second caller in the same session pays O(1).
-//
-// Cache invalidation: invalidateMicroflowsCache (called by
-// microflow/nanoflow create/drop paths) clears this slice along with
-// microflowNames so subsequent reads see fresh container linkage.
+// listMicroflowsWithContainerGen returns every microflow paired with its
+// container UUID, using the domain-cached listing.
 func listMicroflowsWithContainerGen(ctx *ExecContext) ([]MicroflowGenWithContainer, error) {
 	if ctx == nil {
 		return nil, nil
 	}
-	if ctx.Cache != nil && ctx.Cache.microflowsWithContainerGen != nil {
-		return ctx.Cache.microflowsWithContainerGen, nil
+	if ctx.Cache.microflowsWithContainerGen == nil {
+		ctx.Cache.microflowsWithContainerGen = newDomainCache(func() ([]MicroflowGenWithContainer, error) {
+			return loadMicroflowsWithContainerGen(ctx.Deps)
+		})
 	}
-	mfs, err := listMicroflowsGen(ctx)
+	return ctx.Cache.microflowsWithContainerGen.Get()
+}
+
+// loadMicroflowsWithContainerGen loads microflows without caching.
+func loadMicroflowsWithContainerGen(deps *HandlerDeps) ([]MicroflowGenWithContainer, error) {
+	if deps == nil || deps.MicroflowRepo == nil {
+		return nil, nil
+	}
+	mfs, err := deps.MicroflowRepo.ListAll()
 	if err != nil {
 		return nil, err
 	}
@@ -182,15 +176,10 @@ func listMicroflowsWithContainerGen(ctx *ExecContext) ([]MicroflowGenWithContain
 			continue
 		}
 		var containerUUID model.ID
-		if ctx.Microflows != nil {
-			if cid, err := ctx.Microflows.GetContainerUUID(model.ID(mf.ID())); err == nil {
-				containerUUID = cid
-			}
+		if cid, err := deps.MicroflowRepo.GetContainerUUID(model.ID(mf.ID())); err == nil {
+			containerUUID = cid
 		}
 		out = append(out, MicroflowGenWithContainer{MF: mf, ContainerUUID: containerUUID})
-	}
-	if ctx.Cache != nil {
-		ctx.Cache.microflowsWithContainerGen = out
 	}
 	return out, nil
 }
@@ -203,10 +192,28 @@ func listNanoflowsWithContainerGen(ctx *ExecContext) ([]NanoflowGenWithContainer
 	if ctx == nil {
 		return nil, nil
 	}
-	if ctx.Cache != nil && ctx.Cache.nanoflowsWithContainerGen != nil {
-		return ctx.Cache.nanoflowsWithContainerGen, nil
+	if ctx.Cache.nanoflowsWithContainerGen == nil {
+		ctx.Cache.nanoflowsWithContainerGen = newDomainCache(func() ([]NanoflowGenWithContainer, error) {
+			return loadNanoflowsWithContainerGen(ctx.Deps)
+		})
 	}
-	nfs, err := listNanoflowsGen(ctx)
+	return ctx.Cache.nanoflowsWithContainerGen.Get()
+}
+
+// invalidateMicroflowsCache clears the cached microflow+nanoflow listings.
+func invalidateMicroflowsCache(ctx *ExecContext) {
+	if ctx == nil || ctx.Cache == nil {
+		return
+	}
+	ctx.Cache.Invalidate(CacheDomainMicroflows, CacheDomainNanoflows)
+}
+
+// loadNanoflowsWithContainerGen loads nanoflows without caching.
+func loadNanoflowsWithContainerGen(deps *HandlerDeps) ([]NanoflowGenWithContainer, error) {
+	if deps == nil || deps.NanoflowRepo == nil {
+		return nil, nil
+	}
+	nfs, err := deps.NanoflowRepo.List("")
 	if err != nil {
 		return nil, err
 	}
@@ -216,15 +223,12 @@ func listNanoflowsWithContainerGen(ctx *ExecContext) ([]NanoflowGenWithContainer
 			continue
 		}
 		var containerUUID model.ID
-		if ctx.Microflows != nil {
-			if cid, err := ctx.Microflows.GetContainerUUID(model.ID(nf.ID())); err == nil {
+		if deps.MicroflowRepo != nil {
+			if cid, err := deps.MicroflowRepo.GetContainerUUID(model.ID(nf.ID())); err == nil {
 				containerUUID = cid
 			}
 		}
 		out = append(out, NanoflowGenWithContainer{NF: nf, ContainerUUID: containerUUID})
-	}
-	if ctx.Cache != nil {
-		ctx.Cache.nanoflowsWithContainerGen = out
 	}
 	return out, nil
 }

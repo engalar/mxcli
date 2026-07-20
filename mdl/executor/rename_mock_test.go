@@ -426,7 +426,7 @@ func TestRename_Workflow_Success(t *testing.T) {
 	h := mkHierarchy(mod)
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
 	ctx.Workflows = makeWorkflowsRepo([]*genWf.Workflow{wfGen}, mod.ID)
-	ctx.Deps = ctx.buildDeps()
+	rebuildDeps(ctx)
 	assertNoError(t, execRenameFn(ctx, &ast.RenameStmt{
 		ObjectType: "workflow",
 		Name:       ast.QualifiedName{Module: "BPModule", Name: "OldProcess"},

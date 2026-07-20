@@ -193,7 +193,7 @@ func getHierarchy(ctx *ExecContext) (*ContainerHierarchy, error) {
 	}
 	ctx.initRoles()
 	if ctx.Cache == nil {
-		ctx.Cache = &executorCache{}
+		ctx.Cache = newExecutorCache()
 	}
 	if ctx.Cache.hierarchy != nil {
 		return ctx.Cache.hierarchy, nil
@@ -216,7 +216,7 @@ func getHierarchyDeps(deps *HandlerDeps) (*ContainerHierarchy, error) {
 		return nil, nil
 	}
 	if deps.Cache == nil {
-		deps.Cache = &executorCache{}
+		deps.Cache = newExecutorCache()
 	}
 	if deps.Cache.hierarchy != nil {
 		return deps.Cache.hierarchy, nil

@@ -173,12 +173,10 @@ func (pb *pageBuilder) getLayouts() ([]*genPg.Layout, error) {
 }
 
 // getDomainModelsWithContainer returns gen-typed domain models paired with
-// their owning module ID. Caches on execCache.domainModelsWithContainerGen
-// (shared with listDomainModelsWithContainerGen). Stage 3.3.4.C7 migration
-// from legacy sdk/domainmodel.
+// their owning module ID. Uses the domain-cached listing.
 func (pb *pageBuilder) getDomainModelsWithContainer() ([]DomainModelGenWithContainer, error) {
 	if pb.execCache != nil && pb.execCache.domainModelsWithContainerGen != nil {
-		return pb.execCache.domainModelsWithContainerGen, nil
+		return pb.execCache.domainModelsWithContainerGen.Get()
 	}
 	var dms []*genDm.DomainModel
 	if pb.execCache != nil && pb.execCache.domainModelsGen != nil {
@@ -211,7 +209,7 @@ func (pb *pageBuilder) getDomainModelsWithContainer() ([]DomainModelGenWithConta
 		})
 	}
 	if pb.execCache != nil {
-		pb.execCache.domainModelsWithContainerGen = out
+		pb.execCache.domainModelsWithContainerGen.Invalidate()
 	}
 	return out, nil
 }

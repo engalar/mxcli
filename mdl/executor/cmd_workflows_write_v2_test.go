@@ -818,7 +818,7 @@ func TestExecCreateWorkflowGen_ExistingWithoutModify_Errors(t *testing.T) {
 	h := mkHierarchy(mod)
 	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
 	ctx.Workflows = makeWorkflowsRepo([]*genWf.Workflow{wfGen}, mod.ID)
-	ctx.Deps = ctx.buildDeps()
+	rebuildDeps(ctx)
 
 	stmt := &ast.CreateWorkflowStmt{
 		Name: ast.QualifiedName{Module: "BPModule", Name: "Approve"},
@@ -851,7 +851,7 @@ func TestExecCreateWorkflowGen_ExistingWithModify_RoutesThroughUpdate(t *testing
 	h := mkHierarchy(mod)
 	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
 	ctx.Workflows = makeWorkflowsRepo([]*genWf.Workflow{wfGen}, mod.ID)
-	ctx.Deps = ctx.buildDeps()
+	rebuildDeps(ctx)
 
 	stmt := &ast.CreateWorkflowStmt{
 		Name:           ast.QualifiedName{Module: "BPModule", Name: "Approve"},
@@ -886,7 +886,7 @@ func TestExecDropWorkflowGen_DeletesByID(t *testing.T) {
 	h := mkHierarchy(mod)
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
 	ctx.Workflows = makeWorkflowsRepo([]*genWf.Workflow{wfGen}, mod.ID)
-	ctx.Deps = ctx.buildDeps()
+	rebuildDeps(ctx)
 
 	stmt := &ast.DropWorkflowStmt{Name: ast.QualifiedName{Module: "BPModule", Name: "Approve"}}
 	if err := ExecDropWorkflowGenFn(ctx, stmt, ctx.Deps); err != nil {

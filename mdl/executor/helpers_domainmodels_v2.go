@@ -27,21 +27,28 @@ type DomainModelGenWithContainer struct {
 }
 
 // listDomainModelsWithContainerGen returns every DomainModel unit in the
-// project paired with its owning module ID. Caches on
-// ctx.Cache.domainModelsWithContainerGen for the session.
-//
-// Uses ListAllWithContainerID for a single O(#domain_models) scan instead
-// of one List(moduleID) call per module (which was O(N × all_units)).
+// project paired with its owning module ID, using the domain-cached listing.
 func listDomainModelsWithContainerGen(ctx *ExecContext) ([]DomainModelGenWithContainer, error) {
-	if ctx == nil || ctx.DomainModels == nil {
+	if ctx == nil {
 		return nil, nil
 	}
-	if ctx.Cache != nil && ctx.Cache.domainModelsWithContainerGen != nil {
-		return ctx.Cache.domainModelsWithContainerGen, nil
+	if ctx.Cache.domainModelsWithContainerGen == nil {
+		ctx.Cache.domainModelsWithContainerGen = newDomainCache(func() ([]DomainModelGenWithContainer, error) {
+			return loadDomainModelsWithContainerGen(ctx.Deps)
+		})
 	}
+	return ctx.Cache.domainModelsWithContainerGen.Get()
+}
 
-	// Build module ID set for filtering (ContainerID of a DomainModel IS its module ID).
-	mods, err := ctx.ModuleLister.ListModules()
+// loadDomainModelsWithContainerGen loads DomainModels without caching.
+func loadDomainModelsWithContainerGen(deps *HandlerDeps) ([]DomainModelGenWithContainer, error) {
+	if deps == nil || deps.DomainModels == nil {
+		return nil, nil
+	}
+	if deps.ModuleLister == nil {
+		return nil, nil
+	}
+	mods, err := deps.ModuleLister.ListModules()
 	if err != nil {
 		return nil, err
 	}
@@ -49,8 +56,7 @@ func listDomainModelsWithContainerGen(ctx *ExecContext) ([]DomainModelGenWithCon
 	for _, m := range mods {
 		moduleIDs[m.ID] = true
 	}
-
-	pairs, err := ctx.DomainModels.ListAllWithContainerID()
+	pairs, err := deps.DomainModels.ListAllWithContainerID()
 	if err != nil {
 		return nil, err
 	}
@@ -59,14 +65,10 @@ func listDomainModelsWithContainerGen(ctx *ExecContext) ([]DomainModelGenWithCon
 		if p.DM == nil {
 			continue
 		}
-		// Only include DomainModels whose direct parent is a known module.
 		if !moduleIDs[p.ContainerID] {
 			continue
 		}
 		out = append(out, DomainModelGenWithContainer{DM: p.DM, ContainerID: p.ContainerID})
-	}
-	if ctx.Cache != nil {
-		ctx.Cache.domainModelsWithContainerGen = out
 	}
 	return out, nil
 }
@@ -139,15 +141,13 @@ func cachedDomainModelsGenDeps(deps *HandlerDeps) ([]*genDm.DomainModel, error) 
 }
 
 // invalidateDomainModelsGenCache clears the cached gen-typed DomainModel
-// listings. The legacy invalidateDomainModelsCache (in hierarchy.go,
-// which clears the sdk-typed slice) is also extended to call this so
-// older callers automatically refresh both caches; new gen-only call
-// sites should prefer invalidateDomainModelsGenCache directly.
+// listings. Non-domainCache fields are cleared directly; domainCache fields
+// use .Invalidate() so the load function survives.
 func invalidateDomainModelsGenCache(ctx *ExecContext) {
 	if ctx == nil || ctx.Cache == nil {
 		return
 	}
-	ctx.Cache.domainModelsWithContainerGen = nil
+	ctx.Cache.domainModelsWithContainerGen.Invalidate()
 	ctx.Cache.domainModels = nil
 	ctx.Cache.domainModelsGen = nil
 	// Invalidate sub-backend cache so the next ListDomainModelsGen call

@@ -135,7 +135,7 @@ func TestExecGrantMicroflowAccessGen_Roundtrip(t *testing.T) {
 	ctx := newGenDescribeContext(t, w)
 	var buf bytes.Buffer
 	ctx.Output = &buf
-	ctx.Deps = ctx.buildDeps()
+	rebuildDeps(ctx)
 
 	stmt := &ast.GrantMicroflowAccessStmt{
 		Microflow: ast.QualifiedName{Module: "MyFirstModule", Name: "MyFirstLogic"},
@@ -173,7 +173,7 @@ func TestExecGrantMicroflowAccessGen_NotFound(t *testing.T) {
 	w := openMprWriterForTest(t)
 	ctx := newGenDescribeContext(t, w)
 	ctx.Output = &bytes.Buffer{}
-	ctx.Deps = ctx.buildDeps()
+	rebuildDeps(ctx)
 
 	stmt := &ast.GrantMicroflowAccessStmt{
 		Microflow: ast.QualifiedName{Module: "MyFirstModule", Name: "DoesNotExist_Stage3_2_5b"},
@@ -195,7 +195,7 @@ func TestExecRevokeMicroflowAccessGen_Roundtrip(t *testing.T) {
 	w := openMprWriterForTest(t)
 	ctx := newGenDescribeContext(t, w)
 	ctx.Output = &bytes.Buffer{}
-	ctx.Deps = ctx.buildDeps()
+	rebuildDeps(ctx)
 
 	grant := &ast.GrantMicroflowAccessStmt{
 		Microflow: ast.QualifiedName{Module: "MyFirstModule", Name: "MyFirstLogic"},
@@ -211,7 +211,7 @@ func TestExecRevokeMicroflowAccessGen_Roundtrip(t *testing.T) {
 	}
 	var buf bytes.Buffer
 	ctx.Output = &buf
-	ctx.Deps = ctx.buildDeps()
+	rebuildDeps(ctx)
 	if err := ExecRevokeMicroflowAccessGenFn(ctx, revoke, ctx.Deps); err != nil {
 		t.Fatalf("execRevokeMicroflowAccessGen: %v", err)
 	}
@@ -235,7 +235,7 @@ func TestExecRevokeMicroflowAccessGen_NoMatch(t *testing.T) {
 	ctx := newGenDescribeContext(t, w)
 	var buf bytes.Buffer
 	ctx.Output = &buf
-	ctx.Deps = ctx.buildDeps()
+	rebuildDeps(ctx)
 
 	stmt := &ast.RevokeMicroflowAccessStmt{
 		Microflow: ast.QualifiedName{Module: "MyFirstModule", Name: "MyFirstLogic"},
@@ -262,7 +262,7 @@ func TestValidateModuleRole_ModuleNotFound_IsWarning(t *testing.T) {
 		},
 	}
 	ctx, buf := newMockCtx(t, withBackend(mb))
-	ctx.Deps = ctx.buildDeps()
+	rebuildDeps(ctx)
 
 	role := ast.QualifiedName{Module: "Customer_Lookups", Name: "User"}
 	found, err := validateModuleRole(ctx, role)

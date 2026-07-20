@@ -39,19 +39,26 @@ func newMockCtx(t *testing.T, opts ...mockCtxOption) (*ExecContext, *bytes.Buffe
 		},
 		Output: &buf, Format: FormatTable,
 	}
-	ctx.initRoles()
+	// Apply all options first so repos and role fields are set before
+	// initRoles wires the cache with load functions.
 	for _, opt := range opts {
 		opt(ctx)
 	}
-	ctx.Deps = ctx.buildDeps()
+	ctx.initRoles()
 	return ctx, &buf
+}
+
+// rebuildDeps re-builds ctx.Deps and re-wires cache load functions.
+// Tests must call this after modifying ctx repo fields post-initRoles.
+func rebuildDeps(ctx *ExecContext) {
+	ctx.Deps = ctx.buildDeps()
+	ctx.ensureCache()
+	ctx.Cache.initLoadFns(ctx.Deps)
 }
 
 func withBackend(b *mock.MockBackend) mockCtxOption {
 	return func(ctx *ExecContext) {
 		ctx.Backend = b
-		ctx.initRoles()
-		ctx.Deps = ctx.buildDeps()
 	}
 }
 

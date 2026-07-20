@@ -14,115 +14,64 @@ import (
 )
 
 // listWorkflowsWithContainerGen returns every workflow paired with its
-// container UUID, caching the result on
-// ctx.Cache.workflowsWithContainerGen for the session.
-//
-// Per memory `feedback_executor_cache_pattern`: list calls in
-// mdl/executor/ MUST go through this helper to avoid O(N²) container
-// lookups when iterating across the project.
+// container UUID, using the domain-cached listing.
 func listWorkflowsWithContainerGen(ctx *ExecContext) ([]ContainerWithGen[*genWf.Workflow], error) {
 	if ctx == nil {
 		return nil, nil
 	}
-	listFn := func() ([]*genWf.Workflow, error) {
-		if ctx.Workflows == nil {
-			return nil, nil
-		}
-		all, err := ctx.Workflows.ListAll()
-		if err != nil {
-			return nil, err
-		}
-		// Drop nil entries before handing off to the generic helper —
-		// listUnitsWithContainerGen does NOT skip nils (its godoc names
-		// per-domain filtering as the caller's contract).
-		filtered := all[:0]
-		for _, w := range all {
-			if w != nil {
-				filtered = append(filtered, w)
-			}
-		}
-		return filtered, nil
+	if ctx.Cache.workflowsWithContainerGen == nil {
+		ctx.Cache.workflowsWithContainerGen = newDomainCache(func() ([]ContainerWithGen[*genWf.Workflow], error) {
+			return loadWorkflowsWithContainerGen(ctx.Deps)
+		})
 	}
-	// Resolver: ctx.Workflows is the only source of container linkage
-	// after Stage 3.3.3.E1 retired FullBackend.GetWorkflow. Mock tests
-	// must wire RecordingWorkflowRepository.GetContainerUUIDFunc via
-	// ctx.Workflows; tests that don't need container linkage can return
-	// "" from this helper since the hierarchy walker tolerates it.
-	resolveFn := func(id element.ID) (element.ID, error) {
-		if ctx.Workflows == nil {
-			return "", nil
-		}
-		c, err := ctx.Workflows.GetContainerUUID(model.ID(id))
-		return element.ID(c), err
-	}
-	return listUnitsWithContainerGen(
-		listFn,
-		resolveFn,
-		func() ([]ContainerWithGen[*genWf.Workflow], bool) {
-			if ctx.Cache != nil && ctx.Cache.workflowsWithContainerGen != nil {
-				return ctx.Cache.workflowsWithContainerGen, true
-			}
-			return nil, false
-		},
-		func(s []ContainerWithGen[*genWf.Workflow]) {
-			if ctx.Cache != nil {
-				ctx.Cache.workflowsWithContainerGen = s
-			}
-		},
-	)
+	return ctx.Cache.workflowsWithContainerGen.Get()
 }
 
-// invalidateWorkflowsCache clears the cached gen-typed workflow listing.
-// Call from any write path that creates, drops, or otherwise mutates
-// workflow units.
-// listWorkflowsWithContainerGenDeps is the HandlerDeps version of listWorkflowsWithContainerGen.
-func listWorkflowsWithContainerGenDeps(deps *HandlerDeps) ([]ContainerWithGen[*genWf.Workflow], error) {
-	if deps == nil {
+// loadWorkflowsWithContainerGen loads workflows without caching.
+func loadWorkflowsWithContainerGen(deps *HandlerDeps) ([]ContainerWithGen[*genWf.Workflow], error) {
+	if deps == nil || deps.WorkflowRepo == nil {
 		return nil, nil
 	}
-	listFn := func() ([]*genWf.Workflow, error) {
-		if deps.WorkflowRepo == nil {
-			return nil, nil
-		}
-		all, err := deps.WorkflowRepo.ListAll()
-		if err != nil {
-			return nil, err
-		}
-		filtered := all[:0]
-		for _, w := range all {
-			if w != nil {
-				filtered = append(filtered, w)
-			}
-		}
-		return filtered, nil
-	}
-	resolveFn := func(id element.ID) (element.ID, error) {
-		if deps.WorkflowRepo == nil {
-			return "", nil
-		}
-		c, err := deps.WorkflowRepo.GetContainerUUID(model.ID(id))
-		return element.ID(c), err
-	}
 	return listUnitsWithContainerGen(
-		listFn,
-		resolveFn,
-		func() ([]ContainerWithGen[*genWf.Workflow], bool) {
-			if deps.Cache != nil && deps.Cache.workflowsWithContainerGen != nil {
-				return deps.Cache.workflowsWithContainerGen, true
+		func() ([]*genWf.Workflow, error) {
+			all, err := deps.WorkflowRepo.ListAll()
+			if err != nil {
+				return nil, err
 			}
-			return nil, false
-		},
-		func(s []ContainerWithGen[*genWf.Workflow]) {
-			if deps.Cache != nil {
-				deps.Cache.workflowsWithContainerGen = s
+			filtered := all[:0]
+			for _, w := range all {
+				if w != nil {
+					filtered = append(filtered, w)
+				}
 			}
+			return filtered, nil
 		},
+		func(id element.ID) (element.ID, error) {
+			c, err := deps.WorkflowRepo.GetContainerUUID(model.ID(id))
+			return element.ID(c), err
+		},
+		func() ([]ContainerWithGen[*genWf.Workflow], bool) { return nil, false },
+		func([]ContainerWithGen[*genWf.Workflow]) {},
 	)
 }
 
+// listWorkflowsWithContainerGenDeps is the HandlerDeps version of listWorkflowsWithContainerGen.
+func listWorkflowsWithContainerGenDeps(deps *HandlerDeps) ([]ContainerWithGen[*genWf.Workflow], error) {
+	if deps == nil || deps.Cache == nil {
+		return nil, nil
+	}
+	if deps.Cache.workflowsWithContainerGen == nil {
+		deps.Cache.workflowsWithContainerGen = newDomainCache(func() ([]ContainerWithGen[*genWf.Workflow], error) {
+			return loadWorkflowsWithContainerGen(deps)
+		})
+	}
+	return deps.Cache.workflowsWithContainerGen.Get()
+}
+
+// invalidateWorkflowsCache clears the cached workflow listing.
 func invalidateWorkflowsCache(ctx *ExecContext) {
 	if ctx == nil || ctx.Cache == nil {
 		return
 	}
-	ctx.Cache.workflowsWithContainerGen = nil
+	ctx.Cache.Invalidate(CacheDomainWorkflows)
 }

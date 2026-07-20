@@ -71,7 +71,7 @@ func TestExecDropNanoflowGen_PrintsDroppedToOutput(t *testing.T) {
 
 	var buf bytes.Buffer
 	ctx.Output = &buf
-	ctx.Deps = ctx.buildDeps()
+	rebuildDeps(ctx)
 
 	drop := &ast.DropNanoflowStmt{
 		Name: ast.QualifiedName{Module: "MyFirstModule", Name: "NF_DropOutput"},
@@ -91,7 +91,7 @@ func TestExecDropNanoflowGen_NilRepoGuard(t *testing.T) {
 
 	bare := *ctx
 	bare.Nanoflows = nil
-	bare.Deps = bare.buildDeps()
+	bare.Deps = bare.buildDeps(); bare.Cache.initLoadFns(bare.Deps)
 
 	drop := &ast.DropNanoflowStmt{
 		Name: ast.QualifiedName{Module: "MyFirstModule", Name: "NF_Anything"},

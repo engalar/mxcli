@@ -82,7 +82,7 @@ func RegisterHandlers(r *executor.Registry, deps *executor.HandlerDeps) {
 			if deps.Cache != nil {
 				deps.Cache.SetDomainModels(nil)
 				deps.Cache.SetDomainModelsGen(nil)
-				deps.Cache.SetDomainModelsWithContainer(nil)
+				deps.Cache.Invalidate(executor.CacheDomainEntities)
 			}
 			if ectx.CacheInvalidator != nil {
 				ectx.CacheInvalidator.InvalidateCache()

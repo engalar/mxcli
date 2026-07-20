@@ -87,7 +87,7 @@ func TestShowPages_Mock(t *testing.T) {
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
 	ctx.Pages = makePagesRepo([]*genPg.Page{pg}, mod.ID)
-	ctx.Deps = ctx.buildDeps()
+	rebuildDeps(ctx)
 	assertNoError(t, listPagesGen(ctx, ""))
 
 	out := buf.String()
@@ -113,7 +113,7 @@ func TestShowPages_Mock_FilterByModule(t *testing.T) {
 			pg2.ID(): mod2.ID,
 		},
 	)
-	ctx.Deps = ctx.buildDeps()
+	rebuildDeps(ctx)
 	assertNoError(t, listPagesGen(ctx, "HR"))
 
 	out := buf.String()
@@ -139,7 +139,7 @@ func TestShowSnippets_Mock_FilterByModule(t *testing.T) {
 			snp2.ID(): mod2.ID,
 		},
 	)
-	ctx.Deps = ctx.buildDeps()
+	rebuildDeps(ctx)
 	assertNoError(t, listSnippetsGen(ctx, "HR"))
 
 	out := buf.String()
@@ -165,7 +165,7 @@ func TestShowLayouts_Mock_FilterByModule(t *testing.T) {
 			lay2.ID(): mod2.ID,
 		},
 	)
-	ctx.Deps = ctx.buildDeps()
+	rebuildDeps(ctx)
 	assertNoError(t, listLayoutsGen(ctx, "HR"))
 
 	out := buf.String()
@@ -222,7 +222,7 @@ func TestShowSnippets_Mock(t *testing.T) {
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
 	ctx.Snippets = makeSnippetsRepo([]*genPg.Snippet{snp}, mod.ID)
-	ctx.Deps = ctx.buildDeps()
+	rebuildDeps(ctx)
 	assertNoError(t, listSnippetsGen(ctx, ""))
 
 	out := buf.String()
@@ -240,7 +240,7 @@ func TestShowLayouts_Mock(t *testing.T) {
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
 	ctx.Layouts = makeLayoutsRepo([]*genPg.Layout{lay}, mod.ID)
-	ctx.Deps = ctx.buildDeps()
+	rebuildDeps(ctx)
 	assertNoError(t, listLayoutsGen(ctx, ""))
 
 	out := buf.String()

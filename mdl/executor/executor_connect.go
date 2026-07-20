@@ -37,7 +37,7 @@ func execConnect(ctx *ExecContext, s *ast.ConnectStmt) error {
 	}
 
 	ctx.MprPath = s.Path
-	ctx.Cache = &executorCache{} // Initialize fresh cache
+	ctx.Cache = newExecutorCache() // Initialize fresh cache
 
 	// Build project graph and load into ctx.Graph.
 	// The graph is built from a fresh read-only model, synced to the backend
@@ -101,7 +101,7 @@ func reconnect(ctx *ExecContext) error {
 		return mdlerrors.NewBackend("reconnect", fmt.Errorf("no backend factory configured"))
 	}
 
-	ctx.Cache = &executorCache{} // Reset cache
+	ctx.Cache = newExecutorCache() // Reset cache
 
 	// Reset project-scoped caches — file may have changed externally.
 	ctx.ThemeRegistry = nil

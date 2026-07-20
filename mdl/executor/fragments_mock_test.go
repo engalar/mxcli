@@ -13,7 +13,7 @@ func TestShowFragments_Mock(t *testing.T) {
 	ctx.Fragments = map[string]*ast.DefineFragmentStmt{
 		"myFrag": {Name: "myFrag"},
 	}
-	ctx.Deps = ctx.buildDeps()
+	rebuildDeps(ctx)
 
 	assertNoError(t, listFragments(ctx))
 
@@ -24,7 +24,7 @@ func TestShowFragments_Mock(t *testing.T) {
 func TestShowFragments_Empty_Mock(t *testing.T) {
 	ctx, buf := newMockCtx(t)
 	ctx.Fragments = map[string]*ast.DefineFragmentStmt{}
-	ctx.Deps = ctx.buildDeps()
+	rebuildDeps(ctx)
 
 	assertNoError(t, listFragments(ctx))
 
@@ -42,7 +42,7 @@ func TestDescribeFragment_Mock(t *testing.T) {
 			},
 		},
 	}
-	ctx.Deps = ctx.buildDeps()
+	rebuildDeps(ctx)
 
 	assertNoError(t, describeFragment(ctx, ast.QualifiedName{Name: "myFrag"}))
 
@@ -54,7 +54,7 @@ func TestDescribeFragment_Mock(t *testing.T) {
 func TestDescribeFragment_NotFound(t *testing.T) {
 	ctx, _ := newMockCtx(t)
 	ctx.Fragments = map[string]*ast.DefineFragmentStmt{}
-	ctx.Deps = ctx.buildDeps()
+	rebuildDeps(ctx)
 
 	err := describeFragment(ctx, ast.QualifiedName{Name: "noSuchFrag"})
 	assertError(t, err)

@@ -27,6 +27,10 @@ func newWorkflowsCacheTestContext(t *testing.T, wfs []*genWf.Workflow, container
 		Workflows: repo,
 	}
 	ctx.ensureCache()
+	if ctx.Deps == nil {
+		rebuildDeps(ctx)
+	}
+	ctx.Cache.initLoadFns(ctx.Deps)
 	return ctx
 }
 
@@ -91,12 +95,16 @@ func TestInvalidateWorkflowsCache_ClearsCache(t *testing.T) {
 	if _, err := listWorkflowsWithContainerGen(ctx); err != nil {
 		t.Fatalf("warm-up: %v", err)
 	}
-	if ctx.Cache.workflowsWithContainerGen == nil {
-		t.Fatal("warm-up did not populate cache")
-	}
 	invalidateWorkflowsCache(ctx)
-	if ctx.Cache.workflowsWithContainerGen != nil {
-		t.Errorf("invalidate should clear cache")
+	result, err := listWorkflowsWithContainerGen(ctx)
+	if err != nil {
+		t.Fatalf("list after invalidate: %v", err)
+	}
+	if len(result) != 1 {
+		t.Errorf("expected 1 entry after re-read, got %d", len(result))
+	}
+	if result[0].Elem.Name() != "X" {
+		t.Errorf("unexpected workflow name: %s", result[0].Elem.Name())
 	}
 }
 
@@ -109,6 +117,10 @@ func TestListWorkflowsWithContainerGen_PropagatesListError(t *testing.T) {
 		Workflows: repo,
 	}
 	ctx.ensureCache()
+	if ctx.Deps == nil {
+		rebuildDeps(ctx)
+	}
+	ctx.Cache.initLoadFns(ctx.Deps)
 	_, err := listWorkflowsWithContainerGen(ctx)
 	if !errors.Is(err, wantErr) {
 		t.Errorf("expected error to wrap %v, got %v", wantErr, err)

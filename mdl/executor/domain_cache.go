@@ -37,6 +37,9 @@ func newDomainCache[T any](loadFn func() ([]T, error)) *domainCache[T] {
 }
 
 func (c *domainCache[T]) Get() ([]T, error) {
+	if c == nil {
+		return nil, nil
+	}
 	c.mu.RLock()
 	if c.loaded {
 		defer c.mu.RUnlock()
@@ -56,6 +59,9 @@ func (c *domainCache[T]) Get() ([]T, error) {
 }
 
 func (c *domainCache[T]) Invalidate() {
+	if c == nil {
+		return
+	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.loaded = false

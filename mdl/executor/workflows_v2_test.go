@@ -29,7 +29,7 @@ func newListWorkflowsTestCtx(t *testing.T, wfs []*genWf.Workflow) *ExecContext {
 		Workflows: repo,
 		Output: &buf, Format: FormatTable,
 	}
-	ctx.ensureCache()
+	rebuildDeps(ctx)
 	return ctx
 }
 

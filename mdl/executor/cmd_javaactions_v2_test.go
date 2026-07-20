@@ -27,7 +27,7 @@ func TestListJavaActionsGen_OutputsHeaderAndSummary(t *testing.T) {
 	var buf bytes.Buffer
 	ctx.Output = &buf
 	ctx.Format = FormatTable
-	ctx.Deps = ctx.buildDeps()
+	rebuildDeps(ctx)
 
 	if err := listJavaActionsGen(ctx, ""); err != nil {
 		t.Fatalf("listJavaActionsGen: %v", err)
@@ -47,7 +47,7 @@ func TestListJavaActionsGen_RowsPresent(t *testing.T) {
 	var buf bytes.Buffer
 	ctx.Output = &buf
 	ctx.Format = FormatTable
-	ctx.Deps = ctx.buildDeps()
+	rebuildDeps(ctx)
 
 	if err := listJavaActionsGen(ctx, ""); err != nil {
 		t.Fatalf("listJavaActionsGen: %v", err)
@@ -69,7 +69,7 @@ func TestListJavaActionsGen_FilterByModule(t *testing.T) {
 	var buf bytes.Buffer
 	ctx.Output = &buf
 	ctx.Format = FormatTable
-	ctx.Deps = ctx.buildDeps()
+	rebuildDeps(ctx)
 
 	if err := listJavaActionsGen(ctx, "NoSuchModule"); err != nil {
 		t.Fatalf("listJavaActionsGen: %v", err)
@@ -213,7 +213,7 @@ func TestListJavaScriptActionsGen_OutputsPlatformColumn(t *testing.T) {
 	var buf bytes.Buffer
 	ctx.Output = &buf
 	ctx.Format = FormatTable
-	ctx.Deps = ctx.buildDeps()
+	rebuildDeps(ctx)
 
 	if err := listJavaScriptActionsGen(ctx, ""); err != nil {
 		t.Fatalf("listJavaScriptActionsGen: %v", err)
@@ -233,7 +233,7 @@ func TestListJavaScriptActionsGen_RendersAllPlatformAsLabel(t *testing.T) {
 	var buf bytes.Buffer
 	ctx.Output = &buf
 	ctx.Format = FormatTable
-	ctx.Deps = ctx.buildDeps()
+	rebuildDeps(ctx)
 
 	if err := listJavaScriptActionsGen(ctx, ""); err != nil {
 		t.Fatalf("listJavaScriptActionsGen: %v", err)
@@ -253,7 +253,7 @@ func TestDescribeJavaScriptActionGen_OutputsCreateStatement(t *testing.T) {
 	ctx := newJavaActionsTestContext(t)
 	var buf bytes.Buffer
 	ctx.Output = &buf
-	ctx.Deps = ctx.buildDeps()
+	rebuildDeps(ctx)
 
 	pairs, err := listJavaScriptActionsWithContainerGen(ctx)
 	if err != nil {
@@ -484,7 +484,7 @@ func newCreateJavaActionMockCtx(t *testing.T, moduleName string) (*ExecContext, 
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
 	// JavaActions repo: empty by default (no existing actions).
 	ctx.JavaActions = &emptyJavaActionRepo{}
-	ctx.Deps = ctx.buildDeps()
+	rebuildDeps(ctx)
 	return ctx, buf, &created, &updated
 }
 
@@ -639,7 +639,7 @@ func TestExecCreateJavaActionGen_AlreadyExists(t *testing.T) {
 	}
 	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
 	ctx.JavaActions = repo
-	ctx.Deps = ctx.buildDeps()
+	rebuildDeps(ctx)
 
 	stmt := &ast.CreateJavaActionStmt{
 		Name:           ast.QualifiedName{Module: "TestModule", Name: "MyAction"},
@@ -662,7 +662,7 @@ func TestExecCreateJavaActionGen_ModuleNotFound(t *testing.T) {
 	}
 	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(mkHierarchy()))
 	ctx.JavaActions = &emptyJavaActionRepo{}
-	ctx.Deps = ctx.buildDeps()
+	rebuildDeps(ctx)
 
 	stmt := &ast.CreateJavaActionStmt{
 		Name:       ast.QualifiedName{Module: "NoSuchModule", Name: "MyAction"},
@@ -701,7 +701,7 @@ func TestExecCreateJavaActionGen_OrModifyOverwrites(t *testing.T) {
 	}
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
 	ctx.JavaActions = repo
-	ctx.Deps = ctx.buildDeps()
+	rebuildDeps(ctx)
 
 	stmt := &ast.CreateJavaActionStmt{
 		Name:           ast.QualifiedName{Module: "TestModule", Name: "MyAction"},

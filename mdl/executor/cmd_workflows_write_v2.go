@@ -896,7 +896,7 @@ func ExecCreateWorkflowGenFn(ctx context.Context, s *ast.CreateWorkflowStmt, dep
 // invalidateWorkflowsCacheFn is the HandlerDeps version of invalidateWorkflowsCache.
 func invalidateWorkflowsCacheFn(deps *HandlerDeps) {
 	if deps.Cache != nil {
-		deps.Cache.workflowsWithContainerGen = nil
+		deps.Cache.Invalidate(CacheDomainWorkflows)
 	}
 }
 

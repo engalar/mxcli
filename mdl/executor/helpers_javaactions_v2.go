@@ -15,125 +15,62 @@ import (
 )
 
 // listJavaActionsWithContainerGen returns every Java action paired with
-// its container UUID, caching the result on
-// ctx.Cache.javaActionsWithContainerGen for the session.
-//
-// Per memory `feedback_executor_cache_pattern`: list calls in
-// mdl/executor/ MUST go through this helper to avoid O(N²) container
-// lookups when iterating across the project.
+// its container UUID, using the domain-cached listing.
 func listJavaActionsWithContainerGen(ctx *ExecContext) ([]ContainerWithGen[*genJA.JavaAction], error) {
 	if ctx == nil {
 		return nil, nil
 	}
-	// Production path: ctx.JavaActions populated via duck-type provider
-	// (MprBackend). Tests using MockBackend lack the provider, so fall
-	// back to ctx.Backend.ListJavaActionsGen which goes through the
-	// regular FullBackend interface.
-	listFn := func() ([]*genJA.JavaAction, error) {
-		if ctx.JavaActions != nil {
-			return ctx.JavaActions.ListAll()
-		}
-		if ctx.JavaActionReader != nil {
-			return ctx.JavaActionReader.ListJavaActionsGen()
-		}
+	if ctx.Cache.javaActionsWithContainerGen == nil {
+		ctx.Cache.javaActionsWithContainerGen = newDomainCache(func() ([]ContainerWithGen[*genJA.JavaAction], error) {
+			return loadJavaActionsWithContainerGen(ctx.Deps)
+		})
+	}
+	return ctx.Cache.javaActionsWithContainerGen.Get()
+}
+
+// loadJavaActionsWithContainerGen loads Java actions without caching.
+func loadJavaActionsWithContainerGen(deps *HandlerDeps) ([]ContainerWithGen[*genJA.JavaAction], error) {
+	if deps == nil {
 		return nil, nil
 	}
-	resolveFn := func(id element.ID) (element.ID, error) {
-		if ctx.JavaActions != nil {
-			c, err := ctx.JavaActions.GetContainerUUID(model.ID(id))
-			return element.ID(c), err
-		}
-		// MockBackend: caller wires container UUIDs separately via
-		// withContainer / hierarchy. Returning empty here is fine — the
-		// hierarchy walk later resolves Module from element ID directly.
-		return "", nil
-	}
 	return listUnitsWithContainerGen(
-		listFn,
-		resolveFn,
-		func() ([]ContainerWithGen[*genJA.JavaAction], bool) {
-			if ctx.Cache != nil && ctx.Cache.javaActionsWithContainerGen != nil {
-				return ctx.Cache.javaActionsWithContainerGen, true
+		func() ([]*genJA.JavaAction, error) {
+			if deps.JavaActionRepo != nil {
+				return deps.JavaActionRepo.ListAll()
 			}
-			return nil, false
-		},
-		func(s []ContainerWithGen[*genJA.JavaAction]) {
-			if ctx.Cache != nil {
-				ctx.Cache.javaActionsWithContainerGen = s
+			if deps.JavaActionReader != nil {
+				return deps.JavaActionReader.ListJavaActionsGen()
 			}
+			return nil, nil
 		},
+		func(id element.ID) (element.ID, error) {
+			if deps.JavaActionRepo != nil {
+				c, err := deps.JavaActionRepo.GetContainerUUID(model.ID(id))
+				return element.ID(c), err
+			}
+			return "", nil
+		},
+		func() ([]ContainerWithGen[*genJA.JavaAction], bool) { return nil, false },
+		func([]ContainerWithGen[*genJA.JavaAction]) {},
 	)
 }
 
 // listJavaScriptActionsWithContainerGen mirrors listJavaActionsWithContainerGen
 // for JavaScript actions.
 func listJavaScriptActionsWithContainerGen(ctx *ExecContext) ([]ContainerWithGen[*genJSA.JavaScriptAction], error) {
-	if ctx == nil || ctx.JavaScriptActions == nil {
+	if ctx == nil {
 		return nil, nil
 	}
-	return listUnitsWithContainerGen(
-		func() ([]*genJSA.JavaScriptAction, error) { return ctx.JavaScriptActions.ListAll() },
-		func(id element.ID) (element.ID, error) {
-			c, err := ctx.JavaScriptActions.GetContainerUUID(model.ID(id))
-			return element.ID(c), err
-		},
-		func() ([]ContainerWithGen[*genJSA.JavaScriptAction], bool) {
-			if ctx.Cache != nil && ctx.Cache.javaScriptActionsWithContainerGen != nil {
-				return ctx.Cache.javaScriptActionsWithContainerGen, true
-			}
-			return nil, false
-		},
-		func(s []ContainerWithGen[*genJSA.JavaScriptAction]) {
-			if ctx.Cache != nil {
-				ctx.Cache.javaScriptActionsWithContainerGen = s
-			}
-		},
-	)
+	if ctx.Cache.javaScriptActionsWithContainerGen == nil {
+		ctx.Cache.javaScriptActionsWithContainerGen = newDomainCache(func() ([]ContainerWithGen[*genJSA.JavaScriptAction], error) {
+			return loadJavaScriptActionsWithContainerGen(ctx.Deps)
+		})
+	}
+	return ctx.Cache.javaScriptActionsWithContainerGen.Get()
 }
 
-// invalidateJavaActionsCache clears the cached gen-typed Java action
-// listing. Call from any write path that creates, drops, or otherwise
-// mutates Java action units.
-// listJavaActionsWithContainerGenDeps is the HandlerDeps version of listJavaActionsWithContainerGen.
-func listJavaActionsWithContainerGenDeps(deps *HandlerDeps) ([]ContainerWithGen[*genJA.JavaAction], error) {
-	if deps == nil {
-		return nil, nil
-	}
-	listFn := func() ([]*genJA.JavaAction, error) {
-		if deps.JavaActionRepo != nil {
-			return deps.JavaActionRepo.ListAll()
-		}
-		if deps.JavaActionReader != nil {
-			return deps.JavaActionReader.ListJavaActionsGen()
-		}
-		return nil, nil
-	}
-	resolveFn := func(id element.ID) (element.ID, error) {
-		if deps.JavaActionRepo != nil {
-			c, err := deps.JavaActionRepo.GetContainerUUID(model.ID(id))
-			return element.ID(c), err
-		}
-		return "", nil
-	}
-	return listUnitsWithContainerGen(
-		listFn,
-		resolveFn,
-		func() ([]ContainerWithGen[*genJA.JavaAction], bool) {
-			if deps.Cache != nil && deps.Cache.javaActionsWithContainerGen != nil {
-				return deps.Cache.javaActionsWithContainerGen, true
-			}
-			return nil, false
-		},
-		func(s []ContainerWithGen[*genJA.JavaAction]) {
-			if deps.Cache != nil {
-				deps.Cache.javaActionsWithContainerGen = s
-			}
-		},
-	)
-}
-
-// listJavaScriptActionsWithContainerGenDeps is the HandlerDeps version of listJavaScriptActionsWithContainerGen.
-func listJavaScriptActionsWithContainerGenDeps(deps *HandlerDeps) ([]ContainerWithGen[*genJSA.JavaScriptAction], error) {
+// loadJavaScriptActionsWithContainerGen loads JavaScript actions without caching.
+func loadJavaScriptActionsWithContainerGen(deps *HandlerDeps) ([]ContainerWithGen[*genJSA.JavaScriptAction], error) {
 	if deps == nil || deps.JavaScriptActionRepo == nil {
 		return nil, nil
 	}
@@ -143,34 +80,49 @@ func listJavaScriptActionsWithContainerGenDeps(deps *HandlerDeps) ([]ContainerWi
 			c, err := deps.JavaScriptActionRepo.GetContainerUUID(model.ID(id))
 			return element.ID(c), err
 		},
-		func() ([]ContainerWithGen[*genJSA.JavaScriptAction], bool) {
-			if deps.Cache != nil && deps.Cache.javaScriptActionsWithContainerGen != nil {
-				return deps.Cache.javaScriptActionsWithContainerGen, true
-			}
-			return nil, false
-		},
-		func(s []ContainerWithGen[*genJSA.JavaScriptAction]) {
-			if deps.Cache != nil {
-				deps.Cache.javaScriptActionsWithContainerGen = s
-			}
-		},
+		func() ([]ContainerWithGen[*genJSA.JavaScriptAction], bool) { return nil, false },
+		func([]ContainerWithGen[*genJSA.JavaScriptAction]) {},
 	)
 }
 
+// listJavaActionsWithContainerGenDeps is the HandlerDeps version of listJavaActionsWithContainerGen.
+func listJavaActionsWithContainerGenDeps(deps *HandlerDeps) ([]ContainerWithGen[*genJA.JavaAction], error) {
+	if deps == nil || deps.Cache == nil {
+		return nil, nil
+	}
+	if deps.Cache.javaActionsWithContainerGen == nil {
+		deps.Cache.javaActionsWithContainerGen = newDomainCache(func() ([]ContainerWithGen[*genJA.JavaAction], error) {
+			return loadJavaActionsWithContainerGen(deps)
+		})
+	}
+	return deps.Cache.javaActionsWithContainerGen.Get()
+}
+
+// listJavaScriptActionsWithContainerGenDeps is the HandlerDeps version of listJavaScriptActionsWithContainerGen.
+func listJavaScriptActionsWithContainerGenDeps(deps *HandlerDeps) ([]ContainerWithGen[*genJSA.JavaScriptAction], error) {
+	if deps == nil || deps.Cache == nil {
+		return nil, nil
+	}
+	if deps.Cache.javaScriptActionsWithContainerGen == nil {
+		deps.Cache.javaScriptActionsWithContainerGen = newDomainCache(func() ([]ContainerWithGen[*genJSA.JavaScriptAction], error) {
+			return loadJavaScriptActionsWithContainerGen(deps)
+		})
+	}
+	return deps.Cache.javaScriptActionsWithContainerGen.Get()
+}
+
+// invalidateJavaActionsCache clears the cached Java action listing.
 func invalidateJavaActionsCache(ctx *ExecContext) {
 	if ctx == nil || ctx.Cache == nil {
 		return
 	}
-	ctx.Cache.javaActionsWithContainerGen = nil
+	ctx.Cache.Invalidate(CacheDomainJavaActions)
 }
 
-// invalidateJavaScriptActionsCache mirrors invalidateJavaActionsCache.
-// JavaScript actions have no MDL write surface today so callers are
-// limited to test fixture rebuilds, but the helper is wired for
-// symmetry with the Java side.
+// invalidateJavaScriptActionsCache clears the cached JavaScript action listing.
 func invalidateJavaScriptActionsCache(ctx *ExecContext) {
 	if ctx == nil || ctx.Cache == nil {
 		return
 	}
-	ctx.Cache.javaScriptActionsWithContainerGen = nil
+	ctx.Cache.Invalidate(CacheDomainJavaScriptActions)
 }

@@ -6,18 +6,10 @@ import (
 )
 
 type domainModelCache struct {
-	domainModelsWithContainerGen []DomainModelGenWithContainer
+	domainModelsWithContainerGen *domainCache[DomainModelGenWithContainer]
 	domainModels                 []*genDm.DomainModel
 	domainModelsGen              []*genDm.DomainModel
 	domainModelByModule          map[model.ID]*genDm.DomainModel
-}
-
-func (c *domainModelCache) DomainModelsWithContainer() []DomainModelGenWithContainer {
-	return c.domainModelsWithContainerGen
-}
-
-func (c *domainModelCache) SetDomainModelsWithContainer(v []DomainModelGenWithContainer) {
-	c.domainModelsWithContainerGen = v
 }
 
 func (c *domainModelCache) DomainModels() []*genDm.DomainModel { return c.domainModels }

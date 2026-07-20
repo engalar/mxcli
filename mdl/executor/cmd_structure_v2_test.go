@@ -205,13 +205,13 @@ func TestExecShowStructureGen_Depth2_ContainsJavaAction(t *testing.T) {
 	ctx := newGenVizContext(t, &out)
 	ctx.Format = FormatTable
 	ctx.Quiet = true
-	ctx.Deps = ctx.buildDeps()
+	rebuildDeps(ctx)
 
 	// Wire JavaActions repo so loadStructureSharedDataGen can find them.
 	w := openMprWriterForTest(t)
 	ctx.JavaActions = mprrepos.NewJavaActionRepository(w)
 	ctx.JavaScriptActions = mprrepos.NewJavaScriptActionRepository(w)
-	ctx.Deps = ctx.buildDeps()
+	rebuildDeps(ctx)
 	ctx.ensureCache()
 
 	if err := execShowStructureGenFn(ctx, &ast.ShowStmt{ObjectType: ast.ShowStructure, Depth: 2}, ctx.Deps); err != nil {

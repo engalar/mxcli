@@ -750,7 +750,7 @@ func invalidateDomainModelsCacheDeps(deps *HandlerDeps) {
 	if deps.Cache == nil {
 		return
 	}
-	deps.Cache.domainModelsWithContainerGen = nil
+	deps.Cache.Invalidate(CacheDomainEntities)
 	deps.Cache.domainModels = nil
 	deps.Cache.domainModelsGen = nil
 	if deps.CacheInvalidator != nil {
@@ -835,21 +835,7 @@ func validateODataClientExistsDeps(ctx context.Context, deps *HandlerDeps, ref a
 	return mdlerrors.NewNotFoundMsg("odata client", ref.String(), fmt.Sprintf("odata client not found: %s", ref))
 }
 
-// invalidateAllDocumentCachesDeps clears all per-document-type caches (HandlerDeps version).
-func invalidateAllDocumentCachesDeps(deps *HandlerDeps) {
-	if deps == nil || deps.Cache == nil {
-		return
-	}
-	deps.Cache.microflowNames = nil
-	deps.Cache.microflowsWithContainerGen = nil
-	deps.Cache.nanoflowsWithContainerGen = nil
-	deps.Cache.pagesWithContainerGen = nil
-	deps.Cache.layoutsWithContainerGen = nil
-	deps.Cache.snippetsWithContainerGen = nil
-	deps.Cache.workflowsWithContainerGen = nil
-	deps.Cache.javaActionsWithContainerGen = nil
-	deps.Cache.javaScriptActionsWithContainerGen = nil
-}
+
 
 // resolveConstantRefDeps looks up a String constant by qualified name (HandlerDeps version).
 func resolveConstantRefDeps(ctx context.Context, deps *HandlerDeps, name ast.QualifiedName) (*types.ConstantRef, error) {

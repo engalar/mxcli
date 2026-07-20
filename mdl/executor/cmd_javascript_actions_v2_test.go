@@ -67,7 +67,7 @@ func TestExecCreateJavaScriptAction_CreatesFromScratch(t *testing.T) {
 	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
 	ctx.MprPath = mprPath
 	ctx.JavaScriptActions = &jsActionRepoStub{} // empty — will be created
-	ctx.Deps = ctx.buildDeps()
+	rebuildDeps(ctx)
 
 	stmt := &ast.CreateJavaScriptActionStmt{
 		Name:           ast.QualifiedName{Module: "MyModule", Name: "MyAction"},
@@ -103,7 +103,7 @@ func TestExecCreateJavaScriptAction_UpdatesPlatform(t *testing.T) {
 	}
 	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
 	ctx.JavaScriptActions = repo
-	ctx.Deps = ctx.buildDeps()
+	rebuildDeps(ctx)
 
 	stmt := &ast.CreateJavaScriptActionStmt{
 		Name:           ast.QualifiedName{Module: "MyModule", Name: "MyAction"},

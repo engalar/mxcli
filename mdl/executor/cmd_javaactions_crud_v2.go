@@ -68,7 +68,7 @@ func execDropJavaActionGenFn(ctx context.Context, s *ast.DropJavaActionStmt, dep
 // invalidateJavaActionsCacheFn is the HandlerDeps version of invalidateJavaActionsCache.
 func invalidateJavaActionsCacheFn(deps *HandlerDeps) {
 	if deps.Cache != nil {
-		deps.Cache.javaActionsWithContainerGen = nil
+		deps.Cache.Invalidate(CacheDomainJavaActions)
 	}
 }
 
@@ -217,7 +217,7 @@ func execCreateJavaScriptActionFn(ctx context.Context, s *ast.CreateJavaScriptAc
 // invalidateJavaScriptActionsCacheFn is the HandlerDeps version of invalidateJavaScriptActionsCache.
 func invalidateJavaScriptActionsCacheFn(deps *HandlerDeps) {
 	if deps.Cache != nil {
-		deps.Cache.javaScriptActionsWithContainerGen = nil
+		deps.Cache.Invalidate(CacheDomainJavaScriptActions)
 	}
 }
 

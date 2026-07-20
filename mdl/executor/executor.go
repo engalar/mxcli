@@ -117,34 +117,31 @@ func getEntityNames(ctx *ExecContext, h *ContainerHierarchy) map[model.ID]string
 // invalidateMicroflowsCache clears the pre-warmed microflowNames map.
 // Call from any write path that affects microflow or nanoflow units.
 //
-// Stage 3.2.6.5: the legacy `Cache.microflows` slice (sdk-typed) and
-// the `getAllMicroflows` / `getMicroflowNames` helpers are gone — the
-// only consumer (cmd_catalog.go's preWarmCache) now populates
-// microflowNames directly from ctx.Microflows / ctx.Backend.
-func invalidateMicroflowsCache(ctx *ExecContext) {
-	if ctx.Cache != nil {
-		ctx.Cache.microflowNames = nil
-		ctx.Cache.microflowsWithContainerGen = nil
-		ctx.Cache.nanoflowsWithContainerGen = nil
+// Invalidate clears the caches for the given domains.
+func (c *executorCache) Invalidate(domains ...CacheDomain) {
+	for _, d := range domains {
+		switch d {
+		case CacheDomainModules:
+		case CacheDomainEntities:
+			c.domainModelsWithContainerGen.Invalidate()
+		case CacheDomainMicroflows:
+			c.microflowsWithContainerGen.Invalidate()
+		case CacheDomainNanoflows:
+			c.nanoflowsWithContainerGen.Invalidate()
+		case CacheDomainPages:
+			c.pagesWithContainerGen.Invalidate()
+		case CacheDomainSnippets:
+			c.snippetsWithContainerGen.Invalidate()
+		case CacheDomainLayouts:
+			c.layoutsWithContainerGen.Invalidate()
+		case CacheDomainWorkflows:
+			c.workflowsWithContainerGen.Invalidate()
+		case CacheDomainJavaActions:
+			c.javaActionsWithContainerGen.Invalidate()
+		case CacheDomainJavaScriptActions:
+			c.javaScriptActionsWithContainerGen.Invalidate()
+		}
 	}
-}
-
-// invalidateAllDocumentCaches clears all per-document-type caches in one call.
-// Use after any rename/create/drop that might affect multiple listing caches,
-// instead of calling individual invalidateXxxCache functions.
-func invalidateAllDocumentCaches(ctx *ExecContext) {
-	if ctx == nil || ctx.Cache == nil {
-		return
-	}
-	ctx.Cache.microflowNames = nil
-	ctx.Cache.microflowsWithContainerGen = nil
-	ctx.Cache.nanoflowsWithContainerGen = nil
-	ctx.Cache.pagesWithContainerGen = nil
-	ctx.Cache.layoutsWithContainerGen = nil
-	ctx.Cache.snippetsWithContainerGen = nil
-	ctx.Cache.workflowsWithContainerGen = nil
-	ctx.Cache.javaActionsWithContainerGen = nil
-	ctx.Cache.javaScriptActionsWithContainerGen = nil
 }
 
 // getPageNames returns the page name lookup map, using the pre-warmed cache if available.
@@ -314,7 +311,16 @@ func (e *Executor) SetBackendFactory(f BackendFactory) {
 func (e *Executor) SetBackend(b backend.ConnectionBackend) {
 	e.backend = b.(backend.FullBackend)
 	if e.cache == nil {
-		e.cache = &executorCache{}
+		e.cache = &executorCache{
+			sessionTracker:    sessionTracker{},
+			metadataCache:     metadataCache{},
+			microflowCache:    microflowCache{},
+			pageCache:         pageCache{},
+			domainModelCache:  domainModelCache{},
+			securityCache:     securityCache{},
+			workflowCache:     workflowCache{},
+			javaCache:         javaCache{},
+		}
 	}
 	e.registerFutureOverlays()
 }
@@ -892,7 +898,9 @@ func (ctx *ExecContext) initRoles() {
 		ctx.WidgetBuilder = bf.WidgetBuilder()
 		ctx.ScriptTransactionManager = bf.ScriptTransactionManager()
 		ctx.AgentEditorOperator = bf.AgentEditorOperator()
+		ctx.ensureCache()
 		ctx.Deps = ctx.buildDeps()
+		ctx.Cache.initLoadFns(ctx.Deps)
 		return
 	}
 	// Fallback: ctx.Backend (deprecated FullBackend).
@@ -943,7 +951,9 @@ func (ctx *ExecContext) initRoles() {
 	ctx.WidgetBuilder = ctx.Backend
 	ctx.ScriptTransactionManager = ctx.Backend
 	ctx.AgentEditorOperator = ctx.Backend
+	ctx.ensureCache()
 	ctx.Deps = ctx.buildDeps()
+	ctx.Cache.initLoadFns(ctx.Deps)
 }
 
 // buildDeps constructs a HandlerDeps from the ExecContext's current state.
@@ -1078,7 +1088,7 @@ func (ctx *ExecContext) GetThemeRegistry() *ThemeRegistry {
 // ensureCache initializes the ExecContext cache if nil.
 func (ctx *ExecContext) ensureCache() {
 	if ctx.Cache == nil {
-		ctx.Cache = &executorCache{}
+		ctx.Cache = newExecutorCache()
 	}
 }
 

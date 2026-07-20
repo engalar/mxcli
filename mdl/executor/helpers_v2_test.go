@@ -27,7 +27,10 @@ func TestListMicroflowsWithContainerGen_CachesAcrossCalls(t *testing.T) {
 		},
 	}
 	ctx, _ := newMockCtx(t, withMicroflowsRepo(repo))
-	ctx.Cache = &executorCache{}
+	// initRoles already wired the cache with stale deps (before repo was set).
+	// Reset and re-init so load functions capture the repo-backed deps.
+	ctx.Cache = newExecutorCache()
+	ctx.Cache.initLoadFns(ctx.Deps)
 
 	first, err := listMicroflowsWithContainerGen(ctx)
 	if err != nil {
@@ -71,7 +74,8 @@ func TestListMicroflowsWithContainerGen_InvalidationClearsCache(t *testing.T) {
 		},
 	}
 	ctx, _ := newMockCtx(t, withMicroflowsRepo(repo))
-	ctx.Cache = &executorCache{}
+	ctx.Cache = newExecutorCache()
+	ctx.Cache.initLoadFns(ctx.Deps)
 
 	if _, err := listMicroflowsWithContainerGen(ctx); err != nil {
 		t.Fatalf("first call: %v", err)
@@ -104,7 +108,8 @@ func TestListNanoflowsWithContainerGen_CachesAcrossCalls(t *testing.T) {
 		},
 	}
 	ctx, _ := newMockCtx(t, withMicroflowsRepo(mfRepo), withNanoflowsRepo(nfRepo))
-	ctx.Cache = &executorCache{}
+	ctx.Cache = newExecutorCache()
+	ctx.Cache.initLoadFns(ctx.Deps)
 
 	first, err := listNanoflowsWithContainerGen(ctx)
 	if err != nil {

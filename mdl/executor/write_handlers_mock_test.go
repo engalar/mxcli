@@ -197,7 +197,7 @@ func TestExecDropPage_Mock(t *testing.T) {
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
 	ctx.Pages = makePagesRepo([]*genPg.Page{pg}, mod.ID)
-	ctx.Deps = ctx.buildDeps()
+	rebuildDeps(ctx)
 	err := ExecDropPageDeps(ctx, &ast.DropPageStmt{
 		Name: ast.QualifiedName{Module: "MyModule", Name: "HomePage"},
 	}, ctx.Deps)
@@ -225,7 +225,7 @@ func TestExecDropSnippet_Mock(t *testing.T) {
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
 	ctx.Snippets = makeSnippetsRepo([]*genPg.Snippet{snp}, mod.ID)
-	ctx.Deps = ctx.buildDeps()
+	rebuildDeps(ctx)
 	err := ExecDropSnippetDeps(ctx, &ast.DropSnippetStmt{
 		Name: ast.QualifiedName{Module: "MyModule", Name: "HeaderSnippet"},
 	}, ctx.Deps)

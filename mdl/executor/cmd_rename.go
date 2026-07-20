@@ -314,7 +314,13 @@ func execRenameDocumentFn(ctx context.Context, s *ast.RenameStmt, deps *HandlerD
 	}
 
 	invalidateHierarchyDeps(deps)
-	invalidateAllDocumentCachesDeps(deps)
+	deps.Cache.microflowNames = nil
+	deps.Cache.Invalidate(
+		CacheDomainMicroflows, CacheDomainNanoflows,
+		CacheDomainPages, CacheDomainLayouts, CacheDomainSnippets,
+		CacheDomainWorkflows,
+		CacheDomainJavaActions, CacheDomainJavaScriptActions,
+	)
 
 	fmt.Fprintf(deps.Output, "Renamed %s: %s → %s\n", docType, oldQualifiedName, newQualifiedName)
 	if len(hits) > 0 {
@@ -513,7 +519,13 @@ func execRenameJavaActionFn(ctx context.Context, s *ast.RenameStmt, deps *Handle
 	}
 
 	invalidateHierarchyDeps(deps)
-	invalidateAllDocumentCachesDeps(deps)
+	deps.Cache.microflowNames = nil
+	deps.Cache.Invalidate(
+		CacheDomainMicroflows, CacheDomainNanoflows,
+		CacheDomainPages, CacheDomainLayouts, CacheDomainSnippets,
+		CacheDomainWorkflows,
+		CacheDomainJavaActions, CacheDomainJavaScriptActions,
+	)
 
 	fmt.Fprintf(deps.Output, "Renamed java action: %s → %s\n", oldQualifiedName, newQualifiedName)
 	if len(hits) > 0 {

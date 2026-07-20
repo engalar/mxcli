@@ -124,6 +124,11 @@ func (e *Executor) registerFutureOverlays() {
 		return
 	}
 
+	// Wire cache load functions now that repos are available.
+	if deps.Cache != nil {
+		deps.Cache.initLoadFns(deps)
+	}
+
 	// Connection status — uses ConnectionManager/ModuleLister (simple deps).
 	r.RegisterFuture("Status", func(ctx context.Context, stmt ast.Statement) error {
 		return execStatusFuture(ctx, deps.Output, deps.ConnectionManager, deps.ModuleLister, e.mprPath)

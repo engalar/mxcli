@@ -23,264 +23,174 @@ import (
 )
 
 // listPagesWithContainerGen returns every Page paired with its
-// container UUID, caching the result on
-// ctx.Cache.pagesWithContainerGen for the session.
+// container UUID, using the domain-cached listing.
 func listPagesWithContainerGen(ctx *ExecContext) ([]ContainerWithGen[*genPg.Page], error) {
 	if ctx == nil {
 		return nil, nil
 	}
-	listFn := func() ([]*genPg.Page, error) {
-		if ctx.Pages == nil {
-			return nil, nil
-		}
-		all, err := ctx.Pages.ListAll()
-		if err != nil {
-			return nil, err
-		}
-		// Per helpers_gen_container.go contract: list callers MUST
-		// filter nil entries — the generic factory dereferences
-		// e.ID() unconditionally.
-		filtered := all[:0]
-		for _, p := range all {
-			if p != nil {
-				filtered = append(filtered, p)
-			}
-		}
-		return filtered, nil
+	if ctx.Cache.pagesWithContainerGen == nil {
+		ctx.Cache.pagesWithContainerGen = newDomainCache(func() ([]ContainerWithGen[*genPg.Page], error) {
+			return loadPagesWithContainerGen(ctx.Deps)
+		})
 	}
-	resolveFn := func(id element.ID) (element.ID, error) {
-		if ctx.Pages != nil {
-			c, err := ctx.Pages.GetContainerUUID(model.ID(id))
-			return element.ID(c), err
-		}
-		return "", nil
+	return ctx.Cache.pagesWithContainerGen.Get()
+}
+
+// loadPagesWithContainerGen loads pages without caching.
+func loadPagesWithContainerGen(deps *HandlerDeps) ([]ContainerWithGen[*genPg.Page], error) {
+	if deps == nil || deps.PageRepo == nil {
+		return nil, nil
 	}
 	return listUnitsWithContainerGen(
-		listFn,
-		resolveFn,
-		func() ([]ContainerWithGen[*genPg.Page], bool) {
-			if ctx.Cache != nil && ctx.Cache.pagesWithContainerGen != nil {
-				return ctx.Cache.pagesWithContainerGen, true
+		func() ([]*genPg.Page, error) {
+			all, err := deps.PageRepo.ListAll()
+			if err != nil {
+				return nil, err
 			}
-			return nil, false
-		},
-		func(s []ContainerWithGen[*genPg.Page]) {
-			if ctx.Cache != nil {
-				ctx.Cache.pagesWithContainerGen = s
+			filtered := all[:0]
+			for _, p := range all {
+				if p != nil {
+					filtered = append(filtered, p)
+				}
 			}
+			return filtered, nil
 		},
+		func(id element.ID) (element.ID, error) {
+			c, err := deps.PageRepo.GetContainerUUID(model.ID(id))
+			return element.ID(c), err
+		},
+		func() ([]ContainerWithGen[*genPg.Page], bool) { return nil, false },
+		func([]ContainerWithGen[*genPg.Page]) {},
 	)
 }
 
-// listLayoutsWithContainerGen mirrors listPagesWithContainerGen for
-// layouts.
+// listLayoutsWithContainerGen mirrors listPagesWithContainerGen for layouts.
 func listLayoutsWithContainerGen(ctx *ExecContext) ([]ContainerWithGen[*genPg.Layout], error) {
 	if ctx == nil {
 		return nil, nil
 	}
-	listFn := func() ([]*genPg.Layout, error) {
-		if ctx.Layouts == nil {
-			return nil, nil
-		}
-		all, err := ctx.Layouts.ListAll()
-		if err != nil {
-			return nil, err
-		}
-		filtered := all[:0]
-		for _, l := range all {
-			if l != nil {
-				filtered = append(filtered, l)
-			}
-		}
-		return filtered, nil
+	if ctx.Cache.layoutsWithContainerGen == nil {
+		ctx.Cache.layoutsWithContainerGen = newDomainCache(func() ([]ContainerWithGen[*genPg.Layout], error) {
+			return loadLayoutsWithContainerGen(ctx.Deps)
+		})
 	}
-	resolveFn := func(id element.ID) (element.ID, error) {
-		if ctx.Layouts != nil {
-			c, err := ctx.Layouts.GetContainerUUID(model.ID(id))
-			return element.ID(c), err
-		}
-		return "", nil
+	return ctx.Cache.layoutsWithContainerGen.Get()
+}
+
+// loadLayoutsWithContainerGen loads layouts without caching.
+func loadLayoutsWithContainerGen(deps *HandlerDeps) ([]ContainerWithGen[*genPg.Layout], error) {
+	if deps == nil || deps.LayoutRepo == nil {
+		return nil, nil
 	}
 	return listUnitsWithContainerGen(
-		listFn,
-		resolveFn,
-		func() ([]ContainerWithGen[*genPg.Layout], bool) {
-			if ctx.Cache != nil && ctx.Cache.layoutsWithContainerGen != nil {
-				return ctx.Cache.layoutsWithContainerGen, true
+		func() ([]*genPg.Layout, error) {
+			all, err := deps.LayoutRepo.ListAll()
+			if err != nil {
+				return nil, err
 			}
-			return nil, false
-		},
-		func(s []ContainerWithGen[*genPg.Layout]) {
-			if ctx.Cache != nil {
-				ctx.Cache.layoutsWithContainerGen = s
+			filtered := all[:0]
+			for _, l := range all {
+				if l != nil {
+					filtered = append(filtered, l)
+				}
 			}
+			return filtered, nil
 		},
+		func(id element.ID) (element.ID, error) {
+			c, err := deps.LayoutRepo.GetContainerUUID(model.ID(id))
+			return element.ID(c), err
+		},
+		func() ([]ContainerWithGen[*genPg.Layout], bool) { return nil, false },
+		func([]ContainerWithGen[*genPg.Layout]) {},
 	)
 }
 
-// listSnippetsWithContainerGen mirrors listPagesWithContainerGen for
-// snippets.
+// listSnippetsWithContainerGen mirrors listPagesWithContainerGen for snippets.
 func listSnippetsWithContainerGen(ctx *ExecContext) ([]ContainerWithGen[*genPg.Snippet], error) {
 	if ctx == nil {
 		return nil, nil
 	}
-	listFn := func() ([]*genPg.Snippet, error) {
-		if ctx.Snippets == nil {
-			return nil, nil
-		}
-		all, err := ctx.Snippets.ListAll()
-		if err != nil {
-			return nil, err
-		}
-		filtered := all[:0]
-		for _, s := range all {
-			if s != nil {
-				filtered = append(filtered, s)
-			}
-		}
-		return filtered, nil
+	if ctx.Cache.snippetsWithContainerGen == nil {
+		ctx.Cache.snippetsWithContainerGen = newDomainCache(func() ([]ContainerWithGen[*genPg.Snippet], error) {
+			return loadSnippetsWithContainerGen(ctx.Deps)
+		})
 	}
-	resolveFn := func(id element.ID) (element.ID, error) {
-		if ctx.Snippets != nil {
-			c, err := ctx.Snippets.GetContainerUUID(model.ID(id))
-			return element.ID(c), err
-		}
-		return "", nil
+	return ctx.Cache.snippetsWithContainerGen.Get()
+}
+
+// loadSnippetsWithContainerGen loads snippets without caching.
+func loadSnippetsWithContainerGen(deps *HandlerDeps) ([]ContainerWithGen[*genPg.Snippet], error) {
+	if deps == nil || deps.SnippetRepo == nil {
+		return nil, nil
 	}
 	return listUnitsWithContainerGen(
-		listFn,
-		resolveFn,
-		func() ([]ContainerWithGen[*genPg.Snippet], bool) {
-			if ctx.Cache != nil && ctx.Cache.snippetsWithContainerGen != nil {
-				return ctx.Cache.snippetsWithContainerGen, true
+		func() ([]*genPg.Snippet, error) {
+			all, err := deps.SnippetRepo.ListAll()
+			if err != nil {
+				return nil, err
 			}
-			return nil, false
-		},
-		func(s []ContainerWithGen[*genPg.Snippet]) {
-			if ctx.Cache != nil {
-				ctx.Cache.snippetsWithContainerGen = s
+			filtered := all[:0]
+			for _, s := range all {
+				if s != nil {
+					filtered = append(filtered, s)
+				}
 			}
+			return filtered, nil
 		},
+		func(id element.ID) (element.ID, error) {
+			c, err := deps.SnippetRepo.GetContainerUUID(model.ID(id))
+			return element.ID(c), err
+		},
+		func() ([]ContainerWithGen[*genPg.Snippet], bool) { return nil, false },
+		func([]ContainerWithGen[*genPg.Snippet]) {},
 	)
 }
 
-// invalidatePagesGenCache clears the cached gen-typed page/layout/
-// snippet listings. Call from any write path that creates, drops, or
-// otherwise mutates page-family units.
-func invalidatePagesGenCache(ctx *ExecContext) {
-	if ctx == nil || ctx.Cache == nil {
-		return
-	}
-	ctx.Cache.pagesWithContainerGen = nil
-	ctx.Cache.layoutsWithContainerGen = nil
-	ctx.Cache.snippetsWithContainerGen = nil
-}
-
-// parameterEntityNameGen extracts the qualified entity name from a
-// gen-typed page/snippet parameter type element. Mirrors the legacy
-// pages.PageParameter.EntityName fallback chain. Returns "" when the
-// parameter is a primitive type (caller dispatches to MDL primitives via
-// pageParamTypeMDL or similar) or when no entity is referenced.
 // listPagesWithContainerGenDeps is the HandlerDeps version of listPagesWithContainerGen.
 func listPagesWithContainerGenDeps(ctx context.Context, deps *HandlerDeps) ([]ContainerWithGen[*genPg.Page], error) {
-	if deps == nil || deps.PageRepo == nil {
+	if deps == nil || deps.Cache == nil {
 		return nil, nil
 	}
-	if deps.Cache != nil && deps.Cache.pagesWithContainerGen != nil {
-		return deps.Cache.pagesWithContainerGen, nil
+	if deps.Cache.pagesWithContainerGen == nil {
+		deps.Cache.pagesWithContainerGen = newDomainCache(func() ([]ContainerWithGen[*genPg.Page], error) {
+			return loadPagesWithContainerGen(deps)
+		})
 	}
-
-	all, err := deps.PageRepo.ListAll()
-	if err != nil {
-		return nil, err
-	}
-	filtered := all[:0]
-	for _, p := range all {
-		if p != nil {
-			filtered = append(filtered, p)
-		}
-	}
-
-	var out []ContainerWithGen[*genPg.Page]
-	for _, p := range filtered {
-		cid, err := deps.PageRepo.GetContainerUUID(model.ID(p.ID()))
-		if err != nil {
-			continue
-		}
-		out = append(out, ContainerWithGen[*genPg.Page]{Elem: p, ContainerID: element.ID(cid)})
-	}
-	if deps.Cache != nil {
-		deps.Cache.pagesWithContainerGen = out
-	}
-	return out, nil
+	return deps.Cache.pagesWithContainerGen.Get()
 }
 
 // listSnippetsWithContainerGenDeps is the HandlerDeps version of listSnippetsWithContainerGen.
 func listSnippetsWithContainerGenDeps(ctx context.Context, deps *HandlerDeps) ([]ContainerWithGen[*genPg.Snippet], error) {
-	if deps == nil || deps.SnippetRepo == nil {
+	if deps == nil || deps.Cache == nil {
 		return nil, nil
 	}
-	if deps.Cache != nil && deps.Cache.snippetsWithContainerGen != nil {
-		return deps.Cache.snippetsWithContainerGen, nil
+	if deps.Cache.snippetsWithContainerGen == nil {
+		deps.Cache.snippetsWithContainerGen = newDomainCache(func() ([]ContainerWithGen[*genPg.Snippet], error) {
+			return loadSnippetsWithContainerGen(deps)
+		})
 	}
-
-	all, err := deps.SnippetRepo.ListAll()
-	if err != nil {
-		return nil, err
-	}
-	filtered := all[:0]
-	for _, p := range all {
-		if p != nil {
-			filtered = append(filtered, p)
-		}
-	}
-
-	var out []ContainerWithGen[*genPg.Snippet]
-	for _, p := range filtered {
-		cid, err := deps.SnippetRepo.GetContainerUUID(model.ID(p.ID()))
-		if err != nil {
-			continue
-		}
-		out = append(out, ContainerWithGen[*genPg.Snippet]{Elem: p, ContainerID: element.ID(cid)})
-	}
-	if deps.Cache != nil {
-		deps.Cache.snippetsWithContainerGen = out
-	}
-	return out, nil
+	return deps.Cache.snippetsWithContainerGen.Get()
 }
 
 // listLayoutsWithContainerGenDeps is the HandlerDeps version of listLayoutsWithContainerGen.
 func listLayoutsWithContainerGenDeps(deps *HandlerDeps) ([]ContainerWithGen[*genPg.Layout], error) {
-	if deps == nil || deps.LayoutRepo == nil {
+	if deps == nil || deps.Cache == nil {
 		return nil, nil
 	}
-	if deps.Cache != nil && deps.Cache.layoutsWithContainerGen != nil {
-		return deps.Cache.layoutsWithContainerGen, nil
+	if deps.Cache.layoutsWithContainerGen == nil {
+		deps.Cache.layoutsWithContainerGen = newDomainCache(func() ([]ContainerWithGen[*genPg.Layout], error) {
+			return loadLayoutsWithContainerGen(deps)
+		})
 	}
+	return deps.Cache.layoutsWithContainerGen.Get()
+}
 
-	all, err := deps.LayoutRepo.ListAll()
-	if err != nil {
-		return nil, err
+// invalidatePagesGenCache clears the cached page/layout/snippet listings.
+func invalidatePagesGenCache(ctx *ExecContext) {
+	if ctx == nil || ctx.Cache == nil {
+		return
 	}
-	filtered := all[:0]
-	for _, l := range all {
-		if l != nil {
-			filtered = append(filtered, l)
-		}
-	}
-
-	var out []ContainerWithGen[*genPg.Layout]
-	for _, l := range filtered {
-		cid, err := deps.LayoutRepo.GetContainerUUID(model.ID(l.ID()))
-		if err != nil {
-			continue
-		}
-		out = append(out, ContainerWithGen[*genPg.Layout]{Elem: l, ContainerID: element.ID(cid)})
-	}
-	if deps.Cache != nil {
-		deps.Cache.layoutsWithContainerGen = out
-	}
-	return out, nil
+	ctx.Cache.Invalidate(CacheDomainPages, CacheDomainLayouts, CacheDomainSnippets)
 }
 
 // invalidatePagesGenCacheDeps is the HandlerDeps version of invalidatePagesGenCache.
@@ -288,9 +198,7 @@ func invalidatePagesGenCacheDeps(deps *HandlerDeps) {
 	if deps == nil || deps.Cache == nil {
 		return
 	}
-	deps.Cache.pagesWithContainerGen = nil
-	deps.Cache.layoutsWithContainerGen = nil
-	deps.Cache.snippetsWithContainerGen = nil
+	deps.Cache.Invalidate(CacheDomainPages, CacheDomainLayouts, CacheDomainSnippets)
 }
 
 func parameterEntityNameGen(paramType element.Element) string {

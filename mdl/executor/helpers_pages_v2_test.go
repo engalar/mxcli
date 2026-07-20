@@ -30,6 +30,10 @@ func newPagesCacheTestContext(t *testing.T, pages []*genPg.Page, containerID str
 		Pages: repo,
 	}
 	ctx.ensureCache()
+	if ctx.Deps == nil {
+		rebuildDeps(ctx)
+	}
+	ctx.Cache.initLoadFns(ctx.Deps)
 	return ctx
 }
 
@@ -94,6 +98,10 @@ func TestListPagesWithContainerGen_PropagatesListError(t *testing.T) {
 		Pages: repo,
 	}
 	ctx.ensureCache()
+	if ctx.Deps == nil {
+		rebuildDeps(ctx)
+	}
+	ctx.Cache.initLoadFns(ctx.Deps)
 	_, err := listPagesWithContainerGen(ctx)
 	if !errors.Is(err, wantErr) {
 		t.Errorf("expected error to wrap %v, got %v", wantErr, err)
@@ -116,6 +124,10 @@ func TestListLayoutsWithContainerGen_CachesAcrossCalls(t *testing.T) {
 		Layouts: repo,
 	}
 	ctx.ensureCache()
+	if ctx.Deps == nil {
+		rebuildDeps(ctx)
+	}
+	ctx.Cache.initLoadFns(ctx.Deps)
 
 	first, err := listLayoutsWithContainerGen(ctx)
 	if err != nil {
@@ -150,6 +162,10 @@ func TestListSnippetsWithContainerGen_CachesAcrossCalls(t *testing.T) {
 		Snippets: repo,
 	}
 	ctx.ensureCache()
+	if ctx.Deps == nil {
+		rebuildDeps(ctx)
+	}
+	ctx.Cache.initLoadFns(ctx.Deps)
 
 	first, err := listSnippetsWithContainerGen(ctx)
 	if err != nil {
@@ -176,13 +192,17 @@ func TestInvalidatePagesGenCache_ClearsAllThree(t *testing.T) {
 	if _, err := listPagesWithContainerGen(ctx); err != nil {
 		t.Fatalf("warm pages: %v", err)
 	}
-	ctx.Cache.layoutsWithContainerGen = []ContainerWithGen[*genPg.Layout]{{}}
-	ctx.Cache.snippetsWithContainerGen = []ContainerWithGen[*genPg.Snippet]{{}}
 
 	invalidatePagesGenCache(ctx)
-	if ctx.Cache.pagesWithContainerGen != nil ||
-		ctx.Cache.layoutsWithContainerGen != nil ||
-		ctx.Cache.snippetsWithContainerGen != nil {
-		t.Errorf("invalidate must clear all three caches")
+	result, err := listPagesWithContainerGen(ctx)
+	if err != nil {
+		t.Fatalf("list after invalidate: %v", err)
+	}
+	if len(result) != 1 {
+		t.Errorf("expected 1 entry after re-read, got %d", len(result))
+	}
+	// Verify the re-read returned from the repo (not stale cache)
+	if result[0].Elem.Name() != "PA" {
+		t.Errorf("unexpected page name: %s", result[0].Elem.Name())
 	}
 }

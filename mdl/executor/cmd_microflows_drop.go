@@ -110,7 +110,6 @@ func invalidateHierarchyFn(deps *HandlerDeps) {
 func invalidateMicroflowsCacheFn(deps *HandlerDeps) {
 	if deps.Cache != nil {
 		deps.Cache.microflowNames = nil
-		deps.Cache.microflowsWithContainerGen = nil
-		deps.Cache.nanoflowsWithContainerGen = nil
+		deps.Cache.Invalidate(CacheDomainMicroflows, CacheDomainNanoflows)
 	}
 }

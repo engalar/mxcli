@@ -423,7 +423,7 @@ func (javaActionMoverImpl) moveToContainer(ctx *ExecContext, id model.ID, _ ast.
 
 func (javaActionMoverImpl) invalidate(ctx *ExecContext) {
 	if ctx.Cache != nil {
-		ctx.Cache.javaActionsWithContainerGen = nil
+		ctx.Cache.Invalidate(CacheDomainJavaActions)
 	}
 }
 func (javaActionMoverImpl) label() string { return "java action" }
@@ -466,7 +466,7 @@ func (javaScriptActionMoverImpl) moveToContainer(ctx *ExecContext, id model.ID, 
 
 func (javaScriptActionMoverImpl) invalidate(ctx *ExecContext) {
 	if ctx.Cache != nil {
-		ctx.Cache.javaScriptActionsWithContainerGen = nil
+		ctx.Cache.Invalidate(CacheDomainJavaScriptActions)
 	}
 }
 func (javaScriptActionMoverImpl) label() string { return "javascript action" }
@@ -548,7 +548,7 @@ func (workflowMoverImpl) moveToContainer(ctx *ExecContext, id model.ID, _ ast.Qu
 
 func (workflowMoverImpl) invalidate(ctx *ExecContext) {
 	if ctx.Cache != nil {
-		ctx.Cache.workflowsWithContainerGen = nil
+		ctx.Cache.Invalidate(CacheDomainWorkflows)
 	}
 }
 func (workflowMoverImpl) label() string { return "workflow" }
