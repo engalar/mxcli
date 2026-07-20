@@ -24,7 +24,7 @@ func newFixerCtx(t *testing.T, mfs []*genMf.Microflow, updateCalled *bool) *Exec
 		},
 	}
 	ctx := &ExecContext{
-		ExecRepos: ExecRepos{Microflows: repo},
+		Microflows: repo,
 	}
 	return ctx
 }
@@ -152,7 +152,7 @@ func TestMFCallerRefFixer_MultipleCaller_FixesAll(t *testing.T) {
 		UpdateFunc:           func(_ *genMf.Microflow) error { updateCount++; return nil },
 	}
 	ctx := &ExecContext{
-		ExecRepos: ExecRepos{Microflows: repo},
+		Microflows: repo,
 	}
 	fixer := NewMFCallerRefFixer(ctx)
 

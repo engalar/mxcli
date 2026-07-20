@@ -74,7 +74,7 @@ func TestDeleteNanoflowViaRepoOrBackend_FallbackToMockBackend(t *testing.T) {
 	}
 	ctx := &ExecContext{
 		Backend:   mb,
-		ExecRepos: ExecRepos{Nanoflows: nil},
+		Nanoflows: nil,
 	}
 	ctx.initRoles()
 	if err := ctx.deleteNanoflowViaRepoOrBackend(wantID); err != nil {
@@ -160,7 +160,7 @@ func TestDeleteMicroflowViaRepoOrBackend_FallbackToMockBackend(t *testing.T) {
 	ctx := &ExecContext{
 		Backend: mb,
 		// explicit: no repo, must fall back
-		ExecRepos: ExecRepos{Microflows: nil},
+		Microflows: nil,
 	}
 	ctx.initRoles()
 	if err := ctx.deleteMicroflowViaRepoOrBackend(wantID); err != nil {

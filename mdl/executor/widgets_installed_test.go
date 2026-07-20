@@ -23,8 +23,8 @@ func TestExecShowInstalledWidgets_NoWidgetsDir(t *testing.T) {
 	out := &strings.Builder{}
 	ctx := &ExecContext{
 		Backend:        connectedMock(),
-		ExecIO:         ExecIO{Output: out},
-		ExecConnection: ExecConnection{MprPath: filepath.Join(tmp, "app.mpr")},
+		Output: out,
+		MprPath: filepath.Join(tmp, "app.mpr"),
 	}
 	ctx.initRoles()
 	err := execShowInstalledWidgetsFn(ctx, &ast.ShowInstalledWidgetsStmt{}, execContextToDeps(ctx))
@@ -51,8 +51,8 @@ func TestExecShowInstalledWidgets_FindsMpk(t *testing.T) {
 	out := &strings.Builder{}
 	ctx := &ExecContext{
 		Backend:        connectedMock(),
-		ExecIO:         ExecIO{Output: out},
-		ExecConnection: ExecConnection{MprPath: filepath.Join(tmp, "app.mpr")},
+		Output: out,
+		MprPath: filepath.Join(tmp, "app.mpr"),
 	}
 	ctx.initRoles()
 

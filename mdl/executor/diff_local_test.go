@@ -27,8 +27,8 @@ func gitFailBackend(contentsDir string) *ExecContext {
 	ctx := &ExecContext{
 		Context:     context.Background(),
 		Backend:     mb,
-		ExecIO:      ExecIO{Output: &bytes.Buffer{}},
-		ExecSession: ExecSession{Cache: &executorCache{}},
+		Output: &bytes.Buffer{},
+		Cache: &executorCache{},
 	}
 	ctx.initRoles()
 	return ctx

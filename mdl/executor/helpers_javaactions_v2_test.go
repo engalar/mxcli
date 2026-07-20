@@ -26,8 +26,8 @@ func newJavaActionsTestContext(t *testing.T) *ExecContext {
 
 	ctx := &ExecContext{
 		Backend:   be,
-		ExecRepos: ExecRepos{JavaActions: mprrepos.NewJavaActionRepository(w), JavaScriptActions: mprrepos.NewJavaScriptActionRepository(w)},
-		ExecIO:    ExecIO{Output: io.Discard},
+		JavaActions: mprrepos.NewJavaActionRepository(w), JavaScriptActions: mprrepos.NewJavaScriptActionRepository(w),
+		Output: io.Discard,
 	}
 	ctx.initRoles()
 	ctx.ensureCache()

@@ -721,65 +721,12 @@ func consumeDroppedNanoflow(ctx *ExecContext, qualifiedName string) *droppedUnit
 	return info
 }
 
-// ExecRepos holds Stage 3 modelsdk-native repositories.
-type ExecRepos struct {
-	Microflows        repos.MicroflowRepository
-	Nanoflows         repos.NanoflowRepository
-	Security          repos.SecurityRepository
-	JavaActions       repos.JavaActionRepository
-	JavaScriptActions repos.JavaScriptActionRepository
-	DomainModels      repos.DomainModelRepository
-	Workflows         repos.WorkflowRepository
-	Pages             repos.PageRepository
-	Layouts           repos.LayoutRepository
-	Snippets          repos.SnippetRepository
-}
-
-// ExecIO holds output writers and formatting settings.
-type ExecIO struct {
-	Output       io.Writer
-	StatusOutput io.Writer
-	Format       OutputFormat
-	Quiet        bool
-}
-
-// ExecSession holds per-session mutable state.
-type ExecSession struct {
-	Cache                             *executorCache  // Deprecated: use Session for tracking, sub-backend caches for data
-	Session                           *sessionTracker // Per-session create/drop tracking
-	Fragments                         map[string]*ast.DefineFragmentStmt
-	Settings                          map[string]any
-	ScriptDepth                       int
-	DescribingMicroflowHasReturnValue bool
-}
-
-// ExecConnection holds project connection state and external services.
-type ExecConnection struct {
-	MprPath        string
-	BackendFactory BackendFactory
-	SqlMgr         *sqllib.Manager
-	ThemeRegistry  *ThemeRegistry
-	// Graph is the in-memory project graph. *ProjectGraph implements both
-	// graphcatalog.TraversalReader (executor code-search) and LintReader
-	// (linter), so a single concrete-typed field serves both consumers.
-	Graph *graphcatalog.ProjectGraph
-	// Perf collects timing statistics when non-nil.
-	Perf *PerfTimer
-}
-
-// ExecCallbacks holds function references for recursive execution.
-type ExecCallbacks struct {
-	ExecuteFn        func(ast.Statement) error
-	ExecuteProgramFn func(*ast.Program) error
-	FinalizeFn       func() error
-	SyncGraph        func(*graphcatalog.ProjectGraph)
-}
-
 // ExecContext carries all dependencies a statement handler needs.
 //
-// Fields are grouped into embedded sub-structs by responsibility.
-// All ctx.Xxx field accesses continue to work via Go field promotion;
-// only struct literal initializers need to use the sub-struct names.
+// NOTE: ExecRepos, ExecIO, ExecSession, ExecConnection, and ExecCallbacks were
+// previously separate embedded sub-structs. Their fields are now promoted
+// directly into ExecContext for the migration to HandlerDeps. All field
+// access via ectx.Xxx continues to work unchanged.
 type ExecContext struct {
 	context.Context
 
@@ -843,11 +790,49 @@ type ExecContext struct {
 	ScriptTransactionManager    backend.ScriptTransactionManager
 	AgentEditorOperator         backend.AgentEditorOperator
 
-	ExecRepos
-	ExecIO
-	ExecSession
-	ExecConnection
-	ExecCallbacks
+	// ── Former ExecRepos fields ──
+	Microflows        repos.MicroflowRepository
+	Nanoflows         repos.NanoflowRepository
+	Security          repos.SecurityRepository
+	JavaActions       repos.JavaActionRepository
+	JavaScriptActions repos.JavaScriptActionRepository
+	DomainModels      repos.DomainModelRepository
+	Workflows         repos.WorkflowRepository
+	Pages             repos.PageRepository
+	Layouts           repos.LayoutRepository
+	Snippets          repos.SnippetRepository
+
+	// ── Former ExecIO fields ──
+	Output       io.Writer
+	StatusOutput io.Writer
+	Format       OutputFormat
+	Quiet        bool
+
+	// ── Former ExecSession fields ──
+	Cache                             *executorCache  // Deprecated: use Session for tracking, sub-backend caches for data
+	Session                           *sessionTracker // Per-session create/drop tracking
+	Fragments                         map[string]*ast.DefineFragmentStmt
+	Settings                          map[string]any
+	ScriptDepth                       int
+	DescribingMicroflowHasReturnValue bool
+
+	// ── Former ExecConnection fields ──
+	MprPath string
+	// BackendFactory holds the factory function (func() backend.ConnectionBackend).
+	// Used by execConnect/reconnect to create new backend instances.
+	// NOTE: separate from backendFactory (private, backend.BackendFactory interface)
+	// which is set after backend creation for initRoles().
+	BackendFactory BackendFactory
+	SqlMgr        *sqllib.Manager
+	ThemeRegistry *ThemeRegistry
+	Graph         *graphcatalog.ProjectGraph
+	Perf          *PerfTimer
+
+	// ── Former ExecCallbacks fields ──
+	ExecuteFn        func(ast.Statement) error
+	ExecuteProgramFn func(*ast.Program) error
+	FinalizeFn       func() error
+	SyncGraph        func(*graphcatalog.ProjectGraph)
 }
 
 // initRoles populates the role-specific backend fields. Prefers

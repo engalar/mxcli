@@ -58,9 +58,7 @@ func newMiningContext(be backend.FullBackend) *executor.ExecContext {
 	return &executor.ExecContext{
 		Context: context.Background(),
 		Backend: be,
-		ExecIO: executor.ExecIO{
-			Output: io.Discard,
-			Quiet:  true,
-		},
+		Output:  io.Discard,
+		Quiet:   true,
 	}
 }

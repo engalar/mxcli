@@ -45,7 +45,7 @@ var basicFormatters = []struct{ factory FormatterFactory }{
 type legacyDelegate struct{ raw map[string]any }
 
 func (f *legacyDelegate) FormatMDL(ctx *FormatContext) {
-	outputWidgetMDLV3(&ExecContext{ExecIO: ExecIO{Output: ctx.Output}}, rawWidgetFromMap(f.raw), ctx.Indent)
+	outputWidgetMDLV3(&ExecContext{Output: ctx.Output}, rawWidgetFromMap(f.raw), ctx.Indent)
 }
 
 func actionButtonFactory(raw map[string]any) WidgetFormatter { return &legacyDelegate{raw: raw} }

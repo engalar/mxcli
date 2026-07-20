@@ -59,8 +59,8 @@ func scriptCtx(t *testing.T, tx *mockScriptTx, execFn func(ast.Statement) error)
 	ctx := &ExecContext{
 		Context:       context.Background(),
 		Backend:       mb,
-		ExecIO:        ExecIO{Output: &buf, Format: FormatTable},
-		ExecCallbacks: ExecCallbacks{ExecuteFn: execFn},
+		Output: &buf, Format: FormatTable,
+		ExecuteFn: execFn,
 	}
 	ctx.initRoles()
 	return ctx, &buf
@@ -146,8 +146,8 @@ func TestExecuteScript_NotConnected_NoTransaction(t *testing.T) {
 	ctx := &ExecContext{
 		Context:       context.Background(),
 		Backend:       mb,
-		ExecIO:        ExecIO{Output: &buf, Format: FormatTable},
-		ExecCallbacks: ExecCallbacks{ExecuteFn: func(stmt ast.Statement) error { return nil }},
+		Output: &buf, Format: FormatTable,
+		ExecuteFn: func(stmt ast.Statement) error { return nil },
 	}
 	ctx.initRoles()
 	if err := execExecuteScript(ctx, &ast.ExecuteScriptStmt{Path: path}); err != nil {
@@ -179,7 +179,7 @@ func TestExecuteScript_Nested_ReusesOuterTransaction(t *testing.T) {
 	ctx := &ExecContext{
 		Context: context.Background(),
 		Backend: mb,
-		ExecIO:  ExecIO{Output: &buf, Format: FormatTable},
+		Output: &buf, Format: FormatTable,
 	}
 	ctx.initRoles()
 	// ExecuteFn re-enters execExecuteScript for nested EXECUTE SCRIPT

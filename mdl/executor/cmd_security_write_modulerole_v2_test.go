@@ -54,7 +54,7 @@ func TestCreateModuleRole_OverwritesAutoProvisioned(t *testing.T) {
 
 	ctx := &ExecContext{
 		Backend: mb,
-		ExecIO:  ExecIO{Output: &strings.Builder{}, Quiet: true},
+		Output: &strings.Builder{}, Quiet: true,
 	}
 	ctx.initRoles()
 

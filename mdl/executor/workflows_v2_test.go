@@ -26,8 +26,8 @@ func newListWorkflowsTestCtx(t *testing.T, wfs []*genWf.Workflow) *ExecContext {
 	}
 	var buf bytes.Buffer
 	ctx := &ExecContext{
-		ExecRepos: ExecRepos{Workflows: repo},
-		ExecIO:    ExecIO{Output: &buf, Format: FormatTable},
+		Workflows: repo,
+		Output: &buf, Format: FormatTable,
 	}
 	ctx.ensureCache()
 	return ctx

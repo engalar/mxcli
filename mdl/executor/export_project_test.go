@@ -63,7 +63,7 @@ func TestMarketplaceFileContent(t *testing.T) {
 func TestCaptureDescribeFunc_WritesToBuffer(t *testing.T) {
 	var buf bytes.Buffer
 	ctx := &ExecContext{
-		ExecIO: ExecIO{Output: &buf},
+		Output: &buf,
 	}
 
 	result, err := captureDescribeFunc(ctx, func(c *ExecContext) error {
@@ -232,7 +232,7 @@ func TestRoundTrip_ExportThenImport(t *testing.T) {
 	origMods, _ := origBe.ListModules()
 	origCtx := &ExecContext{
 		Backend:     origBe,
-		ExecSession: ExecSession{Cache: &executorCache{}},
+		Cache: &executorCache{},
 	}
 	origCtx.initRoles()
 	origEntityCount := 0
@@ -265,7 +265,7 @@ func TestRoundTrip_ExportThenImport(t *testing.T) {
 	importMods, _ := importBe.ListModules()
 	importCtx := &ExecContext{
 		Backend:     importBe,
-		ExecSession: ExecSession{Cache: &executorCache{}},
+		Cache: &executorCache{},
 	}
 	importCtx.initRoles()
 	importEntityCount := 0

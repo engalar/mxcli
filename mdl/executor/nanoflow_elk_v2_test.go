@@ -37,8 +37,8 @@ func newGenVizContext(t *testing.T, out *bytes.Buffer) *ExecContext {
 
 	_ctx := &ExecContext{
 		Backend:   be,
-		ExecRepos: ExecRepos{Microflows: repoCtx.Microflows, Nanoflows: repoCtx.Nanoflows},
-		ExecIO:    ExecIO{Output: out},
+		Microflows: repoCtx.Microflows, Nanoflows: repoCtx.Nanoflows,
+		Output: out,
 	}
 	_ctx.initRoles()
 	return _ctx

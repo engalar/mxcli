@@ -73,8 +73,8 @@ func newGenDescribeContext(t *testing.T, w *mmpr.Writer) *ExecContext {
 
 	_ctx := &ExecContext{
 		Backend:   be,
-		ExecRepos: ExecRepos{Microflows: repoCtx.Microflows, Nanoflows: repoCtx.Nanoflows},
-		ExecIO:    ExecIO{Output: io.Discard},
+		Microflows: repoCtx.Microflows, Nanoflows: repoCtx.Nanoflows,
+		Output: io.Discard,
 	}
 	_ctx.initRoles()
 	return _ctx
@@ -697,7 +697,7 @@ func TestDescribeMicroflowGenToString_NestedLoopBodyComplete(t *testing.T) {
 	mf.AddFlows(makeFlow(sv1ID, sv2ID))
 
 	ctx := &ExecContext{
-		ExecIO: ExecIO{Output: io.Discard},
+		Output: io.Discard,
 	}
 	ctx.initRoles()
 	out, err := DescribeMicroflowGenToString(ctx, mf)

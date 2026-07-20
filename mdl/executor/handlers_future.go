@@ -2754,19 +2754,15 @@ func execShowStructureGenFuture(ctx context.Context, output io.Writer, format Ou
 // delegates to execConnect, then syncs mutated fields back.
 func execConnectFuture(ctx context.Context, s *ast.ConnectStmt, ex *Executor) error {
 	tmpCtx := &ExecContext{
-		Context: ctx,
-		ExecIO: ExecIO{
-			Output:       ex.guard,
-			StatusOutput: ex.statusOutput,
-			Format:       ex.guard.format,
-			Quiet:        ex.guard.quiet,
-		},
-		ExecConnection: ExecConnection{
-			BackendFactory: ex.backendFactory,
-			MprPath:        ex.mprPath,
-			Graph:          ex.graphCatalog,
-		},
-		Logger: ex.logger,
+		Context:       ctx,
+		Output:        ex.guard,
+		StatusOutput:  ex.statusOutput,
+		Format:        ex.guard.format,
+		Quiet:         ex.guard.quiet,
+		BackendFactory: ex.backendFactory,
+		MprPath:       ex.mprPath,
+		Graph:         ex.graphCatalog,
+		Logger:        ex.logger,
 	}
 	if ex.backend != nil {
 		tmpCtx.Backend = ex.backend
@@ -2805,12 +2801,10 @@ func execDisconnectFuture(ctx context.Context, ex *Executor) error {
 		Context:           ctx,
 		Backend:           ex.backend,
 		ConnectionManager: ex.backend,
-		ExecIO:            ExecIO{Output: ex.guard},
-		ExecConnection:    ExecConnection{MprPath: ex.mprPath},
-		ExecCallbacks: ExecCallbacks{
-			FinalizeFn: ex.finalizeProgramExecution,
-		},
-		Logger: ex.logger,
+		Output:            ex.guard,
+		MprPath:           ex.mprPath,
+		FinalizeFn:        ex.finalizeProgramExecution,
+		Logger:            ex.logger,
 	}
 	if ex.cache != nil {
 		tmpCtx.Cache = ex.cache
@@ -2863,17 +2857,13 @@ func execRefreshFuture(ctx context.Context, deps *HandlerDeps, ex *Executor) err
 // execExecuteScriptFuture is the ExecContext-free version of execExecuteScript.
 func execExecuteScriptFuture(ctx context.Context, s *ast.ExecuteScriptStmt, deps *HandlerDeps, ex *Executor) error {
 	tmpCtx := &ExecContext{
-		Context:           ctx,
-		Backend:           ex.backend,
-		ConnectionManager: deps.ConnectionManager,
-		ExecIO:            ExecIO{Output: deps.Output},
-		ExecConnection: ExecConnection{
-			BackendFactory: ex.backendFactory,
-		},
-		ExecCallbacks: ExecCallbacks{
-			ExecuteFn:        ex.Execute,
-			ExecuteProgramFn: ex.ExecuteProgram,
-		},
+		Context:                  ctx,
+		Backend:                  ex.backend,
+		ConnectionManager:        deps.ConnectionManager,
+		Output:                   deps.Output,
+		BackendFactory:           ex.backendFactory,
+		ExecuteFn:                ex.Execute,
+		ExecuteProgramFn:         ex.ExecuteProgram,
 		ScriptTransactionManager: deps.ScriptTransactionManager,
 		Logger:                   deps.Logger,
 	}
@@ -2902,42 +2892,37 @@ func NewExecContext(ctx context.Context, deps *HandlerDeps) *ExecContext {
 	ectx := &ExecContext{
 		Context:   ctx,
 		Logger:    deps.Logger,
-		ExecRepos: ExecRepos{
-			DomainModels:      deps.DomainModels,
-			Microflows:        deps.MicroflowRepo,
-			Nanoflows:         deps.NanoflowRepo,
-			Security:          deps.Security,
-			JavaActions:       deps.JavaActionRepo,
-			JavaScriptActions: deps.JavaScriptActionRepo,
-			Workflows:         deps.WorkflowRepo,
-			Pages:             deps.PageRepo,
-			Layouts:           deps.LayoutRepo,
-			Snippets:          deps.SnippetRepo,
-		},
-		ExecIO: ExecIO{
-			Output:       deps.Output,
-			StatusOutput: deps.StatusOutput,
-			Format:       deps.Format,
-			Quiet:        deps.Quiet,
-		},
-		ExecSession: ExecSession{
-			Cache:     deps.Cache,
-			Session:   deps.Session,
-			Fragments: deps.Fragments,
-			Settings:  deps.Settings,
-		},
-		ExecConnection: ExecConnection{
-			MprPath:        deps.MprPath,
-			BackendFactory: deps.BackendFactory,
-			Graph:          deps.Graph,
-			Perf:           deps.Perf,
-		},
-		ExecCallbacks: ExecCallbacks{
-			ExecuteFn:        deps.ExecuteFn,
-			ExecuteProgramFn: deps.ExecuteProgramFn,
-			FinalizeFn:       deps.FinalizeFn,
-			SyncGraph:        deps.SyncGraph,
-		},
+
+		Output:       deps.Output,
+		StatusOutput: deps.StatusOutput,
+		Format:       deps.Format,
+		Quiet:        deps.Quiet,
+
+		Fragments: deps.Fragments,
+		Settings:  deps.Settings,
+		Cache:     deps.Cache,
+		Session:   deps.Session,
+
+		MprPath:        deps.MprPath,
+		BackendFactory: deps.BackendFactory,
+		Graph:          deps.Graph,
+		Perf:           deps.Perf,
+
+		DomainModels:      deps.DomainModels,
+		Microflows:        deps.MicroflowRepo,
+		Nanoflows:         deps.NanoflowRepo,
+		Security:          deps.Security,
+		JavaActions:       deps.JavaActionRepo,
+		JavaScriptActions: deps.JavaScriptActionRepo,
+		Workflows:         deps.WorkflowRepo,
+		Pages:             deps.PageRepo,
+		Layouts:           deps.LayoutRepo,
+		Snippets:          deps.SnippetRepo,
+
+		ExecuteFn:        deps.ExecuteFn,
+		ExecuteProgramFn: deps.ExecuteProgramFn,
+		FinalizeFn:       deps.FinalizeFn,
+		SyncGraph:        deps.SyncGraph,
 	}
 	// Populate role-specific backend fields from deps.
 	ectx.ConnectionManager = deps.ConnectionManager

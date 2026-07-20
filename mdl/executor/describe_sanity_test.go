@@ -204,8 +204,8 @@ func newSanityContext(t *testing.T, w *mmpr.Writer) *ExecContext {
 	t.Cleanup(func() { _ = be.Disconnect() })
 	ctx := &ExecContext{
 		Backend:   be,
-		ExecRepos: ExecRepos{Microflows: repoCtx.Microflows, DomainModels: repoCtx.DomainModels},
-		ExecIO:    ExecIO{Output: io.Discard},
+		Microflows: repoCtx.Microflows, DomainModels: repoCtx.DomainModels,
+		Output: io.Discard,
 	}
 	ctx.initRoles()
 	// Cache the listDomainModelsWithContainerGen result so the entity

@@ -25,8 +25,8 @@ func newSecurityTestContext(t *testing.T) *ExecContext {
 
 	ctx := &ExecContext{
 		Backend:   be,
-		ExecRepos: ExecRepos{Security: repoCtx.Security, DomainModels: repoCtx.DomainModels, Pages: repoCtx.Pages},
-		ExecIO:    ExecIO{Output: io.Discard},
+		Security: repoCtx.Security, DomainModels: repoCtx.DomainModels, Pages: repoCtx.Pages,
+		Output: io.Discard,
 	}
 	ctx.initRoles()
 	ctx.ensureCache()

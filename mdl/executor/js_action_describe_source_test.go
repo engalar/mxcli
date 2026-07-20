@@ -36,11 +36,9 @@ func TestDescribeJavaScriptActionGen_SourceFileComplete(t *testing.T) {
 
 	ctx := &ExecContext{
 		Backend: be,
-		ExecConnection: ExecConnection{
 			MprPath: path,
-		},
-		ExecRepos: ExecRepos{JavaActions: mprrepos.NewJavaActionRepository(w), JavaScriptActions: mprrepos.NewJavaScriptActionRepository(w)},
-		ExecIO:    ExecIO{Output: io.Discard},
+		JavaActions: mprrepos.NewJavaActionRepository(w), JavaScriptActions: mprrepos.NewJavaScriptActionRepository(w),
+		Output: io.Discard,
 	}
 	ctx.initRoles()
 	ctx.ensureCache()
@@ -142,11 +140,9 @@ func TestDescribeJavaScriptActionGen_NoSourceFile(t *testing.T) {
 
 	ctx := &ExecContext{
 		Backend: be,
-		ExecConnection: ExecConnection{
 			MprPath: path,
-		},
-		ExecRepos: ExecRepos{JavaActions: mprrepos.NewJavaActionRepository(w), JavaScriptActions: mprrepos.NewJavaScriptActionRepository(w)},
-		ExecIO:    ExecIO{Output: io.Discard},
+		JavaActions: mprrepos.NewJavaActionRepository(w), JavaScriptActions: mprrepos.NewJavaScriptActionRepository(w),
+		Output: io.Discard,
 	}
 	ctx.initRoles()
 	ctx.ensureCache()

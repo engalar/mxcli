@@ -23,7 +23,7 @@ func (m *mockDMBackend) GetDomainModelGen(moduleID model.ID) (*genDm.DomainModel
 func newDMCtx(mb *mockDMBackend) *ExecContext {
 	_ctx := &ExecContext{
 		Backend:     mb,
-		ExecSession: ExecSession{Cache: &executorCache{}},
+		Cache: &executorCache{},
 	}
 	_ctx.initRoles()
 	return _ctx
@@ -91,7 +91,7 @@ func TestGetDomainModelGenCached_NilCacheInitializes(t *testing.T) {
 	mb := &mockDMBackend{dm: dm}
 	ctx := &ExecContext{
 		Backend:     mb,
-		ExecSession: ExecSession{Cache: nil},
+		Cache: nil,
 	}
 	ctx.initRoles()
 

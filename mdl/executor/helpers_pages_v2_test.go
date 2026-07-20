@@ -27,7 +27,7 @@ func newPagesCacheTestContext(t *testing.T, pages []*genPg.Page, containerID str
 		},
 	}
 	ctx := &ExecContext{
-		ExecRepos: ExecRepos{Pages: repo},
+		Pages: repo,
 	}
 	ctx.ensureCache()
 	return ctx
@@ -91,7 +91,7 @@ func TestListPagesWithContainerGen_PropagatesListError(t *testing.T) {
 		ListAllFunc: func() ([]*genPg.Page, error) { return nil, wantErr },
 	}
 	ctx := &ExecContext{
-		ExecRepos: ExecRepos{Pages: repo},
+		Pages: repo,
 	}
 	ctx.ensureCache()
 	_, err := listPagesWithContainerGen(ctx)
@@ -113,7 +113,7 @@ func TestListLayoutsWithContainerGen_CachesAcrossCalls(t *testing.T) {
 		},
 	}
 	ctx := &ExecContext{
-		ExecRepos: ExecRepos{Layouts: repo},
+		Layouts: repo,
 	}
 	ctx.ensureCache()
 
@@ -147,7 +147,7 @@ func TestListSnippetsWithContainerGen_CachesAcrossCalls(t *testing.T) {
 		},
 	}
 	ctx := &ExecContext{
-		ExecRepos: ExecRepos{Snippets: repo},
+		Snippets: repo,
 	}
 	ctx.ensureCache()
 

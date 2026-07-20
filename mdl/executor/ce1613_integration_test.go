@@ -82,8 +82,8 @@ func TestWarnBrokenCallerRefs_OutputFormat(t *testing.T) {
 
 	var buf bytes.Buffer
 	ctx := &ExecContext{
-		ExecRepos: ExecRepos{Microflows: repo},
-		ExecIO:    ExecIO{Output: &buf},
+		Microflows: repo,
+		Output: &buf,
 	}
 
 	warnBrokenCallerRefs(ctx, targetQN, []string{"OldParam"})
@@ -128,7 +128,7 @@ func TestMFCallerRefFixer_EndToEnd_RemovesAndUpdates(t *testing.T) {
 	}
 
 	ctx := &ExecContext{
-		ExecRepos: ExecRepos{Microflows: repo},
+		Microflows: repo,
 	}
 	fixer := NewMFCallerRefFixer(ctx)
 
