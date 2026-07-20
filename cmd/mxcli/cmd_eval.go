@@ -64,7 +64,7 @@ Examples:
   mxcli eval check docs/14-eval/eval-1.md -p app.mpr --output eval-results/
 `,
 	Args: cobra.ExactArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		projectPath, _ := cmd.Flags().GetString("project")
 		testID, _ := cmd.Flags().GetString("test")
 		skipMxCheck, _ := cmd.Flags().GetBool("skip-mx-check")
@@ -73,8 +73,7 @@ Examples:
 		color, _ := cmd.Flags().GetBool("color")
 
 		if projectPath == "" {
-			fmt.Fprintln(os.Stderr, "Error: --project (-p) is required")
-			os.Exit(1)
+			return fmt.Errorf("--project (-p) is required")
 		}
 
 		// Resolve mxcli path: use self if not specified
@@ -93,8 +92,7 @@ Examples:
 
 		fi, err := os.Stat(path)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-			os.Exit(1)
+			return fmt.Errorf("accessing path %s: %w", path, err)
 		}
 
 		if fi.IsDir() {
@@ -107,8 +105,7 @@ Examples:
 			}
 		}
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error parsing eval tests: %v\n", err)
-			os.Exit(1)
+			return fmt.Errorf("parsing eval tests: %w", err)
 		}
 
 		// Filter by test ID if specified
@@ -120,15 +117,13 @@ Examples:
 				}
 			}
 			if len(filtered) == 0 {
-				fmt.Fprintf(os.Stderr, "Error: no eval test with ID %q found\n", testID)
-				os.Exit(1)
+				return fmt.Errorf("no eval test with ID %q found", testID)
 			}
 			tests = filtered
 		}
 
 		if len(tests) == 0 {
-			fmt.Fprintln(os.Stderr, "Error: no eval tests found")
-			os.Exit(1)
+			return fmt.Errorf("no eval tests found")
 		}
 
 		// Set up check options
@@ -183,8 +178,9 @@ Examples:
 		}
 
 		if !allPassed {
-			os.Exit(1)
+			return fmt.Errorf("some eval tests failed")
 		}
+		return nil
 	},
 }
 
@@ -239,10 +235,10 @@ Examples:
   mxcli eval list docs/14-eval/eval-1.md
 `,
 	Args: cobra.RangeArgs(0, 1),
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) == 0 {
 			_ = cmd.Help()
-			return
+			return nil
 		}
 		path := args[0]
 		var tests []*evalrunner.EvalTest
@@ -250,8 +246,7 @@ Examples:
 
 		fi, statErr := os.Stat(path)
 		if statErr != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", statErr)
-			os.Exit(1)
+			return fmt.Errorf("accessing path: %w", statErr)
 		}
 
 		if fi.IsDir() {
@@ -264,13 +259,12 @@ Examples:
 			}
 		}
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-			os.Exit(1)
+			return fmt.Errorf("parsing eval tests: %w", err)
 		}
 
 		if len(tests) == 0 {
 			fmt.Fprintln(os.Stdout, "No eval tests found.")
-			return
+			return nil
 		}
 
 		fmt.Fprintf(os.Stdout, "%-12s %-15s %8s %10s  %s\n", "ID", "Category", "Checks", "Iteration", "Title")
@@ -292,5 +286,6 @@ Examples:
 		}
 
 		fmt.Fprintf(os.Stdout, "\n%d eval test(s) found.\n", len(tests))
+		return nil
 	},
 }

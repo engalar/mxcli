@@ -77,7 +77,7 @@ Examples:
   mxcli lint -p app.mpr --format sarif > results.sarif
   mxcli lint -p app.mpr --list-rules
 `,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		projectPath, _ := cmd.Flags().GetString("project")
 		format := resolveFormat(cmd, "text")
 		useColor, _ := cmd.Flags().GetBool("color")
@@ -85,8 +85,7 @@ Examples:
 		excludeModules, _ := cmd.Flags().GetStringSlice("exclude")
 
 		if projectPath == "" {
-			fmt.Fprintln(os.Stderr, "Error: --project (-p) is required")
-			os.Exit(1)
+			return fmt.Errorf("--project (-p) is required")
 		}
 
 		// Create executor and connect
@@ -97,16 +96,14 @@ Examples:
 		connectProg, _ := visitor.Build(fmt.Sprintf("CONNECT LOCAL '%s'", projectPath))
 		for _, stmt := range connectProg.Statements {
 			if err := exec.Execute(stmt); err != nil {
-				fmt.Fprintf(os.Stderr, "Error connecting: %v\n", err)
-				os.Exit(1)
+				return fmt.Errorf("connecting: %w", err)
 			}
 		}
 
 		// Build the project graph (required for linting)
 		pg, err := exec.BuildGraph()
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error building project graph: %v\n", err)
-			os.Exit(1)
+			return fmt.Errorf("building project graph: %w", err)
 		}
 
 		// Create lint context
@@ -156,28 +153,27 @@ Examples:
 				fmt.Printf("      Category: %s, Severity: %s\n", rule.Category(), rule.DefaultSeverity())
 				fmt.Println()
 			}
-			return
+			return nil
 		}
 
 		// Run linting
 		violations, err := lint.Run(context.Background())
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error running linter: %v\n", err)
-			os.Exit(1)
+			return fmt.Errorf("running linter: %w", err)
 		}
 
 		// Output results
 		outputFormat := linter.OutputFormat(format)
 		formatter := linter.GetFormatter(outputFormat, useColor)
 		if err := formatter.Format(violations, os.Stdout); err != nil {
-			fmt.Fprintf(os.Stderr, "Error formatting output: %v\n", err)
-			os.Exit(1)
+			return fmt.Errorf("formatting output: %w", err)
 		}
 
 		// Exit with error if there are errors
 		summary := linter.Summarize(violations)
 		if summary.Errors > 0 {
-			os.Exit(1)
+			return fmt.Errorf("lint found %d error(s)", summary.Errors)
 		}
+		return nil
 	},
 }

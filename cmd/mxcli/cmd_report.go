@@ -36,15 +36,14 @@ Examples:
   mxcli report -p app.mpr --format html --output report.html
   mxcli report -p app.mpr --format markdown --output report.md
 `,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		projectPath, _ := cmd.Flags().GetString("project")
 		format := resolveFormat(cmd, "markdown")
 		outputPath, _ := cmd.Flags().GetString("output")
 		excludeModules, _ := cmd.Flags().GetStringSlice("exclude")
 
 		if projectPath == "" {
-			fmt.Fprintln(os.Stderr, "Error: --project (-p) is required")
-			os.Exit(1)
+			return fmt.Errorf("--project (-p) is required")
 		}
 
 		// Create executor and connect
@@ -55,16 +54,14 @@ Examples:
 		connectProg, _ := visitor.Build(fmt.Sprintf("CONNECT LOCAL '%s'", projectPath))
 		for _, stmt := range connectProg.Statements {
 			if err := exec.Execute(stmt); err != nil {
-				fmt.Fprintf(os.Stderr, "Error connecting: %v\n", err)
-				os.Exit(1)
+				return fmt.Errorf("connecting: %w", err)
 			}
 		}
 
 		// Build the project graph (report needs comprehensive data)
 		pg, err := exec.BuildGraph()
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error building project graph: %v\n", err)
-			os.Exit(1)
+			return fmt.Errorf("building project graph: %w", err)
 		}
 
 		// Create lint context
@@ -108,8 +105,7 @@ Examples:
 		// Run all rules
 		violations, err := lint.Run(context.Background())
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error running linter: %v\n", err)
-			os.Exit(1)
+			return fmt.Errorf("running linter: %w", err)
 		}
 
 		// Derive project name from path
@@ -131,8 +127,7 @@ Examples:
 			var err error
 			writer, err = os.Create(outputPath)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "Error creating output file: %v\n", err)
-				os.Exit(1)
+				return fmt.Errorf("creating output file: %w", err)
 			}
 			defer writer.Close()
 		} else {
@@ -140,12 +135,12 @@ Examples:
 		}
 
 		if err := formatter.FormatReport(report, writer); err != nil {
-			fmt.Fprintf(os.Stderr, "Error formatting report: %v\n", err)
-			os.Exit(1)
+			return fmt.Errorf("formatting report: %w", err)
 		}
 
 		if outputPath != "" {
 			fmt.Fprintf(os.Stderr, "Report written to %s\n", outputPath)
 		}
+		return nil
 	},
 }
