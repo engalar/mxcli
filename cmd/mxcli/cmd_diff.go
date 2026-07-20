@@ -65,7 +65,7 @@ Examples:
   mxcli diff script -p app.mpr changes.mdl --color
 `,
 	Args: cobra.ExactArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		filePath := args[0]
 		projectPath, _ := cmd.Flags().GetString("project")
 		format, _ := cmd.Flags().GetString("format")
@@ -73,14 +73,12 @@ Examples:
 		width, _ := cmd.Flags().GetInt("width")
 
 		if projectPath == "" {
-			fmt.Fprintln(os.Stderr, "Error: --project (-p) is required")
-			os.Exit(1)
+			return fmt.Errorf("--project (-p) is required")
 		}
 
 		content, err := os.ReadFile(filePath)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error reading file: %v\n", err)
-			os.Exit(1)
+			return fmt.Errorf("reading file: %w", err)
 		}
 
 		prog, errs := visitor.Build(string(content))
@@ -89,7 +87,7 @@ Examples:
 			for _, err := range errs {
 				fmt.Fprintf(os.Stderr, "  - %v\n", err)
 			}
-			os.Exit(1)
+			return fmt.Errorf("syntax errors in script")
 		}
 
 		exec, logger := buildExec("subcommand", cmd.OutOrStdout())
@@ -99,8 +97,7 @@ Examples:
 		connectProg, _ := visitor.Build(fmt.Sprintf("CONNECT LOCAL '%s'", projectPath))
 		for _, stmt := range connectProg.Statements {
 			if err := exec.Execute(stmt); err != nil {
-				fmt.Fprintf(os.Stderr, "Error connecting: %v\n", err)
-				os.Exit(1)
+				return fmt.Errorf("connecting: %w", err)
 			}
 		}
 
@@ -111,13 +108,13 @@ Examples:
 		}
 
 		if err := exec.DiffProgram(prog, opts); err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-			os.Exit(1)
+			return fmt.Errorf("diff: %w", err)
 		}
+		return nil
 	},
 }
 
-func runDiffLocal(cmd *cobra.Command, args []string) {
+func runDiffLocal(cmd *cobra.Command, args []string) error {
 	projectPath, _ := cmd.Flags().GetString("project")
 	ref, _ := cmd.Flags().GetString("ref")
 	format, _ := cmd.Flags().GetString("format")
@@ -125,8 +122,7 @@ func runDiffLocal(cmd *cobra.Command, args []string) {
 	width, _ := cmd.Flags().GetInt("width")
 
 	if projectPath == "" {
-		fmt.Fprintln(os.Stderr, "Error: --project (-p) is required")
-		os.Exit(1)
+		return fmt.Errorf("--project (-p) is required")
 	}
 
 	if ref == "" {
@@ -140,8 +136,7 @@ func runDiffLocal(cmd *cobra.Command, args []string) {
 	connectProg, _ := visitor.Build(fmt.Sprintf("CONNECT LOCAL '%s'", projectPath))
 	for _, stmt := range connectProg.Statements {
 		if err := exec.Execute(stmt); err != nil {
-			fmt.Fprintf(os.Stderr, "Error connecting: %v\n", err)
-			os.Exit(1)
+			return fmt.Errorf("connecting: %w", err)
 		}
 	}
 
@@ -152,9 +147,9 @@ func runDiffLocal(cmd *cobra.Command, args []string) {
 	}
 
 	if err := exec.DiffLocal(ref, opts); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("diff-local: %w", err)
 	}
+	return nil
 }
 
 var diffLocalCmd = &cobra.Command{
@@ -186,7 +181,7 @@ Examples:
   # With structural format
   mxcli diff-local -p app.mpr --format struct --color
 `,
-	Run: runDiffLocal,
+	RunE: runDiffLocal,
 }
 
 var diffLocalSubCmd = &cobra.Command{
@@ -201,7 +196,7 @@ Examples:
   mxcli diff local -p app.mpr
   mxcli diff local -p app.mpr --ref main
 `,
-	Run: runDiffLocal,
+	RunE: runDiffLocal,
 }
 
 var diffBsonCompareCmd = &cobra.Command{
@@ -223,24 +218,22 @@ Examples:
   mxcli diff bson-compare -p app.mpr --type workflow --all WF1 WF2
 `,
 	Args: cobra.RangeArgs(1, 2),
-	Run:  runBsonCompare,
+	RunE: runBsonCompare,
 }
 
-func runBsonCompare(cmd *cobra.Command, args []string) {
+func runBsonCompare(cmd *cobra.Command, args []string) error {
 	projectPath, _ := cmd.Flags().GetString("project")
 	secondProject, _ := cmd.Flags().GetString("p2")
 	objectType, _ := cmd.Flags().GetString("type")
 	includeAll, _ := cmd.Flags().GetBool("all")
 
 	if projectPath == "" {
-		fmt.Fprintln(os.Stderr, "Error: --project (-p) is required")
-		os.Exit(1)
+		return fmt.Errorf("--project (-p) is required")
 	}
 
 	reader1, err := mmpr.Open(projectPath)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error opening project: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("opening project: %w", err)
 	}
 	defer reader1.Close()
 
@@ -254,22 +247,19 @@ func runBsonCompare(cmd *cobra.Command, args []string) {
 		if secondProject != "" {
 			reader2, err = mmpr.Open(secondProject)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "Error opening second project: %v\n", err)
-				os.Exit(1)
+				return fmt.Errorf("opening second project: %w", err)
 			}
 			defer reader2.Close()
 		}
 	case 1:
 		if secondProject == "" {
-			fmt.Fprintln(os.Stderr, "Error: provide two names, or one name with -p2 for cross-MPR comparison")
-			os.Exit(1)
+			return fmt.Errorf("provide two names, or one name with -p2 for cross-MPR comparison")
 		}
 		leftName = args[0]
 		rightName = args[0]
 		reader2, err = mmpr.Open(secondProject)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error opening second project: %v\n", err)
-			os.Exit(1)
+			return fmt.Errorf("opening second project: %w", err)
 		}
 		defer reader2.Close()
 	}
@@ -281,41 +271,35 @@ func runBsonCompare(cmd *cobra.Command, args []string) {
 
 	leftUnit, err := reader1.GetRawUnitByName(objectType, leftName)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error getting %s: %v\n", leftName, err)
-		os.Exit(1)
+		return fmt.Errorf("getting %s: %w", leftName, err)
 	}
 
 	rightUnit, err := rightReader.GetRawUnitByName(objectType, rightName)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error getting %s: %v\n", rightName, err)
-		os.Exit(1)
+		return fmt.Errorf("getting %s: %w", rightName, err)
 	}
 
 	format, _ := cmd.Flags().GetString("format")
 	if format == "ndsl" {
 		var leftDocD, rightDocD bson.D
 		if err := bson.Unmarshal(leftUnit.Contents, &leftDocD); err != nil {
-			fmt.Fprintf(os.Stderr, "Error parsing BSON for %s: %v\n", leftName, err)
-			os.Exit(1)
+			return fmt.Errorf("parsing BSON for %s: %w", leftName, err)
 		}
 		if err := bson.Unmarshal(rightUnit.Contents, &rightDocD); err != nil {
-			fmt.Fprintf(os.Stderr, "Error parsing BSON for %s: %v\n", rightName, err)
-			os.Exit(1)
+			return fmt.Errorf("parsing BSON for %s: %w", rightName, err)
 		}
 		fmt.Printf("=== LEFT: %s ===\n%s\n\n=== RIGHT: %s ===\n%s\n",
 			leftName, bsondebug.Render(leftDocD, 0),
 			rightName, bsondebug.Render(rightDocD, 0))
-		return
+		return nil
 	}
 
 	var leftDoc, rightDoc bson.M
 	if err := bson.Unmarshal(leftUnit.Contents, &leftDoc); err != nil {
-		fmt.Fprintf(os.Stderr, "Error parsing BSON for %s: %v\n", leftName, err)
-		os.Exit(1)
+		return fmt.Errorf("parsing BSON for %s: %w", leftName, err)
 	}
 	if err := bson.Unmarshal(rightUnit.Contents, &rightDoc); err != nil {
-		fmt.Fprintf(os.Stderr, "Error parsing BSON for %s: %v\n", rightName, err)
-		os.Exit(1)
+		return fmt.Errorf("parsing BSON for %s: %w", rightName, err)
 	}
 
 	opts := bsondebug.CompareOptions{IncludeAll: includeAll}
@@ -332,6 +316,7 @@ func runBsonCompare(cmd *cobra.Command, args []string) {
 	}
 
 	fmt.Println(bsondebug.FormatDiffs(diffs))
+	return nil
 }
 
 var diffBsonDiffCmd = &cobra.Command{
