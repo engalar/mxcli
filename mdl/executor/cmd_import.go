@@ -29,7 +29,7 @@ func ExecImportFn(ctx context.Context, s *ast.ImportStmt, deps *HandlerDeps) err
 	}
 
 	// Get source connection (auto-connects from config if needed)
-	ectx := NewExecContext(ctx, deps)
+	ectx := newMinimalExecCtx(ctx, deps)
 	sourceConn, err := getOrAutoConnect(ectx, s.SourceAlias)
 	if err != nil {
 		return fmt.Errorf("source connection: %w", err)
@@ -120,7 +120,7 @@ func resolveImportLinksFn(ctx context.Context, deps *HandlerDeps, goCtx context.
 	}
 	targetModule := targetParts[0]
 
-	ectx := NewExecContext(ctx, deps)
+	ectx := newMinimalExecCtx(ctx, deps)
 	dms, err := listDomainModelsWithContainerGen(ectx)
 	if err != nil {
 		return nil, mdlerrors.NewBackend("list domain models", err)

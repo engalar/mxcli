@@ -66,8 +66,7 @@ func ExecDropNanoflowGenFn(ctx context.Context, s *ast.DropNanoflowStmt, deps *H
 		if nf == nil {
 			continue
 		}
-		ectx := NewExecContext(ctx, deps)
-		modName := genFlowContainerModule(ectx, h, model.ID(nf.ID()))
+		modName := genFlowContainerModuleDeps(deps, h, model.ID(nf.ID()))
 		if modName != s.Name.Module || nf.Name() != s.Name.Name {
 			continue
 		}

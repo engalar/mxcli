@@ -1680,8 +1680,7 @@ func ExecCreateODataClientFn(ctx context.Context, s *ast.CreateODataClientStmt, 
 		return err
 	}
 
-	ectx := NewExecContext(ctx, deps)
-	module, err := findModule(ectx, s.Name.Module)
+	module, err := findModuleDeps(ctx, deps, s.Name.Module)
 	if err != nil {
 		return err
 	}
@@ -1689,7 +1688,7 @@ func ExecCreateODataClientFn(ctx context.Context, s *ast.CreateODataClientStmt, 
 	// Check if client already exists
 	services, err := deps.ServiceLister.ListConsumedODataServices()
 	if err == nil {
-		h, _ := getHierarchy(ectx)
+		h, _ := GetOrBuildHierarchy(deps)
 		for _, svc := range services {
 			modID := h.FindModuleID(svc.ContainerID)
 			modName := h.GetModuleName(modID)
@@ -1767,7 +1766,7 @@ func ExecCreateODataClientFn(ctx context.Context, s *ast.CreateODataClientStmt, 
 					if err := deps.ServiceWriter.UpdateConsumedODataService(svc); err != nil {
 						return mdlerrors.NewBackend("update OData client", err)
 					}
-					invalidateHierarchy(ectx)
+					invalidateHierarchyDeps(deps)
 					fmt.Fprintf(deps.Output, "Modified OData client: %s.%s\n", modName, svc.Name)
 					return nil
 				}
@@ -1778,7 +1777,7 @@ func ExecCreateODataClientFn(ctx context.Context, s *ast.CreateODataClientStmt, 
 
 	containerID := module.ID
 	if s.Folder != "" {
-		folderID, err := resolveFolder(ectx, module.ID, s.Folder, nil)
+		folderID, err := resolveFolderDeps(deps, module.ID, s.Folder, nil)
 		if err != nil {
 			return mdlerrors.NewBackend(fmt.Sprintf("resolve folder %s", s.Folder), err)
 		}
@@ -1864,7 +1863,7 @@ Got: %s`, s.ServiceUrl)
 	if err := deps.ServiceWriter.CreateConsumedODataService(newSvc); err != nil {
 		return mdlerrors.NewBackend("create OData client", err)
 	}
-	invalidateHierarchy(ectx)
+	invalidateHierarchyDeps(deps)
 	fmt.Fprintf(deps.Output, "Created OData client: %s.%s\n", s.Name.Module, s.Name.Name)
 	if newSvc.Metadata != "" {
 		if doc, err := types.ParseEdmx(newSvc.Metadata); err == nil {
@@ -1891,8 +1890,7 @@ func ExecAlterODataClientFn(ctx context.Context, s *ast.AlterODataClientStmt, de
 		return mdlerrors.NewBackend("list consumed OData services", err)
 	}
 
-	ectx := NewExecContext(ctx, deps)
-	h, err := getHierarchy(ectx)
+	h, err := GetOrBuildHierarchy(deps)
 	if err != nil {
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}
@@ -1964,7 +1962,7 @@ func ExecAlterODataClientFn(ctx context.Context, s *ast.AlterODataClientStmt, de
 			if err := deps.ServiceWriter.UpdateConsumedODataService(svc); err != nil {
 				return mdlerrors.NewBackend("alter OData client", err)
 			}
-			invalidateHierarchy(ectx)
+			invalidateHierarchyDeps(deps)
 			fmt.Fprintf(deps.Output, "Altered OData client: %s.%s\n", modName, svc.Name)
 			return nil
 		}
@@ -1984,8 +1982,7 @@ func ExecDropODataClientFn(ctx context.Context, s *ast.DropODataClientStmt, deps
 		return mdlerrors.NewBackend("list consumed OData services", err)
 	}
 
-	ectx := NewExecContext(ctx, deps)
-	h, err := getHierarchy(ectx)
+	h, err := GetOrBuildHierarchy(deps)
 	if err != nil {
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}
@@ -1995,11 +1992,11 @@ func ExecDropODataClientFn(ctx context.Context, s *ast.DropODataClientStmt, deps
 		modName := h.GetModuleName(modID)
 		if strings.EqualFold(modName, s.Name.Module) && strings.EqualFold(svc.Name, s.Name.Name) {
 			serviceRef := modName + "." + svc.Name
-			module, findErr := findModule(ectx, s.Name.Module)
+			module, findErr := findModuleDeps(ctx, deps, s.Name.Module)
 			if findErr != nil {
 				return findErr
 			}
-			dm, dmErr := getDomainModelGenCached(ectx, module.ID)
+			dm, dmErr := getDomainModelGenCachedDeps(ctx, deps, module.ID)
 			if dmErr != nil {
 				return mdlerrors.NewBackend("get domain model for cascade", dmErr)
 			}
@@ -2016,13 +2013,13 @@ func ExecDropODataClientFn(ctx context.Context, s *ast.DropODataClientStmt, deps
 				}
 			}
 			if len(externalEntityIDs) > 0 {
-				invalidateDomainModelGenForModule(ectx, module.ID)
+				invalidateDomainModelGenForModuleDeps(deps, module.ID)
 			}
 
 			if err := deps.ServiceWriter.DeleteConsumedODataService(svc.ID); err != nil {
 				return mdlerrors.NewBackend("drop OData client", err)
 			}
-			invalidateHierarchy(ectx)
+			invalidateHierarchyDeps(deps)
 			fmt.Fprintf(deps.Output, "Dropped OData client: %s.%s\n", modName, svc.Name)
 			return nil
 		}
@@ -2041,15 +2038,14 @@ func ExecCreateODataServiceFn(ctx context.Context, s *ast.CreateODataServiceStmt
 		return mdlerrors.NewValidation("module name required: use create odata service Module.Name (...)")
 	}
 
-	ectx := NewExecContext(ctx, deps)
-	module, err := findModule(ectx, s.Name.Module)
+	module, err := findModuleDeps(ctx, deps, s.Name.Module)
 	if err != nil {
 		return err
 	}
 
 	services, err := deps.ServiceLister.ListPublishedODataServices()
 	if err == nil {
-		h, _ := getHierarchy(ectx)
+		h, _ := GetOrBuildHierarchy(deps)
 		for _, svc := range services {
 			modID := h.FindModuleID(svc.ContainerID)
 			modName := h.GetModuleName(modID)
@@ -2084,7 +2080,7 @@ func ExecCreateODataServiceFn(ctx context.Context, s *ast.CreateODataServiceStmt
 					if err := deps.ServiceWriter.UpdatePublishedODataService(svc); err != nil {
 						return mdlerrors.NewBackend("update OData service", err)
 					}
-					invalidateHierarchy(ectx)
+					invalidateHierarchyDeps(deps)
 					fmt.Fprintf(deps.Output, "Modified OData service: %s.%s\n", modName, svc.Name)
 					return nil
 				}
@@ -2095,7 +2091,7 @@ func ExecCreateODataServiceFn(ctx context.Context, s *ast.CreateODataServiceStmt
 
 	containerID := module.ID
 	if s.Folder != "" {
-		folderID, err := resolveFolder(ectx, module.ID, s.Folder, nil)
+		folderID, err := resolveFolderDeps(deps, module.ID, s.Folder, nil)
 		if err != nil {
 			return mdlerrors.NewBackend(fmt.Sprintf("resolve folder %s", s.Folder), err)
 		}
@@ -2126,7 +2122,7 @@ func ExecCreateODataServiceFn(ctx context.Context, s *ast.CreateODataServiceStmt
 	if err := deps.ServiceWriter.CreatePublishedODataService(newSvc); err != nil {
 		return mdlerrors.NewBackend("create OData service", err)
 	}
-	invalidateHierarchy(ectx)
+	invalidateHierarchyDeps(deps)
 	fmt.Fprintf(deps.Output, "Created OData service: %s.%s\n", s.Name.Module, s.Name.Name)
 	return nil
 }
@@ -2142,8 +2138,7 @@ func ExecAlterODataServiceFn(ctx context.Context, s *ast.AlterODataServiceStmt, 
 		return mdlerrors.NewBackend("list published OData services", err)
 	}
 
-	ectx := NewExecContext(ctx, deps)
-	h, err := getHierarchy(ectx)
+	h, err := GetOrBuildHierarchy(deps)
 	if err != nil {
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}
@@ -2178,7 +2173,7 @@ func ExecAlterODataServiceFn(ctx context.Context, s *ast.AlterODataServiceStmt, 
 			if err := deps.ServiceWriter.UpdatePublishedODataService(svc); err != nil {
 				return mdlerrors.NewBackend("alter OData service", err)
 			}
-			invalidateHierarchy(ectx)
+			invalidateHierarchyDeps(deps)
 			fmt.Fprintf(deps.Output, "Altered OData service: %s.%s\n", modName, svc.Name)
 			return nil
 		}
@@ -2198,8 +2193,7 @@ func ExecDropODataServiceFn(ctx context.Context, s *ast.DropODataServiceStmt, de
 		return mdlerrors.NewBackend("list published OData services", err)
 	}
 
-	ectx := NewExecContext(ctx, deps)
-	h, err := getHierarchy(ectx)
+	h, err := GetOrBuildHierarchy(deps)
 	if err != nil {
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}
@@ -2211,7 +2205,7 @@ func ExecDropODataServiceFn(ctx context.Context, s *ast.DropODataServiceStmt, de
 			if err := deps.ServiceWriter.DeletePublishedODataService(svc.ID); err != nil {
 				return mdlerrors.NewBackend("drop OData service", err)
 			}
-			invalidateHierarchy(ectx)
+			invalidateHierarchyDeps(deps)
 			fmt.Fprintf(deps.Output, "Dropped OData service: %s.%s\n", modName, svc.Name)
 			return nil
 		}
@@ -2230,17 +2224,16 @@ func ExecCreateExternalEntityFn(ctx context.Context, s *ast.CreateExternalEntity
 		return mdlerrors.NewValidation("module name required: use create external entity Module.Name from odata client ...")
 	}
 
-	ectx := NewExecContext(ctx, deps)
-	module, err := findModule(ectx, s.Name.Module)
+	module, err := findModuleDeps(ctx, deps, s.Name.Module)
 	if err != nil {
 		return err
 	}
 
-	if err := validateODataClientExists(ectx, s.ServiceRef); err != nil {
+	if err := validateODataClientExistsDeps(ctx, deps, s.ServiceRef); err != nil {
 		return err
 	}
 
-	dm, err := getDomainModelGenCached(ectx, module.ID)
+	dm, err := getDomainModelGenCachedDeps(ctx, deps, module.ID)
 	if err != nil {
 		return mdlerrors.NewBackend("get domain model", err)
 	}
@@ -2272,7 +2265,7 @@ func ExecCreateExternalEntityFn(ctx context.Context, s *ast.CreateExternalEntity
 		if err := deps.DomainModelWriter.UpdateEntityGen(model.ID(dm.ID()), existingEntity); err != nil {
 			return mdlerrors.NewBackend("update external entity", err)
 		}
-		invalidateDomainModelGenForModule(ectx, module.ID)
+		invalidateDomainModelGenForModuleDeps(deps, module.ID)
 		fmt.Fprintf(deps.Output, "Modified external entity: %s.%s\n", s.Name.Module, s.Name.Name)
 		return nil
 	}
@@ -2289,54 +2282,54 @@ func ExecCreateExternalEntityFn(ctx context.Context, s *ast.CreateExternalEntity
 	if err := deps.DomainModelWriter.CreateEntityGen(model.ID(dm.ID()), newEntity); err != nil {
 		return mdlerrors.NewBackend("create external entity", err)
 	}
-	invalidateDomainModelGenForModule(ectx, module.ID)
+	invalidateDomainModelGenForModuleDeps(deps, module.ID)
 	fmt.Fprintf(deps.Output, "Created external entity: %s.%s\n", s.Name.Module, s.Name.Name)
 	return nil
 }
 
 // listODataClientsDeps is the HandlerDeps version of listODataClients.
 func listODataClientsDeps(ctx context.Context, deps *HandlerDeps, format OutputFormat, moduleName string) error {
-	tmpCtx := NewExecContext(ctx, deps)
+	tmpCtx := newMinimalExecCtx(ctx, deps)
 	tmpCtx.Format = format
 	return listODataClients(tmpCtx, moduleName)
 }
 
 // listODataServicesDeps is the HandlerDeps version of listODataServices.
 func listODataServicesDeps(ctx context.Context, deps *HandlerDeps, format OutputFormat, moduleName string) error {
-	tmpCtx := NewExecContext(ctx, deps)
+	tmpCtx := newMinimalExecCtx(ctx, deps)
 	tmpCtx.Format = format
 	return listODataServices(tmpCtx, moduleName)
 }
 
 // listExternalEntitiesDeps is the HandlerDeps version of listExternalEntities.
 func listExternalEntitiesDeps(ctx context.Context, deps *HandlerDeps, format OutputFormat, moduleName string) error {
-	tmpCtx := NewExecContext(ctx, deps)
+	tmpCtx := newMinimalExecCtx(ctx, deps)
 	tmpCtx.Format = format
 	return listExternalEntities(tmpCtx, moduleName)
 }
 
 // listExternalActionsDeps is the HandlerDeps version of listExternalActions.
 func listExternalActionsDeps(ctx context.Context, deps *HandlerDeps, format OutputFormat, moduleName string) error {
-	tmpCtx := NewExecContext(ctx, deps)
+	tmpCtx := newMinimalExecCtx(ctx, deps)
 	tmpCtx.Format = format
 	return listExternalActions(tmpCtx, moduleName)
 }
 
 // describeODataClientDeps is the HandlerDeps version of describeODataClient.
 func describeODataClientDeps(ctx context.Context, deps *HandlerDeps, name ast.QualifiedName) error {
-	tmpCtx := NewExecContext(ctx, deps)
+	tmpCtx := newMinimalExecCtx(ctx, deps)
 	return describeODataClient(tmpCtx, name)
 }
 
 // describeODataServiceDeps is the HandlerDeps version of describeODataService.
 func describeODataServiceDeps(ctx context.Context, deps *HandlerDeps, name ast.QualifiedName) error {
-	tmpCtx := NewExecContext(ctx, deps)
+	tmpCtx := newMinimalExecCtx(ctx, deps)
 	return describeODataService(tmpCtx, name)
 }
 
 // describeExternalEntityDeps is the HandlerDeps version of describeExternalEntity.
 func describeExternalEntityDeps(ctx context.Context, deps *HandlerDeps, name ast.QualifiedName) error {
-	tmpCtx := NewExecContext(ctx, deps)
+	tmpCtx := newMinimalExecCtx(ctx, deps)
 	return describeExternalEntity(tmpCtx, name)
 }
 

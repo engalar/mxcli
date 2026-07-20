@@ -35,8 +35,7 @@ func ExecGrantODataServiceAccessGenFn(ctx context.Context, s *ast.GrantODataServ
 	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
-	ectx := NewExecContext(ctx, deps)
-	h, err := getHierarchy(ectx)
+	h, err := getHierarchyDeps(deps)
 	if err != nil {
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}
@@ -52,7 +51,7 @@ func ExecGrantODataServiceAccessGenFn(ctx context.Context, s *ast.GrantODataServ
 		}
 		var validRoles []ast.QualifiedName
 		for _, role := range s.Roles {
-			found, err := validateModuleRole(ectx, role)
+			found, err := validateModuleRoleFn(deps, role)
 			if err != nil {
 				return err
 			}
@@ -82,8 +81,7 @@ func ExecRevokeODataServiceAccessGenFn(ctx context.Context, s *ast.RevokeODataSe
 	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
-	ectx := NewExecContext(ctx, deps)
-	h, err := getHierarchy(ectx)
+	h, err := getHierarchyDeps(deps)
 	if err != nil {
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}
@@ -116,13 +114,12 @@ func ExecGrantPublishedRestServiceAccessGenFn(ctx context.Context, s *ast.GrantP
 	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
-	ectx := NewExecContext(ctx, deps)
 	if err := checkFeatureFn(ctx, deps, "integration", "published_rest_grant_revoke",
 		"grant access on published rest service",
 		"upgrade your project to 10.0+"); err != nil {
 		return err
 	}
-	h, err := getHierarchy(ectx)
+	h, err := getHierarchyDeps(deps)
 	if err != nil {
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}
@@ -138,7 +135,7 @@ func ExecGrantPublishedRestServiceAccessGenFn(ctx context.Context, s *ast.GrantP
 		}
 		var validRoles []ast.QualifiedName
 		for _, role := range s.Roles {
-			found, err := validateModuleRole(ectx, role)
+			found, err := validateModuleRoleFn(deps, role)
 			if err != nil {
 				return err
 			}
@@ -168,8 +165,7 @@ func ExecRevokePublishedRestServiceAccessGenFn(ctx context.Context, s *ast.Revok
 	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
-	ectx := NewExecContext(ctx, deps)
-	h, err := getHierarchy(ectx)
+	h, err := getHierarchyDeps(deps)
 	if err != nil {
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}

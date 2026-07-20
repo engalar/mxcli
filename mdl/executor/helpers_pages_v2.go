@@ -249,6 +249,40 @@ func listSnippetsWithContainerGenDeps(ctx context.Context, deps *HandlerDeps) ([
 	return out, nil
 }
 
+// listLayoutsWithContainerGenDeps is the HandlerDeps version of listLayoutsWithContainerGen.
+func listLayoutsWithContainerGenDeps(deps *HandlerDeps) ([]ContainerWithGen[*genPg.Layout], error) {
+	if deps == nil || deps.LayoutRepo == nil {
+		return nil, nil
+	}
+	if deps.Cache != nil && deps.Cache.layoutsWithContainerGen != nil {
+		return deps.Cache.layoutsWithContainerGen, nil
+	}
+
+	all, err := deps.LayoutRepo.ListAll()
+	if err != nil {
+		return nil, err
+	}
+	filtered := all[:0]
+	for _, l := range all {
+		if l != nil {
+			filtered = append(filtered, l)
+		}
+	}
+
+	var out []ContainerWithGen[*genPg.Layout]
+	for _, l := range filtered {
+		cid, err := deps.LayoutRepo.GetContainerUUID(model.ID(l.ID()))
+		if err != nil {
+			continue
+		}
+		out = append(out, ContainerWithGen[*genPg.Layout]{Elem: l, ContainerID: element.ID(cid)})
+	}
+	if deps.Cache != nil {
+		deps.Cache.layoutsWithContainerGen = out
+	}
+	return out, nil
+}
+
 // invalidatePagesGenCacheDeps is the HandlerDeps version of invalidatePagesGenCache.
 func invalidatePagesGenCacheDeps(deps *HandlerDeps) {
 	if deps == nil || deps.Cache == nil {
@@ -314,6 +348,44 @@ func findPageIDGen(ctx *ExecContext, name ast.QualifiedName, h *ContainerHierarc
 // findSnippetIDGen mirrors findPageIDGen for snippets.
 func findSnippetIDGen(ctx *ExecContext, name ast.QualifiedName, h *ContainerHierarchy) (model.ID, error) {
 	pairs, err := listSnippetsWithContainerGen(ctx)
+	if err != nil {
+		return "", mdlerrors.NewBackend("list snippets", err)
+	}
+	for _, p := range pairs {
+		if p.Elem == nil {
+			continue
+		}
+		modID := h.FindModuleID(model.ID(p.ContainerID))
+		modName := h.GetModuleName(modID)
+		if p.Elem.Name() == name.Name && (name.Module == "" || modName == name.Module) {
+			return model.ID(p.Elem.ID()), nil
+		}
+	}
+	return "", mdlerrors.NewNotFound("snippet", name.String())
+}
+
+// findPageIDGenDeps is the HandlerDeps version of findPageIDGen.
+func findPageIDGenDeps(deps *HandlerDeps, name ast.QualifiedName, h *ContainerHierarchy) (model.ID, error) {
+	pairs, err := listPagesWithContainerGenDeps(context.Background(), deps)
+	if err != nil {
+		return "", mdlerrors.NewBackend("list pages", err)
+	}
+	for _, p := range pairs {
+		if p.Elem == nil {
+			continue
+		}
+		modID := h.FindModuleID(model.ID(p.ContainerID))
+		modName := h.GetModuleName(modID)
+		if p.Elem.Name() == name.Name && (name.Module == "" || modName == name.Module) {
+			return model.ID(p.Elem.ID()), nil
+		}
+	}
+	return "", mdlerrors.NewNotFound("page", name.String())
+}
+
+// findSnippetIDGenDeps is the HandlerDeps version of findSnippetIDGen.
+func findSnippetIDGenDeps(deps *HandlerDeps, name ast.QualifiedName, h *ContainerHierarchy) (model.ID, error) {
+	pairs, err := listSnippetsWithContainerGenDeps(context.Background(), deps)
 	if err != nil {
 		return "", mdlerrors.NewBackend("list snippets", err)
 	}

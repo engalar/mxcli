@@ -17,8 +17,7 @@ func ExecAlterProjectSecurityGenFn(ctx context.Context, s *ast.AlterProjectSecur
 	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
-	ectx := NewExecContext(ctx, deps)
-	ps, err := getProjectSecurityGen(ectx)
+	ps, err := getProjectSecurityGenDeps(deps)
 	if err != nil || ps == nil {
 		return mdlerrors.NewBackend("read project security", err)
 	}
@@ -37,14 +36,18 @@ func ExecAlterProjectSecurityGenFn(ctx context.Context, s *ast.AlterProjectSecur
 		if err := deps.SecurityProjectManager.SetProjectSecurityLevel(model.ID(ps.ID()), bsonLevel); err != nil {
 			return mdlerrors.NewBackend("set security level", err)
 		}
-		invalidateProjectSecurityCache(ectx)
+		if deps.Cache != nil {
+			deps.Cache.projectSecurityGen = nil
+		}
 		fmt.Fprintf(deps.Output, "Set project security level to %s\n", s.SecurityLevel)
 	}
 	if s.DemoUsersEnabled != nil {
 		if err := deps.SecurityProjectManager.SetProjectDemoUsersEnabled(model.ID(ps.ID()), *s.DemoUsersEnabled); err != nil {
 			return mdlerrors.NewBackend("set demo users", err)
 		}
-		invalidateProjectSecurityCache(ectx)
+		if deps.Cache != nil {
+			deps.Cache.projectSecurityGen = nil
+		}
 		state := "disabled"
 		if *s.DemoUsersEnabled {
 			state = "enabled"

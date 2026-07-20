@@ -596,3 +596,213 @@ func sortScheduledEvents(events []*model.ScheduledEvent) {
 		return strings.ToLower(events[i].Name) < strings.ToLower(events[j].Name)
 	})
 }
+
+// getStructureModulesDeps is the HandlerDeps version of getStructureModules.
+func getStructureModulesDeps(deps *HandlerDeps, filterModule string, includeAll bool) ([]structureModule, error) {
+	mods, err := deps.ModuleLister.ListModules()
+	if err != nil {
+		return nil, mdlerrors.NewBackend("list modules", err)
+	}
+
+	var modules []structureModule
+	for _, m := range mods {
+		if filterModule != "" && !strings.EqualFold(m.Name, filterModule) {
+			continue
+		}
+		if !includeAll && !isUserModule(m.Name, "", "") {
+			continue
+		}
+		modules = append(modules, structureModule{Name: m.Name, ID: m.ID})
+	}
+
+	sort.Slice(modules, func(i, j int) bool {
+		return strings.ToLower(modules[i].Name) < strings.ToLower(modules[j].Name)
+	})
+
+	return modules, nil
+}
+
+// structureDepth1JSONDeps is the HandlerDeps version of structureDepth1JSON.
+func structureDepth1JSONDeps(deps *HandlerDeps, modules []structureModule) error {
+	if deps.Format != FormatJSON {
+		return nil
+	}
+	tr := &TableResult{
+		Columns: []string{"Module"},
+	}
+	for _, m := range modules {
+		tr.Rows = append(tr.Rows, []any{m.Name})
+	}
+	return writeResultDeps(deps, tr)
+}
+
+// structureDepth1Deps is the HandlerDeps version of structureDepth1.
+func structureDepth1Deps(deps *HandlerDeps, modules []structureModule) error {
+	constantCounts := countByModuleFromBackendDeps(deps, "constants")
+	scheduledEventCounts := countByModuleFromBackendDeps(deps, "scheduled_events")
+
+	nameWidth := 0
+	for _, m := range modules {
+		if len(m.Name) > nameWidth {
+			nameWidth = len(m.Name)
+		}
+	}
+
+	for _, m := range modules {
+		var parts []string
+		if c := constantCounts[m.Name]; c > 0 {
+			parts = append(parts, pluralize(c, "constant", "constants"))
+		}
+		if c := scheduledEventCounts[m.Name]; c > 0 {
+			parts = append(parts, pluralize(c, "scheduled event", "scheduled events"))
+		}
+		if len(parts) > 0 {
+			fmt.Fprintf(deps.Output, "%-*s  %s\n", nameWidth, m.Name, strings.Join(parts, ", "))
+		}
+	}
+	return nil
+}
+
+// countByModuleFromBackendDeps is the HandlerDeps version of countByModuleFromBackend.
+func countByModuleFromBackendDeps(deps *HandlerDeps, kind string) map[string]int {
+	counts := make(map[string]int)
+	h, err := getHierarchyDeps(deps)
+	if err != nil {
+		return counts
+	}
+
+	switch kind {
+	case "constants":
+		if constants, err := deps.ConstantReader.ListConstants(); err == nil {
+			for _, c := range constants {
+				modID := h.FindModuleID(c.ContainerID)
+				modName := h.GetModuleName(modID)
+				counts[modName]++
+			}
+		}
+	case "scheduled_events":
+		if events, err := deps.ScheduledEventReader.ListScheduledEvents(); err == nil {
+			for _, ev := range events {
+				modID := h.FindModuleID(ev.ContainerID)
+				modName := h.GetModuleName(modID)
+				counts[modName]++
+			}
+		}
+	}
+	return counts
+}
+
+// structurePagesDeps is the HandlerDeps version of structurePages.
+func structurePagesDeps(deps *HandlerDeps, moduleName string) {
+	if deps.PageRepo == nil {
+		return
+	}
+	pages, err := deps.PageRepo.ListAll()
+	if err != nil {
+		return
+	}
+	h, err := getHierarchyDeps(deps)
+	if err != nil {
+		return
+	}
+	for _, p := range pages {
+		if p == nil {
+			continue
+		}
+		containerID, err := deps.PageRepo.GetContainerUUID(model.ID(p.ID()))
+		if err != nil || containerID == "" {
+			continue
+		}
+		modID := h.FindModuleID(containerID)
+		modName := h.GetModuleName(modID)
+		if modName == moduleName {
+			fmt.Fprintf(deps.Output, "  Page %s.%s\n", moduleName, p.Name())
+		}
+	}
+}
+
+// structureSnippetsDeps is the HandlerDeps version of structureSnippets.
+func structureSnippetsDeps(deps *HandlerDeps, moduleName string) {
+	if deps.SnippetRepo == nil {
+		return
+	}
+	snippets, err := deps.SnippetRepo.ListAll()
+	if err != nil {
+		return
+	}
+	h, err := getHierarchyDeps(deps)
+	if err != nil {
+		return
+	}
+	for _, s := range snippets {
+		if s == nil {
+			continue
+		}
+		containerID, err := deps.SnippetRepo.GetContainerUUID(model.ID(s.ID()))
+		if err != nil || containerID == "" {
+			continue
+		}
+		modID := h.FindModuleID(containerID)
+		modName := h.GetModuleName(modID)
+		if modName == moduleName {
+			fmt.Fprintf(deps.Output, "  Snippet %s.%s\n", moduleName, s.Name())
+		}
+	}
+}
+
+// outputJavaActionsGenDeps is the HandlerDeps version of outputJavaActionsGen.
+func outputJavaActionsGenDeps(deps *HandlerDeps, moduleName string, actions []*genJA.JavaAction, withNames bool) {
+	if len(actions) == 0 {
+		return
+	}
+	sorted := make([]*genJA.JavaAction, len(actions))
+	copy(sorted, actions)
+	sort.Slice(sorted, func(i, j int) bool {
+		return strings.ToLower(sorted[i].Name()) < strings.ToLower(sorted[j].Name())
+	})
+	for _, ja := range sorted {
+		sig := formatJavaActionSignatureGen(ja, withNames)
+		fmt.Fprintf(deps.Output, "  JavaAction %s.%s%s\n", moduleName, ja.Name(), sig)
+	}
+}
+
+// structureWorkflowsDeps is the HandlerDeps version of structureWorkflows.
+func structureWorkflowsDeps(deps *HandlerDeps, moduleName string, wfs []*genWf.Workflow, withDetails bool) {
+	if len(wfs) == 0 {
+		return
+	}
+
+	sorted := make([]*genWf.Workflow, len(wfs))
+	copy(sorted, wfs)
+	sort.Slice(sorted, func(i, j int) bool {
+		return strings.ToLower(sorted[i].Name()) < strings.ToLower(sorted[j].Name())
+	})
+
+	for _, wf := range sorted {
+		qualName := moduleName + "." + wf.Name()
+		var parts []string
+
+		total, userTasks, _, decisions := countStructureWorkflowActivitiesGen(wf)
+		if total > 0 {
+			parts = append(parts, pluralize(total, "activity", "activities"))
+		}
+		if userTasks > 0 {
+			parts = append(parts, pluralize(userTasks, "user task", "user tasks"))
+		}
+		if decisions > 0 {
+			parts = append(parts, pluralize(decisions, "decision", "decisions"))
+		}
+
+		if withDetails {
+			if entity := workflowParameterEntityGen(wf); entity != "" {
+				parts = append(parts, "param: "+shortName(entity))
+			}
+		}
+
+		if len(parts) > 0 {
+			fmt.Fprintf(deps.Output, "  Workflow %s (%s)\n", qualName, strings.Join(parts, ", "))
+		} else {
+			fmt.Fprintf(deps.Output, "  Workflow %s\n", qualName)
+		}
+	}
+}

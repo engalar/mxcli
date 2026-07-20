@@ -57,7 +57,7 @@ func ExecCreateNanoflowGenFn(ctx context.Context, s *ast.CreateNanoflowStmt, dep
 		return mdlerrors.NewValidation("nanoflow name must not be empty")
 	}
 
-	ectx := NewExecContext(ctx, deps)
+	ectx := newMinimalExecCtx(ctx, deps)
 	module, err := findOrCreateModule(ectx, s.Name.Module)
 	if err != nil {
 		return err
@@ -413,8 +413,7 @@ func defaultDocumentAccessRoleQNames(ctx *ExecContext, module *model.Module) []s
 
 // defaultDocumentAccessRoleQNamesFn is the HandlerDeps version of defaultDocumentAccessRoleQNames.
 func defaultDocumentAccessRoleQNamesFn(deps *HandlerDeps, module *model.Module) []string {
-	ectx := NewExecContext(nil, deps)
-	ids := defaultDocumentAccessRoles(ectx, module)
+	ids := defaultDocumentAccessRolesDeps(deps, module)
 	if len(ids) == 0 {
 		return nil
 	}

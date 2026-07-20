@@ -35,8 +35,7 @@ func ExecCreateDemoUserGenFn(ctx context.Context, s *ast.CreateDemoUserStmt, dep
 	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
-	ectx := NewExecContext(ctx, deps)
-	ps, err := getProjectSecurityGen(ectx)
+	ps, err := getProjectSecurityGenDeps(deps)
 	if err != nil {
 		return mdlerrors.NewBackend("read project security", err)
 	}
@@ -81,7 +80,9 @@ func ExecCreateDemoUserGenFn(ctx context.Context, s *ast.CreateDemoUserStmt, dep
 		if err := deps.SecurityProjectManager.AddDemoUser(model.ID(ps.ID()), s.UserName, s.Password, entity, mergedRoles); err != nil {
 			return mdlerrors.NewBackend("update demo user", err)
 		}
-		invalidateProjectSecurityCache(ectx)
+		if deps.Cache != nil {
+			deps.Cache.projectSecurityGen = nil
+		}
 		fmt.Fprintf(deps.Output, "Modified demo user: %s\n", s.UserName)
 		return nil
 	}
@@ -96,7 +97,9 @@ func ExecCreateDemoUserGenFn(ctx context.Context, s *ast.CreateDemoUserStmt, dep
 	if err := deps.SecurityProjectManager.AddDemoUser(model.ID(ps.ID()), s.UserName, s.Password, entity, s.UserRoles); err != nil {
 		return mdlerrors.NewBackend("create demo user", err)
 	}
-	invalidateProjectSecurityCache(ectx)
+	if deps.Cache != nil {
+		deps.Cache.projectSecurityGen = nil
+	}
 	fmt.Fprintf(deps.Output, "Created demo user: %s (entity: %s)\n", s.UserName, entity)
 	return nil
 }
@@ -106,8 +109,7 @@ func ExecDropDemoUserGenFn(ctx context.Context, s *ast.DropDemoUserStmt, deps *H
 	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
-	ectx := NewExecContext(ctx, deps)
-	ps, err := getProjectSecurityGen(ectx)
+	ps, err := getProjectSecurityGenDeps(deps)
 	if err != nil {
 		return mdlerrors.NewBackend("read project security", err)
 	}
@@ -131,15 +133,59 @@ func ExecDropDemoUserGenFn(ctx context.Context, s *ast.DropDemoUserStmt, deps *H
 	if err := deps.SecurityProjectManager.RemoveDemoUser(model.ID(ps.ID()), s.UserName); err != nil {
 		return mdlerrors.NewBackend("drop demo user", err)
 	}
-	invalidateProjectSecurityCache(ectx)
+	if deps.Cache != nil {
+		deps.Cache.projectSecurityGen = nil
+	}
 	fmt.Fprintf(deps.Output, "Dropped demo user: %s\n", s.UserName)
 	return nil
 }
 
 // detectUserEntityGenFn is the HandlerDeps version of detectUserEntityGen.
 func detectUserEntityGenFn(ctx context.Context, deps *HandlerDeps) (string, error) {
-	ectx := NewExecContext(ctx, deps)
-	return detectUserEntityGen(ectx)
+	modules, err := deps.ModuleLister.ListModules()
+	if err != nil {
+		return "", mdlerrors.NewBackend("list modules", err)
+	}
+	moduleNameByID := make(map[model.ID]string, len(modules))
+	for _, m := range modules {
+		moduleNameByID[m.ID] = m.Name
+	}
+
+	h, err := getHierarchyDeps(deps)
+	if err != nil {
+		return "", mdlerrors.NewBackend("build hierarchy", err)
+	}
+
+	dms, err := cachedDomainModelsGenDeps(deps)
+	if err != nil {
+		return "", mdlerrors.NewBackend("list domain models", err)
+	}
+
+	var candidates []string
+	for _, dm := range dms {
+		if dm == nil {
+			continue
+		}
+		moduleName := moduleNameByID[h.FindModuleID(model.ID(dm.ID()))]
+		for _, entityElem := range dm.EntitiesItems() {
+			ent, ok := entityElem.(*genDm.Entity)
+			if !ok {
+				continue
+			}
+			if entityGeneralizationQNGen(ent) == "System.User" {
+				candidates = append(candidates, moduleName+"."+ent.Name())
+			}
+		}
+	}
+
+	switch len(candidates) {
+	case 0:
+		return "System.User", nil
+	case 1:
+		return candidates[0], nil
+	default:
+		return "", mdlerrors.NewValidationf("multiple entities generalize System.User: %s; use entity clause to specify one", joinCandidatesGen(candidates))
+	}
 }
 
 // validatePasswordPolicy checks the password against all configured rules.

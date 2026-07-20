@@ -31,8 +31,7 @@ func execAlterWorkflowDepsImpl(ctx context.Context, s *ast.AlterWorkflowStmt, de
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}
 
-	// Use temp ExecContext for deep workflow helper chains
-	tmpCtx := NewExecContext(ctx, deps)
+	tmpCtx := newMinimalExecCtx(ctx, deps)
 
 	pairs, err := listWorkflowsWithContainerGen(tmpCtx)
 	if err != nil {

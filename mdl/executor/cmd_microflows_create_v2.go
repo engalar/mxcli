@@ -67,7 +67,7 @@ func ExecCreateMicroflowGenFn(ctx context.Context, s *ast.CreateMicroflowStmt, d
 		return mdlerrors.NewValidation("microflow name must not be empty")
 	}
 
-	ectx := NewExecContext(ctx, deps)
+	ectx := newMinimalExecCtx(ctx, deps)
 	module, err := findOrCreateModule(ectx, s.Name.Module)
 	if err != nil {
 		return err

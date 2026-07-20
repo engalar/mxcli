@@ -208,12 +208,11 @@ func executeGeneratedMDLFn(deps *HandlerDeps, mdl string) error {
 	if len(errs) > 0 {
 		return mdlerrors.NewBackend("parse generated MDL", fmt.Errorf("%v", errs[0]))
 	}
-	// Use the Executor's ExecuteProgram through a temporary ExecContext.
-	ectx := NewExecContext(context.Background(), deps)
-	if ectx.ExecuteProgramFn == nil {
-		return mdlerrors.NewBackend("execute generated MDL", fmt.Errorf("ExecuteProgramFn not set — ExecContext was not created via Executor dispatch"))
+	// Use the Executor's ExecuteProgram through deps.
+	if deps.ExecuteProgramFn == nil {
+		return mdlerrors.NewBackend("execute generated MDL", fmt.Errorf("ExecuteProgramFn not set — HandlerDeps was not created via Executor dispatch"))
 	}
-	return ectx.ExecuteProgramFn(prog)
+	return deps.ExecuteProgramFn(prog)
 }
 
 // ExecSQLDescribeTableFn handles SQL <alias> DESCRIBE <table> with HandlerDeps.

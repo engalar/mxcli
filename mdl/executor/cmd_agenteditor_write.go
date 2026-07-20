@@ -18,12 +18,11 @@ func ExecCreateConsumedMCPServiceFn(ctx context.Context, s *ast.CreateConsumedMC
 	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnected()
 	}
-	ectx := NewExecContext(ctx, deps)
-	existing := findAgentEditorConsumedMCPService(ectx, s.Name.Module, s.Name.Name)
+	existing := findAgentEditorConsumedMCPServiceDeps(deps, s.Name.Module, s.Name.Name)
 	if existing != nil && !s.CreateOrModify {
 		return mdlerrors.NewAlreadyExists("consumed mcp service", s.Name.String())
 	}
-	module, err := findOrCreateModule(ectx, s.Name.Module)
+	module, err := findOrCreateModuleDeps(ctx, deps, s.Name.Module)
 	if err != nil {
 		return err
 	}
@@ -41,14 +40,14 @@ func ExecCreateConsumedMCPServiceFn(ctx context.Context, s *ast.CreateConsumedMC
 		if err := deps.AgentEditorOperator.UpdateAgentEditorConsumedMCPService(c); err != nil {
 			return mdlerrors.NewBackend("update consumed mcp service", err)
 		}
-		invalidateHierarchy(ectx)
+		invalidateHierarchyDeps(deps)
 		fmt.Fprintf(deps.Output, "Modified consumed mcp service: %s\n", s.Name)
 		return nil
 	}
 	if err := deps.AgentEditorOperator.CreateAgentEditorConsumedMCPService(c); err != nil {
 		return mdlerrors.NewBackend("create consumed mcp service", err)
 	}
-	invalidateHierarchy(ectx)
+	invalidateHierarchyDeps(deps)
 	fmt.Fprintf(deps.Output, "Created consumed mcp service: %s\n", s.Name)
 	return nil
 }
@@ -57,8 +56,7 @@ func ExecDropConsumedMCPServiceFn(ctx context.Context, s *ast.DropConsumedMCPSer
 	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnected()
 	}
-	ectx := NewExecContext(ctx, deps)
-	c := findAgentEditorConsumedMCPService(ectx, s.Name.Module, s.Name.Name)
+	c := findAgentEditorConsumedMCPServiceDeps(deps, s.Name.Module, s.Name.Name)
 	if c == nil {
 		return mdlerrors.NewNotFound("consumed mcp service", s.Name.String())
 	}
@@ -73,18 +71,17 @@ func ExecCreateKnowledgeBaseFn(ctx context.Context, s *ast.CreateKnowledgeBaseSt
 	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnected()
 	}
-	ectx := NewExecContext(ctx, deps)
-	existing := findAgentEditorKnowledgeBase(ectx, s.Name.Module, s.Name.Name)
+	existing := findAgentEditorKnowledgeBaseDeps(deps, s.Name.Module, s.Name.Name)
 	if existing != nil && !s.CreateOrModify {
 		return mdlerrors.NewAlreadyExists("knowledge base", s.Name.String())
 	}
-	module, err := findOrCreateModule(ectx, s.Name.Module)
+	module, err := findOrCreateModuleDeps(ctx, deps, s.Name.Module)
 	if err != nil {
 		return err
 	}
 	var keyRef *types.ConstantRef
 	if s.Key != nil {
-		keyRef, err = resolveConstantRef(ectx, *s.Key)
+		keyRef, err = resolveConstantRefDeps(ctx, deps, *s.Key)
 		if err != nil {
 			return fmt.Errorf("create knowledge base %s: %w", s.Name, err)
 		}
@@ -111,14 +108,14 @@ func ExecCreateKnowledgeBaseFn(ctx context.Context, s *ast.CreateKnowledgeBaseSt
 		if err := deps.AgentEditorOperator.UpdateAgentEditorKnowledgeBase(k); err != nil {
 			return mdlerrors.NewBackend("update knowledge base", err)
 		}
-		invalidateHierarchy(ectx)
+		invalidateHierarchyDeps(deps)
 		fmt.Fprintf(deps.Output, "Modified knowledge base: %s\n", s.Name)
 		return nil
 	}
 	if err := deps.AgentEditorOperator.CreateAgentEditorKnowledgeBase(k); err != nil {
 		return mdlerrors.NewBackend("create knowledge base", err)
 	}
-	invalidateHierarchy(ectx)
+	invalidateHierarchyDeps(deps)
 	fmt.Fprintf(deps.Output, "Created knowledge base: %s\n", s.Name)
 	return nil
 }
@@ -127,8 +124,7 @@ func ExecDropKnowledgeBaseFn(ctx context.Context, s *ast.DropKnowledgeBaseStmt, 
 	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnected()
 	}
-	ectx := NewExecContext(ctx, deps)
-	k := findAgentEditorKnowledgeBase(ectx, s.Name.Module, s.Name.Name)
+	k := findAgentEditorKnowledgeBaseDeps(deps, s.Name.Module, s.Name.Name)
 	if k == nil {
 		return mdlerrors.NewNotFound("knowledge base", s.Name.String())
 	}
@@ -143,12 +139,11 @@ func ExecCreateAgentFn(ctx context.Context, s *ast.CreateAgentStmt, deps *Handle
 	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnected()
 	}
-	ectx := NewExecContext(ctx, deps)
-	existingAgent := findAgentEditorAgent(ectx, s.Name.Module, s.Name.Name)
+	existingAgent := findAgentEditorAgentDeps(deps, s.Name.Module, s.Name.Name)
 	if existingAgent != nil && !s.CreateOrModify {
 		return mdlerrors.NewAlreadyExists("agent", s.Name.String())
 	}
-	module, err := findOrCreateModule(ectx, s.Name.Module)
+	module, err := findOrCreateModuleDeps(ctx, deps, s.Name.Module)
 	if err != nil {
 		return err
 	}
@@ -166,7 +161,7 @@ func ExecCreateAgentFn(ctx context.Context, s *ast.CreateAgentStmt, deps *Handle
 		TopP:          s.TopP,
 	}
 	if s.Model != nil {
-		m := findAgentEditorModel(ectx, s.Model.Module, s.Model.Name)
+		m := findAgentEditorModelDeps(deps, s.Model.Module, s.Model.Name)
 		if m == nil {
 			return fmt.Errorf("create agent %s: model not found: %s", s.Name, s.Model)
 		}
@@ -194,7 +189,7 @@ func ExecCreateAgentFn(ctx context.Context, s *ast.CreateAgentStmt, deps *Handle
 			ToolType:    td.ToolType,
 		}
 		if td.Document != nil && td.ToolType == "mcp" {
-			svc := findAgentEditorConsumedMCPService(ectx, td.Document.Module, td.Document.Name)
+			svc := findAgentEditorConsumedMCPServiceDeps(deps, td.Document.Module, td.Document.Name)
 			if svc == nil {
 				return fmt.Errorf("create agent %s: consumed mcp service not found: %s", s.Name, td.Document)
 			}
@@ -214,7 +209,7 @@ func ExecCreateAgentFn(ctx context.Context, s *ast.CreateAgentStmt, deps *Handle
 			MaxResults:           kbd.MaxResults,
 		}
 		if kbd.Source != nil {
-			kb := findAgentEditorKnowledgeBase(ectx, kbd.Source.Module, kbd.Source.Name)
+			kb := findAgentEditorKnowledgeBaseDeps(deps, kbd.Source.Module, kbd.Source.Name)
 			if kb == nil {
 				return fmt.Errorf("create agent %s: knowledge base not found: %s", s.Name, kbd.Source)
 			}
@@ -230,14 +225,14 @@ func ExecCreateAgentFn(ctx context.Context, s *ast.CreateAgentStmt, deps *Handle
 		if err := deps.AgentEditorOperator.UpdateAgentEditorAgent(a); err != nil {
 			return mdlerrors.NewBackend("update agent", err)
 		}
-		invalidateHierarchy(ectx)
+		invalidateHierarchyDeps(deps)
 		fmt.Fprintf(deps.Output, "Modified agent: %s\n", s.Name)
 		return nil
 	}
 	if err := deps.AgentEditorOperator.CreateAgentEditorAgent(a); err != nil {
 		return mdlerrors.NewBackend("create agent", err)
 	}
-	invalidateHierarchy(ectx)
+	invalidateHierarchyDeps(deps)
 	fmt.Fprintf(deps.Output, "Created agent: %s\n", s.Name)
 	return nil
 }
@@ -246,8 +241,7 @@ func ExecDropAgentFn(ctx context.Context, s *ast.DropAgentStmt, deps *HandlerDep
 	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnected()
 	}
-	ectx := NewExecContext(ctx, deps)
-	a := findAgentEditorAgent(ectx, s.Name.Module, s.Name.Name)
+	a := findAgentEditorAgentDeps(deps, s.Name.Module, s.Name.Name)
 	if a == nil {
 		return mdlerrors.NewNotFound("agent", s.Name.String())
 	}

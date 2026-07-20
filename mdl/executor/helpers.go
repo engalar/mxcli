@@ -779,7 +779,10 @@ func setDomainModelGenCachedDeps(deps *HandlerDeps, moduleID model.ID, dm *genDm
 
 // getDomainModelGenCachedDeps returns the DomainModel for moduleID (HandlerDeps version).
 func getDomainModelGenCachedDeps(_ context.Context, deps *HandlerDeps, moduleID model.ID) (*genDm.DomainModel, error) {
-	if deps.Cache != nil && deps.Cache.domainModelByModule != nil {
+	if deps.Cache == nil {
+		deps.Cache = &executorCache{}
+	}
+	if deps.Cache.domainModelByModule != nil {
 		if dm, ok := deps.Cache.domainModelByModule[moduleID]; ok {
 			return dm, nil
 		}
@@ -809,6 +812,121 @@ func trackModifiedDomainModelDeps(deps *HandlerDeps, moduleID model.ID, moduleNa
 // writeResultDeps renders a TableResult to deps.Output in the current format.
 func writeResultDeps(deps *HandlerDeps, r *TableResult) error {
 	return writeResultTo(deps.Output, deps.Format, r)
+}
+
+// validateODataClientExistsDeps returns an error if no consumed OData service matching
+// the given qualified name exists in the project (HandlerDeps version).
+func validateODataClientExistsDeps(ctx context.Context, deps *HandlerDeps, ref ast.QualifiedName) error {
+	services, err := deps.ServiceLister.ListConsumedODataServices()
+	if err != nil {
+		return mdlerrors.NewBackend("list consumed OData services", err)
+	}
+	h, err := GetOrBuildHierarchy(deps)
+	if err != nil {
+		return mdlerrors.NewBackend("build hierarchy", err)
+	}
+	for _, svc := range services {
+		modID := h.FindModuleID(svc.ContainerID)
+		modName := h.GetModuleName(modID)
+		if strings.EqualFold(modName, ref.Module) && strings.EqualFold(svc.Name, ref.Name) {
+			return nil
+		}
+	}
+	return mdlerrors.NewNotFoundMsg("odata client", ref.String(), fmt.Sprintf("odata client not found: %s", ref))
+}
+
+// invalidateAllDocumentCachesDeps clears all per-document-type caches (HandlerDeps version).
+func invalidateAllDocumentCachesDeps(deps *HandlerDeps) {
+	if deps == nil || deps.Cache == nil {
+		return
+	}
+	deps.Cache.microflowNames = nil
+	deps.Cache.microflowsWithContainerGen = nil
+	deps.Cache.nanoflowsWithContainerGen = nil
+	deps.Cache.pagesWithContainerGen = nil
+	deps.Cache.layoutsWithContainerGen = nil
+	deps.Cache.snippetsWithContainerGen = nil
+	deps.Cache.workflowsWithContainerGen = nil
+	deps.Cache.javaActionsWithContainerGen = nil
+	deps.Cache.javaScriptActionsWithContainerGen = nil
+}
+
+// resolveConstantRefDeps looks up a String constant by qualified name (HandlerDeps version).
+func resolveConstantRefDeps(ctx context.Context, deps *HandlerDeps, name ast.QualifiedName) (*types.ConstantRef, error) {
+	consts, err := deps.ConstantReader.ListConstants()
+	if err != nil {
+		return nil, fmt.Errorf("failed to list constants: %w", err)
+	}
+	h, err := GetOrBuildHierarchy(deps)
+	if err != nil {
+		return nil, err
+	}
+	for _, c := range consts {
+		modID := h.FindModuleID(c.ContainerID)
+		modName := h.GetModuleName(modID)
+		if c.Name == name.Name && modName == name.Module {
+			return &types.ConstantRef{
+				DocumentID:    string(c.ID),
+				QualifiedName: name.String(),
+			}, nil
+		}
+	}
+	return nil, fmt.Errorf("constant not found: %s", name)
+}
+
+// NewMinimalExecCtx creates a lightweight *ExecContext for bridge functions that
+// still delegate to old-style helpers needing specific ExecContext fields.
+// Significantly lighter than NewExecContext: does NOT populate Backend, BackendFactory,
+// Graph, Perf, delegate functions (ExecuteFn, ExecuteProgramFn, FinalizeFn, SyncGraph),
+// or most backend role interfaces (ModuleWriter, all *Writer/*Reader, etc.).
+// Add fields here only when they are needed by the target old-style function.
+// NewMinimalExecCtx is the exported version for subpackage callers.
+func NewMinimalExecCtx(ctx context.Context, deps *HandlerDeps) *ExecContext {
+	return newMinimalExecCtx(ctx, deps)
+}
+
+func newMinimalExecCtx(ctx context.Context, deps *HandlerDeps) *ExecContext {
+	return &ExecContext{
+		Context:            ctx,
+		Output:             deps.Output,
+		StatusOutput:       deps.StatusOutput,
+		Logger:             deps.Logger,
+		Quiet:              deps.Quiet,
+		Format:             deps.Format,
+		Cache:              deps.Cache,
+		MprPath:            deps.MprPath,
+		Fragments:          deps.Fragments,
+		ModuleLister:       deps.ModuleLister,
+		MetadataReader:     deps.MetadataReader,
+		FolderManager:      deps.FolderManager,
+		ConnectionManager:  deps.ConnectionManager,
+		ServiceLister:      deps.ServiceLister,
+		ServiceWriter:      deps.ServiceWriter,
+		CacheInvalidator:   deps.CacheInvalidator,
+		DomainModels:       deps.DomainModels,
+		MicroflowReader:    deps.MicroflowReader,
+		DomainModelReader:  deps.DomainModelReader,
+		DomainModelWriter:  deps.DomainModelWriter,
+		ModuleWriter:       deps.ModuleWriter,
+		Microflows:                  deps.MicroflowRepo,
+		Nanoflows:                   deps.NanoflowRepo,
+		Pages:                       deps.PageRepo,
+		Layouts:                     deps.LayoutRepo,
+		Snippets:                    deps.SnippetRepo,
+		Workflows:                   deps.WorkflowRepo,
+		JavaActions:                 deps.JavaActionRepo,
+		JavaScriptActions:           deps.JavaScriptActionRepo,
+		PageWriter:                  deps.PageWriter,
+		ConstantReader:              deps.ConstantReader,
+		ConstantWriter:              deps.ConstantWriter,
+		EnumerationReader:           deps.EnumerationReader,
+		EnumerationWriter:           deps.EnumerationWriter,
+		WorkflowReader:              deps.WorkflowReader,
+		SecurityModuleManager:       deps.SecurityModuleManager,
+		SecurityEntityAccessManager: deps.SecurityEntityAccessManager,
+		ScriptTransactionManager:    deps.ScriptTransactionManager,
+		Deps:                        deps,
+	}
 }
 
 // ----------------------------------------------------------------------------

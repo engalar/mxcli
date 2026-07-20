@@ -14,6 +14,7 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
 	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
+	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 )
 
 func printRenameReport(ctx *ExecContext, oldName, newName string, hits []types.RenameHit) {
@@ -82,14 +83,12 @@ func execRenameFn(ctx context.Context, s *ast.RenameStmt, deps *HandlerDeps) err
 }
 
 func execRenameEntityFn(ctx context.Context, s *ast.RenameStmt, deps *HandlerDeps) error {
-	ectx := NewExecContext(ctx, deps)
-
-	module, err := findModule(ectx, s.Name.Module)
+	module, err := findModuleDeps(ctx, deps, s.Name.Module)
 	if err != nil {
 		return err
 	}
 
-	dm, err := getDomainModelGenCached(ectx, module.ID)
+	dm, err := getDomainModelGenCachedDeps(ctx, deps, module.ID)
 	if err != nil {
 		return mdlerrors.NewBackend("get domain model", err)
 	}
@@ -143,10 +142,10 @@ func execRenameEntityFn(ctx context.Context, s *ast.RenameStmt, deps *HandlerDep
 	if err := deps.DomainModelWriter.UpdateDomainModelGen(dm); err != nil {
 		return mdlerrors.NewBackend("update entity name", err)
 	}
-	setDomainModelGenCached(ectx, module.ID, dm)
+	setDomainModelGenCachedDeps(deps, module.ID, dm)
 
-	invalidateHierarchy(ectx)
-	invalidateDomainModelsCache(ectx)
+	invalidateHierarchyDeps(deps)
+	invalidateDomainModelsCacheDeps(deps)
 
 	fmt.Fprintf(deps.Output, "Renamed entity: %s → %s\n", oldQualifiedName, newQualifiedName)
 	if len(hits) > 0 {
@@ -159,8 +158,7 @@ func execRenameModuleFn(ctx context.Context, s *ast.RenameStmt, deps *HandlerDep
 	oldModuleName := s.Name.Module
 	newModuleName := s.NewName
 
-	ectx := NewExecContext(ctx, deps)
-	module, err := findModule(ectx, oldModuleName)
+	module, err := findModuleDeps(ctx, deps, oldModuleName)
 	if err != nil {
 		return err
 	}
@@ -187,8 +185,8 @@ func execRenameModuleFn(ctx context.Context, s *ast.RenameStmt, deps *HandlerDep
 		return mdlerrors.NewBackend("update module name", err)
 	}
 
-	invalidateHierarchy(ectx)
-	invalidateDomainModelsCache(ectx)
+	invalidateHierarchyDeps(deps)
+	invalidateDomainModelsCacheDeps(deps)
 
 	fmt.Fprintf(deps.Output, "Renamed module: %s → %s\n", oldModuleName, newModuleName)
 	if len(allHits) > 0 {
@@ -201,8 +199,7 @@ func execRenameDocumentFn(ctx context.Context, s *ast.RenameStmt, deps *HandlerD
 	oldQualifiedName := s.Name.Module + "." + s.Name.Name
 	newQualifiedName := s.Name.Module + "." + s.NewName
 
-	ectx := NewExecContext(ctx, deps)
-	h, err := getHierarchy(ectx)
+	h, err := GetOrBuildHierarchy(deps)
 	if err != nil {
 		return err
 	}
@@ -211,12 +208,15 @@ func execRenameDocumentFn(ctx context.Context, s *ast.RenameStmt, deps *HandlerD
 	collision := false
 	switch docType {
 	case "microflow":
-		mfs, _ := listMicroflowsGen(ectx)
+		var mfs []*genMf.Microflow
+		if deps.MicroflowRepo != nil {
+			mfs, _ = deps.MicroflowRepo.ListAll()
+		}
 		for _, mf := range mfs {
 			if mf == nil {
 				continue
 			}
-			modName := genFlowContainerModule(ectx, h, model.ID(mf.ID()))
+			modName := genFlowContainerModuleDeps(deps, h, model.ID(mf.ID()))
 			if modName != s.Name.Module {
 				continue
 			}
@@ -227,12 +227,15 @@ func execRenameDocumentFn(ctx context.Context, s *ast.RenameStmt, deps *HandlerD
 			}
 		}
 	case "nanoflow":
-		nfs, _ := listNanoflowsGen(ectx)
+		var nfs []*genMf.Nanoflow
+		if deps.NanoflowRepo != nil {
+			nfs, _ = deps.NanoflowRepo.List("")
+		}
 		for _, nf := range nfs {
 			if nf == nil {
 				continue
 			}
-			modName := genFlowContainerModule(ectx, h, model.ID(nf.ID()))
+			modName := genFlowContainerModuleDeps(deps, h, model.ID(nf.ID()))
 			if modName != s.Name.Module {
 				continue
 			}
@@ -243,7 +246,7 @@ func execRenameDocumentFn(ctx context.Context, s *ast.RenameStmt, deps *HandlerD
 			}
 		}
 	case "page":
-		pairs, _ := listPagesWithContainerGen(ectx)
+		pairs, _ := listPagesWithContainerGenDeps(ctx, deps)
 		for _, p := range pairs {
 			if p.Elem == nil {
 				continue
@@ -272,7 +275,7 @@ func execRenameDocumentFn(ctx context.Context, s *ast.RenameStmt, deps *HandlerD
 			}
 		}
 	case "workflow":
-		pairs, _ := listWorkflowsWithContainerGen(ectx)
+		pairs, _ := listWorkflowsWithContainerGenDeps(deps)
 		for _, p := range pairs {
 			if p.Elem == nil {
 				continue
@@ -310,8 +313,8 @@ func execRenameDocumentFn(ctx context.Context, s *ast.RenameStmt, deps *HandlerD
 		return mdlerrors.NewBackend(fmt.Sprintf("rename %s", docType), err)
 	}
 
-	invalidateHierarchy(ectx)
-	invalidateAllDocumentCaches(ectx)
+	invalidateHierarchyDeps(deps)
+	invalidateAllDocumentCachesDeps(deps)
 
 	fmt.Fprintf(deps.Output, "Renamed %s: %s → %s\n", docType, oldQualifiedName, newQualifiedName)
 	if len(hits) > 0 {
@@ -328,8 +331,7 @@ func execRenameEnumerationFn(ctx context.Context, s *ast.RenameStmt, deps *Handl
 	if err != nil {
 		return mdlerrors.NewBackend("list enumerations", err)
 	}
-	ectx := NewExecContext(ctx, deps)
-	h, err := getHierarchy(ectx)
+	h, err := GetOrBuildHierarchy(deps)
 	if err != nil {
 		return err
 	}
@@ -371,8 +373,8 @@ func execRenameEnumerationFn(ctx context.Context, s *ast.RenameStmt, deps *Handl
 		fmt.Fprintf(deps.Output, "Warning: failed to update enumeration references in domain models: %v\n", err)
 	}
 
-	invalidateHierarchy(ectx)
-	invalidateDomainModelsCache(ectx)
+	invalidateHierarchyDeps(deps)
+	invalidateDomainModelsCacheDeps(deps)
 
 	fmt.Fprintf(deps.Output, "Renamed enumeration: %s → %s\n", oldQualifiedName, newQualifiedName)
 	if len(hits) > 0 {
@@ -385,13 +387,12 @@ func execRenameAssociationFn(ctx context.Context, s *ast.RenameStmt, deps *Handl
 	oldQualifiedName := s.Name.Module + "." + s.Name.Name
 	newQualifiedName := s.Name.Module + "." + s.NewName
 
-	ectx := NewExecContext(ctx, deps)
-	module, err := findModule(ectx, s.Name.Module)
+	module, err := findModuleDeps(ctx, deps, s.Name.Module)
 	if err != nil {
 		return err
 	}
 
-	dm, err := getDomainModelGenCached(ectx, module.ID)
+	dm, err := getDomainModelGenCachedDeps(ctx, deps, module.ID)
 	if err != nil {
 		return mdlerrors.NewBackend("get domain model", err)
 	}
@@ -442,10 +443,10 @@ func execRenameAssociationFn(ctx context.Context, s *ast.RenameStmt, deps *Handl
 	if err := deps.DomainModelWriter.UpdateDomainModelGen(dm); err != nil {
 		return mdlerrors.NewBackend("update association name", err)
 	}
-	setDomainModelGenCached(ectx, module.ID, dm)
+	setDomainModelGenCachedDeps(deps, module.ID, dm)
 
-	invalidateHierarchy(ectx)
-	invalidateDomainModelsCache(ectx)
+	invalidateHierarchyDeps(deps)
+	invalidateDomainModelsCacheDeps(deps)
 
 	fmt.Fprintf(deps.Output, "Renamed association: %s → %s\n", oldQualifiedName, newQualifiedName)
 	if len(hits) > 0 {
@@ -458,12 +459,11 @@ func execRenameJavaActionFn(ctx context.Context, s *ast.RenameStmt, deps *Handle
 	oldQualifiedName := s.Name.Module + "." + s.Name.Name
 	newQualifiedName := s.Name.Module + "." + s.NewName
 
-	ectx := NewExecContext(ctx, deps)
-	pairs, err := listJavaActionsWithContainerGen(ectx)
+	pairs, err := listJavaActionsWithContainerGenDeps(deps)
 	if err != nil {
 		return mdlerrors.NewBackend("list java actions", err)
 	}
-	h, err := getHierarchy(ectx)
+	h, err := GetOrBuildHierarchy(deps)
 	if err != nil {
 		return err
 	}
@@ -512,8 +512,8 @@ func execRenameJavaActionFn(ctx context.Context, s *ast.RenameStmt, deps *Handle
 		return mdlerrors.NewBackend("rename java source file", err)
 	}
 
-	invalidateHierarchy(ectx)
-	invalidateAllDocumentCaches(ectx)
+	invalidateHierarchyDeps(deps)
+	invalidateAllDocumentCachesDeps(deps)
 
 	fmt.Fprintf(deps.Output, "Renamed java action: %s → %s\n", oldQualifiedName, newQualifiedName)
 	if len(hits) > 0 {

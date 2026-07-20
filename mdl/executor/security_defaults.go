@@ -45,6 +45,29 @@ func defaultDocumentAccessRoles(ctx *ExecContext, module *model.Module) []model.
 	return []model.ID{model.ID(module.Name + "." + autoDocumentRoleName)}
 }
 
+// defaultDocumentAccessRolesDeps is the HandlerDeps version of defaultDocumentAccessRoles.
+func defaultDocumentAccessRolesDeps(deps *HandlerDeps, module *model.Module) []model.ID {
+	if module == nil {
+		return nil
+	}
+
+	ms, err := deps.SecurityModuleManager.GetModuleSecurityGen(module.ID)
+	if err != nil || ms == nil {
+		return nil
+	}
+	if moduleUsesAutoDocumentRoleGen(ms) {
+		return []model.ID{model.ID(module.Name + "." + autoDocumentRoleName)}
+	}
+	if len(ms.ModuleRolesItems()) > 0 {
+		return nil
+	}
+
+	if err := deps.SecurityModuleManager.AddModuleRole(model.ID(ms.ID()), autoDocumentRoleName, autoDocumentRoleDescription); err != nil {
+		return nil
+	}
+	return []model.ID{model.ID(module.Name + "." + autoDocumentRoleName)}
+}
+
 func moduleUsesAutoDocumentRoleGen(ms *genSec.ModuleSecurity) bool {
 	if ms == nil {
 		return false
@@ -165,6 +188,39 @@ func pruneInvalidUserRoles(ctx *ExecContext, _ *genSec.ProjectSecurity) error {
 		}
 		if !ctx.Quiet {
 			fmt.Fprintf(ctx.Output, "Dropped invalid user role: %s\n", typed.Name())
+		}
+	}
+
+	return nil
+}
+
+// pruneInvalidUserRolesDeps is the HandlerDeps version of pruneInvalidUserRoles.
+func pruneInvalidUserRolesDeps(deps *HandlerDeps, _ *genSec.ProjectSecurity) error {
+	ps, err := deps.SecurityProjectManager.GetProjectSecurityGen()
+	if err != nil || ps == nil {
+		return err
+	}
+
+	for _, ur := range ps.UserRolesItems() {
+		typed, ok := ur.(*genSec.UserRole)
+		if !ok {
+			continue
+		}
+		hasNonSystemRole := false
+		for _, moduleRole := range typed.ModuleRolesQualifiedNames() {
+			if !strings.HasPrefix(moduleRole, "System.") {
+				hasNonSystemRole = true
+				break
+			}
+		}
+		if hasNonSystemRole {
+			continue
+		}
+		if err := deps.SecurityProjectManager.RemoveUserRole(model.ID(ps.ID()), typed.Name()); err != nil {
+			return err
+		}
+		if !deps.Quiet {
+			fmt.Fprintf(deps.Output, "Dropped invalid user role: %s\n", typed.Name())
 		}
 	}
 

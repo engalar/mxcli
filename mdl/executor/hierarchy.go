@@ -210,6 +210,29 @@ func getHierarchy(ctx *ExecContext) (*ContainerHierarchy, error) {
 	return h, nil
 }
 
+// getHierarchyDeps is the HandlerDeps version of getHierarchy.
+func getHierarchyDeps(deps *HandlerDeps) (*ContainerHierarchy, error) {
+	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
+		return nil, nil
+	}
+	if deps.Cache == nil {
+		deps.Cache = &executorCache{}
+	}
+	if deps.Cache.hierarchy != nil {
+		return deps.Cache.hierarchy, nil
+	}
+	h, err := NewContainerHierarchy(hierarchyRolesSource{
+		ml:  deps.ModuleLister,
+		mur: deps.MetadataReader,
+		fm:  deps.FolderManager,
+	})
+	if err != nil {
+		return nil, err
+	}
+	deps.Cache.hierarchy = h
+	return h, nil
+}
+
 // invalidateHierarchy clears the cached hierarchy so it will be rebuilt on next access.
 // This should be called after any write operation that creates or deletes units.
 func invalidateHierarchy(ctx *ExecContext) {

@@ -115,14 +115,13 @@ func execCreateJsonStructureFn(ctx context.Context, s *ast.CreateJsonStructureSt
 	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnected()
 	}
-	ectx := NewExecContext(ctx, deps)
-	module, err := findOrCreateModule(ectx, s.Name.Module)
+	module, err := findOrCreateModuleDeps(ctx, deps, s.Name.Module)
 	if err != nil {
 		return err
 	}
 	containerID := module.ID
 	if s.Folder != "" {
-		folderID, err := resolveFolder(ectx, module.ID, s.Folder, nil)
+		folderID, err := resolveFolderDeps(deps, module.ID, s.Folder, nil)
 		if err != nil {
 			return mdlerrors.NewBackend("resolve folder "+s.Folder, err)
 		}
@@ -158,7 +157,7 @@ func execCreateJsonStructureFn(ctx context.Context, s *ast.CreateJsonStructureSt
 		}
 		fmt.Fprintf(deps.Output, "Created json structure: %s\n", s.Name)
 	}
-	invalidateHierarchy(ectx)
+	invalidateHierarchyDeps(deps)
 	return nil
 }
 

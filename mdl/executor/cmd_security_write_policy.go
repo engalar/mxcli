@@ -20,8 +20,7 @@ func execAlterPasswordPolicyFn(ctx context.Context, s *ast.AlterProjectSecurityS
 	if opts == nil {
 		return nil
 	}
-	ectx := NewExecContext(ctx, deps)
-	ps, err := getProjectSecurityGen(ectx)
+	ps, err := getProjectSecurityGenDeps(deps)
 	if err != nil {
 		return mdlerrors.NewBackend("read project security", err)
 	}
@@ -37,7 +36,9 @@ func execAlterPasswordPolicyFn(ctx context.Context, s *ast.AlterProjectSecurityS
 	); err != nil {
 		return mdlerrors.NewBackend("set password policy", err)
 	}
-	invalidateProjectSecurityCache(ectx)
+	if deps.Cache != nil {
+		deps.Cache.projectSecurityGen = nil
+	}
 	fmt.Fprintf(deps.Output, "Updated password policy")
 	if opts.MinLength != nil {
 		fmt.Fprintf(deps.Output, ": min_length=%d", *opts.MinLength)

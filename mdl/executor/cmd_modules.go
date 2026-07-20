@@ -19,8 +19,36 @@ import (
 
 // execCreateModuleDeps is the HandlerDeps version of execCreateModule.
 func execCreateModuleDeps(ctx context.Context, s *ast.CreateModuleStmt, deps *HandlerDeps) error {
-	tmpCtx := NewExecContext(ctx, deps)
-	return execCreateModule(tmpCtx, s)
+	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
+		return mdlerrors.NewNotConnected()
+	}
+
+	modules, err := deps.ModuleLister.ListModules()
+	if err != nil {
+		return mdlerrors.NewBackend("list modules", err)
+	}
+
+	for _, m := range modules {
+		if m.Name == s.Name {
+			fmt.Fprintf(deps.Output, "Module '%s' already exists\n", s.Name)
+			return nil
+		}
+	}
+
+	module := &model.Module{
+		Name: s.Name,
+	}
+
+	if err := deps.ModuleWriter.CreateModule(module); err != nil {
+		return mdlerrors.NewBackend("create module", err)
+	}
+
+	if deps.Cache != nil {
+		deps.Cache.modules = nil
+	}
+
+	fmt.Fprintf(deps.Output, "Created module: %s\n", s.Name)
+	return nil
 }
 
 // execCreateModule handles CREATE MODULE statements.
@@ -60,8 +88,25 @@ func execCreateModule(ctx *ExecContext, s *ast.CreateModuleStmt) error {
 
 // execDropModuleDeps is the HandlerDeps version of execDropModule.
 func execDropModuleDeps(ctx context.Context, s *ast.DropModuleStmt, deps *HandlerDeps) error {
-	tmpCtx := NewExecContext(ctx, deps)
-	return execDropModule(tmpCtx, s)
+	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
+		return mdlerrors.NewNotConnected()
+	}
+
+	module, err := findModuleDeps(ctx, deps, s.Name)
+	if err != nil {
+		return err
+	}
+
+	if err := deps.ModuleWriter.DeleteModule(module.ID); err != nil {
+		return mdlerrors.NewBackend("delete module", err)
+	}
+
+	if deps.Cache != nil {
+		deps.Cache.modules = nil
+	}
+
+	fmt.Fprintf(deps.Output, "Dropped module: %s\n", s.Name)
+	return nil
 }
 
 // execDropModule handles DROP MODULE statements.

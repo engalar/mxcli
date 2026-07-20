@@ -134,7 +134,7 @@ func describeAgentEditorModel(ctx *ExecContext, name ast.QualifiedName) error {
 
 // execCreateAgentEditorModelFn is the HandlerDeps version of execCreateAgentEditorModel.
 func execCreateAgentEditorModelFn(ctx context.Context, s *ast.CreateModelStmt, deps *HandlerDeps) error {
-	tmpCtx := NewExecContext(ctx, deps)
+	tmpCtx := newMinimalExecCtx(ctx, deps)
 	return execCreateAgentEditorModel(tmpCtx, s)
 }
 
@@ -201,7 +201,7 @@ func execCreateAgentEditorModel(ctx *ExecContext, s *ast.CreateModelStmt) error 
 
 // execDropAgentEditorModelFn is the HandlerDeps version of execDropAgentEditorModel.
 func execDropAgentEditorModelFn(ctx context.Context, s *ast.DropModelStmt, deps *HandlerDeps) error {
-	tmpCtx := NewExecContext(ctx, deps)
+	tmpCtx := newMinimalExecCtx(ctx, deps)
 	return execDropAgentEditorModel(tmpCtx, s)
 }
 

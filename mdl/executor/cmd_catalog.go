@@ -47,8 +47,7 @@ func ExecRefreshCatalogFn(ctx context.Context, s *ast.RefreshCatalogStmt, deps *
 	}
 	fmt.Fprintf(deps.Output, "Catalog system has been replaced by MXGraph.\n")
 	fmt.Fprintf(deps.Output, "Index building is handled automatically.\n")
-	tmpCtx := NewExecContext(ctx, deps)
-	return buildGraph(tmpCtx)
+	return buildGraphFromDeps(deps.Output, deps.Quiet, deps.MprPath, &deps.Graph)
 }
 
 // execRefreshCatalogStmt handles REFRESH CATALOG.

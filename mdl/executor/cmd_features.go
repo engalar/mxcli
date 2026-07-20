@@ -106,8 +106,141 @@ func checkFeature(ctx *ExecContext, area, name, statement, hint string) error {
 
 // ExecShowFeaturesFn is the HandlerDeps version of execShowFeatures.
 func ExecShowFeaturesFn(ctx context.Context, s *ast.ShowFeaturesStmt, deps *HandlerDeps) error {
-	tmpCtx := NewExecContext(ctx, deps)
-	return execShowFeatures(tmpCtx, s)
+	return execShowFeaturesDeps(ctx, deps, s)
+}
+
+// execShowFeaturesDeps is the HandlerDeps version of execShowFeatures.
+func execShowFeaturesDeps(ctx context.Context, deps *HandlerDeps, s *ast.ShowFeaturesStmt) error {
+	reg, err := version.Load()
+	if err != nil {
+		return mdlerrors.NewBackend("load version registry", err)
+	}
+
+	var pv version.SemVer
+
+	switch {
+	case s.AddedSince != "":
+		sinceV, err := version.ParseSemVer(s.AddedSince)
+		if err != nil {
+			return mdlerrors.NewValidationf("invalid version %q: %v", s.AddedSince, err)
+		}
+		return listFeaturesAddedSinceDeps(deps, reg, sinceV)
+
+	case s.ForVersion != "":
+		pv, err = version.ParseSemVer(s.ForVersion)
+		if err != nil {
+			return mdlerrors.NewValidationf("invalid version %q: %v", s.ForVersion, err)
+		}
+
+	default:
+		if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
+			return mdlerrors.NewNotConnectedMsg("not connected to a project\n  hint: use show features for version x.y without a project connection")
+		}
+		rpv := deps.ConnectionManager.ProjectVersion()
+		pv = version.SemVer{Major: rpv.MajorVersion, Minor: rpv.MinorVersion, Patch: rpv.PatchVersion}
+	}
+
+	if s.InArea != "" {
+		return listFeaturesInAreaDeps(deps, reg, pv, s.InArea)
+	}
+	return listFeaturesAllDeps(deps, reg, pv)
+}
+
+func listFeaturesAllDeps(deps *HandlerDeps, reg *version.Registry, pv version.SemVer) error {
+	features := reg.FeaturesForVersion(pv)
+	if len(features) == 0 && deps.Format != FormatJSON {
+		fmt.Fprintf(deps.Output, "No features found for version %s\n", pv)
+		return nil
+	}
+
+	if deps.Format != FormatJSON {
+		fmt.Fprintf(deps.Output, "Features for Mendix %s:\n\n", pv)
+	}
+
+	available, unavailable := 0, 0
+	tr := &TableResult{
+		Columns: []string{"Feature", "Available", "Since", "Notes"},
+	}
+	for _, f := range features {
+		avail := "Yes"
+		if !f.Available {
+			avail = "No"
+			unavailable++
+		} else {
+			available++
+		}
+		notes := f.Notes
+		if !f.Available && f.Workaround != nil {
+			notes = f.Workaround.Description
+		}
+		if len(notes) > 38 {
+			notes = notes[:35] + "..."
+		}
+		tr.Rows = append(tr.Rows, []any{f.DisplayName(), avail, fmt.Sprintf("%s", f.MinVersion), notes})
+	}
+	tr.Summary = fmt.Sprintf("(%d available, %d not available in %s)", available, unavailable, pv)
+	return writeResultDeps(deps, tr)
+}
+
+func listFeaturesInAreaDeps(deps *HandlerDeps, reg *version.Registry, pv version.SemVer, area string) error {
+	features := reg.FeaturesInArea(area, pv)
+	if len(features) == 0 && deps.Format != FormatJSON {
+		areas := reg.Areas()
+		fmt.Fprintf(deps.Output, "No features found in area %q for version %s\n", area, pv)
+		fmt.Fprintf(deps.Output, "Available areas: %s\n", strings.Join(areas, ", "))
+		return nil
+	}
+
+	if deps.Format != FormatJSON {
+		fmt.Fprintf(deps.Output, "Features in %s for Mendix %s:\n\n", area, pv)
+	}
+
+	tr := &TableResult{
+		Columns: []string{"Feature", "Available", "Since", "Notes"},
+	}
+	for _, f := range features {
+		avail := "Yes"
+		if !f.Available {
+			avail = "No"
+		}
+		notes := f.Notes
+		if !f.Available && f.Workaround != nil {
+			notes = f.Workaround.Description
+		}
+		if len(notes) > 38 {
+			notes = notes[:35] + "..."
+		}
+		tr.Rows = append(tr.Rows, []any{f.DisplayName(), avail, fmt.Sprintf("%s", f.MinVersion), notes})
+	}
+	return writeResultDeps(deps, tr)
+}
+
+func listFeaturesAddedSinceDeps(deps *HandlerDeps, reg *version.Registry, sinceV version.SemVer) error {
+	added := reg.FeaturesAddedSince(sinceV)
+	if len(added) == 0 && deps.Format != FormatJSON {
+		fmt.Fprintf(deps.Output, "No new features found since %s\n", sinceV)
+		return nil
+	}
+
+	if deps.Format != FormatJSON {
+		fmt.Fprintf(deps.Output, "Features added since Mendix %s:\n\n", sinceV)
+	}
+
+	tr := &TableResult{
+		Columns: []string{"Feature", "Area", "Since", "Notes"},
+		Summary: fmt.Sprintf("(%d features added since %s)", len(added), sinceV),
+	}
+	for _, f := range added {
+		notes := f.Notes
+		if f.MDL != "" && notes == "" {
+			notes = f.MDL
+		}
+		if len(notes) > 38 {
+			notes = notes[:35] + "..."
+		}
+		tr.Rows = append(tr.Rows, []any{f.DisplayName(), f.Area, fmt.Sprintf("%s", f.MinVersion), notes})
+	}
+	return writeResultDeps(deps, tr)
 }
 
 // execShowFeatures handles SHOW FEATURES, SHOW FEATURES FOR VERSION, and

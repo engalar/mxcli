@@ -31,13 +31,12 @@ func ExecGrantEntityAccessGenFn(ctx context.Context, s *ast.GrantEntityAccessStm
 	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
-	ectx := NewExecContext(ctx, deps)
-	module, err := findModule(ectx, s.Entity.Module)
+	module, err := findModuleDeps(ctx, deps, s.Entity.Module)
 	if err != nil {
 		return err
 	}
 
-	dm, err := getDomainModelGenCached(ectx, module.ID)
+	dm, err := getDomainModelGenCachedDeps(ctx, deps, module.ID)
 	if err != nil {
 		return mdlerrors.NewBackend("get domain model", err)
 	}
@@ -45,7 +44,7 @@ func ExecGrantEntityAccessGenFn(ctx context.Context, s *ast.GrantEntityAccessStm
 		return mdlerrors.NewNotFound("entity", s.Entity.Module+"."+s.Entity.Name)
 	}
 
-	entity, _, err := findEntityGen(ectx, s.Entity)
+	entity, _, err := findEntityInDMsDeps(ctx, deps, s.Entity)
 	if err != nil {
 		return mdlerrors.NewBackend("find entity", err)
 	}
@@ -55,7 +54,7 @@ func ExecGrantEntityAccessGenFn(ctx context.Context, s *ast.GrantEntityAccessStm
 
 	var roleNames []string
 	for _, role := range s.Roles {
-		found, err := validateModuleRole(ectx, role)
+		found, err := validateModuleRoleFn(deps, role)
 		if err != nil {
 			return err
 		}
@@ -187,8 +186,8 @@ func ExecGrantEntityAccessGenFn(ctx context.Context, s *ast.GrantEntityAccessStm
 		return mdlerrors.NewBackend("grant entity access", err)
 	}
 
-	invalidateDomainModelGenForModule(ectx, module.ID)
-	invalidateDomainModelsCache(ectx)
+	invalidateDomainModelGenForModuleDeps(deps, module.ID)
+	invalidateDomainModelsCacheDeps(deps)
 
 	if msgs, err := deps.SecurityEntityAccessManager.ReconcileMemberAccesses(model.ID(dm.ID()), module.Name); err != nil {
 		return mdlerrors.NewBackend("reconcile member accesses", err)
@@ -198,10 +197,10 @@ func ExecGrantEntityAccessGenFn(ctx context.Context, s *ast.GrantEntityAccessStm
 		}
 	}
 
-	ectx.trackModifiedDomainModel(module.ID, module.Name)
+	trackModifiedDomainModelDeps(deps, module.ID, module.Name)
 	fmt.Fprintf(deps.Output, "Granted access on %s.%s to %s\n", s.Entity.Module, s.Entity.Name, strings.Join(roleNames, ", "))
 	if !deps.Quiet {
-		fmt.Fprint(deps.Output, formatAccessRuleResult(ectx, s.Entity.Module, s.Entity.Name, roleNames))
+		fmt.Fprint(deps.Output, formatAccessRuleResultDeps(deps, s.Entity.Module, s.Entity.Name, roleNames))
 	}
 	return nil
 }
@@ -211,13 +210,12 @@ func ExecRevokeEntityAccessGenFn(ctx context.Context, s *ast.RevokeEntityAccessS
 	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
-	ectx := NewExecContext(ctx, deps)
-	module, err := findModule(ectx, s.Entity.Module)
+	module, err := findModuleDeps(ctx, deps, s.Entity.Module)
 	if err != nil {
 		return err
 	}
 
-	dm, err := getDomainModelGenCached(ectx, module.ID)
+	dm, err := getDomainModelGenCachedDeps(ctx, deps, module.ID)
 	if err != nil {
 		return mdlerrors.NewBackend("get domain model", err)
 	}
@@ -225,7 +223,7 @@ func ExecRevokeEntityAccessGenFn(ctx context.Context, s *ast.RevokeEntityAccessS
 		return mdlerrors.NewNotFound("entity", s.Entity.Module+"."+s.Entity.Name)
 	}
 
-	entity, _, err := findEntityGen(ectx, s.Entity)
+	entity, _, err := findEntityInDMsDeps(ctx, deps, s.Entity)
 	if err != nil {
 		return mdlerrors.NewBackend("find entity", err)
 	}
@@ -235,7 +233,7 @@ func ExecRevokeEntityAccessGenFn(ctx context.Context, s *ast.RevokeEntityAccessS
 
 	var roleNames []string
 	for _, role := range s.Roles {
-		found, err := validateModuleRole(ectx, role)
+		found, err := validateModuleRoleFn(deps, role)
 		if err != nil {
 			return err
 		}
@@ -284,7 +282,7 @@ func ExecRevokeEntityAccessGenFn(ctx context.Context, s *ast.RevokeEntityAccessS
 			fmt.Fprintf(deps.Output, "Revoked partial access on %s.%s from %s\n",
 				s.Entity.Module, s.Entity.Name, strings.Join(roleNames, ", "))
 			if !deps.Quiet {
-				fmt.Fprint(deps.Output, formatAccessRuleResult(ectx, s.Entity.Module, s.Entity.Name, roleNames))
+				fmt.Fprint(deps.Output, formatAccessRuleResultDeps(deps, s.Entity.Module, s.Entity.Name, roleNames))
 			}
 		}
 	} else {
@@ -305,7 +303,7 @@ func ExecRevokeEntityAccessGenFn(ctx context.Context, s *ast.RevokeEntityAccessS
 		}
 	}
 
-	ectx.trackModifiedDomainModel(module.ID, module.Name)
+	trackModifiedDomainModelDeps(deps, module.ID, module.Name)
 	return nil
 }
 

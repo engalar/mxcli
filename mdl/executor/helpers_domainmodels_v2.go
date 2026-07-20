@@ -123,6 +123,21 @@ func cachedDomainModelsGen(ctx *ExecContext) ([]*genDm.DomainModel, error) {
 	return list, nil
 }
 
+// cachedDomainModelsGenDeps is the HandlerDeps version of cachedDomainModelsGen.
+func cachedDomainModelsGenDeps(deps *HandlerDeps) ([]*genDm.DomainModel, error) {
+	if deps.Cache != nil && deps.Cache.domainModelsGen != nil {
+		return deps.Cache.domainModelsGen, nil
+	}
+	list, err := deps.DomainModelReader.ListDomainModelsGen()
+	if err != nil {
+		return nil, err
+	}
+	if deps.Cache != nil {
+		deps.Cache.domainModelsGen = list
+	}
+	return list, nil
+}
+
 // invalidateDomainModelsGenCache clears the cached gen-typed DomainModel
 // listings. The legacy invalidateDomainModelsCache (in hierarchy.go,
 // which clears the sdk-typed slice) is also extended to call this so

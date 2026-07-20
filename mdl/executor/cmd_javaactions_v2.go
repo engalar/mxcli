@@ -95,8 +95,7 @@ func listJavaActionsGenFn(ctx context.Context, moduleName string, deps *HandlerD
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}
 
-	ectx := NewExecContext(ctx, deps)
-	pairs, err := listJavaActionsWithContainerGen(ectx)
+	pairs, err := listJavaActionsWithContainerGenDeps(deps)
 	if err != nil {
 		return mdlerrors.NewBackend("list java actions", err)
 	}
@@ -325,8 +324,7 @@ func listJavaScriptActionsGenFn(ctx context.Context, moduleName string, deps *Ha
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}
 
-	ectx := NewExecContext(ctx, deps)
-	pairs, err := listJavaScriptActionsWithContainerGen(ectx)
+	pairs, err := listJavaScriptActionsWithContainerGenDeps(deps)
 	if err != nil {
 		return mdlerrors.NewBackend("list javascript actions", err)
 	}
@@ -391,8 +389,7 @@ func describeJavaScriptActionGenFn(ctx context.Context, name ast.QualifiedName, 
 	}
 	qn := name.Module + "." + name.Name
 
-	ectx := NewExecContext(ctx, deps)
-	pairs, err := listJavaScriptActionsWithContainerGen(ectx)
+	pairs, err := listJavaScriptActionsWithContainerGenDeps(deps)
 	if err != nil {
 		return mdlerrors.NewBackend("list javascript actions", err)
 	}

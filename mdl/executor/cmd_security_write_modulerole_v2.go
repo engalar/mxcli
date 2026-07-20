@@ -33,8 +33,7 @@ func ExecCreateModuleRoleGenFn(ctx context.Context, s *ast.CreateModuleRoleStmt,
 		return mdlerrors.NewBackend("backend not fully initialized", nil)
 	}
 
-	ectx := NewExecContext(ctx, deps)
-	module, err := findModule(ectx, s.Name.Module)
+	module, err := findModuleDeps(ctx, deps, s.Name.Module)
 	if err != nil {
 		return err
 	}
@@ -65,7 +64,9 @@ func ExecCreateModuleRoleGenFn(ctx context.Context, s *ast.CreateModuleRoleStmt,
 						fmt.Sprintf("rename references %s -> %s", oldQualified, newQualified), err)
 				}
 			}
-			invalidateModuleSecurityCache(ectx)
+			if deps.Cache != nil {
+				deps.Cache.moduleSecurityWithContainerGen = nil
+			}
 			if !deps.Quiet {
 				fmt.Fprintf(deps.Output, "Module role %s.%s already exists (auto-provisioned)\n",
 					s.Name.Module, s.Name.Name)
@@ -84,7 +85,9 @@ func ExecCreateModuleRoleGenFn(ctx context.Context, s *ast.CreateModuleRoleStmt,
 		return mdlerrors.NewBackend("create module role", err)
 	}
 
-	invalidateModuleSecurityCache(ectx)
+	if deps.Cache != nil {
+		deps.Cache.moduleSecurityWithContainerGen = nil
+	}
 	fmt.Fprintf(deps.Output, "Created module role: %s.%s\n", s.Name.Module, s.Name.Name)
 	return nil
 }
@@ -95,8 +98,7 @@ func ExecDropModuleRoleGenFn(ctx context.Context, s *ast.DropModuleRoleStmt, dep
 		return mdlerrors.NewNotConnectedWrite()
 	}
 
-	ectx := NewExecContext(ctx, deps)
-	module, err := findModule(ectx, s.Name.Module)
+	module, err := findModuleDeps(ctx, deps, s.Name.Module)
 	if err != nil {
 		return err
 	}
@@ -123,12 +125,12 @@ func ExecDropModuleRoleGenFn(ctx context.Context, s *ast.DropModuleRoleStmt, dep
 
 	qualifiedRole := s.Name.Module + "." + s.Name.Name
 
-	if dm, err := getDomainModelGenCached(ectx, module.ID); err == nil && dm != nil {
+	if dm, err := getDomainModelGenCachedDeps(ctx, deps, module.ID); err == nil && dm != nil {
 		if n, err := deps.SecurityEntityAccessManager.RemoveRoleFromAllEntities(model.ID(dm.ID()), qualifiedRole); err != nil {
 			return mdlerrors.NewBackend("cascade-remove entity access rules", err)
 		} else if n > 0 {
 			fmt.Fprintf(deps.Output, "Removed %s from %d entity access rule(s)\n", qualifiedRole, n)
-			invalidateDomainModelGenForModule(ectx, module.ID)
+			invalidateDomainModelGenForModuleDeps(deps, module.ID)
 		}
 	}
 
@@ -139,9 +141,10 @@ func ExecDropModuleRoleGenFn(ctx context.Context, s *ast.DropModuleRoleStmt, dep
 		return err
 	}
 
-	h, err := getHierarchy(ectx)
+	h, err := getHierarchyDeps(deps)
 	if err == nil {
-		if pgPairs, err := listPagesWithContainerGen(ectx); err == nil {
+		bg := context.Background()
+		if pgPairs, err := listPagesWithContainerGenDeps(bg, deps); err == nil {
 			for _, pair := range pgPairs {
 				pg := pair.Elem
 				modID := h.FindModuleID(model.ID(pair.ContainerID))
@@ -171,7 +174,7 @@ func ExecDropModuleRoleGenFn(ctx context.Context, s *ast.DropModuleRoleStmt, dep
 		if n, err := deps.SecurityModuleManager.RemoveModuleRoleFromAllUserRoles(model.ID(ps.ID()), qualifiedRole); err == nil && n > 0 {
 			fmt.Fprintf(deps.Output, "Removed %s from %d user role(s)\n", qualifiedRole, n)
 		}
-		if err := pruneInvalidUserRoles(ectx, nil); err != nil {
+		if err := pruneInvalidUserRolesDeps(deps, nil); err != nil {
 			return mdlerrors.NewBackend("cleanup invalid user roles", err)
 		}
 	}
@@ -180,7 +183,9 @@ func ExecDropModuleRoleGenFn(ctx context.Context, s *ast.DropModuleRoleStmt, dep
 		return mdlerrors.NewBackend("drop module role", err)
 	}
 
-	invalidateModuleSecurityCache(ectx)
+	if deps.Cache != nil {
+		deps.Cache.moduleSecurityWithContainerGen = nil
+	}
 	fmt.Fprintf(deps.Output, "Dropped module role: %s.%s\n", s.Name.Module, s.Name.Name)
 	return nil
 }

@@ -67,6 +67,24 @@ func listModuleSecurityWithContainerGen(ctx *ExecContext) ([]ModuleSecurityGenWi
 
 // invalidateProjectSecurityCache clears the cached ProjectSecurity pointer.
 // Called by any write path that mutates ProjectSecurity.
+// getProjectSecurityGenDeps is the HandlerDeps version of getProjectSecurityGen.
+func getProjectSecurityGenDeps(deps *HandlerDeps) (*genSec.ProjectSecurity, error) {
+	if deps == nil || deps.Security == nil {
+		return nil, nil
+	}
+	if deps.Cache != nil && deps.Cache.projectSecurityGen != nil {
+		return deps.Cache.projectSecurityGen, nil
+	}
+	ps, err := deps.Security.Get()
+	if err != nil {
+		return nil, err
+	}
+	if deps.Cache != nil {
+		deps.Cache.projectSecurityGen = ps
+	}
+	return ps, nil
+}
+
 func invalidateProjectSecurityCache(ctx *ExecContext) {
 	if ctx == nil || ctx.Cache == nil {
 		return

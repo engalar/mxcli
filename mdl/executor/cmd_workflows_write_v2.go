@@ -788,7 +788,7 @@ func ExecCreateWorkflowGenFn(ctx context.Context, s *ast.CreateWorkflowStmt, dep
 		return mdlerrors.NewNotConnectedWrite()
 	}
 
-	ectx := NewExecContext(ctx, deps)
+	ectx := newMinimalExecCtx(ctx, deps)
 	module, err := findOrCreateModule(ectx, s.Name.Module)
 	if err != nil {
 		return err
@@ -1186,7 +1186,7 @@ func ExecDropWorkflowGenFn(ctx context.Context, s *ast.DropWorkflowStmt, deps *H
 	if err != nil {
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}
-	ectx := NewExecContext(ctx, deps)
+	ectx := newMinimalExecCtx(ctx, deps)
 	pairs, err := listWorkflowsWithContainerGen(ectx)
 	if err != nil {
 		return mdlerrors.NewBackend("list workflows", err)

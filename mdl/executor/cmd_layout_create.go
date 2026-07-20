@@ -23,8 +23,67 @@ func ExecCreateOrModifyLayoutFn(ctx context.Context, s *ast.CreateLayoutStmt, de
 	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
-	ectx := NewExecContext(ctx, deps)
-	return execCreateOrModifyLayoutImpl(ectx, s)
+	return execCreateOrModifyLayoutImplDeps(ctx, deps, s)
+}
+
+func execCreateOrModifyLayoutImplDeps(ctx context.Context, deps *HandlerDeps, s *ast.CreateLayoutStmt) error {
+	module, err := findOrCreateModuleDeps(ctx, deps, s.Name.Module)
+	if err != nil {
+		return mdlerrors.NewBackend(fmt.Sprintf("find module %s", s.Name.Module), err)
+	}
+
+	h, err := getHierarchyDeps(deps)
+	if err != nil {
+		return mdlerrors.NewBackend("build hierarchy", err)
+	}
+
+	existingPairs, _ := listLayoutsWithContainerGenDeps(deps)
+	var existingID model.ID
+	for _, pair := range existingPairs {
+		modID := h.FindModuleID(model.ID(pair.ContainerID))
+		modName := h.GetModuleName(modID)
+		if modName == s.Name.Module && pair.Elem.Name() == s.Name.Name {
+			if !s.IsModify && !s.IsReplace {
+				return mdlerrors.NewAlreadyExists("layout", s.Name.String())
+			}
+			existingID = model.ID(pair.Elem.ID())
+			break
+		}
+	}
+
+	layout := genPg.NewLayout()
+	layout.SetName(s.Name.Name)
+	if s.Documentation != "" {
+		layout.SetDocumentation(s.Documentation)
+	}
+	layout.SetCanvasWidth(layoutCanvasWidth)
+	layout.SetCanvasHeight(layoutCanvasHeight)
+	layout.SetContent(buildLayoutContent(s))
+
+	if existingID != "" {
+		if err := deps.PageWriter.DeleteLayoutGen(existingID); err != nil {
+			return mdlerrors.NewBackend("delete existing layout", err)
+		}
+	}
+
+	containerID, err := deps.PageWriter.GetContainerID(module.ID, s.Folder)
+	if err != nil {
+		return mdlerrors.NewBackend("resolve container", err)
+	}
+
+	if err := deps.PageWriter.CreateLayoutGen(string(containerID), "Documents", layout); err != nil {
+		return mdlerrors.NewBackend("create layout", err)
+	}
+
+	invalidateHierarchyDeps(deps)
+	invalidatePagesGenCacheDeps(deps)
+
+	verb := "Created"
+	if existingID != "" {
+		verb = "Modified"
+	}
+	fmt.Fprintf(deps.Output, "%s layout %s\n", verb, s.Name.String())
+	return nil
 }
 
 func execCreateOrModifyLayoutImpl(ctx *ExecContext, s *ast.CreateLayoutStmt) error {

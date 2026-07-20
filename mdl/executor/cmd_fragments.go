@@ -69,7 +69,7 @@ func ExecDescribeFragmentFromFn(ctx context.Context, s *ast.DescribeFragmentFrom
 	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnected()
 	}
-	ectx := NewExecContext(ctx, deps)
+	ectx := newMinimalExecCtx(ctx, deps)
 	h, err := getHierarchy(ectx)
 	if err != nil {
 		return mdlerrors.NewBackend("build hierarchy", err)

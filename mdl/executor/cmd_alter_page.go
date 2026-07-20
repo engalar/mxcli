@@ -20,7 +20,7 @@ import (
 
 // ExecAlterPageDeps is the HandlerDeps version of ExecAlterPage.
 func ExecAlterPageDeps(ctx context.Context, s *ast.AlterPageStmt, deps *HandlerDeps) error {
-	tmpCtx := NewExecContext(ctx, deps)
+	tmpCtx := newMinimalExecCtx(ctx, deps)
 	return ExecAlterPage(tmpCtx, s)
 }
 

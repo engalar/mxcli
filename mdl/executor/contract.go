@@ -1537,7 +1537,7 @@ func ExecCreateExternalEntitiesFn(ctx context.Context, s *ast.CreateExternalEnti
 		return mdlerrors.NewNotConnected()
 	}
 
-	ectx := NewExecContext(ctx, deps)
+	ectx := newMinimalExecCtx(ctx, deps)
 	doc, svcQN, err := parseServiceContract(ectx, s.ServiceRef)
 	if err != nil {
 		return err

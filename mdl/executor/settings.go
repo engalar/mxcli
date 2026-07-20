@@ -278,6 +278,126 @@ func alterSettings(ctx *ExecContext, stmt *ast.AlterSettingsStmt) error {
 	return nil
 }
 
+// alterSettingsConfigurationDeps is the HandlerDeps version of alterSettingsConfiguration.
+func alterSettingsConfigurationDeps(deps *HandlerDeps, ps *model.ProjectSettings, stmt *ast.AlterSettingsStmt) error {
+	if ps.Configuration == nil {
+		return mdlerrors.NewNotFound("settings section", "configuration")
+	}
+
+	var cfg *model.ServerConfiguration
+	for _, c := range ps.Configuration.Configurations {
+		if strings.EqualFold(c.Name, stmt.ConfigName) {
+			cfg = c
+			break
+		}
+	}
+	if cfg == nil {
+		return mdlerrors.NewNotFound("configuration", stmt.ConfigName)
+	}
+
+	for key, val := range stmt.Properties {
+		valStr := settingsValueToString(val)
+		switch key {
+		case "DatabaseType":
+			cfg.DatabaseType = valStr
+		case "DatabaseUrl":
+			cfg.DatabaseUrl = valStr
+		case "DatabaseName":
+			cfg.DatabaseName = valStr
+		case "DatabaseUserName":
+			cfg.DatabaseUserName = valStr
+		case "DatabasePassword":
+			cfg.DatabasePassword = valStr
+		case "HttpPortNumber":
+			if v, err := strconv.Atoi(valStr); err == nil {
+				cfg.HttpPortNumber = v
+			}
+		case "ServerPortNumber":
+			if v, err := strconv.Atoi(valStr); err == nil {
+				cfg.ServerPortNumber = v
+			}
+		case "ApplicationRootUrl":
+			cfg.ApplicationRootUrl = valStr
+		default:
+			return mdlerrors.NewUnsupported("unknown configuration setting: " + key)
+		}
+	}
+
+	if err := deps.SettingsWriter.UpdateProjectSettings(ps); err != nil {
+		return mdlerrors.NewBackend("update project settings", err)
+	}
+
+	fmt.Fprintf(deps.Output, "Updated configuration '%s'\n", stmt.ConfigName)
+	return nil
+}
+
+// alterSettingsConstantDeps is the HandlerDeps version of alterSettingsConstant.
+func alterSettingsConstantDeps(deps *HandlerDeps, ps *model.ProjectSettings, stmt *ast.AlterSettingsStmt) error {
+	if ps.Configuration == nil {
+		return mdlerrors.NewNotFound("settings section", "configuration")
+	}
+
+	targetConfig := stmt.ConfigName
+	if targetConfig == "" {
+		if len(ps.Configuration.Configurations) > 0 {
+			targetConfig = ps.Configuration.Configurations[0].Name
+		} else {
+			return mdlerrors.NewValidation("no configurations found")
+		}
+	}
+
+	var cfg *model.ServerConfiguration
+	for _, c := range ps.Configuration.Configurations {
+		if strings.EqualFold(c.Name, targetConfig) {
+			cfg = c
+			break
+		}
+	}
+	if cfg == nil {
+		return mdlerrors.NewNotFound("configuration", targetConfig)
+	}
+
+	if stmt.DropConstant {
+		for i, cv := range cfg.ConstantValues {
+			if cv.ConstantId == stmt.ConstantId {
+				cfg.ConstantValues = append(cfg.ConstantValues[:i], cfg.ConstantValues[i+1:]...)
+				if err := deps.SettingsWriter.UpdateProjectSettings(ps); err != nil {
+					return mdlerrors.NewBackend("update project settings", err)
+				}
+				fmt.Fprintf(deps.Output, "Dropped constant '%s' from configuration '%s'\n",
+					stmt.ConstantId, targetConfig)
+				return nil
+			}
+		}
+		return mdlerrors.NewNotFoundMsg("constant", stmt.ConstantId, fmt.Sprintf("constant '%s' not found in configuration '%s'", stmt.ConstantId, targetConfig))
+	}
+
+	found := false
+	for _, cv := range cfg.ConstantValues {
+		if cv.ConstantId == stmt.ConstantId {
+			cv.Value = stmt.Value
+			found = true
+			break
+		}
+	}
+	if !found {
+		cv := &model.ConstantValue{
+			ConstantId: stmt.ConstantId,
+			Value:      stmt.Value,
+		}
+		cv.TypeName = "Settings$ConstantValue"
+		cfg.ConstantValues = append(cfg.ConstantValues, cv)
+	}
+
+	if err := deps.SettingsWriter.UpdateProjectSettings(ps); err != nil {
+		return mdlerrors.NewBackend("update project settings", err)
+	}
+
+	fmt.Fprintf(deps.Output, "Updated constant '%s' = '%s' in configuration '%s'\n",
+		stmt.ConstantId, stmt.Value, targetConfig)
+	return nil
+}
+
 func alterSettingsConfiguration(ctx *ExecContext, ps *model.ProjectSettings, stmt *ast.AlterSettingsStmt) error {
 	if ps.Configuration == nil {
 		return mdlerrors.NewNotFound("settings section", "configuration")
@@ -699,12 +819,10 @@ func ExecAlterSettingsFn(ctx context.Context, s *ast.AlterSettingsStmt, deps *Ha
 		}
 
 	case "configuration":
-		ectx := NewExecContext(ctx, deps)
-		return alterSettingsConfiguration(ectx, ps, s)
+		return alterSettingsConfigurationDeps(deps, ps, s)
 
 	case "constant":
-		ectx := NewExecContext(ctx, deps)
-		return alterSettingsConstant(ectx, ps, s)
+		return alterSettingsConstantDeps(deps, ps, s)
 
 	default:
 		return mdlerrors.NewUnsupported(fmt.Sprintf("unknown settings section: %s (expected model, configuration, constant, LANGUAGE, or workflows)", section))

@@ -21,14 +21,17 @@ func ExecLintFn(ctx context.Context, s *ast.LintStmt, deps *HandlerDeps) error {
 	if s.ShowRules {
 		return listLintRulesFn(ctx, deps)
 	}
-	ectx := NewExecContext(ctx, deps)
-	if ectx.Graph == nil {
+	if deps.Graph == nil {
 		fmt.Fprintln(deps.Output, "Building project graph for linting...")
-		if err := buildGraph(ectx); err != nil {
+		if err := buildGraphFromDeps(deps.Output, deps.Quiet, deps.MprPath, &deps.Graph); err != nil {
 			return mdlerrors.NewBackend("build project graph", err)
 		}
 	}
-	lintCtx := linter.NewLintContext(ectx.Graph, ectx.LintReader())
+	var lintReader linter.LintReader
+	if lr, ok := deps.ConnectionManager.(linter.LintReader); ok {
+		lintReader = lr
+	}
+	lintCtx := linter.NewLintContext(deps.Graph, lintReader)
 	projectDir := filepath.Dir(deps.MprPath)
 	configPath := linter.FindConfigFile(projectDir)
 	config, err := linter.LoadConfig(configPath)

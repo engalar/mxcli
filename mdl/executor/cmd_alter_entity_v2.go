@@ -157,7 +157,7 @@ func canExecAlterEntityGenFn(deps *HandlerDeps, s *ast.AlterEntityStmt) bool {
 }
 
 func ExecAlterEntityGenFn(ctx context.Context, s *ast.AlterEntityStmt, deps *HandlerDeps) error {
-	if !deps.ConnectionManager.IsConnected() {
+	if deps.ConnectionManager != nil && !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnected()
 	}
 
@@ -165,8 +165,6 @@ func ExecAlterEntityGenFn(ctx context.Context, s *ast.AlterEntityStmt, deps *Han
 	if !ok {
 		return mdlerrors.NewNotFoundMsg("entity", fmt.Sprint(s.Name), fmt.Sprintf("entity not found: %s", s.Name))
 	}
-
-	ectx := NewExecContext(ctx, deps)
 
 	switch s.Operation {
 	case ast.AlterEntityAddAttribute:
@@ -196,9 +194,9 @@ func ExecAlterEntityGenFn(ctx context.Context, s *ast.AlterEntityStmt, deps *Han
 		if err := deps.DomainModelWriter.UpdateEntityGen(model.ID(dm.ID()), entity); err != nil {
 			return mdlerrors.NewBackend("add attribute", err)
 		}
-		invalidateHierarchy(ectx)
-		invalidateDomainModelGenForModule(ectx, module.ID)
-		invalidateDomainModelsCache(ectx)
+		invalidateHierarchyDeps(deps)
+		invalidateDomainModelGenForModuleDeps(deps, module.ID)
+		invalidateDomainModelsCacheDeps(deps)
 		fmt.Fprintf(deps.Output, "Added attribute '%s' to entity %s\n", a.Name, s.Name)
 
 	case ast.AlterEntityDropAttribute:
@@ -209,11 +207,11 @@ func ExecAlterEntityGenFn(ctx context.Context, s *ast.AlterEntityStmt, deps *Han
 			if err := deps.DomainModelWriter.UpdateEntityGen(model.ID(dm.ID()), entity); err != nil {
 				return mdlerrors.NewBackend("drop attribute", err)
 			}
-			invalidateHierarchy(ectx)
-			invalidateDomainModelGenForModule(ectx, module.ID)
-			invalidateDomainModelsCache(ectx)
+			invalidateHierarchyDeps(deps)
+			invalidateDomainModelGenForModuleDeps(deps, module.ID)
+			invalidateDomainModelsCacheDeps(deps)
 			fmt.Fprintf(deps.Output, "Dropped attribute '%s' from entity %s\n", s.AttributeName, s.Name)
-			ectx.trackModifiedDomainModel(module.ID, module.Name)
+			trackModifiedDomainModelDeps(deps, module.ID, module.Name)
 			return nil
 		}
 		attr, attrIdx := findAttributeGenWithIndexByName(entity, s.AttributeName)
@@ -231,9 +229,9 @@ func ExecAlterEntityGenFn(ctx context.Context, s *ast.AlterEntityStmt, deps *Han
 		if err := deps.DomainModelWriter.UpdateEntityGen(model.ID(dm.ID()), entity); err != nil {
 			return mdlerrors.NewBackend("drop attribute", err)
 		}
-		invalidateHierarchy(ectx)
-		invalidateDomainModelGenForModule(ectx, module.ID)
-		invalidateDomainModelsCache(ectx)
+		invalidateHierarchyDeps(deps)
+		invalidateDomainModelGenForModuleDeps(deps, module.ID)
+		invalidateDomainModelsCacheDeps(deps)
 		fmt.Fprintf(deps.Output, "Dropped attribute '%s' from entity %s\n", s.AttributeName, s.Name)
 		if n := origValidationCount - len(entity.ValidationRulesItems()); n > 0 {
 			fmt.Fprintf(deps.Output, "  Removed %d validation rule(s)\n", n)
@@ -257,9 +255,9 @@ func ExecAlterEntityGenFn(ctx context.Context, s *ast.AlterEntityStmt, deps *Han
 		if err := deps.DomainModelWriter.UpdateEntityGen(model.ID(dm.ID()), entity); err != nil {
 			return mdlerrors.NewBackend("rename attribute", err)
 		}
-		invalidateHierarchy(ectx)
-		invalidateDomainModelGenForModule(ectx, module.ID)
-		invalidateDomainModelsCache(ectx)
+		invalidateHierarchyDeps(deps)
+		invalidateDomainModelGenForModuleDeps(deps, module.ID)
+		invalidateDomainModelsCacheDeps(deps)
 		fmt.Fprintf(deps.Output, "Renamed attribute '%s' to '%s' on entity %s\n", s.AttributeName, s.NewName, s.Name)
 
 	case ast.AlterEntityModifyAttribute:
@@ -281,9 +279,9 @@ func ExecAlterEntityGenFn(ctx context.Context, s *ast.AlterEntityStmt, deps *Han
 		if err := deps.DomainModelWriter.UpdateEntityGen(model.ID(dm.ID()), entity); err != nil {
 			return mdlerrors.NewBackend("modify attribute", err)
 		}
-		invalidateHierarchy(ectx)
-		invalidateDomainModelGenForModule(ectx, module.ID)
-		invalidateDomainModelsCache(ectx)
+		invalidateHierarchyDeps(deps)
+		invalidateDomainModelGenForModuleDeps(deps, module.ID)
+		invalidateDomainModelsCacheDeps(deps)
 		fmt.Fprintf(deps.Output, "Modified attribute '%s' on entity %s\n", s.AttributeName, s.Name)
 
 	case ast.AlterEntitySetDocumentation:
@@ -291,8 +289,8 @@ func ExecAlterEntityGenFn(ctx context.Context, s *ast.AlterEntityStmt, deps *Han
 		if err := deps.DomainModelWriter.UpdateEntityGen(model.ID(dm.ID()), entity); err != nil {
 			return mdlerrors.NewBackend("set documentation", err)
 		}
-		invalidateDomainModelGenForModule(ectx, module.ID)
-		invalidateDomainModelsCache(ectx)
+		invalidateDomainModelGenForModuleDeps(deps, module.ID)
+		invalidateDomainModelsCacheDeps(deps)
 		fmt.Fprintf(deps.Output, "Set documentation on entity %s\n", s.Name)
 
 	case ast.AlterEntitySetComment:
@@ -300,8 +298,8 @@ func ExecAlterEntityGenFn(ctx context.Context, s *ast.AlterEntityStmt, deps *Han
 		if err := deps.DomainModelWriter.UpdateEntityGen(model.ID(dm.ID()), entity); err != nil {
 			return mdlerrors.NewBackend("set comment", err)
 		}
-		invalidateDomainModelGenForModule(ectx, module.ID)
-		invalidateDomainModelsCache(ectx)
+		invalidateDomainModelGenForModuleDeps(deps, module.ID)
+		invalidateDomainModelsCacheDeps(deps)
 		fmt.Fprintf(deps.Output, "Set comment on entity %s\n", s.Name)
 
 	case ast.AlterEntitySetPosition:
@@ -312,8 +310,8 @@ func ExecAlterEntityGenFn(ctx context.Context, s *ast.AlterEntityStmt, deps *Han
 		if err := deps.DomainModelWriter.UpdateEntityGen(model.ID(dm.ID()), entity); err != nil {
 			return mdlerrors.NewBackend("set position", err)
 		}
-		invalidateDomainModelGenForModule(ectx, module.ID)
-		invalidateDomainModelsCache(ectx)
+		invalidateDomainModelGenForModuleDeps(deps, module.ID)
+		invalidateDomainModelsCacheDeps(deps)
 		fmt.Fprintf(deps.Output, "Set position of entity %s to (%d, %d)\n", s.Name, s.Position.X, s.Position.Y)
 
 	case ast.AlterEntityAddIndex:
@@ -341,8 +339,8 @@ func ExecAlterEntityGenFn(ctx context.Context, s *ast.AlterEntityStmt, deps *Han
 		if err := deps.DomainModelWriter.UpdateEntityGen(model.ID(dm.ID()), entity); err != nil {
 			return mdlerrors.NewBackend("add index", err)
 		}
-		invalidateDomainModelGenForModule(ectx, module.ID)
-		invalidateDomainModelsCache(ectx)
+		invalidateDomainModelGenForModuleDeps(deps, module.ID)
+		invalidateDomainModelsCacheDeps(deps)
 		fmt.Fprintf(deps.Output, "Added index to entity %s\n", s.Name)
 
 	case ast.AlterEntityDropIndex:
@@ -364,8 +362,8 @@ func ExecAlterEntityGenFn(ctx context.Context, s *ast.AlterEntityStmt, deps *Han
 		if err := deps.DomainModelWriter.UpdateEntityGen(model.ID(dm.ID()), entity); err != nil {
 			return mdlerrors.NewBackend("drop index", err)
 		}
-		invalidateDomainModelGenForModule(ectx, module.ID)
-		invalidateDomainModelsCache(ectx)
+		invalidateDomainModelGenForModuleDeps(deps, module.ID)
+		invalidateDomainModelsCacheDeps(deps)
 		fmt.Fprintf(deps.Output, "Dropped index '%s' from entity %s\n", s.IndexName, s.Name)
 
 	case ast.AlterEntityAddEventHandler:
@@ -388,8 +386,8 @@ func ExecAlterEntityGenFn(ctx context.Context, s *ast.AlterEntityStmt, deps *Han
 		if err := deps.DomainModelWriter.UpdateEntityGen(model.ID(dm.ID()), entity); err != nil {
 			return mdlerrors.NewBackend("add event handler", err)
 		}
-		invalidateDomainModelGenForModule(ectx, module.ID)
-		invalidateDomainModelsCache(ectx)
+		invalidateDomainModelGenForModuleDeps(deps, module.ID)
+		invalidateDomainModelsCacheDeps(deps)
 		fmt.Fprintf(deps.Output, "Added event handler %s %s on %s\n",
 			s.EventHandler.Moment, s.EventHandler.Event, s.Name)
 
@@ -419,8 +417,8 @@ func ExecAlterEntityGenFn(ctx context.Context, s *ast.AlterEntityStmt, deps *Han
 		if err := deps.DomainModelWriter.UpdateEntityGen(model.ID(dm.ID()), entity); err != nil {
 			return mdlerrors.NewBackend("drop event handler", err)
 		}
-		invalidateDomainModelGenForModule(ectx, module.ID)
-		invalidateDomainModelsCache(ectx)
+		invalidateDomainModelGenForModuleDeps(deps, module.ID)
+		invalidateDomainModelsCacheDeps(deps)
 		fmt.Fprintf(deps.Output, "Dropped event handler %s %s from %s\n",
 			s.EventHandler.Moment, s.EventHandler.Event, s.Name)
 
@@ -433,8 +431,8 @@ func ExecAlterEntityGenFn(ctx context.Context, s *ast.AlterEntityStmt, deps *Han
 		if err := deps.DomainModelWriter.UpdateEntityGen(model.ID(dm.ID()), entity); err != nil {
 			return mdlerrors.NewBackend("set allow create change locally", err)
 		}
-		invalidateDomainModelGenForModule(ectx, module.ID)
-		invalidateDomainModelsCache(ectx)
+		invalidateDomainModelGenForModuleDeps(deps, module.ID)
+		invalidateDomainModelsCacheDeps(deps)
 		fmt.Fprintf(deps.Output, "Set AllowCreateChangeLocally = %v on entity %s\n", s.BoolValue, s.Name)
 
 	case ast.AlterEntitySetSystemMembers:
@@ -461,25 +459,24 @@ func ExecAlterEntityGenFn(ctx context.Context, s *ast.AlterEntityStmt, deps *Han
 		if err := deps.DomainModelWriter.UpdateEntityGen(model.ID(dm.ID()), entity); err != nil {
 			return mdlerrors.NewBackend("set system members", err)
 		}
-		invalidateDomainModelGenForModule(ectx, module.ID)
-		invalidateDomainModelsCache(ectx)
+		invalidateDomainModelGenForModuleDeps(deps, module.ID)
+		invalidateDomainModelsCacheDeps(deps)
 		fmt.Fprintf(deps.Output, "Set system members (%v) on entity %s\n", s.SystemMembers, s.Name)
 
 	default:
 		return mdlerrors.NewUnsupported("unsupported alter entity operation")
 	}
 
-	ectx.trackModifiedDomainModel(module.ID, module.Name)
+	trackModifiedDomainModelDeps(deps, module.ID, module.Name)
 	return nil
 }
 
 func loadAlterEntityGenTargetFn(ctx context.Context, deps *HandlerDeps, s *ast.AlterEntityStmt) (*genDm.Entity, *genDm.DomainModel, *model.Module, bool) {
-	ectx := NewExecContext(ctx, deps)
-	module, err := findModule(ectx, s.Name.Module)
+	module, err := findModuleDeps(ctx, deps, s.Name.Module)
 	if err != nil {
 		return nil, nil, nil, false
 	}
-	dm, err := getDomainModelGenCached(ectx, module.ID)
+	dm, err := getDomainModelGenCachedDeps(ctx, deps, module.ID)
 	if err != nil || dm == nil {
 		return nil, nil, nil, false
 	}

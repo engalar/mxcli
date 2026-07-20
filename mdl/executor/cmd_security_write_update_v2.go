@@ -17,8 +17,7 @@ func ExecUpdateSecurityGenFn(ctx context.Context, s *ast.UpdateSecurityStmt, dep
 	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
-	ectx := NewExecContext(ctx, deps)
-	modules, err := getModulesFromCache(ectx)
+	modules, err := getModulesFromCacheDeps(ctx, deps)
 	if err != nil {
 		return err
 	}
@@ -27,7 +26,7 @@ func ExecUpdateSecurityGenFn(ctx context.Context, s *ast.UpdateSecurityStmt, dep
 		if s.Module != "" && mod.Name != s.Module {
 			continue
 		}
-		dm, err := getDomainModelGenCached(ectx, mod.ID)
+		dm, err := getDomainModelGenCachedDeps(ctx, deps, mod.ID)
 		if err != nil || dm == nil {
 			continue
 		}
@@ -36,7 +35,7 @@ func ExecUpdateSecurityGenFn(ctx context.Context, s *ast.UpdateSecurityStmt, dep
 			return mdlerrors.NewBackend(fmt.Sprintf("reconcile security for module %s", mod.Name), err)
 		}
 		if len(msgs) > 0 {
-			invalidateDomainModelGenForModule(ectx, mod.ID)
+			invalidateDomainModelGenForModuleDeps(deps, mod.ID)
 		}
 		for _, msg := range msgs {
 			fmt.Fprintf(deps.Output, "  [%s] %s\n", mod.Name, msg)

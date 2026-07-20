@@ -13,7 +13,7 @@ import (
 func RegisterHandlers(r *executor.Registry, deps *executor.HandlerDeps) {
 	// Single shared ExecContext for wiring DomainModelDeps callbacks.
 	bgCtx := context.Background()
-	ectx := executor.NewExecContext(bgCtx, deps)
+	ectx := executor.NewMinimalExecCtx(bgCtx, deps)
 
 	d := DomainModelDeps{
 		ConnectionManager:          deps.ConnectionManager,
@@ -93,11 +93,11 @@ func RegisterHandlers(r *executor.Registry, deps *executor.HandlerDeps) {
 		},
 
 		FindEntityGen: func(qn ast.QualifiedName) (*genDm.Entity, string, error) {
-			e := executor.NewExecContext(bgCtx, deps)
+			e := executor.NewMinimalExecCtx(bgCtx, deps)
 			return executor.FindEntityGenWrap(e, qn)
 		},
 		FindEnumeration: func(moduleName, enumName string) *model.Enumeration {
-			e := executor.NewExecContext(bgCtx, deps)
+			e := executor.NewMinimalExecCtx(bgCtx, deps)
 			return executor.FindEnumerationWrap(e, moduleName, enumName)
 		},
 

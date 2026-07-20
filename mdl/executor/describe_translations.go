@@ -16,7 +16,7 @@ import (
 
 // ExecDescribeTranslationsFn is the HandlerDeps version of describeTranslations.
 func ExecDescribeTranslationsFn(ctx context.Context, s *ast.DescribeTranslationsStmt, deps *HandlerDeps) error {
-	tmpCtx := NewExecContext(ctx, deps)
+	tmpCtx := newMinimalExecCtx(ctx, deps)
 	return describeTranslations(tmpCtx, s)
 }
 

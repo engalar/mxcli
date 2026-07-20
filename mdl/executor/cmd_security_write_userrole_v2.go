@@ -28,8 +28,7 @@ func ExecCreateUserRoleGenFn(ctx context.Context, s *ast.CreateUserRoleStmt, dep
 	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
-	ectx := NewExecContext(ctx, deps)
-	ps, err := getProjectSecurityGen(ectx)
+	ps, err := getProjectSecurityGenDeps(deps)
 	if err != nil {
 		return mdlerrors.NewBackend("read project security", err)
 	}
@@ -57,7 +56,9 @@ func ExecCreateUserRoleGenFn(ctx context.Context, s *ast.CreateUserRoleStmt, dep
 			if err := deps.SecurityProjectManager.AlterUserRoleModuleRoles(model.ID(ps.ID()), s.Name, true, moduleRoleNames); err != nil {
 				return mdlerrors.NewBackend("update user role", err)
 			}
-			invalidateProjectSecurityCache(ectx)
+			if deps.Cache != nil {
+				deps.Cache.projectSecurityGen = nil
+			}
 			fmt.Fprintf(deps.Output, "Modified user role: %s\n", s.Name)
 			return nil
 		}
@@ -65,7 +66,9 @@ func ExecCreateUserRoleGenFn(ctx context.Context, s *ast.CreateUserRoleStmt, dep
 	if err := deps.SecurityProjectManager.AddUserRole(model.ID(ps.ID()), s.Name, moduleRoleNames, s.ManageAllRoles); err != nil {
 		return mdlerrors.NewBackend("create user role", err)
 	}
-	invalidateProjectSecurityCache(ectx)
+	if deps.Cache != nil {
+		deps.Cache.projectSecurityGen = nil
+	}
 	fmt.Fprintf(deps.Output, "Created user role: %s\n", s.Name)
 	return nil
 }
@@ -75,8 +78,7 @@ func ExecAlterUserRoleGenFn(ctx context.Context, s *ast.AlterUserRoleStmt, deps 
 	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
-	ectx := NewExecContext(ctx, deps)
-	ps, err := getProjectSecurityGen(ectx)
+	ps, err := getProjectSecurityGenDeps(deps)
 	if err != nil {
 		return mdlerrors.NewBackend("read project security", err)
 	}
@@ -104,7 +106,9 @@ func ExecAlterUserRoleGenFn(ctx context.Context, s *ast.AlterUserRoleStmt, deps 
 	if err := deps.SecurityProjectManager.AlterUserRoleModuleRoles(model.ID(ps.ID()), s.Name, s.Add, moduleRoleNames); err != nil {
 		return mdlerrors.NewBackend("alter user role", err)
 	}
-	invalidateProjectSecurityCache(ectx)
+	if deps.Cache != nil {
+		deps.Cache.projectSecurityGen = nil
+	}
 	action := "Added"
 	prep := "to"
 	if !s.Add {
@@ -120,8 +124,7 @@ func ExecDropUserRoleGenFn(ctx context.Context, s *ast.DropUserRoleStmt, deps *H
 	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
-	ectx := NewExecContext(ctx, deps)
-	ps, err := getProjectSecurityGen(ectx)
+	ps, err := getProjectSecurityGenDeps(deps)
 	if err != nil {
 		return mdlerrors.NewBackend("read project security", err)
 	}
@@ -145,7 +148,9 @@ func ExecDropUserRoleGenFn(ctx context.Context, s *ast.DropUserRoleStmt, deps *H
 	if err := deps.SecurityProjectManager.RemoveUserRole(model.ID(ps.ID()), s.Name); err != nil {
 		return mdlerrors.NewBackend("drop user role", err)
 	}
-	invalidateProjectSecurityCache(ectx)
+	if deps.Cache != nil {
+		deps.Cache.projectSecurityGen = nil
+	}
 	fmt.Fprintf(deps.Output, "Dropped user role: %s\n", s.Name)
 	return nil
 }

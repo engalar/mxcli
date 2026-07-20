@@ -18,6 +18,6 @@ func ExecDropWorkflowGenFn(ctx context.Context, s *ast.DropWorkflowStmt, deps *e
 }
 
 func ExecAlterWorkflowFn(ctx context.Context, s *ast.AlterWorkflowStmt, deps *executor.HandlerDeps) error {
-	ectx := executor.NewExecContext(ctx, deps)
+	ectx := executor.NewMinimalExecCtx(ctx, deps)
 	return executor.ExecAlterWorkflow(ectx, s)
 }

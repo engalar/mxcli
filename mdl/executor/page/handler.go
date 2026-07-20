@@ -15,7 +15,7 @@ import (
 
 func RegisterHandlers(r *executor.Registry, deps *executor.HandlerDeps) {
 	bgCtx := context.Background()
-	ectx := executor.NewExecContext(bgCtx, deps)
+	ectx := executor.NewMinimalExecCtx(bgCtx, deps)
 
 	d := PageDeps{
 		ConnectionManager:    deps.ConnectionManager,

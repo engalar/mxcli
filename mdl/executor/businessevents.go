@@ -507,7 +507,7 @@ func ExecCreateBusinessEventServiceFn(ctx context.Context, s *ast.CreateBusiness
 	}
 
 	moduleName := s.Name.Module
-	ectx := NewExecContext(ctx, deps)
+	ectx := newMinimalExecCtx(ctx, deps)
 	module, err := findModule(ectx, moduleName)
 	if err != nil {
 		return mdlerrors.NewNotFound("module", moduleName)
@@ -623,7 +623,7 @@ func ExecDropBusinessEventServiceFn(ctx context.Context, s *ast.DropBusinessEven
 		return mdlerrors.NewBackend("list business event services", err)
 	}
 
-	ectx := NewExecContext(ctx, deps)
+	ectx := newMinimalExecCtx(ctx, deps)
 	h, err := getHierarchy(ectx)
 	if err != nil {
 		return mdlerrors.NewBackend("build hierarchy", err)

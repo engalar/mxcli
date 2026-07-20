@@ -49,8 +49,7 @@ func execMoveFn(ctx context.Context, s *ast.MoveStmt, deps *HandlerDeps) error {
 
 	var targetContainerID model.ID
 	if s.Folder != "" {
-		ectx := NewExecContext(ctx, deps)
-		targetContainerID, err = resolveFolder(ectx, targetModule.ID, s.Folder, nil)
+		targetContainerID, err = resolveFolderDeps(deps, targetModule.ID, s.Folder, nil)
 		if err != nil {
 			return mdlerrors.NewBackend("resolve target folder", err)
 		}
@@ -58,7 +57,7 @@ func execMoveFn(ctx context.Context, s *ast.MoveStmt, deps *HandlerDeps) error {
 		targetContainerID = targetModule.ID
 	}
 
-	ectx := NewExecContext(ctx, deps)
+	ectx := newMinimalExecCtx(ctx, deps)
 	id, err := mover.find(ectx, s.Name)
 	if err != nil {
 		return err
@@ -96,8 +95,7 @@ func updateQualifiedNameRefsFn(ctx context.Context, deps *HandlerDeps, name ast.
 
 // moveEntityFn is the HandlerDeps version of moveEntity.
 func moveEntityFn(ctx context.Context, deps *HandlerDeps, name ast.QualifiedName, sourceModule, targetModule *model.Module) error {
-	ectx := NewExecContext(ctx, deps)
-	sourceDM, err := getDomainModelGenCached(ectx, sourceModule.ID)
+	sourceDM, err := getDomainModelGenCachedDeps(ctx, deps, sourceModule.ID)
 	if err != nil {
 		return mdlerrors.NewBackend("get source domain model", err)
 	}
@@ -117,7 +115,7 @@ func moveEntityFn(ctx context.Context, deps *HandlerDeps, name ast.QualifiedName
 		return mdlerrors.NewNotFound("entity", name.String())
 	}
 
-	targetDM, err := getDomainModelGenCached(ectx, targetModule.ID)
+	targetDM, err := getDomainModelGenCachedDeps(ctx, deps, targetModule.ID)
 	if err != nil {
 		return mdlerrors.NewBackend("get target domain model", err)
 	}
@@ -129,8 +127,8 @@ func moveEntityFn(ctx context.Context, deps *HandlerDeps, name ast.QualifiedName
 	if err != nil {
 		return mdlerrors.NewBackend("move entity", err)
 	}
-	invalidateDomainModelGenForModule(ectx, sourceModule.ID)
-	invalidateDomainModelGenForModule(ectx, targetModule.ID)
+	invalidateDomainModelGenForModuleDeps(deps, sourceModule.ID)
+	invalidateDomainModelGenForModuleDeps(deps, targetModule.ID)
 
 	if source, ok := entity.Source().(*genDm.OqlViewEntitySource); ok && source != nil && source.SourceDocumentQualifiedName() != "" {
 		docName := name.Name

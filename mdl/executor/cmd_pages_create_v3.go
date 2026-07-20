@@ -20,7 +20,7 @@ import (
 
 // ExecCreatePageV3Deps is the HandlerDeps version of ExecCreatePageV3.
 func ExecCreatePageV3Deps(ctx context.Context, s *ast.CreatePageStmtV3, deps *HandlerDeps) error {
-	tmpCtx := NewExecContext(ctx, deps)
+	tmpCtx := newMinimalExecCtx(ctx, deps)
 	return ExecCreatePageV3(tmpCtx, s)
 }
 
@@ -171,7 +171,7 @@ func ExecCreatePageV3(ctx *ExecContext, s *ast.CreatePageStmtV3) error {
 
 // ExecCreateSnippetV3Deps is the HandlerDeps version of ExecCreateSnippetV3.
 func ExecCreateSnippetV3Deps(ctx context.Context, s *ast.CreateSnippetStmtV3, deps *HandlerDeps) error {
-	tmpCtx := NewExecContext(ctx, deps)
+	tmpCtx := newMinimalExecCtx(ctx, deps)
 	return ExecCreateSnippetV3(tmpCtx, s)
 }
 

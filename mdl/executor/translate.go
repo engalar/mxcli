@@ -15,7 +15,7 @@ import (
 
 // ExecTranslateFn is the HandlerDeps version of translateDocument.
 func ExecTranslateFn(ctx context.Context, s *ast.TranslateStmt, deps *HandlerDeps) error {
-	tmpCtx := NewExecContext(ctx, deps)
+	tmpCtx := newMinimalExecCtx(ctx, deps)
 	return translateDocument(tmpCtx, s)
 }
 

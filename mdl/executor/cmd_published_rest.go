@@ -181,7 +181,7 @@ func execCreatePublishedRestServiceFn(ctx context.Context, s *ast.CreatePublishe
 		return mdlerrors.NewNotConnectedWrite()
 	}
 
-	tmpCtx := NewExecContext(ctx, deps)
+	tmpCtx := newMinimalExecCtx(ctx, deps)
 
 	if err := checkFeature(tmpCtx, "integration", "published_rest_service",
 		"create published rest service",
@@ -298,7 +298,7 @@ func execAlterPublishedRestServiceFn(ctx context.Context, s *ast.AlterPublishedR
 		return mdlerrors.NewNotConnectedWrite()
 	}
 
-	tmpCtx := NewExecContext(ctx, deps)
+	tmpCtx := newMinimalExecCtx(ctx, deps)
 
 	if err := checkFeature(tmpCtx, "integration", "published_rest_alter",
 		"alter published rest service",

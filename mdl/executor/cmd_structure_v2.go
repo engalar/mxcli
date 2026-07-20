@@ -52,8 +52,7 @@ func execShowStructureGenFn(ctx context.Context, s *ast.ShowStmt, deps *HandlerD
 	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnected()
 	}
-	tmpCtx := NewExecContext(ctx, deps)
-	return execShowStructureGenImpl(tmpCtx, s)
+	return execShowStructureGenImplDeps(ctx, deps, s)
 }
 
 // ────────────────────────────────────────────────────────────
@@ -70,6 +69,311 @@ func execShowStructureGenFn(ctx context.Context, s *ast.ShowStmt, deps *HandlerD
 // because nothing on that path touches sdk/microflows; depth-2 and -3
 // are reimplemented to read microflow/nanoflow data via the gen
 // repositories.
+func execShowStructureGenImplDeps(ctx context.Context, deps *HandlerDeps, s *ast.ShowStmt) error {
+	depth := min(max(s.Depth, 1), 3)
+
+	modules, err := getStructureModulesDeps(deps, s.InModule, s.All)
+	if err != nil {
+		return err
+	}
+
+	if len(modules) == 0 {
+		if deps.Format == FormatJSON {
+			fmt.Fprintln(deps.Output, "[]")
+		} else {
+			fmt.Fprintln(deps.Output, "(no modules found)")
+		}
+		return nil
+	}
+
+	if deps.Format == FormatJSON {
+		return structureDepth1JSONDeps(deps, modules)
+	}
+
+	switch depth {
+	case 1:
+		return structureDepth1Deps(deps, modules)
+	case 2:
+		return structureDepth2GenImplDeps(deps, modules)
+	case 3:
+		return structureDepth3GenImplDeps(deps, modules)
+	default:
+		return structureDepth2GenImplDeps(deps, modules)
+	}
+}
+
+func structureDepth3GenImplDeps(deps *HandlerDeps, modules []structureModule) error {
+	h, err := getHierarchyDeps(deps)
+	if err != nil {
+		return mdlerrors.NewBackend("build hierarchy", err)
+	}
+
+	dmByModule, enumsByModule, constByModule, eventsByModule, jaByModule, wfByModule, err := loadStructureSharedDataGenDeps(deps, h)
+	if err != nil {
+		return err
+	}
+
+	mfByModule, err := loadGenMicroflowsByModuleDeps(deps, h)
+	if err != nil {
+		return err
+	}
+	nfByModule, err := loadGenNanoflowsByModuleDeps(deps, h)
+	if err != nil {
+		return err
+	}
+
+	for i, m := range modules {
+		if i > 0 {
+			fmt.Fprintln(deps.Output)
+		}
+		fmt.Fprintln(deps.Output, m.Name)
+
+		structureEntitiesGenDeps(deps, m.Name, dmByModule[m.Name], true)
+
+		if enums, ok := enumsByModule[m.Name]; ok {
+			sortEnumerations(enums)
+			for _, enum := range enums {
+				values := make([]string, len(enum.Values))
+				for i, v := range enum.Values {
+					values[i] = v.Name
+				}
+				fmt.Fprintf(deps.Output, "  Enumeration %s.%s [%s]\n", m.Name, enum.Name, strings.Join(values, ", "))
+			}
+		}
+
+		if mfs, ok := mfByModule[m.Name]; ok {
+			sortGenMicroflows(mfs)
+			for _, mf := range mfs {
+				fmt.Fprintf(deps.Output, "  Microflow %s.%s%s\n",
+					m.Name, mf.Name(), formatMicroflowSignatureGen(mf, true))
+			}
+		}
+
+		if nfs, ok := nfByModule[m.Name]; ok {
+			sortGenNanoflows(nfs)
+			for _, nf := range nfs {
+				fmt.Fprintf(deps.Output, "  Nanoflow %s.%s%s\n",
+					m.Name, nf.Name(), formatNanoflowSignatureGen(nf, true))
+			}
+		}
+
+		structureWorkflowsDeps(deps, m.Name, wfByModule[m.Name], true)
+		structurePagesDeps(deps, m.Name)
+		structureSnippetsDeps(deps, m.Name)
+		outputJavaActionsGenDeps(deps, m.Name, jaByModule[m.Name], true)
+
+		if consts, ok := constByModule[m.Name]; ok {
+			sortConstants(consts)
+			for _, c := range consts {
+				s := fmt.Sprintf("  Constant %s.%s: %s", m.Name, c.Name, formatConstantTypeBrief(c.Type))
+				if c.DefaultValue != "" {
+					s += " = " + c.DefaultValue
+				}
+				fmt.Fprintln(deps.Output, s)
+			}
+		}
+		if events, ok := eventsByModule[m.Name]; ok {
+			sortScheduledEvents(events)
+			for _, ev := range events {
+				fmt.Fprintf(deps.Output, "  ScheduledEvent %s.%s\n", m.Name, ev.Name)
+			}
+		}
+	}
+	return nil
+}
+
+func loadStructureSharedDataGenDeps(deps *HandlerDeps, h *ContainerHierarchy) (
+	dmByModule structureDmMapGen,
+	enumsByModule structureEnumMapGen,
+	constByModule structureConstMapGen,
+	eventsByModule structureEventMapGen,
+	jaByModule structureJaMapGen,
+	wfByModule structureWfMapGen,
+	err error,
+) {
+	domainModels, _ := listDomainModelsWithContainerGenDeps(context.Background(), deps)
+	dmByModule = make(structureDmMapGen)
+	for _, pair := range domainModels {
+		if pair.DM == nil {
+			continue
+		}
+		modID := h.FindModuleID(pair.ContainerID)
+		modName := h.GetModuleName(modID)
+		dmByModule[modName] = pair.DM
+	}
+
+	allEnums, _ := deps.EnumerationReader.ListEnumerations()
+	enumsByModule = make(structureEnumMapGen)
+	for _, enum := range allEnums {
+		modID := h.FindModuleID(enum.ContainerID)
+		modName := h.GetModuleName(modID)
+		enumsByModule[modName] = append(enumsByModule[modName], enum)
+	}
+
+	allConstants, _ := deps.ConstantReader.ListConstants()
+	constByModule = make(structureConstMapGen)
+	for _, c := range allConstants {
+		modID := h.FindModuleID(c.ContainerID)
+		modName := h.GetModuleName(modID)
+		constByModule[modName] = append(constByModule[modName], c)
+	}
+
+	allEvents, _ := deps.ScheduledEventReader.ListScheduledEvents()
+	eventsByModule = make(structureEventMapGen)
+	for _, ev := range allEvents {
+		modID := h.FindModuleID(ev.ContainerID)
+		modName := h.GetModuleName(modID)
+		eventsByModule[modName] = append(eventsByModule[modName], ev)
+	}
+
+	jaPairs, _ := listJavaActionsWithContainerGenDeps(deps)
+	jaByModule = make(structureJaMapGen)
+	for _, p := range jaPairs {
+		if p.Elem == nil {
+			continue
+		}
+		modID := h.FindModuleID(model.ID(p.ContainerID))
+		modName := h.GetModuleName(modID)
+		jaByModule[modName] = append(jaByModule[modName], p.Elem)
+	}
+
+	wfPairs, _ := listWorkflowsWithContainerGenDeps(deps)
+	wfByModule = make(structureWfMapGen)
+	for _, p := range wfPairs {
+		if p.Elem == nil {
+			continue
+		}
+		modID := h.FindModuleID(model.ID(p.ContainerID))
+		modName := h.GetModuleName(modID)
+		wfByModule[modName] = append(wfByModule[modName], p.Elem)
+	}
+	return
+}
+
+func loadGenMicroflowsByModuleDeps(deps *HandlerDeps, h *ContainerHierarchy) (map[string][]*genMf.Microflow, error) {
+	if deps.MicroflowRepo == nil {
+		return nil, mdlerrors.NewBackend("microflow repository", fmt.Errorf("deps.MicroflowRepo is nil"))
+	}
+	all, err := deps.MicroflowRepo.ListAll()
+	if err != nil {
+		return nil, mdlerrors.NewBackend("list microflows", err)
+	}
+	out := make(map[string][]*genMf.Microflow)
+	for _, mf := range all {
+		modName := lookupGenContainerModuleDeps(deps, h, mf.ID())
+		out[modName] = append(out[modName], mf)
+	}
+	return out, nil
+}
+
+func loadGenNanoflowsByModuleDeps(deps *HandlerDeps, h *ContainerHierarchy) (map[string][]*genMf.Nanoflow, error) {
+	if deps.NanoflowRepo == nil {
+		return nil, mdlerrors.NewBackend("nanoflow repository", fmt.Errorf("deps.NanoflowRepo is nil"))
+	}
+	all, err := deps.NanoflowRepo.List("")
+	if err != nil {
+		return nil, mdlerrors.NewBackend("list nanoflows", err)
+	}
+	out := make(map[string][]*genMf.Nanoflow)
+	for _, nf := range all {
+		modName := lookupGenContainerModuleDeps(deps, h, nf.ID())
+		out[modName] = append(out[modName], nf)
+	}
+	return out, nil
+}
+
+func lookupGenContainerModuleDeps(deps *HandlerDeps, h *ContainerHierarchy, id element.ID) string {
+	if deps.MicroflowRepo == nil {
+		return ""
+	}
+	containerID, err := deps.MicroflowRepo.GetContainerUUID(model.ID(id))
+	if err != nil || containerID == "" {
+		return ""
+	}
+	modID := h.FindModuleID(containerID)
+	return h.GetModuleName(modID)
+}
+
+func structureEntitiesGenDeps(deps *HandlerDeps, moduleName string, dm *genDm.DomainModel, withTypes bool) {
+	if dm == nil {
+		return
+	}
+
+	entityByID := make(map[model.ID]string)
+	var entities []*genDm.Entity
+	for _, item := range dm.EntitiesItems() {
+		ent, ok := item.(*genDm.Entity)
+		if !ok || ent == nil {
+			continue
+		}
+		entityByID[model.ID(ent.ID())] = ent.Name()
+		entities = append(entities, ent)
+	}
+
+	sort.Slice(entities, func(i, j int) bool {
+		return strings.ToLower(entities[i].Name()) < strings.ToLower(entities[j].Name())
+	})
+
+	assocByParent := make(map[model.ID][]*genDm.Association)
+	for _, item := range dm.AssociationsItems() {
+		assoc, ok := item.(*genDm.Association)
+		if !ok || assoc == nil {
+			continue
+		}
+		assocByParent[model.ID(assoc.ParentRefID())] = append(assocByParent[model.ID(assoc.ParentRefID())], assoc)
+	}
+
+	for _, ent := range entities {
+		var attrParts []string
+		for _, item := range ent.AttributesItems() {
+			attr, ok := item.(*genDm.Attribute)
+			if !ok || attr == nil {
+				continue
+			}
+			if withTypes {
+				attrParts = append(attrParts, fmt.Sprintf("%s: %s", attr.Name(), formatAttributeTypeGen(attr.Type())))
+			} else {
+				attrParts = append(attrParts, attr.Name())
+			}
+		}
+		qualName := moduleName + "." + ent.Name()
+		if len(attrParts) > 0 {
+			fmt.Fprintf(deps.Output, "  Entity %s [%s]\n", qualName, strings.Join(attrParts, ", "))
+		} else {
+			fmt.Fprintf(deps.Output, "  Entity %s\n", qualName)
+		}
+
+		if assocs, ok := assocByParent[model.ID(ent.ID())]; ok {
+			var assocParts []string
+			for _, assoc := range assocs {
+				childName := entityByID[model.ID(assoc.ChildRefID())]
+				if childName == "" {
+					childName = "?"
+				}
+				cardinality := "(1)"
+				if assoc.Type() == "ReferenceSet" {
+					cardinality = "(*)"
+				}
+				part := fmt.Sprintf("→ %s %s", childName, cardinality)
+				if withTypes {
+					if dbe, ok := assoc.DeleteBehavior().(*genDm.AssociationDeleteBehavior); ok && dbe != nil {
+						switch dbe.ChildDeleteBehavior() {
+						case "DeleteMeAndReferences":
+							part += " cascade"
+						case "DeleteMeIfNoReferences":
+							part += " RESTRICT"
+						}
+					}
+				}
+				assocParts = append(assocParts, part)
+			}
+			if len(assocParts) > 0 {
+				fmt.Fprintf(deps.Output, "    %s\n", strings.Join(assocParts, ", "))
+			}
+		}
+	}
+}
+
 func execShowStructureGenImpl(ctx *ExecContext, s *ast.ShowStmt) error {
 	if !ctx.Connected() {
 		return mdlerrors.NewNotConnected()
@@ -114,6 +418,84 @@ func execShowStructureGenImpl(ctx *ExecContext, s *ast.ShowStmt) error {
 // ────────────────────────────────────────────────────────────
 // Depth 2 — gen-typed
 // ────────────────────────────────────────────────────────────
+
+func structureDepth2GenImplDeps(deps *HandlerDeps, modules []structureModule) error {
+	h, err := getHierarchyDeps(deps)
+	if err != nil {
+		return mdlerrors.NewBackend("build hierarchy", err)
+	}
+
+	dmByModule, enumsByModule, constByModule, eventsByModule, jaByModule, wfByModule, err := loadStructureSharedDataGenDeps(deps, h)
+	if err != nil {
+		return err
+	}
+
+	mfByModule, err := loadGenMicroflowsByModuleDeps(deps, h)
+	if err != nil {
+		return err
+	}
+	nfByModule, err := loadGenNanoflowsByModuleDeps(deps, h)
+	if err != nil {
+		return err
+	}
+
+	for i, m := range modules {
+		if i > 0 {
+			fmt.Fprintln(deps.Output)
+		}
+		fmt.Fprintln(deps.Output, m.Name)
+
+		structureEntitiesGenDeps(deps, m.Name, dmByModule[m.Name], false)
+
+		if enums, ok := enumsByModule[m.Name]; ok {
+			sortEnumerations(enums)
+			for _, enum := range enums {
+				values := make([]string, len(enum.Values))
+				for i, v := range enum.Values {
+					values[i] = v.Name
+				}
+				fmt.Fprintf(deps.Output, "  Enumeration %s.%s [%s]\n", m.Name, enum.Name, strings.Join(values, ", "))
+			}
+		}
+
+		if mfs, ok := mfByModule[m.Name]; ok {
+			sortGenMicroflows(mfs)
+			for _, mf := range mfs {
+				fmt.Fprintf(deps.Output, "  Microflow %s.%s%s\n",
+					m.Name, mf.Name(), formatMicroflowSignatureGen(mf, false))
+			}
+		}
+
+		if nfs, ok := nfByModule[m.Name]; ok {
+			sortGenNanoflows(nfs)
+			for _, nf := range nfs {
+				fmt.Fprintf(deps.Output, "  Nanoflow %s.%s%s\n",
+					m.Name, nf.Name(), formatNanoflowSignatureGen(nf, false))
+			}
+		}
+
+		structureWorkflowsDeps(deps, m.Name, wfByModule[m.Name], false)
+
+		structurePagesDeps(deps, m.Name)
+		structureSnippetsDeps(deps, m.Name)
+
+		outputJavaActionsGenDeps(deps, m.Name, jaByModule[m.Name], false)
+
+		if consts, ok := constByModule[m.Name]; ok {
+			sortConstants(consts)
+			for _, c := range consts {
+				fmt.Fprintf(deps.Output, "  Constant %s.%s: %s\n", m.Name, c.Name, formatConstantTypeBrief(c.Type))
+			}
+		}
+		if events, ok := eventsByModule[m.Name]; ok {
+			sortScheduledEvents(events)
+			for _, ev := range events {
+				fmt.Fprintf(deps.Output, "  ScheduledEvent %s.%s\n", m.Name, ev.Name)
+			}
+		}
+	}
+	return nil
+}
 
 func structureDepth2GenImpl(ctx *ExecContext, modules []structureModule) error {
 	h, err := getHierarchy(ctx)

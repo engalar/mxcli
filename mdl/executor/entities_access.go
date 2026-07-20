@@ -4,6 +4,7 @@
 package executor
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -195,6 +196,54 @@ func formatAccessRuleResult(ctx *ExecContext, moduleName, entityName string, rol
 	invalidateDomainModelsCache(ctx)
 
 	entity, _, err := findEntityGen(ctx, ast.QualifiedName{Module: moduleName, Name: entityName})
+	if err != nil || entity == nil {
+		return ""
+	}
+
+	attrNames := make(map[string]string)
+	for _, a := range entity.AttributesItems() {
+		attr, ok := a.(*genDm.Attribute)
+		if !ok {
+			continue
+		}
+		attrNames[string(attr.ID())] = attr.Name()
+		attrNames[attr.Name()] = attr.Name()
+	}
+
+	roleSet := make(map[string]bool)
+	for _, rn := range roleNames {
+		roleSet[rn] = true
+	}
+
+	for _, r := range entity.AccessRulesItems() {
+		rule, ok := r.(*genDm.AccessRule)
+		if !ok {
+			continue
+		}
+		matchCount := 0
+		for _, rn := range rule.ModuleRolesQualifiedNames() {
+			if roleSet[rn] {
+				matchCount++
+			}
+		}
+		if matchCount == 0 {
+			continue
+		}
+		rightsStr := formatAccessRuleRightsGen(rule, attrNames)
+		if rightsStr == "" {
+			return "  Result: (no access)\n"
+		}
+		return fmt.Sprintf("  Result: %s\n", rightsStr)
+	}
+
+	return "  Result: (no access)\n"
+}
+
+// formatAccessRuleResultDeps is the HandlerDeps version of formatAccessRuleResult.
+func formatAccessRuleResultDeps(deps *HandlerDeps, moduleName, entityName string, roleNames []string) string {
+	invalidateDomainModelsCacheDeps(deps)
+
+	entity, _, err := findEntityInDMsDeps(context.Background(), deps, ast.QualifiedName{Module: moduleName, Name: entityName})
 	if err != nil || entity == nil {
 		return ""
 	}

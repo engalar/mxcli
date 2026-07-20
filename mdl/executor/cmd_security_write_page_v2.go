@@ -31,18 +31,17 @@ func ExecGrantPageAccessGenFn(ctx context.Context, s *ast.GrantPageAccessStmt, d
 	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
-	ectx := NewExecContext(ctx, deps)
-	h, err := getHierarchy(ectx)
+	h, err := getHierarchyDeps(deps)
 	if err != nil {
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}
-	if ectx.Cache != nil && ectx.Cache.createdPages != nil {
+	if deps.Cache != nil && deps.Cache.createdPages != nil {
 		qualifiedName := s.Page.Module + "." + s.Page.Name
-		if info, ok := ectx.Cache.createdPages[qualifiedName]; ok {
+		if info, ok := deps.Cache.createdPages[qualifiedName]; ok {
 			return execGrantExistingPageFn(ctx, s, info.ID, info.ModuleName, deps)
 		}
 	}
-	pgPairs, err := listPagesWithContainerGen(ectx)
+	pgPairs, err := listPagesWithContainerGenDeps(ctx, deps)
 	if err != nil {
 		return mdlerrors.NewBackend("list pages", err)
 	}
@@ -59,10 +58,9 @@ func ExecGrantPageAccessGenFn(ctx context.Context, s *ast.GrantPageAccessStmt, d
 }
 
 func execGrantExistingPageFn(ctx context.Context, s *ast.GrantPageAccessStmt, pageID model.ID, modName string, deps *HandlerDeps) error {
-	ectx := NewExecContext(ctx, deps)
 	var validRoles []ast.QualifiedName
 	for _, role := range s.Roles {
-		found, err := validateModuleRole(ectx, role)
+		found, err := validateModuleRoleFn(deps, role)
 		if err != nil {
 			return err
 		}
@@ -98,8 +96,7 @@ func ExecRevokePageAccessGenFn(ctx context.Context, s *ast.RevokePageAccessStmt,
 	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
-	ectx := NewExecContext(ctx, deps)
-	h, err := getHierarchy(ectx)
+	h, err := getHierarchyDeps(deps)
 	if err != nil {
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}
@@ -110,7 +107,7 @@ func ExecRevokePageAccessGenFn(ctx context.Context, s *ast.RevokePageAccessStmt,
 	if pageID != "" {
 		return execRevokeExistingPageFn(ctx, s, pageID, deps)
 	}
-	pgPairs, err := listPagesWithContainerGen(ectx)
+	pgPairs, err := listPagesWithContainerGenDeps(ctx, deps)
 	if err != nil {
 		return mdlerrors.NewBackend("list pages", err)
 	}

@@ -104,6 +104,18 @@ func genFlowContainerModule(ctx *ExecContext, h *ContainerHierarchy, id model.ID
 	return containerModuleName(h, containerID)
 }
 
+// genFlowContainerModuleDeps is the HandlerDeps version of genFlowContainerModule.
+func genFlowContainerModuleDeps(deps *HandlerDeps, h *ContainerHierarchy, id model.ID) string {
+	if id == "" || deps == nil || deps.MicroflowRepo == nil || h == nil {
+		return ""
+	}
+	containerID, err := deps.MicroflowRepo.GetContainerUUID(id)
+	if err != nil || containerID == "" {
+		return ""
+	}
+	return containerModuleName(h, containerID)
+}
+
 // containerModuleName resolves the module name from a known container
 // UUID using the in-memory container hierarchy.  This is the fast-path
 // half of genFlowContainerModule — callers that already hold the

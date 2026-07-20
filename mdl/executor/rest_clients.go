@@ -993,8 +993,8 @@ func fetchSpecBytes(specPath, baseDir string) ([]byte, string, error) {
 
 func ExecCreateRestClientFn(ctx context.Context, s *ast.CreateRestClientStmt, deps *HandlerDeps) error {
 	if s.OpenApiPath != "" {
-		ectx := NewExecContext(ctx, deps)
-		return createRestClientFromSpec(ectx, s)
+		_ectx := newMinimalExecCtx(ctx, deps)
+		return createRestClientFromSpec(_ectx, s)
 	}
 
 	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
@@ -1008,8 +1008,8 @@ func ExecCreateRestClientFn(ctx context.Context, s *ast.CreateRestClientStmt, de
 	}
 
 	moduleName := s.Name.Module
-	ectx := NewExecContext(ctx, deps)
-	module, err := findModule(ectx, moduleName)
+	_ectx := newMinimalExecCtx(ctx, deps)
+	module, err := findModule(_ectx, moduleName)
 	if err != nil {
 		return mdlerrors.NewNotFound("module", moduleName)
 	}
@@ -1018,7 +1018,7 @@ func ExecCreateRestClientFn(ctx context.Context, s *ast.CreateRestClientStmt, de
 	if err != nil {
 		return mdlerrors.NewBackend("list rest clients", err)
 	}
-	h, err := getHierarchy(ectx)
+	h, err := getHierarchy(_ectx)
 	if err != nil {
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}
@@ -1043,7 +1043,7 @@ func ExecCreateRestClientFn(ctx context.Context, s *ast.CreateRestClientStmt, de
 
 	containerID := module.ID
 	if s.Folder != "" {
-		folderID, err := resolveFolder(ectx, module.ID, s.Folder, nil)
+		folderID, err := resolveFolder(_ectx, module.ID, s.Folder, nil)
 		if err != nil {
 			return mdlerrors.NewBackend(fmt.Sprintf("resolve folder '%s'", s.Folder), err)
 		}
@@ -1072,7 +1072,7 @@ func ExecCreateRestClientFn(ctx context.Context, s *ast.CreateRestClientStmt, de
 			auth.Username = "$" + name
 		} else if s.Authentication.Username != "" {
 			constName := s.Name.Name + "_Username"
-			if err := ensureConstant(ectx, moduleName, containerID, constName, s.Authentication.Username); err != nil {
+			if err := ensureConstant(_ectx, moduleName, containerID, constName, s.Authentication.Username); err != nil {
 				return fmt.Errorf("failed to create username constant: %w", err)
 			}
 			auth.Username = "$" + moduleName + "." + constName
@@ -1085,7 +1085,7 @@ func ExecCreateRestClientFn(ctx context.Context, s *ast.CreateRestClientStmt, de
 			auth.Password = "$" + name
 		} else if s.Authentication.Password != "" {
 			constName := s.Name.Name + "_Password"
-			if err := ensureConstant(ectx, moduleName, containerID, constName, s.Authentication.Password); err != nil {
+			if err := ensureConstant(_ectx, moduleName, containerID, constName, s.Authentication.Password); err != nil {
 				return fmt.Errorf("failed to create password constant: %w", err)
 			}
 			auth.Password = "$" + moduleName + "." + constName
@@ -1121,8 +1121,8 @@ func ExecDropRestClientFn(ctx context.Context, s *ast.DropRestClientStmt, deps *
 		return mdlerrors.NewBackend("list consumed rest services", err)
 	}
 
-	ectx := NewExecContext(ctx, deps)
-	h, err := getHierarchy(ectx)
+	_ectx := newMinimalExecCtx(ctx, deps)
+	h, err := getHierarchy(_ectx)
 	if err != nil {
 		return mdlerrors.NewBackend("build hierarchy", err)
 	}
@@ -1168,8 +1168,8 @@ func ExecDescribeContractFromOpenAPIFn(ctx context.Context, s *ast.DescribeContr
 	}
 
 	svc := convertOpenAPIToModel(parsed, "")
-	ectx := NewExecContext(ctx, deps)
-	return outputConsumedRestServiceMDL(ectx, svc, "MyModule")
+	_ectx := newMinimalExecCtx(ctx, deps)
+	return outputConsumedRestServiceMDL(_ectx, svc, "MyModule")
 }
 
 // Executor wrappers for unmigrated callers.

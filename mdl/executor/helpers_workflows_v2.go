@@ -85,6 +85,57 @@ func listWorkflowsWithContainerGen(ctx *ExecContext) ([]ContainerWithGen[*genWf.
 // invalidateWorkflowsCache clears the cached gen-typed workflow listing.
 // Call from any write path that creates, drops, or otherwise mutates
 // workflow units.
+// listWorkflowsWithContainerGenDeps is the HandlerDeps version of listWorkflowsWithContainerGen.
+func listWorkflowsWithContainerGenDeps(deps *HandlerDeps) ([]ContainerWithGen[*genWf.Workflow], error) {
+	if deps == nil {
+		return nil, nil
+	}
+	listFn := func() ([]*genWf.Workflow, error) {
+		var all []*genWf.Workflow
+		var err error
+		switch {
+		case deps.WorkflowRepo != nil:
+			all, err = deps.WorkflowRepo.ListAll()
+		case deps.WorkflowReader != nil:
+			all, err = deps.WorkflowReader.ListWorkflowsGen()
+		default:
+			return nil, nil
+		}
+		if err != nil {
+			return nil, err
+		}
+		filtered := all[:0]
+		for _, w := range all {
+			if w != nil {
+				filtered = append(filtered, w)
+			}
+		}
+		return filtered, nil
+	}
+	resolveFn := func(id element.ID) (element.ID, error) {
+		if deps.WorkflowRepo != nil {
+			c, err := deps.WorkflowRepo.GetContainerUUID(model.ID(id))
+			return element.ID(c), err
+		}
+		return "", nil
+	}
+	return listUnitsWithContainerGen(
+		listFn,
+		resolveFn,
+		func() ([]ContainerWithGen[*genWf.Workflow], bool) {
+			if deps.Cache != nil && deps.Cache.workflowsWithContainerGen != nil {
+				return deps.Cache.workflowsWithContainerGen, true
+			}
+			return nil, false
+		},
+		func(s []ContainerWithGen[*genWf.Workflow]) {
+			if deps.Cache != nil {
+				deps.Cache.workflowsWithContainerGen = s
+			}
+		},
+	)
+}
+
 func invalidateWorkflowsCache(ctx *ExecContext) {
 	if ctx == nil || ctx.Cache == nil {
 		return
