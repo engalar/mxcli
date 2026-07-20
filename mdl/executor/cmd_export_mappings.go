@@ -191,7 +191,7 @@ func printExportMappingElement(w io.Writer, elem *model.ExportMappingElement, de
 
 // execCreateExportMappingFn creates a new export mapping with HandlerDeps.
 func execCreateExportMappingFn(ctx context.Context, s *ast.CreateExportMappingStmt, deps *HandlerDeps) error {
-	if deps.Backend == nil || !deps.ConnectionManager.IsConnected() {
+	if !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
 
@@ -244,7 +244,7 @@ func execCreateExportMappingFn(ctx context.Context, s *ast.CreateExportMappingSt
 
 	// Build element tree from the AST definition, cloning JSON structure properties
 	if s.RootElement != nil {
-		root := buildExportMappingElementModel(s.Name.Module, s.RootElement, "", "(Object)", jsElems, deps.Backend, true)
+		root := buildExportMappingElementModel(s.Name.Module, s.RootElement, "", "(Object)", jsElems, deps.DomainModelReader, true)
 		em.Elements = append(em.Elements, root)
 	}
 
@@ -273,7 +273,7 @@ func execCreateExportMappingFn(ctx context.Context, s *ast.CreateExportMappingSt
 
 // buildExportMappingElementModel converts an AST element definition to a model element.
 // It clones properties from the matching JSON structure element and adds mapping bindings.
-func buildExportMappingElementModel(moduleName string, def *ast.ExportMappingElementDef, parentEntity, parentPath string, jsElems map[string]*types.JsonElement, b backend.DomainModelBackend, isRoot bool) *model.ExportMappingElement {
+func buildExportMappingElementModel(moduleName string, def *ast.ExportMappingElementDef, parentEntity, parentPath string, jsElems map[string]*types.JsonElement, b backend.DomainModelReader, isRoot bool) *model.ExportMappingElement {
 	elem := &model.ExportMappingElement{
 		BaseElement: model.BaseElement{
 			ID: model.ID(types.GenerateID()),
@@ -403,7 +403,7 @@ func buildExportMappingElementModel(moduleName string, def *ast.ExportMappingEle
 
 // execDropExportMappingFn deletes an export mapping with HandlerDeps.
 func execDropExportMappingFn(ctx context.Context, s *ast.DropExportMappingStmt, deps *HandlerDeps) error {
-	if deps.Backend == nil || !deps.ConnectionManager.IsConnected() {
+	if !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
 

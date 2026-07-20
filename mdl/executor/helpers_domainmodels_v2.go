@@ -33,7 +33,7 @@ type DomainModelGenWithContainer struct {
 // Uses ListAllWithContainerID for a single O(#domain_models) scan instead
 // of one List(moduleID) call per module (which was O(N × all_units)).
 func listDomainModelsWithContainerGen(ctx *ExecContext) ([]DomainModelGenWithContainer, error) {
-	if ctx == nil || ctx.DomainModels == nil || ctx.Backend == nil {
+	if ctx == nil || ctx.DomainModels == nil {
 		return nil, nil
 	}
 	if ctx.Cache != nil && ctx.Cache.domainModelsWithContainerGen != nil {
@@ -80,7 +80,7 @@ func findDomainModelGenByModule(ctx *ExecContext, moduleName string) (*genDm.Dom
 	if err != nil {
 		return nil, err
 	}
-	if ctx == nil || ctx.Backend == nil {
+	if ctx == nil {
 		return nil, nil
 	}
 	mods, err := ctx.ModuleLister.ListModules()

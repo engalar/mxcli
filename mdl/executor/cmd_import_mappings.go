@@ -204,7 +204,7 @@ func printImportMappingElement(w io.Writer, elem *model.ImportMappingElement, de
 
 // execCreateImportMappingFn creates a new import mapping with HandlerDeps.
 func execCreateImportMappingFn(ctx context.Context, s *ast.CreateImportMappingStmt, deps *HandlerDeps) error {
-	if deps.Backend == nil || !deps.ConnectionManager.IsConnected() {
+	if !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
 
@@ -253,7 +253,7 @@ func execCreateImportMappingFn(ctx context.Context, s *ast.CreateImportMappingSt
 
 	// Build element tree from the AST definition, cloning JSON structure properties
 	if s.RootElement != nil {
-		root := buildImportMappingElementModel(s.Name.Module, s.RootElement, "", "(Object)", deps.Backend, jsElementsByPath, true)
+		root := buildImportMappingElementModel(s.Name.Module, s.RootElement, "", "(Object)", deps.DomainModelReader, jsElementsByPath, true)
 		im.Elements = append(im.Elements, root)
 	}
 
@@ -284,7 +284,7 @@ func execCreateImportMappingFn(ctx context.Context, s *ast.CreateImportMappingSt
 // It clones properties from the matching JSON structure element (ExposedName, JsonPath,
 // MaxOccurs, ElementType, etc.) and adds mapping-specific bindings (Entity, Attribute,
 // Association, ObjectHandling).
-func buildImportMappingElementModel(moduleName string, def *ast.ImportMappingElementDef, parentEntity, parentPath string, b backend.DomainModelBackend, jsElems map[string]*types.JsonElement, isRoot bool) *model.ImportMappingElement {
+func buildImportMappingElementModel(moduleName string, def *ast.ImportMappingElementDef, parentEntity, parentPath string, b backend.DomainModelReader, jsElems map[string]*types.JsonElement, isRoot bool) *model.ImportMappingElement {
 	elem := &model.ImportMappingElement{
 		BaseElement: model.BaseElement{
 			ID: model.ID(types.GenerateID()),
@@ -389,7 +389,7 @@ func buildJsonElementPathMap(elems []*types.JsonElement, m map[string]*types.Jso
 
 // resolveAttributeType looks up the data type of an entity attribute from the project.
 // Returns "String" as default if the attribute cannot be found.
-func resolveAttributeType(entityQN, attrName string, b backend.DomainModelBackend) string {
+func resolveAttributeType(entityQN, attrName string, b backend.DomainModelReader) string {
 	if b == nil || entityQN == "" {
 		return "String"
 	}
@@ -458,7 +458,7 @@ func importMappingAttributeTypeNameGen(t any) string {
 
 // execDropImportMappingFn deletes an import mapping with HandlerDeps.
 func execDropImportMappingFn(ctx context.Context, s *ast.DropImportMappingStmt, deps *HandlerDeps) error {
-	if deps.Backend == nil || !deps.ConnectionManager.IsConnected() {
+	if !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnectedWrite()
 	}
 

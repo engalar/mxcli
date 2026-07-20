@@ -878,11 +878,11 @@ func ExecCreateWorkflowGenFn(ctx context.Context, s *ast.CreateWorkflowStmt, dep
 
 	if existingID != "" {
 		wf.SetID(element.ID(existingID))
-		if err := deps.Backend.UpdateWorkflowGen(wf); err != nil {
+		if err := deps.WorkflowWriter.UpdateWorkflowGen(wf); err != nil {
 			return mdlerrors.NewBackend("update workflow", err)
 		}
 	} else {
-		if err := deps.Backend.CreateWorkflowGen(string(module.ID), "Documents", wf); err != nil {
+		if err := deps.WorkflowWriter.CreateWorkflowGen(string(module.ID), "Documents", wf); err != nil {
 			return mdlerrors.NewBackend("create workflow", err)
 		}
 	}
@@ -1198,7 +1198,7 @@ func ExecDropWorkflowGenFn(ctx context.Context, s *ast.DropWorkflowStmt, deps *H
 		modID := h.FindModuleID(model.ID(p.ContainerID))
 		modName := h.GetModuleName(modID)
 		if modName == s.Name.Module && p.Elem.Name() == s.Name.Name {
-			if err := deps.Backend.DeleteWorkflow(model.ID(p.Elem.ID())); err != nil {
+			if err := deps.WorkflowWriter.DeleteWorkflow(model.ID(p.Elem.ID())); err != nil {
 				return mdlerrors.NewBackend("delete workflow", err)
 			}
 			invalidateHierarchyFn(deps)

@@ -2864,7 +2864,7 @@ func execRefreshFuture(ctx context.Context, deps *HandlerDeps, ex *Executor) err
 func execExecuteScriptFuture(ctx context.Context, s *ast.ExecuteScriptStmt, deps *HandlerDeps, ex *Executor) error {
 	tmpCtx := &ExecContext{
 		Context:           ctx,
-		Backend:           deps.Backend,
+		Backend:           ex.backend,
 		ConnectionManager: deps.ConnectionManager,
 		ExecIO:            ExecIO{Output: deps.Output},
 		ExecConnection: ExecConnection{
@@ -2874,7 +2874,7 @@ func execExecuteScriptFuture(ctx context.Context, s *ast.ExecuteScriptStmt, deps
 			ExecuteFn:        ex.Execute,
 			ExecuteProgramFn: ex.ExecuteProgram,
 		},
-		ScriptTransactionManager: deps.Backend,
+		ScriptTransactionManager: deps.ScriptTransactionManager,
 		Logger:                   deps.Logger,
 	}
 	err := execExecuteScript(tmpCtx, s)
@@ -2901,7 +2901,6 @@ func execExecuteScriptFuture(ctx context.Context, s *ast.ExecuteScriptStmt, deps
 func NewExecContext(ctx context.Context, deps *HandlerDeps) *ExecContext {
 	ectx := &ExecContext{
 		Context:   ctx,
-		Backend:   deps.Backend,
 		Logger:    deps.Logger,
 		ExecRepos: ExecRepos{
 			DomainModels:      deps.DomainModels,
@@ -2941,17 +2940,8 @@ func NewExecContext(ctx context.Context, deps *HandlerDeps) *ExecContext {
 		},
 	}
 	// Populate role-specific backend fields from deps.
-	// Each field uses the deps value when non-nil, falling back to deps.Backend.
-	if deps.ConnectionManager != nil {
-		ectx.ConnectionManager = deps.ConnectionManager
-	} else if deps.Backend != nil {
-		ectx.ConnectionManager = deps.Backend
-	}
-	if deps.CacheInvalidator != nil {
-		ectx.CacheInvalidator = deps.CacheInvalidator
-	} else if deps.Backend != nil {
-		ectx.CacheInvalidator = deps.Backend
-	}
+	ectx.ConnectionManager = deps.ConnectionManager
+	ectx.CacheInvalidator = deps.CacheInvalidator
 	ectx.ModuleLister = deps.ModuleLister
 	ectx.ModuleWriter = deps.ModuleWriter
 	ectx.DomainModelReader = deps.DomainModelReader

@@ -389,10 +389,10 @@ func validateModuleRoleFn(deps *HandlerDeps, role ast.QualifiedName) (bool, erro
 		return false, mdlerrors.NewBackend(fmt.Sprintf("read module for role %s.%s", role.Module, role.Name), err)
 	}
 
-	// Fallback: use Backend directly when Security repo is not available
-	// (e.g., mock backends that don't implement repos.SecurityRepository).
+	// Fallback: use SecurityModuleManager directly when Security repo is not
+	// available (e.g., mock backends that don't implement repos.SecurityRepository).
 	if deps.Security == nil {
-		ms, err := deps.Backend.GetModuleSecurityGen(module.ID)
+		ms, err := deps.SecurityModuleManager.GetModuleSecurityGen(module.ID)
 		if err != nil {
 			return false, mdlerrors.NewBackend(fmt.Sprintf("read module security for %s", role.Module), err)
 		}

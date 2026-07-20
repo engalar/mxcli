@@ -35,9 +35,6 @@ type PageDeps struct {
 	MicroflowsRepo  repos.MicroflowRepository
 	NanoflowsRepo   repos.NanoflowRepository
 
-	WidgetBackend          backend.FullBackend
-	SerializationBackend   backend.FullBackend
-
 	Output io.Writer
 
 	FindOrCreateModule func(name string) (*model.Module, error)

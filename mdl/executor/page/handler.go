@@ -35,8 +35,6 @@ func RegisterHandlers(r *executor.Registry, deps *executor.HandlerDeps) {
 		LayoutsRepo:      deps.LayoutRepo,
 		MicroflowsRepo:   deps.MicroflowRepo,
 		NanoflowsRepo:    deps.NanoflowRepo,
-		WidgetBackend:    deps.Backend,
-		SerializationBackend: deps.Backend,
 
 		Output: deps.Output,
 

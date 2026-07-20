@@ -413,7 +413,7 @@ func defaultDocumentAccessRoleQNames(ctx *ExecContext, module *model.Module) []s
 
 // defaultDocumentAccessRoleQNamesFn is the HandlerDeps version of defaultDocumentAccessRoleQNames.
 func defaultDocumentAccessRoleQNamesFn(deps *HandlerDeps, module *model.Module) []string {
-	ectx := &ExecContext{Backend: deps.Backend}
+	ectx := NewExecContext(nil, deps)
 	ids := defaultDocumentAccessRoles(ectx, module)
 	if len(ids) == 0 {
 		return nil

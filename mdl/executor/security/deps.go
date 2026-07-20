@@ -31,7 +31,6 @@ type SecurityDeps struct {
 	SettingsWriter             backend.SettingsWriter
 	ServiceLister              backend.ServiceLister
 	RenameManager              backend.RenameManager
-	Backend                    backend.FullBackend
 
 	Security      repos.SecurityRepository
 	PagesRepo     repos.PageRepository

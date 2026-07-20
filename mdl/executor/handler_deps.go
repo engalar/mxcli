@@ -23,8 +23,7 @@ type HandlerDeps struct {
 	Logger       *diaglog.Logger
 	Quiet        bool
 
-	Backend              backend.FullBackend
-	BackendFactory       BackendFactory
+	BackendFactory BackendFactory
 	ConnectionManager    backend.ConnectionManager
 	ModuleLister         backend.ModuleLister
 	ModuleWriter         backend.ModuleWriter
@@ -893,8 +892,6 @@ func execContextToDeps(ectx *ExecContext) *HandlerDeps {
 		StatusOutput: ectx.StatusOutput,
 		Logger:       ectx.Logger,
 		Quiet:        ectx.Quiet,
-		Backend:      ectx.Backend,
-
 		ConnectionManager:    ectx.ConnectionManager,
 		ModuleLister:         ectx.ModuleLister,
 		ModuleWriter:         ectx.ModuleWriter,
@@ -992,7 +989,6 @@ func (e *Executor) buildHandlerDeps() *HandlerDeps {
 		StatusOutput: e.statusOutput,
 		Logger:       e.logger,
 		Quiet:        e.quiet,
-		Backend:      e.backend,
 
 		ConnectionManager:    e.backend,
 		ModuleLister:         e.backend,

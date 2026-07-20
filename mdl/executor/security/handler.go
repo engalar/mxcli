@@ -33,7 +33,6 @@ func RegisterHandlers(r *executor.Registry, deps *executor.HandlerDeps) {
 		SettingsWriter:             deps.SettingsWriter,
 		ServiceLister:              deps.ServiceLister,
 		RenameManager:              deps.RenameManager,
-		Backend:                    deps.Backend,
 
 		Security:      deps.Security,
 		PagesRepo:     deps.PageRepo,
