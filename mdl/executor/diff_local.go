@@ -4,7 +4,6 @@
 package executor
 
 import (
-	"context"
 	"encoding/base64"
 	"fmt"
 	"os"
@@ -107,7 +106,7 @@ func diffLocal(ctx *ExecContext, ref string, opts DiffOptions) error {
 
 // DiffLocal is a method wrapper for external callers.
 func (e *Executor) DiffLocal(ref string, opts DiffOptions) error {
-	return diffLocal(e.newExecContext(context.Background()), ref, opts)
+	return diffLocalDeps(e.buildHandlerDeps(), ref, opts)
 }
 
 // gitChange represents a file change from git
@@ -946,3 +945,8 @@ func blobToUUID(blob []byte) string {
 		blob[8], blob[9],
 		blob[10], blob[11], blob[12], blob[13], blob[14], blob[15])
 }
+
+func diffLocalDeps(deps *HandlerDeps, ref string, opts DiffOptions) error {
+	return diffLocal(execContextFromDeps(deps), ref, opts)
+}
+

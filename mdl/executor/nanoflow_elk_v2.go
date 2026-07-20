@@ -16,7 +16,6 @@
 package executor
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"math"
@@ -38,7 +37,7 @@ import (
 // Resolves the nanoflow via the gen NanoflowRepository and renders
 // the same JSON ELK graph schema legacy produces.
 func (e *Executor) NanoflowELKGen(name string) error {
-	return nanoflowELKGen(e.newExecContext(context.Background()), name)
+	return nanoflowELKGenDeps(e.buildHandlerDeps(), name)
 }
 
 // NanoflowELK is the public Executor wrapper consumed by
@@ -46,7 +45,7 @@ func (e *Executor) NanoflowELKGen(name string) error {
 // the (deleted) cmd_nanoflow_elk.go; the body always routes through
 // the gen path now that legacy `nanoflowELK` is gone.
 func (e *Executor) NanoflowELK(name string) error {
-	return nanoflowELKGen(e.newExecContext(context.Background()), name)
+	return nanoflowELKGenDeps(e.buildHandlerDeps(), name)
 }
 
 func nanoflowELKGen(ctx *ExecContext, name string) error {
@@ -447,3 +446,9 @@ func lookupGenContainerModule(ctx *ExecContext, h *ContainerHierarchy, id elemen
 	modID := h.FindModuleID(containerID)
 	return h.GetModuleName(modID)
 }
+
+func nanoflowELKGenDeps(deps *HandlerDeps, name string) error {
+	return nanoflowELKGen(execContextFromDeps(deps), name)
+}
+
+

@@ -218,41 +218,46 @@ func describeConstant(ctx *ExecContext, name ast.QualifiedName) error {
 	return mdlerrors.NewNotFound("constant", name.String())
 }
 
-// outputConstantMDL outputs a constant definition in MDL format.
-func outputConstantMDL(ctx *ExecContext, c *model.Constant, moduleName string) error {
+// outputConstantMDLDeps outputs a constant definition in MDL format using HandlerDeps.
+func outputConstantMDLDeps(deps *HandlerDeps, c *model.Constant, moduleName string) error {
 	// Format default value based on type
 	defaultValueStr := formatDefaultValue(c.Type, c.DefaultValue)
 
-	fmt.Fprintf(ctx.Output, "create or modify constant %s.%s\n", moduleName, c.Name)
-	fmt.Fprintf(ctx.Output, "  type %s\n", formatConstantTypeForMDL(c.Type))
-	fmt.Fprintf(ctx.Output, "  default %s", defaultValueStr)
+	fmt.Fprintf(deps.Output, "create or modify constant %s.%s\n", moduleName, c.Name)
+	fmt.Fprintf(deps.Output, "  type %s\n", formatConstantTypeForMDL(c.Type))
+	fmt.Fprintf(deps.Output, "  default %s", defaultValueStr)
 
 	// Add folder if present
-	h, _ := getHierarchy(ctx)
+	h, _ := getHierarchyDeps(deps)
 	if h != nil {
 		if folderPath := h.BuildFolderPath(c.ContainerID); folderPath != "" {
-			fmt.Fprintf(ctx.Output, "\n  folder '%s'", folderPath)
+			fmt.Fprintf(deps.Output, "\n  folder '%s'", folderPath)
 		}
 	}
 
 	// Add options if present
 	if c.Documentation != "" {
 		escaped := strings.ReplaceAll(c.Documentation, "'", "''")
-		fmt.Fprintf(ctx.Output, "\n  comment '%s'", escaped)
+		fmt.Fprintf(deps.Output, "\n  comment '%s'", escaped)
 	}
 	if c.ExposedToClient {
-		fmt.Fprintf(ctx.Output, "\n  exposed to client")
+		fmt.Fprintf(deps.Output, "\n  exposed to client")
 	}
 
-	fmt.Fprintln(ctx.Output, ";")
-	fmt.Fprintln(ctx.Output, "/")
+	fmt.Fprintln(deps.Output, ";")
+	fmt.Fprintln(deps.Output, "/")
 
 	return nil
 }
 
+// outputConstantMDL outputs a constant definition in MDL format.
+func outputConstantMDL(ctx *ExecContext, c *model.Constant, moduleName string) error {
+	return outputConstantMDLDeps(ctx.Deps, c, moduleName)
+}
+
 // outputConstantMDL is an Executor method wrapper for callers not yet migrated.
 func (e *Executor) outputConstantMDL(c *model.Constant, moduleName string) error {
-	return outputConstantMDL(e.newExecContext(context.Background()), c, moduleName)
+	return outputConstantMDLDeps(e.buildHandlerDeps(), c, moduleName)
 }
 
 // formatConstantType returns a human-readable type string.
@@ -611,3 +616,31 @@ func astDataTypeToConstantDataType(dt ast.DataType) model.ConstantDataType {
 		return model.ConstantDataType{Kind: "String"}
 	}
 }
+
+func ExecCreateConstantDeps(ctx context.Context, stmt *ast.CreateConstantStmt, deps *HandlerDeps) error {
+	return execCreateConstantDepsImpl(ctx, stmt, deps)
+}
+
+
+func ExecDropConstantDeps(ctx context.Context, stmt *ast.DropConstantStmt, deps *HandlerDeps) error {
+	return execDropConstantDepsImpl(ctx, stmt, deps)
+}
+
+
+func listConstantsDeps(ctx context.Context, deps *HandlerDeps, moduleName string) error {
+	return listConstantsFuture(ctx, deps.Output, deps.Format, deps.ConnectionManager, deps.ConstantReader, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, moduleName)
+}
+
+
+func listConstantValuesDeps(ctx context.Context, deps *HandlerDeps, moduleName string) error {
+	return listConstantValuesFuture(ctx, deps.Output, deps.Format, deps.ConnectionManager, deps.ConstantReader, deps.SettingsReader, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, moduleName)
+}
+
+
+func describeConstantDeps(ctx context.Context, deps *HandlerDeps, name ast.QualifiedName) error {
+	return describeConstantFuture(ctx, deps.Output, deps.ConstantReader, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, name)
+}
+
+// ── Languages / Settings ──
+
+

@@ -105,7 +105,7 @@ func TestCreateEntity_UnknownAttributeType_Issue392(t *testing.T) {
 	withContainer(h, model.ID(dm.ID()), mod.ID)
 
 	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
-	err := ExecCreateEntity(ctx, &ast.CreateEntityStmt{
+	err := ExecCreateEntityDeps(ctx, &ast.CreateEntityStmt{
 		Name: ast.QualifiedName{Module: "M", Name: "E"},
 		Kind: ast.EntityPersistent,
 		Attributes: []ast.Attribute{
@@ -117,7 +117,7 @@ func TestCreateEntity_UnknownAttributeType_Issue392(t *testing.T) {
 				},
 			},
 		},
-	})
+	}, ctx.Deps)
 	assertError(t, err)
 	assertContainsStr(t, err.Error(), "invalidtype")
 }

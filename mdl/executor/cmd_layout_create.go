@@ -86,64 +86,6 @@ func execCreateOrModifyLayoutImplDeps(ctx context.Context, deps *HandlerDeps, s 
 	return nil
 }
 
-func execCreateOrModifyLayoutImpl(ctx *ExecContext, s *ast.CreateLayoutStmt) error {
-	if !ctx.ConnectedForWrite() {
-		return mdlerrors.NewNotConnectedWrite()
-	}
-
-	module, err := findOrCreateModule(ctx, s.Name.Module)
-	if err != nil {
-		return mdlerrors.NewBackend(fmt.Sprintf("find module %s", s.Name.Module), err)
-	}
-
-	existingPairs, _ := listLayoutsWithContainerGen(ctx)
-	var existingID model.ID
-	for _, pair := range existingPairs {
-		modID := getModuleID(ctx, model.ID(pair.ContainerID))
-		modName := getModuleName(ctx, modID)
-		if modName == s.Name.Module && pair.Elem.Name() == s.Name.Name {
-			if !s.IsModify && !s.IsReplace {
-				return mdlerrors.NewAlreadyExists("layout", s.Name.String())
-			}
-			existingID = model.ID(pair.Elem.ID())
-			break
-		}
-	}
-
-	layout := genPg.NewLayout()
-	layout.SetName(s.Name.Name)
-	if s.Documentation != "" {
-		layout.SetDocumentation(s.Documentation)
-	}
-	layout.SetCanvasWidth(layoutCanvasWidth)
-	layout.SetCanvasHeight(layoutCanvasHeight)
-	layout.SetContent(buildLayoutContent(s))
-
-	if existingID != "" {
-		if err := ctx.PageWriter.DeleteLayoutGen(existingID); err != nil {
-			return mdlerrors.NewBackend("delete existing layout", err)
-		}
-	}
-
-	containerID, err := ctx.PageWriter.GetContainerID(module.ID, s.Folder)
-	if err != nil {
-		return mdlerrors.NewBackend("resolve container", err)
-	}
-
-	if err := ctx.PageWriter.CreateLayoutGen(string(containerID), "Documents", layout); err != nil {
-		return mdlerrors.NewBackend("create layout", err)
-	}
-
-	invalidateHierarchy(ctx)
-	invalidatePagesGenCache(ctx)
-
-	verb := "Created"
-	if existingID != "" {
-		verb = "Modified"
-	}
-	fmt.Fprintf(ctx.Output, "%s layout %s\n", verb, s.Name.String())
-	return nil
-}
 
 
 func buildLayoutContent(s *ast.CreateLayoutStmt) element.Element {

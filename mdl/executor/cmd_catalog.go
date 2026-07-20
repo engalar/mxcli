@@ -208,3 +208,16 @@ func searchBackendDeps(deps *HandlerDeps, keyword string) error {
 // ensureCatalog is a no-op — catalog SQLite system has been removed.
 // All data queries should use MXGraph or backend directly.
 func ensureCatalog(_ *ExecContext, _ bool) error { return nil }
+
+func execShowCatalogTablesDeps(ctx context.Context, deps *HandlerDeps) error {
+	return execShowCatalogTablesFuture(ctx, deps.Output)
+}
+
+
+func execShowCatalogStatusDeps(ctx context.Context, deps *HandlerDeps) error {
+	return execShowCatalogStatusFuture(ctx, deps.Output)
+}
+
+// ── Version ──
+
+

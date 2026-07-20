@@ -588,3 +588,9 @@ func CheckProjectConflicts(ctx *ExecContext, prog *ast.Program) []error {
 
 	return errs
 }
+
+func CheckProjectConflictsDeps(deps *HandlerDeps, prog *ast.Program) []error {
+	return CheckProjectConflicts(execContextFromDeps(deps), prog)
+}
+
+

@@ -3,7 +3,6 @@
 package executor
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -542,9 +541,20 @@ func mapWidgetToLines(nodes []wireframeNode, lines []string, sourceMap map[strin
 }
 
 func (e *Executor) PageWireframeJSON(name string) error {
-	return PageWireframeJSON(e.newExecContext(context.Background()), name)
+	return pageWireframeJSONDeps(e.buildHandlerDeps(), name)
 }
 
 func (e *Executor) SnippetWireframeJSON(name string) error {
-	return SnippetWireframeJSON(e.newExecContext(context.Background()), name)
+	return snippetWireframeJSONDeps(e.buildHandlerDeps(), name)
 }
+
+func pageWireframeJSONDeps(deps *HandlerDeps, name string) error {
+	return PageWireframeJSON(execContextFromDeps(deps), name)
+}
+
+
+func snippetWireframeJSONDeps(deps *HandlerDeps, name string) error {
+	return SnippetWireframeJSON(execContextFromDeps(deps), name)
+}
+
+

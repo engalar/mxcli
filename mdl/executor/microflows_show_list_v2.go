@@ -14,6 +14,7 @@
 package executor
 
 import (
+	"context"
 	"fmt"
 	"sort"
 	"strings"
@@ -217,3 +218,12 @@ func calculateGenFlowComplexity(oc *genMf.MicroflowObjectCollection) int {
 	}
 	return complexity
 }
+
+func listMicroflowsDeps(ctx context.Context, deps *HandlerDeps, moduleName string) error {
+	return listMicroflowsFuture(ctx, deps.Output, deps.Format, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, deps.MicroflowRepo, moduleName)
+}
+
+func listNanoflowsDeps(ctx context.Context, deps *HandlerDeps, moduleName string) error {
+	return listNanoflowsFuture(ctx, deps.Output, deps.Format, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, deps.NanoflowRepo, moduleName)
+}
+

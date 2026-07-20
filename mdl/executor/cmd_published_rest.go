@@ -402,3 +402,14 @@ func astResourceDefToModel(def *ast.PublishedRestResourceDef) *model.PublishedRe
 	}
 	return resource
 }
+
+func listPublishedRestServicesDeps(ctx context.Context, deps *HandlerDeps, moduleName string) error {
+	return listPublishedRestServicesFn(ctx, deps.Output, deps.Format, deps, moduleName)
+}
+
+
+func describePublishedRestServiceDeps(ctx context.Context, deps *HandlerDeps, name ast.QualifiedName) error {
+	return describePublishedRestServiceFn(ctx, deps.Output, deps, name)
+}
+
+

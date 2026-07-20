@@ -333,14 +333,19 @@ func getModuleID(ctx *ExecContext, containerID model.ID) model.ID {
 	return h.FindModuleID(containerID)
 }
 
-// getModuleName returns the module name for a module ID.
-// Deprecated: prefer using getHierarchy().GetModuleName() directly.
-func getModuleName(ctx *ExecContext, moduleID model.ID) string {
-	h, err := getHierarchy(ctx)
+// getModuleNameDeps returns the module name for a module ID using HandlerDeps.
+func getModuleNameDeps(deps *HandlerDeps, moduleID model.ID) string {
+	h, err := getHierarchyDeps(deps)
 	if err != nil {
 		return ""
 	}
 	return h.GetModuleName(moduleID)
+}
+
+// getModuleName returns the module name for a module ID.
+// Deprecated: prefer using getHierarchy().GetModuleName() directly.
+func getModuleName(ctx *ExecContext, moduleID model.ID) string {
+	return getModuleNameDeps(ctx.Deps, moduleID)
 }
 
 // getMainPlaceholderRef returns the qualified name reference for the main placeholder.
@@ -510,78 +515,17 @@ func execDropSnippetDepsImpl(ctx context.Context, s *ast.DropSnippetStmt, deps *
 	return mdlerrors.NewNotFound("snippet", s.Name.String())
 }
 
-// ExecDropPage handles DROP PAGE statement.
-func ExecDropPage(ctx *ExecContext, s *ast.DropPageStmt) error {
-	if !ctx.ConnectedForWrite() {
-		return mdlerrors.NewNotConnectedWrite()
-	}
-
-	h, err := getHierarchy(ctx)
-	if err != nil {
-		return mdlerrors.NewBackend("build hierarchy", err)
-	}
-
-	pairs, err := listPagesWithContainerGen(ctx)
-	if err != nil {
-		return mdlerrors.NewBackend("list pages", err)
-	}
-
-	for _, p := range pairs {
-		if p.Elem == nil {
-			continue
-		}
-		modID := h.FindModuleID(model.ID(p.ContainerID))
-		modName := h.GetModuleName(modID)
-		if modName == s.Name.Module && p.Elem.Name() == s.Name.Name {
-			pgID := model.ID(p.Elem.ID())
-			if err := ctx.PageWriter.DeletePageGen(pgID); err != nil {
-				return mdlerrors.NewBackend("delete page", err)
-			}
-			invalidatePagesGenCache(ctx)
-			fmt.Fprintf(ctx.Output, "Dropped page %s\n", s.Name.String())
-			return nil
-		}
-	}
-
-	return mdlerrors.NewNotFound("page", s.Name.String())
-}
-
-// ExecDropSnippet handles DROP SNIPPET statement.
-func ExecDropSnippet(ctx *ExecContext, s *ast.DropSnippetStmt) error {
-	if !ctx.ConnectedForWrite() {
-		return mdlerrors.NewNotConnectedWrite()
-	}
-
-	h, err := getHierarchy(ctx)
-	if err != nil {
-		return mdlerrors.NewBackend("build hierarchy", err)
-	}
-
-	pairs, err := listSnippetsWithContainerGen(ctx)
-	if err != nil {
-		return mdlerrors.NewBackend("list snippets", err)
-	}
-
-	for _, p := range pairs {
-		if p.Elem == nil {
-			continue
-		}
-		modID := h.FindModuleID(model.ID(p.ContainerID))
-		modName := h.GetModuleName(modID)
-		if modName == s.Name.Module && p.Elem.Name() == s.Name.Name {
-			snpID := model.ID(p.Elem.ID())
-			if err := ctx.PageWriter.DeleteSnippetGen(snpID); err != nil {
-				return mdlerrors.NewBackend("delete snippet", err)
-			}
-			invalidatePagesGenCache(ctx)
-			fmt.Fprintf(ctx.Output, "Dropped snippet %s\n", s.Name.String())
-			return nil
-		}
-	}
-
-	return mdlerrors.NewNotFound("snippet", s.Name.String())
-}
-
 func (e *Executor) getModuleName(moduleID model.ID) string {
-	return getModuleName(e.newExecContext(context.Background()), moduleID)
+	return getModuleNameDeps(e.buildHandlerDeps(), moduleID)
 }
+
+func ExecDropPageDeps(ctx context.Context, s *ast.DropPageStmt, deps *HandlerDeps) error {
+	return execDropPageDepsImpl(ctx, s, deps)
+}
+
+
+func ExecDropSnippetDeps(ctx context.Context, s *ast.DropSnippetStmt, deps *HandlerDeps) error {
+	return execDropSnippetDepsImpl(ctx, s, deps)
+}
+
+

@@ -120,3 +120,9 @@ func ExecDropAssociationGen(ctx *ExecContext, s *ast.DropAssociationStmt) error 
 
 	return mdlerrors.NewNotFound("association", s.Name.String())
 }
+
+func ExecDropAssociationGenDeps(ctx context.Context, s *ast.DropAssociationStmt, deps *HandlerDeps) error {
+	return execDropAssociationGenDeps(ctx, s, deps)
+}
+
+

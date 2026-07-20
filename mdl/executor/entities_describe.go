@@ -4,6 +4,7 @@
 package executor
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -169,3 +170,8 @@ func lookupMicroflowName(ctx *ExecContext, mfID model.ID) string {
 }
 
 // --- Executor method wrappers for callers not yet migrated ---
+
+func listEntityDeps(ctx context.Context, deps *HandlerDeps, name *ast.QualifiedName) error {
+	return listEntityFuture(ctx, deps.Output, deps.ModuleLister, deps.DomainModels, name)
+}
+

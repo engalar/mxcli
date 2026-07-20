@@ -10,6 +10,7 @@
 package executor
 
 import (
+	"context"
 	"fmt"
 	"sort"
 	"strings"
@@ -225,3 +226,19 @@ func pickPageTitleGen(p *genPg.Page) string {
 	s, _ := pickTextTranslationGen(t)
 	return s
 }
+
+func listPagesGenDeps(ctx context.Context, deps *HandlerDeps, moduleName string) error {
+	return listPagesFuture(ctx, deps.Output, deps.Format, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, deps.PageRepo, moduleName)
+}
+
+
+func listSnippetsGenDeps(ctx context.Context, deps *HandlerDeps, moduleName string) error {
+	return listSnippetsFuture(ctx, deps.Output, deps.Format, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, deps.SnippetRepo, moduleName)
+}
+
+
+func listLayoutsGenDeps(ctx context.Context, deps *HandlerDeps, moduleName string) error {
+	return listLayoutsFuture(ctx, deps.Output, deps.Format, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, deps.LayoutRepo, moduleName)
+}
+
+

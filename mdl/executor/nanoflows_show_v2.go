@@ -23,6 +23,7 @@
 package executor
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -323,3 +324,10 @@ func buildGenFlowMapsFromList(items []element.Element) (map[element.ID][]*genMf.
 	}
 	return byOrigin, byDest
 }
+
+func describeNanoflowGenDeps(ctx context.Context, deps *HandlerDeps, name ast.QualifiedName) error {
+	return describeNanoflowGenFuture(ctx, deps.Output, deps.NanoflowRepo, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, name)
+}
+
+// ── Pages / Snippets / Layouts ──
+

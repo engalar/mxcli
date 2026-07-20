@@ -303,3 +303,16 @@ func formatActionV3(a *ast.ActionV3) string {
 		return a.Type
 	}
 }
+
+func listFragmentsDeps(ctx context.Context, deps *HandlerDeps) error {
+	return listFragmentsFuture(ctx, deps.Output, deps.Fragments)
+}
+
+
+func describeFragmentDeps(ctx context.Context, deps *HandlerDeps, name ast.QualifiedName) error {
+	return describeFragmentFuture(ctx, deps.Output, deps.Fragments, name)
+}
+
+// ── Database Connections ──
+
+

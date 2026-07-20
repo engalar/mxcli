@@ -558,3 +558,11 @@ func stripSlashSeparators(content string) string {
 	}
 	return strings.Join(result, "\n")
 }
+
+func listVersionDeps(ctx context.Context, deps *HandlerDeps) error {
+	return listVersionFuture(ctx, deps.Output, deps.ConnectionManager)
+}
+
+// ── Context / Structure ──
+
+

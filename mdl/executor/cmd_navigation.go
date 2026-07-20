@@ -365,3 +365,33 @@ func outputNavigationProfileFn(output io.Writer, p *types.NavigationProfile) {
 }
 
 
+
+func listNavigationDeps(ctx context.Context, deps *HandlerDeps) error {
+	return listNavigationFuture(ctx, deps.Output, deps.NavigationReader)
+}
+
+
+func listNavigationMenuDeps(ctx context.Context, deps *HandlerDeps, name *ast.QualifiedName) error {
+	return listNavigationMenuFuture(ctx, deps.Output, deps.NavigationReader, name)
+}
+
+
+func listNavigationHomesDeps(ctx context.Context, deps *HandlerDeps) error {
+	return listNavigationHomesFuture(ctx, deps.Output, deps.NavigationReader)
+}
+
+
+func describeNavigationDeps(ctx context.Context, deps *HandlerDeps, name ast.QualifiedName) error {
+	return describeNavigationFuture(ctx, deps.Output, deps.NavigationReader, name)
+}
+
+// ── OData ──
+
+// Note: listODataClientsDeps, listODataServicesDeps, listExternalEntitiesDeps,
+// listExternalActionsDeps, describeODataClientDeps, describeODataServiceDeps,
+// and describeExternalEntityDeps are defined in cmd_odata.go with additional
+// format parameter. Do NOT redeclare here.
+
+// ── Business Events ──
+
+

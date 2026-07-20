@@ -379,10 +379,6 @@ func showInstalledWidgetsFromMPK(ctx *ExecContext) error {
 	return showInstalledWidgetsFromMPKFn(ctx.Output, ctx.MprPath)
 }
 
-func describeWidget(ctx *ExecContext, name ast.QualifiedName) error {
-	deps := ctx.Deps
-	return describeWidgetFn(ctx, deps.Output, deps, name)
-}
 
 // ────────────────────────────────────────────────────────────
 // Stateless helpers (no ctx/deps needed)
@@ -462,3 +458,11 @@ func formatCell(val any, maxLen int) string {
 	}
 	return s
 }
+
+func describeWidgetDeps(ctx context.Context, deps *HandlerDeps, name ast.QualifiedName) error {
+	return describeWidgetFn(ctx, deps.Output, deps, name)
+}
+
+// ── Remaining ExecContext wrappers (bridge via execContextFromDeps) ──
+
+

@@ -19,6 +19,7 @@
 package executor
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -942,3 +943,54 @@ func listAccessOnPageGen(ctx *ExecContext, name *ast.QualifiedName) error {
 
 	return mdlerrors.NewNotFound("page", name.String())
 }
+
+func listProjectSecurityGenDeps(ctx context.Context, deps *HandlerDeps) error {
+	return listProjectSecurityFuture(ctx, deps.Output, deps.Format, deps.Security)
+}
+
+func listModuleRolesGenDeps(ctx context.Context, deps *HandlerDeps, moduleName string) error {
+	return listModuleRolesFuture(ctx, deps.Output, deps.Format, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, deps.Security, moduleName)
+}
+
+func listUserRolesGenDeps(ctx context.Context, deps *HandlerDeps) error {
+	return listUserRolesFuture(ctx, deps.Output, deps.Format, deps.Security)
+}
+
+func listDemoUsersGenDeps(ctx context.Context, deps *HandlerDeps) error {
+	return listDemoUsersFuture(ctx, deps.Output, deps.Format, deps.Security)
+}
+
+func listAccessOnEntityGenDeps(ctx context.Context, deps *HandlerDeps, name *ast.QualifiedName) error {
+	return listAccessOnEntityFuture(ctx, deps.Output, deps.Format, deps.ModuleLister, deps.DomainModels, name)
+}
+
+func listAccessOnMicroflowGenDeps(ctx context.Context, deps *HandlerDeps, name *ast.QualifiedName) error {
+	return listAccessOnMicroflowFuture(ctx, deps.Output, deps.Format, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, deps.MicroflowRepo, name)
+}
+
+func listAccessOnPageGenDeps(ctx context.Context, deps *HandlerDeps, name *ast.QualifiedName) error {
+	return listAccessOnPageFuture(ctx, deps.Output, deps.Format, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, deps.PageRepo, name)
+}
+
+func listAccessOnNanoflowGenDeps(ctx context.Context, deps *HandlerDeps, name *ast.QualifiedName) error {
+	return listAccessOnNanoflowFuture(ctx, deps.Output, deps.Format, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, deps.NanoflowRepo, name)
+}
+
+func listSecurityMatrixGenDeps(ctx context.Context, deps *HandlerDeps, moduleName string) error {
+	return listSecurityMatrixFuture(ctx, deps.Output, deps.Format, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, deps.Security, deps.DomainModels, deps.MicroflowRepo, deps.PageRepo, moduleName)
+}
+
+func describeModuleRoleGenDeps(ctx context.Context, deps *HandlerDeps, name ast.QualifiedName) error {
+	return describeModuleRoleGenFuture(ctx, deps.Output, deps.Security, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, name)
+}
+
+func describeUserRoleGenDeps(ctx context.Context, deps *HandlerDeps, name ast.QualifiedName) error {
+	return describeUserRoleGenFuture(ctx, deps.Output, deps.Security, name)
+}
+
+func describeDemoUserGenDeps(ctx context.Context, deps *HandlerDeps, userName string) error {
+	return describeDemoUserGenFuture(ctx, deps.Output, deps.Security, userName)
+}
+
+// ── Enumerations ──
+

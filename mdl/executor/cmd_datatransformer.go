@@ -228,3 +228,16 @@ func execDropDataTransformerFn(ctx context.Context, s *ast.DropDataTransformerSt
 	return mdlerrors.NewNotFound("data transformer", s.Name.Module+"."+s.Name.Name)
 }
 
+
+func listDataTransformersDeps(ctx context.Context, deps *HandlerDeps, moduleName string) error {
+	return listDataTransformersFn(ctx, moduleName, deps)
+}
+
+
+func describeDataTransformerDeps(ctx context.Context, deps *HandlerDeps, name ast.QualifiedName) error {
+	return describeDataTransformerFn(ctx, name, deps)
+}
+
+// ── JSON Structures ──
+
+

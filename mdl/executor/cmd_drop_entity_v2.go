@@ -116,3 +116,9 @@ func execDropEntityGen(ctx *ExecContext, s *ast.DropEntityStmt) error {
 
 	return mdlerrors.NewNotFoundMsg("entity", fmt.Sprint(s.Name), fmt.Sprintf("entity not found: %s", s.Name))
 }
+
+func ExecDropEntityDeps(ctx context.Context, s *ast.DropEntityStmt, deps *HandlerDeps) error {
+	return execDropEntityGenDeps(ctx, s, deps)
+}
+
+

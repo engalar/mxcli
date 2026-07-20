@@ -451,3 +451,16 @@ func findImageIndex(ic *types.ImageCollection, name string) int {
 	}
 	return -1
 }
+
+func listImageCollectionsDeps(ctx context.Context, deps *HandlerDeps, moduleName string) error {
+	return listImageCollectionsFn(ctx, deps.Output, deps.Format, deps, moduleName)
+}
+
+
+func describeImageCollectionDeps(ctx context.Context, deps *HandlerDeps, name ast.QualifiedName) error {
+	return describeImageCollectionFuture(ctx, deps.Output, deps.ImageBackend, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, name)
+}
+
+// ── REST / External Services ──
+
+

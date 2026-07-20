@@ -5,7 +5,6 @@ package executor
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"reflect"
 	"strings"
@@ -143,7 +142,7 @@ func diffProgram(ctx *ExecContext, prog *ast.Program, opts DiffOptions) error {
 
 // DiffProgram is a method wrapper for external callers.
 func (e *Executor) DiffProgram(prog *ast.Program, opts DiffOptions) error {
-	return diffProgram(e.newExecContext(context.Background()), prog, opts)
+	return diffProgramDeps(e.buildHandlerDeps(), prog, opts)
 }
 
 // diffHandler is a function that computes a diff for a specific statement type.
@@ -630,3 +629,9 @@ func countBodyStatements(_ *ExecContext, mdl string) int {
 	}
 	return count
 }
+
+func diffProgramDeps(deps *HandlerDeps, prog *ast.Program, opts DiffOptions) error {
+	return diffProgram(execContextFromDeps(deps), prog, opts)
+}
+
+

@@ -298,3 +298,19 @@ func alterLanguageDrop(ctx *ExecContext, ps *model.ProjectSettings, stmt *ast.Al
 }
 
 // --- Executor method wrapper for backward compatibility ---
+
+func AlterLanguageDeps(ctx context.Context, stmt *ast.AlterLanguageStmt, deps *HandlerDeps) error {
+	return alterLanguageDepsImpl(ctx, stmt, deps)
+}
+
+
+func listLanguagesDeps(ctx context.Context, deps *HandlerDeps) error {
+	return listLanguagesFuture(ctx, deps.Output, deps.Format, deps.SettingsReader)
+}
+
+
+func listSupportedLanguagesDeps(ctx context.Context, deps *HandlerDeps) error {
+	return listSupportedLanguagesFuture(ctx, deps.Output, deps.Format)
+}
+
+

@@ -835,3 +835,16 @@ func ExecAlterSettingsFn(ctx context.Context, s *ast.AlterSettingsStmt, deps *Ha
 	fmt.Fprintf(deps.Output, "Updated %s settings\n", section)
 	return nil
 }
+
+func listSettingsDeps(ctx context.Context, deps *HandlerDeps) error {
+	return listSettingsFuture(ctx, deps.Output, deps.Format, deps.SettingsReader)
+}
+
+
+func describeSettingsDeps(ctx context.Context, deps *HandlerDeps) error {
+	return describeSettingsFuture(ctx, deps.Output, deps.ConnectionManager, deps.SettingsReader)
+}
+
+// ── Navigation ──
+
+

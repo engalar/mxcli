@@ -349,3 +349,9 @@ func findEntityInDMGenByName(dm *genDm.DomainModel, name string) *genDm.Entity {
 	}
 	return nil
 }
+
+func ExecCreateViewEntityDeps(ctx context.Context, s *ast.CreateViewEntityStmt, deps *HandlerDeps) error {
+	return execCreateViewEntityGenDeps(ctx, s, deps)
+}
+
+

@@ -3,7 +3,6 @@
 package executor
 
 import (
-	"context"
 	"fmt"
 	"strings"
 
@@ -29,7 +28,7 @@ type entityAccessSummary struct {
 // The second return value carries non-fatal warnings (e.g. pages that could
 // not be parsed); callers should surface these to the user.
 func (e *Executor) AnalyzeAccess() ([]AccessGap, []string, error) {
-	ctx := e.newExecContext(context.Background())
+	ctx := execContextFromDeps(e.buildHandlerDeps())
 	if ctx == nil || ctx.Backend == nil || !ctx.Connected() {
 		return nil, nil, nil
 	}

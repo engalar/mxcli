@@ -12,7 +12,6 @@
 package executor
 
 import (
-	"context"
 	"fmt"
 	"strings"
 
@@ -25,7 +24,7 @@ import (
 // FindByQualifiedName helper and renders the same JSON ELK graph
 // schema legacy produces.
 func (e *Executor) MicroflowELKGen(name string) error {
-	return microflowELKGen(e.newExecContext(context.Background()), name)
+	return microflowELKGenDeps(e.buildHandlerDeps(), name)
 }
 
 // MicroflowELK is the public Executor wrapper consumed by
@@ -33,7 +32,7 @@ func (e *Executor) MicroflowELKGen(name string) error {
 // the (deleted) cmd_microflow_elk.go; the body always routes through
 // the gen path now that legacy `microflowELK` is gone.
 func (e *Executor) MicroflowELK(name string) error {
-	return microflowELKGen(e.newExecContext(context.Background()), name)
+	return microflowELKGenDeps(e.buildHandlerDeps(), name)
 }
 
 func microflowELKGen(ctx *ExecContext, name string) error {
@@ -82,3 +81,9 @@ func microflowELKGen(ctx *ExecContext, name string) error {
 		SourceMap:        sourceMap,
 	})
 }
+
+func microflowELKGenDeps(deps *HandlerDeps, name string) error {
+	return microflowELKGen(execContextFromDeps(deps), name)
+}
+
+

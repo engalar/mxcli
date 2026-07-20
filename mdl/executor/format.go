@@ -180,7 +180,8 @@ func writeDescribeJSONFuture(output io.Writer, format OutputFormat, name, object
 // ----------------------------------------------------------------------------
 
 func (e *Executor) writeResult(r *TableResult) error {
-	return writeResult(e.newExecContext(context.Background()), r)
+	deps := e.buildHandlerDeps()
+	return writeResultTo(deps.Output, deps.Format, r)
 }
 
 // formatCellValue formats a value for table cell display.

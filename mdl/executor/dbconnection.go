@@ -525,3 +525,16 @@ func dbTypeToMDLType(bsonType string) string {
 }
 
 // Executor wrappers for unmigrated callers.
+
+func ExecCreateDatabaseConnectionDeps(ctx context.Context, stmt *ast.CreateDatabaseConnectionStmt, deps *HandlerDeps) error {
+	return execCreateDatabaseConnectionDepsImpl(ctx, stmt, deps)
+}
+
+
+func describeDatabaseConnectionDeps(ctx context.Context, deps *HandlerDeps, name ast.QualifiedName) error {
+	return describeDatabaseConnectionFuture(ctx, deps.Output, deps.ServiceLister, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, name)
+}
+
+// ── Image Collections ──
+
+

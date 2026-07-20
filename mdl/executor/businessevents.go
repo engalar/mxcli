@@ -645,3 +645,21 @@ func ExecDropBusinessEventServiceFn(ctx context.Context, s *ast.DropBusinessEven
 }
 
 // Executor wrappers for unmigrated callers.
+
+func listBusinessEventServicesDeps(ctx context.Context, deps *HandlerDeps, inModule string) error {
+	return listBusinessEventServicesFuture(ctx, deps.Output, deps.Format, deps.ConnectionManager, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, deps.BusinessEventBackend, inModule)
+}
+
+
+func listBusinessEventClientsDeps(ctx context.Context, deps *HandlerDeps, inModule string) error {
+	return listBusinessEventClientsFuture(ctx, deps.Output)
+}
+
+
+func listBusinessEventsDeps(ctx context.Context, deps *HandlerDeps, inModule string) error {
+	return listBusinessEventsFuture(ctx, deps.Output, deps.Format, deps.ConnectionManager, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, deps.BusinessEventBackend, inModule)
+}
+
+// ── Fragments ──
+
+

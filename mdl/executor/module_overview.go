@@ -38,13 +38,13 @@ var systemModuleNames = map[string]bool{
 	"Atlas_Native_Mobile_Content": true,
 }
 
-// ModuleOverview builds the module dependency overview using backend sources.
-func ModuleOverview(ctx *ExecContext) error {
-	if !ctx.Connected() {
+// ModuleOverviewDeps builds the module dependency overview using HandlerDeps.
+func ModuleOverviewDeps(deps *HandlerDeps) error {
+	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return mdlerrors.NewNotConnected()
 	}
 
-	modules, err := ctx.ModuleLister.ListModules()
+	modules, err := deps.ModuleLister.ListModules()
 	if err != nil {
 		return mdlerrors.NewBackend("list modules", err)
 	}
@@ -59,12 +59,12 @@ func ModuleOverview(ctx *ExecContext) error {
 
 	// Count entities via domain models
 	entityCounts := make(map[string]int)
-	if dms, err := ctx.DomainModelReader.ListDomainModelsGen(); err == nil {
+	if dms, err := deps.DomainModelReader.ListDomainModelsGen(); err == nil {
 		for _, dm := range dms {
 			if dm == nil {
 				continue
 			}
-			modName := findModuleNameByContainer(ctx, model.ID(dm.ID()))
+			modName := findModuleNameByContainerDeps(deps, model.ID(dm.ID()))
 			if modName != "" {
 				for range dm.EntitiesItems() {
 					entityCounts[modName]++
@@ -75,12 +75,12 @@ func ModuleOverview(ctx *ExecContext) error {
 
 	// Count microflows per module via hierarchy
 	mfCounts := make(map[string]int)
-	if mfs, err := ctx.Microflows.ListAll(); err == nil {
+	if mfs, err := deps.MicroflowRepo.ListAll(); err == nil {
 		for _, mf := range mfs {
 			if mf == nil {
 				continue
 			}
-			modName := findModuleNameByContainer(ctx, model.ID(mf.ID()))
+			modName := findModuleNameByContainerDeps(deps, model.ID(mf.ID()))
 			if modName != "" {
 				mfCounts[modName]++
 			}
@@ -88,12 +88,12 @@ func ModuleOverview(ctx *ExecContext) error {
 	}
 
 	pageCounts := make(map[string]int)
-	if pages, err := ctx.Pages.ListAll(); err == nil {
+	if pages, err := deps.PageRepo.ListAll(); err == nil {
 		for _, p := range pages {
 			if p == nil {
 				continue
 			}
-			modName := findModuleNameByContainer(ctx, model.ID(p.ID()))
+			modName := findModuleNameByContainerDeps(deps, model.ID(p.ID()))
 			if modName != "" {
 				pageCounts[modName]++
 			}
@@ -117,16 +117,26 @@ func ModuleOverview(ctx *ExecContext) error {
 	if err != nil {
 		return fmt.Errorf("encode module overview: %w", err)
 	}
-	fmt.Fprintln(ctx.Output, string(out))
+	fmt.Fprintln(deps.Output, string(out))
 	return nil
 }
 
-// findModuleNameByContainer resolves the module name for an element ID.
-func findModuleNameByContainer(ctx *ExecContext, elemID model.ID) string {
-	h, err := getHierarchy(ctx)
+// ModuleOverview builds the module dependency overview using backend sources.
+func ModuleOverview(ctx *ExecContext) error {
+	return ModuleOverviewDeps(ctx.Deps)
+}
+
+// findModuleNameByContainerDeps resolves the module name for an element ID using HandlerDeps.
+func findModuleNameByContainerDeps(deps *HandlerDeps, elemID model.ID) string {
+	h, err := getHierarchyDeps(deps)
 	if err != nil {
 		return ""
 	}
 	modID := h.FindModuleID(elemID)
 	return h.GetModuleName(modID)
+}
+
+// findModuleNameByContainer resolves the module name for an element ID.
+func findModuleNameByContainer(ctx *ExecContext, elemID model.ID) string {
+	return findModuleNameByContainerDeps(ctx.Deps, elemID)
 }

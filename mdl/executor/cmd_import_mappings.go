@@ -481,3 +481,14 @@ func execDropImportMappingFn(ctx context.Context, s *ast.DropImportMappingStmt, 
 }
 
 // execDropImportMapping deletes an import mapping.
+
+func listImportMappingsDeps(ctx context.Context, deps *HandlerDeps, inModule string) error {
+	return listImportMappingsFn(ctx, inModule, deps)
+}
+
+
+func describeImportMappingDeps(ctx context.Context, deps *HandlerDeps, name ast.QualifiedName) error {
+	return describeImportMappingFn(ctx, name, deps)
+}
+
+

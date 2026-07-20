@@ -49,21 +49,13 @@ func BuildGraphAtPath(projectPath string) (*graphcatalog.ProjectGraph, error) {
 	return pg, nil
 }
 
-// buildGraph constructs the in-memory project graph from the connected project,
-// registering all five domain adapters, and installs it as ctx.Graph.
-// It also persists a gob snapshot + delta log to <projectDir>/.mxcli/ so a
-// later session can reload without a full rebuild.
-//
-// The graph is built from a fresh read-only modelsdk.Model opened from MprPath
-// (matching cmd/mxcli/serve.go's buildProjectGraph). This avoids coupling the
-// graph adapters, which consume *modelsdk.Model, to the executor's write-path
-// MprBackend, which exposes only a modelsdkmpr.Reader.
-func buildGraph(ctx *ExecContext) error {
-	if ctx.MprPath == "" {
+// buildGraphDeps constructs the in-memory project graph using HandlerDeps.
+func buildGraphDeps(deps *HandlerDeps) error {
+	if deps.MprPath == "" {
 		return mdlerrors.NewNotConnected()
 	}
 
-	projectDir := filepath.Dir(ctx.MprPath)
+	projectDir := filepath.Dir(deps.MprPath)
 	snapPath := graphcatalog.SnapshotPath(projectDir)
 	deltaPath := graphcatalog.DeltaPath(projectDir)
 
@@ -73,18 +65,18 @@ func buildGraph(ctx *ExecContext) error {
 	} else if g != nil {
 		mgr := mxgraph.NewIndexManagerFromGraph(g)
 		pg := graphcatalog.NewProjectGraph(mgr)
-		ctx.Graph = pg
-		if ctx.SyncGraph != nil {
-			ctx.SyncGraph(pg)
+		deps.Graph = pg
+		if deps.SyncGraph != nil {
+			deps.SyncGraph(pg)
 		}
-		if !ctx.Quiet {
-			fmt.Fprintf(ctx.Output, "Graph restored: %d nodes, %d edges (from cache)\n",
+		if !deps.Quiet {
+			fmt.Fprintf(deps.Output, "Graph restored: %d nodes, %d edges (from cache)\n",
 				len(g.AllNodes()), len(g.AllEdges()))
 		}
 		return nil
 	}
 
-	m, err := modelsdk.Open(ctx.MprPath)
+	m, err := modelsdk.Open(deps.MprPath)
 	if err != nil {
 		return mdlerrors.NewBackend("open project for graph build", err)
 	}
@@ -95,17 +87,30 @@ func buildGraph(ctx *ExecContext) error {
 		return err
 	}
 
-	ctx.Graph = pg
-	if ctx.SyncGraph != nil {
-		ctx.SyncGraph(pg)
+	deps.Graph = pg
+	if deps.SyncGraph != nil {
+		deps.SyncGraph(pg)
 	}
 
-	if !ctx.Quiet {
+	if !deps.Quiet {
 		g := pg.MxGraph()
-		fmt.Fprintf(ctx.Output, "Graph built: %d nodes, %d edges\n",
+		fmt.Fprintf(deps.Output, "Graph built: %d nodes, %d edges\n",
 			len(g.AllNodes()), len(g.AllEdges()))
 	}
 	return nil
+}
+
+// buildGraph constructs the in-memory project graph from the connected project,
+// registering all five domain adapters, and installs it as ctx.Graph.
+// It also persists a gob snapshot + delta log to <projectDir>/.mxcli/ so a
+// later session can reload without a full rebuild.
+//
+// The graph is built from a fresh read-only modelsdk.Model opened from MprPath
+// (matching cmd/mxcli/serve.go's buildProjectGraph). This avoids coupling the
+// graph adapters, which consume *modelsdk.Model, to the executor's write-path
+// MprBackend, which exposes only a modelsdkmpr.Reader.
+func buildGraph(ctx *ExecContext) error {
+	return buildGraphDeps(ctx.Deps)
 }
 
 // buildGraphFromModel constructs a ProjectGraph from an opened modelsdk.Model.

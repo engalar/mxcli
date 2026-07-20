@@ -582,21 +582,21 @@ func (e *Executor) Graph() *graphcatalog.ProjectGraph {
 // BuildGraph builds (or rebuilds) the in-memory project graph and returns it.
 // Used by CLI lint/report commands that need a graphcatalog.LintReader.
 func (e *Executor) BuildGraph() (*graphcatalog.ProjectGraph, error) {
-	ctx := e.newExecContext(context.Background())
-	if err := buildGraph(ctx); err != nil {
+	deps := e.buildHandlerDeps()
+	if err := buildGraphDeps(deps); err != nil {
 		return nil, err
 	}
 	// Inline syncBack: propagate graph state back to Executor
-	if ctx.Graph != nil {
-		e.graphCatalog = ctx.Graph
+	if deps.Graph != nil {
+		e.graphCatalog = deps.Graph
 	}
-	return ctx.Graph, nil
+	return deps.Graph, nil
 }
 
 // ModuleOverview builds the module overview as JSON.
 func (e *Executor) ModuleOverview() error {
-	ctx := e.newExecContext(context.Background())
-	return ModuleOverview(ctx)
+	deps := e.buildHandlerDeps()
+	return ModuleOverviewDeps(deps)
 }
 
 // Search executes a SEARCH query with the given format.
@@ -636,9 +636,9 @@ func (e *Executor) Close() error {
 	if e.backend != nil && e.backend.IsConnected() {
 		// Close SQL connections before the backend so the backend can cleanly
 		// disconnect without pending SQL operations.
-		ec := e.newExecContext(context.Background())
-		if ec.SqlMgr != nil {
-			ec.SqlMgr.CloseAll()
+		deps := e.buildHandlerDeps()
+		if deps.SqlMgr != nil {
+			deps.SqlMgr.CloseAll()
 		}
 		closeErr = e.backend.Disconnect()
 		e.backend = nil

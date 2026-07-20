@@ -24,6 +24,7 @@
 package executor
 
 import (
+	"context"
 	"fmt"
 	"sort"
 	"strings"
@@ -1087,3 +1088,8 @@ func pickBooleanBranchesGen(flows []*genMf.SequenceFlow) (*genMf.SequenceFlow, *
 	}
 	return t, f
 }
+
+func describeMicroflowGenDeps(ctx context.Context, deps *HandlerDeps, name ast.QualifiedName) error {
+	return describeMicroflowGenFuture(ctx, deps.Output, deps.MicroflowRepo, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, name)
+}
+

@@ -13,10 +13,88 @@ import (
 
 // getModuleNames returns a list of all module names for autocomplete.
 func getModuleNames(ctx *ExecContext) []string {
-	if !ctx.Connected() {
+	return getModuleNamesDeps(ctx.Deps)
+}
+
+// getMicroflowNamesAC returns qualified microflow names, optionally filtered by module.
+func getMicroflowNamesAC(ctx *ExecContext, moduleFilter string) []string {
+	return getMicroflowNamesACDeps(ctx.Deps, moduleFilter)
+}
+
+// getEntityNamesAC returns qualified entity names, optionally filtered by module.
+func getEntityNamesAC(ctx *ExecContext, moduleFilter string) []string {
+	return getEntityNamesACDeps(ctx.Deps, moduleFilter)
+}
+
+// getPageNamesAC returns qualified page names, optionally filtered by module.
+func getPageNamesAC(ctx *ExecContext, moduleFilter string) []string {
+	return getPageNamesACDeps(ctx.Deps, moduleFilter)
+}
+
+// getSnippetNamesAC returns qualified snippet names, optionally filtered by module.
+func getSnippetNamesAC(ctx *ExecContext, moduleFilter string) []string {
+	return getSnippetNamesACDeps(ctx.Deps, moduleFilter)
+}
+
+// getAssociationNamesAC returns qualified association names, optionally filtered by module.
+func getAssociationNamesAC(ctx *ExecContext, moduleFilter string) []string {
+	return getAssociationNamesACDeps(ctx.Deps, moduleFilter)
+}
+
+// getEnumerationNamesAC returns qualified enumeration names, optionally filtered by module.
+func getEnumerationNamesAC(ctx *ExecContext, moduleFilter string) []string {
+	return getEnumerationNamesACDeps(ctx.Deps, moduleFilter)
+}
+
+// getLayoutNamesAC returns qualified layout names, optionally filtered by module.
+func getLayoutNamesAC(ctx *ExecContext, moduleFilter string) []string {
+	return getLayoutNamesACDeps(ctx.Deps, moduleFilter)
+}
+
+// getJavaActionNamesAC returns qualified Java action names, optionally filtered by module.
+func getJavaActionNamesAC(ctx *ExecContext, moduleFilter string) []string {
+	return getJavaActionNamesACDeps(ctx.Deps, moduleFilter)
+}
+
+// getODataClientNamesAC returns qualified consumed OData service names, optionally filtered by module.
+func getODataClientNamesAC(ctx *ExecContext, moduleFilter string) []string {
+	return getODataClientNamesACDeps(ctx.Deps, moduleFilter)
+}
+
+// getODataServiceNamesAC returns qualified published OData service names, optionally filtered by module.
+func getODataServiceNamesAC(ctx *ExecContext, moduleFilter string) []string {
+	return getODataServiceNamesACDeps(ctx.Deps, moduleFilter)
+}
+
+// getRestClientNamesAC returns qualified consumed REST service names, optionally filtered by module.
+func getRestClientNamesAC(ctx *ExecContext, moduleFilter string) []string {
+	return getRestClientNamesACDeps(ctx.Deps, moduleFilter)
+}
+
+// getDatabaseConnectionNamesAC returns qualified database connection names, optionally filtered by module.
+func getDatabaseConnectionNamesAC(ctx *ExecContext, moduleFilter string) []string {
+	return getDatabaseConnectionNamesACDeps(ctx.Deps, moduleFilter)
+}
+
+// getBusinessEventServiceNamesAC returns qualified business event service names, optionally filtered by module.
+func getBusinessEventServiceNamesAC(ctx *ExecContext, moduleFilter string) []string {
+	return getBusinessEventServiceNamesACDeps(ctx.Deps, moduleFilter)
+}
+
+// getJsonStructureNamesAC returns qualified JSON structure names, optionally filtered by module.
+func getJsonStructureNamesAC(ctx *ExecContext, moduleFilter string) []string {
+	return getJsonStructureNamesACDeps(ctx.Deps, moduleFilter)
+}
+
+// ----------------------------------------------------------------------------
+// Deps-based autocomplete helpers (use *HandlerDeps directly)
+// ----------------------------------------------------------------------------
+
+func getModuleNamesDeps(deps *HandlerDeps) []string {
+	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return nil
 	}
-	modules, err := ctx.ModuleLister.ListModules()
+	modules, err := deps.ModuleLister.ListModules()
 	if err != nil {
 		return nil
 	}
@@ -27,40 +105,45 @@ func getModuleNames(ctx *ExecContext) []string {
 	return names
 }
 
-// getMicroflowNamesAC returns qualified microflow names, optionally filtered by module.
-func getMicroflowNamesAC(ctx *ExecContext, moduleFilter string) []string {
-	if !ctx.Connected() {
+func getMicroflowNamesACDeps(deps *HandlerDeps, moduleFilter string) []string {
+	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return nil
 	}
-	h, err := getHierarchy(ctx)
+	h, err := getHierarchyDeps(deps)
 	if err != nil {
 		return nil
 	}
-	mfs, err := listMicroflowsWithContainerGen(ctx)
+	mfs, err := deps.MicroflowRepo.ListAll()
 	if err != nil {
 		return nil
 	}
 	names := make([]string, 0)
-	for _, item := range mfs {
-		modID := h.FindModuleID(item.ContainerUUID)
+	for _, mf := range mfs {
+		if mf == nil {
+			continue
+		}
+		cid, err := deps.MicroflowRepo.GetContainerUUID(model.ID(mf.ID()))
+		if err != nil {
+			continue
+		}
+		modID := h.FindModuleID(cid)
 		modName := h.GetModuleName(modID)
 		if moduleFilter == "" || modName == moduleFilter {
-			names = append(names, modName+"."+item.MF.Name())
+			names = append(names, modName+"."+mf.Name())
 		}
 	}
 	return names
 }
 
-// getEntityNamesAC returns qualified entity names, optionally filtered by module.
-func getEntityNamesAC(ctx *ExecContext, moduleFilter string) []string {
-	if !ctx.Connected() {
+func getEntityNamesACDeps(deps *HandlerDeps, moduleFilter string) []string {
+	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return nil
 	}
-	h, err := getHierarchy(ctx)
+	h, err := getHierarchyDeps(deps)
 	if err != nil {
 		return nil
 	}
-	dms, err := cachedDomainModelsGen(ctx)
+	dms, err := cachedDomainModelsGenDeps(deps)
 	if err != nil {
 		return nil
 	}
@@ -84,16 +167,15 @@ func getEntityNamesAC(ctx *ExecContext, moduleFilter string) []string {
 	return names
 }
 
-// getPageNamesAC returns qualified page names, optionally filtered by module.
-func getPageNamesAC(ctx *ExecContext, moduleFilter string) []string {
-	if !ctx.Connected() {
+func getPageNamesACDeps(deps *HandlerDeps, moduleFilter string) []string {
+	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return nil
 	}
-	h, err := getHierarchy(ctx)
+	h, err := getHierarchyDeps(deps)
 	if err != nil {
 		return nil
 	}
-	pairs, err := listPagesWithContainerGen(ctx)
+	pairs, err := listPagesWithContainerGenDeps(context.Background(), deps)
 	if err != nil {
 		return nil
 	}
@@ -109,16 +191,15 @@ func getPageNamesAC(ctx *ExecContext, moduleFilter string) []string {
 	return names
 }
 
-// getSnippetNamesAC returns qualified snippet names, optionally filtered by module.
-func getSnippetNamesAC(ctx *ExecContext, moduleFilter string) []string {
-	if !ctx.Connected() {
+func getSnippetNamesACDeps(deps *HandlerDeps, moduleFilter string) []string {
+	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return nil
 	}
-	h, err := getHierarchy(ctx)
+	h, err := getHierarchyDeps(deps)
 	if err != nil {
 		return nil
 	}
-	snippetPairs, err := listSnippetsWithContainerGen(ctx)
+	snippetPairs, err := listSnippetsWithContainerGenDeps(context.Background(), deps)
 	if err != nil {
 		return nil
 	}
@@ -134,16 +215,15 @@ func getSnippetNamesAC(ctx *ExecContext, moduleFilter string) []string {
 	return names
 }
 
-// getAssociationNamesAC returns qualified association names, optionally filtered by module.
-func getAssociationNamesAC(ctx *ExecContext, moduleFilter string) []string {
-	if !ctx.Connected() {
+func getAssociationNamesACDeps(deps *HandlerDeps, moduleFilter string) []string {
+	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return nil
 	}
-	h, err := getHierarchy(ctx)
+	h, err := getHierarchyDeps(deps)
 	if err != nil {
 		return nil
 	}
-	dms, err := cachedDomainModelsGen(ctx)
+	dms, err := cachedDomainModelsGenDeps(deps)
 	if err != nil {
 		return nil
 	}
@@ -167,16 +247,15 @@ func getAssociationNamesAC(ctx *ExecContext, moduleFilter string) []string {
 	return names
 }
 
-// getEnumerationNamesAC returns qualified enumeration names, optionally filtered by module.
-func getEnumerationNamesAC(ctx *ExecContext, moduleFilter string) []string {
-	if !ctx.Connected() {
+func getEnumerationNamesACDeps(deps *HandlerDeps, moduleFilter string) []string {
+	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return nil
 	}
-	h, err := getHierarchy(ctx)
+	h, err := getHierarchyDeps(deps)
 	if err != nil {
 		return nil
 	}
-	enums, err := ctx.EnumerationReader.ListEnumerations()
+	enums, err := deps.EnumerationReader.ListEnumerations()
 	if err != nil {
 		return nil
 	}
@@ -191,16 +270,15 @@ func getEnumerationNamesAC(ctx *ExecContext, moduleFilter string) []string {
 	return names
 }
 
-// getLayoutNamesAC returns qualified layout names, optionally filtered by module.
-func getLayoutNamesAC(ctx *ExecContext, moduleFilter string) []string {
-	if !ctx.Connected() {
+func getLayoutNamesACDeps(deps *HandlerDeps, moduleFilter string) []string {
+	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return nil
 	}
-	h, err := getHierarchy(ctx)
+	h, err := getHierarchyDeps(deps)
 	if err != nil {
 		return nil
 	}
-	layoutPairs, err := listLayoutsWithContainerGen(ctx)
+	layoutPairs, err := listLayoutsWithContainerGenDeps(deps)
 	if err != nil {
 		return nil
 	}
@@ -216,16 +294,15 @@ func getLayoutNamesAC(ctx *ExecContext, moduleFilter string) []string {
 	return names
 }
 
-// getJavaActionNamesAC returns qualified Java action names, optionally filtered by module.
-func getJavaActionNamesAC(ctx *ExecContext, moduleFilter string) []string {
-	if !ctx.Connected() {
+func getJavaActionNamesACDeps(deps *HandlerDeps, moduleFilter string) []string {
+	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return nil
 	}
-	h, err := getHierarchy(ctx)
+	h, err := getHierarchyDeps(deps)
 	if err != nil {
 		return nil
 	}
-	pairs, err := listJavaActionsWithContainerGen(ctx)
+	pairs, err := listJavaActionsWithContainerGenDeps(deps)
 	if err != nil {
 		return nil
 	}
@@ -243,40 +320,15 @@ func getJavaActionNamesAC(ctx *ExecContext, moduleFilter string) []string {
 	return names
 }
 
-// getODataClientNamesAC returns qualified consumed OData service names, optionally filtered by module.
-func getODataClientNamesAC(ctx *ExecContext, moduleFilter string) []string {
-	if !ctx.Connected() {
+func getODataClientNamesACDeps(deps *HandlerDeps, moduleFilter string) []string {
+	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return nil
 	}
-	h, err := getHierarchy(ctx)
+	h, err := getHierarchyDeps(deps)
 	if err != nil {
 		return nil
 	}
-	services, err := ctx.ServiceLister.ListConsumedODataServices()
-	if err != nil {
-		return nil
-	}
-	names := make([]string, 0)
-	for _, svc := range services {
-		modID := h.FindModuleID(svc.ContainerID)
-		modName := h.GetModuleName(modID)
-		if moduleFilter == "" || modName == moduleFilter {
-			names = append(names, modName+"."+svc.Name)
-		}
-	}
-	return names
-}
-
-// getODataServiceNamesAC returns qualified published OData service names, optionally filtered by module.
-func getODataServiceNamesAC(ctx *ExecContext, moduleFilter string) []string {
-	if !ctx.Connected() {
-		return nil
-	}
-	h, err := getHierarchy(ctx)
-	if err != nil {
-		return nil
-	}
-	services, err := ctx.ServiceLister.ListPublishedODataServices()
+	services, err := deps.ServiceLister.ListConsumedODataServices()
 	if err != nil {
 		return nil
 	}
@@ -291,16 +343,15 @@ func getODataServiceNamesAC(ctx *ExecContext, moduleFilter string) []string {
 	return names
 }
 
-// getRestClientNamesAC returns qualified consumed REST service names, optionally filtered by module.
-func getRestClientNamesAC(ctx *ExecContext, moduleFilter string) []string {
-	if !ctx.Connected() {
+func getODataServiceNamesACDeps(deps *HandlerDeps, moduleFilter string) []string {
+	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return nil
 	}
-	h, err := getHierarchy(ctx)
+	h, err := getHierarchyDeps(deps)
 	if err != nil {
 		return nil
 	}
-	services, err := ctx.ServiceLister.ListConsumedRestServices()
+	services, err := deps.ServiceLister.ListPublishedODataServices()
 	if err != nil {
 		return nil
 	}
@@ -315,16 +366,38 @@ func getRestClientNamesAC(ctx *ExecContext, moduleFilter string) []string {
 	return names
 }
 
-// getDatabaseConnectionNamesAC returns qualified database connection names, optionally filtered by module.
-func getDatabaseConnectionNamesAC(ctx *ExecContext, moduleFilter string) []string {
-	if !ctx.Connected() {
+func getRestClientNamesACDeps(deps *HandlerDeps, moduleFilter string) []string {
+	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return nil
 	}
-	h, err := getHierarchy(ctx)
+	h, err := getHierarchyDeps(deps)
 	if err != nil {
 		return nil
 	}
-	connections, err := ctx.ServiceLister.ListDatabaseConnections()
+	services, err := deps.ServiceLister.ListConsumedRestServices()
+	if err != nil {
+		return nil
+	}
+	names := make([]string, 0)
+	for _, svc := range services {
+		modID := h.FindModuleID(svc.ContainerID)
+		modName := h.GetModuleName(modID)
+		if moduleFilter == "" || modName == moduleFilter {
+			names = append(names, modName+"."+svc.Name)
+		}
+	}
+	return names
+}
+
+func getDatabaseConnectionNamesACDeps(deps *HandlerDeps, moduleFilter string) []string {
+	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
+		return nil
+	}
+	h, err := getHierarchyDeps(deps)
+	if err != nil {
+		return nil
+	}
+	connections, err := deps.ServiceLister.ListDatabaseConnections()
 	if err != nil {
 		return nil
 	}
@@ -339,16 +412,15 @@ func getDatabaseConnectionNamesAC(ctx *ExecContext, moduleFilter string) []strin
 	return names
 }
 
-// getBusinessEventServiceNamesAC returns qualified business event service names, optionally filtered by module.
-func getBusinessEventServiceNamesAC(ctx *ExecContext, moduleFilter string) []string {
-	if !ctx.Connected() {
+func getBusinessEventServiceNamesACDeps(deps *HandlerDeps, moduleFilter string) []string {
+	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return nil
 	}
-	h, err := getHierarchy(ctx)
+	h, err := getHierarchyDeps(deps)
 	if err != nil {
 		return nil
 	}
-	services, err := ctx.ServiceLister.ListBusinessEventServices()
+	services, err := deps.ServiceLister.ListBusinessEventServices()
 	if err != nil {
 		return nil
 	}
@@ -363,16 +435,15 @@ func getBusinessEventServiceNamesAC(ctx *ExecContext, moduleFilter string) []str
 	return names
 }
 
-// getJsonStructureNamesAC returns qualified JSON structure names, optionally filtered by module.
-func getJsonStructureNamesAC(ctx *ExecContext, moduleFilter string) []string {
-	if !ctx.Connected() {
+func getJsonStructureNamesACDeps(deps *HandlerDeps, moduleFilter string) []string {
+	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
 		return nil
 	}
-	h, err := getHierarchy(ctx)
+	h, err := getHierarchyDeps(deps)
 	if err != nil {
 		return nil
 	}
-	structures, err := ctx.MappingReader.ListJsonStructures()
+	structures, err := deps.MapperReader.ListJsonStructures()
 	if err != nil {
 		return nil
 	}
@@ -393,75 +464,75 @@ func getJsonStructureNamesAC(ctx *ExecContext, moduleFilter string) []string {
 
 // GetModuleNames returns a list of all module names for autocomplete.
 func (e *Executor) GetModuleNames() []string {
-	return getModuleNames(e.newExecContext(context.Background()))
+	return getModuleNamesDeps(e.buildHandlerDeps())
 }
 
 // GetMicroflowNames returns qualified microflow names, optionally filtered by module.
 func (e *Executor) GetMicroflowNames(moduleFilter string) []string {
-	return getMicroflowNamesAC(e.newExecContext(context.Background()), moduleFilter)
+	return getMicroflowNamesACDeps(e.buildHandlerDeps(), moduleFilter)
 }
 
 // GetEntityNames returns qualified entity names, optionally filtered by module.
 func (e *Executor) GetEntityNames(moduleFilter string) []string {
-	return getEntityNamesAC(e.newExecContext(context.Background()), moduleFilter)
+	return getEntityNamesACDeps(e.buildHandlerDeps(), moduleFilter)
 }
 
 // GetPageNames returns qualified page names, optionally filtered by module.
 func (e *Executor) GetPageNames(moduleFilter string) []string {
-	return getPageNamesAC(e.newExecContext(context.Background()), moduleFilter)
+	return getPageNamesACDeps(e.buildHandlerDeps(), moduleFilter)
 }
 
 // GetSnippetNames returns qualified snippet names, optionally filtered by module.
 func (e *Executor) GetSnippetNames(moduleFilter string) []string {
-	return getSnippetNamesAC(e.newExecContext(context.Background()), moduleFilter)
+	return getSnippetNamesACDeps(e.buildHandlerDeps(), moduleFilter)
 }
 
 // GetAssociationNames returns qualified association names, optionally filtered by module.
 func (e *Executor) GetAssociationNames(moduleFilter string) []string {
-	return getAssociationNamesAC(e.newExecContext(context.Background()), moduleFilter)
+	return getAssociationNamesACDeps(e.buildHandlerDeps(), moduleFilter)
 }
 
 // GetEnumerationNames returns qualified enumeration names, optionally filtered by module.
 func (e *Executor) GetEnumerationNames(moduleFilter string) []string {
-	return getEnumerationNamesAC(e.newExecContext(context.Background()), moduleFilter)
+	return getEnumerationNamesACDeps(e.buildHandlerDeps(), moduleFilter)
 }
 
 // GetLayoutNames returns qualified layout names, optionally filtered by module.
 func (e *Executor) GetLayoutNames(moduleFilter string) []string {
-	return getLayoutNamesAC(e.newExecContext(context.Background()), moduleFilter)
+	return getLayoutNamesACDeps(e.buildHandlerDeps(), moduleFilter)
 }
 
 // GetJavaActionNames returns qualified Java action names, optionally filtered by module.
 func (e *Executor) GetJavaActionNames(moduleFilter string) []string {
-	return getJavaActionNamesAC(e.newExecContext(context.Background()), moduleFilter)
+	return getJavaActionNamesACDeps(e.buildHandlerDeps(), moduleFilter)
 }
 
 // GetODataClientNames returns qualified consumed OData service names, optionally filtered by module.
 func (e *Executor) GetODataClientNames(moduleFilter string) []string {
-	return getODataClientNamesAC(e.newExecContext(context.Background()), moduleFilter)
+	return getODataClientNamesACDeps(e.buildHandlerDeps(), moduleFilter)
 }
 
 // GetODataServiceNames returns qualified published OData service names, optionally filtered by module.
 func (e *Executor) GetODataServiceNames(moduleFilter string) []string {
-	return getODataServiceNamesAC(e.newExecContext(context.Background()), moduleFilter)
+	return getODataServiceNamesACDeps(e.buildHandlerDeps(), moduleFilter)
 }
 
 // GetRestClientNames returns qualified consumed REST service names, optionally filtered by module.
 func (e *Executor) GetRestClientNames(moduleFilter string) []string {
-	return getRestClientNamesAC(e.newExecContext(context.Background()), moduleFilter)
+	return getRestClientNamesACDeps(e.buildHandlerDeps(), moduleFilter)
 }
 
 // GetDatabaseConnectionNames returns qualified database connection names, optionally filtered by module.
 func (e *Executor) GetDatabaseConnectionNames(moduleFilter string) []string {
-	return getDatabaseConnectionNamesAC(e.newExecContext(context.Background()), moduleFilter)
+	return getDatabaseConnectionNamesACDeps(e.buildHandlerDeps(), moduleFilter)
 }
 
 // GetBusinessEventServiceNames returns qualified business event service names, optionally filtered by module.
 func (e *Executor) GetBusinessEventServiceNames(moduleFilter string) []string {
-	return getBusinessEventServiceNamesAC(e.newExecContext(context.Background()), moduleFilter)
+	return getBusinessEventServiceNamesACDeps(e.buildHandlerDeps(), moduleFilter)
 }
 
 // GetJsonStructureNames returns qualified JSON structure names, optionally filtered by module.
 func (e *Executor) GetJsonStructureNames(moduleFilter string) []string {
-	return getJsonStructureNamesAC(e.newExecContext(context.Background()), moduleFilter)
+	return getJsonStructureNamesACDeps(e.buildHandlerDeps(), moduleFilter)
 }

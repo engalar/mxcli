@@ -3,7 +3,6 @@
 package executor
 
 import (
-	"context"
 	"strings"
 
 	genPg "github.com/mendixlabs/mxcli/modelsdk/gen/pages"
@@ -905,7 +904,7 @@ func extractCustomWidgetPropertyAttributeRef(ctx *ExecContext, w map[string]any,
 //
 // This is the symmetric counterpart of extractCustomWidgetPropertyAttributeRef,
 // handling the EntityRef storage format instead of AttributeRef.
-func extractCustomWidgetPropertyAssociation(ctx *ExecContext, w map[string]any, propertyKey string) string {
+func extractCustomWidgetPropertyAssociation(w map[string]any, propertyKey string) string {
 	obj, ok := w["Object"].(map[string]any)
 	if !ok {
 		return ""
@@ -1286,5 +1285,5 @@ func extractCustomWidgetPropertyAction(ctx *ExecContext, w map[string]any, prope
 }
 
 func (e *Executor) extractCustomWidgetPropertyAssociation(w map[string]any, propertyKey string) string {
-	return extractCustomWidgetPropertyAssociation(e.newExecContext(context.Background()), w, propertyKey)
+	return extractCustomWidgetPropertyAssociation(w, propertyKey)
 }

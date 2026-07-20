@@ -3,6 +3,7 @@
 package executor
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"strconv"
@@ -847,3 +848,18 @@ func resolvePageParams(_ *ExecContext, page *genPg.Page) []types.PageParam {
 	}
 	return params
 }
+
+func describePageDeps(ctx context.Context, deps *HandlerDeps, name ast.QualifiedName) error {
+	return describePageFuture(ctx, deps.Output, deps.PageRepo, deps.ImageBackend, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, name)
+}
+
+func describeSnippetDeps(ctx context.Context, deps *HandlerDeps, name ast.QualifiedName) error {
+	return describeSnippetFuture(ctx, deps.Output, deps.SnippetRepo, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, name)
+}
+
+func describeLayoutDeps(ctx context.Context, deps *HandlerDeps, name ast.QualifiedName) error {
+	return describeLayoutFuture(ctx, deps.Output, deps.LayoutRepo, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, name)
+}
+
+// ── Workflows ──
+

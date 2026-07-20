@@ -429,3 +429,16 @@ func execDropExportMappingFn(ctx context.Context, s *ast.DropExportMappingStmt, 
 }
 
 // execDropExportMapping deletes an export mapping.
+
+func listExportMappingsDeps(ctx context.Context, deps *HandlerDeps, inModule string) error {
+	return listExportMappingsFn(ctx, inModule, deps)
+}
+
+
+func describeExportMappingDeps(ctx context.Context, deps *HandlerDeps, name ast.QualifiedName) error {
+	return describeExportMappingFn(ctx, name, deps)
+}
+
+// ── Widgets ──
+
+

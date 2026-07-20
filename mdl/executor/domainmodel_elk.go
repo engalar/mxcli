@@ -3,7 +3,6 @@
 package executor
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 
@@ -115,5 +114,11 @@ func emitDomainModelELK(ctx *ExecContext, data domainModelELKData) error {
 
 // DomainModelELK is the exported Executor method, called from outside the package.
 func (e *Executor) DomainModelELK(name string) error {
-	return domainModelELK(e.newExecContext(context.Background()), name)
+	return domainModelELKDeps(e.buildHandlerDeps(), name)
 }
+
+func domainModelELKDeps(deps *HandlerDeps, name string) error {
+	return domainModelELK(execContextFromDeps(deps), name)
+}
+
+

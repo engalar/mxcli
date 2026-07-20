@@ -255,7 +255,7 @@ func parseRawWidget(ctx *ExecContext, w map[string]any, parentEntityContext ...s
 		if widget.RenderMode == "combobox" {
 			widget.DataSource = extractComboBoxDataSource(ctx, w)
 			if widget.DataSource != nil {
-				widget.Content = extractCustomWidgetPropertyAssociation(ctx, w, "attributeAssociation")
+				widget.Content = extractCustomWidgetPropertyAssociation(w, "attributeAssociation")
 				widget.CaptionAttribute = extractCustomWidgetPropertyAttributeRef(ctx, w, "optionsSourceAssociationCaptionAttribute")
 			}
 		}

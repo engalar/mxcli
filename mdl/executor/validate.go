@@ -4,7 +4,6 @@
 package executor
 
 import (
-	"context"
 	"fmt"
 	"strings"
 
@@ -188,7 +187,7 @@ func validateProgram(ctx *ExecContext, prog *ast.Program) []error {
 // ValidateProgram validates all statements in a program, skipping references
 // to objects that are defined within the script itself.
 func (e *Executor) ValidateProgram(prog *ast.Program) []error {
-	return validateProgram(e.newExecContext(context.Background()), prog)
+	return validateProgramDeps(e.buildHandlerDeps(), prog)
 }
 
 // CheckProjectConflicts walks prog in statement order and returns errors for
@@ -196,7 +195,7 @@ func (e *Executor) ValidateProgram(prog *ast.Program) []error {
 // exists in the connected project. Names created earlier in the same script are
 // excluded — those will be caught by CheckScriptDuplicates.
 func (e *Executor) CheckProjectConflicts(prog *ast.Program) []error {
-	return CheckProjectConflicts(e.newExecContext(context.Background()), prog)
+	return CheckProjectConflictsDeps(e.buildHandlerDeps(), prog)
 }
 
 // validateWithContext validates a statement, considering objects defined in the script.
@@ -428,7 +427,7 @@ func validate(ctx *ExecContext, stmt ast.Statement) error {
 
 // Validate checks if a statement's references are valid without executing it.
 func (e *Executor) Validate(stmt ast.Statement) error {
-	return validate(e.newExecContext(context.Background()), stmt)
+	return validateDeps(e.buildHandlerDeps(), stmt)
 }
 
 // ----------------------------------------------------------------------------
@@ -675,3 +674,14 @@ func getErrorHandlerBody(stmt ast.MicroflowStatement) []ast.MicroflowStatement {
 	}
 	return nil
 }
+
+func validateProgramDeps(deps *HandlerDeps, prog *ast.Program) []error {
+	return validateProgram(execContextFromDeps(deps), prog)
+}
+
+
+func validateDeps(deps *HandlerDeps, stmt ast.Statement) error {
+	return validate(execContextFromDeps(deps), stmt)
+}
+
+

@@ -500,3 +500,26 @@ func ValidateEntity(stmt *ast.CreateEntityStmt) []linter.Violation {
 	}
 	return violations
 }
+
+func ExecCreateEnumerationDeps(ctx context.Context, s *ast.CreateEnumerationStmt, deps *HandlerDeps) error {
+	return execCreateEnumerationDepsImpl(ctx, s, deps)
+}
+
+
+func ExecDropEnumerationDeps(ctx context.Context, s *ast.DropEnumerationStmt, deps *HandlerDeps) error {
+	return execDropEnumerationDepsImpl(ctx, s, deps)
+}
+
+
+func listEnumerationsDeps(ctx context.Context, deps *HandlerDeps, moduleName string) error {
+	return listEnumerationsFuture(ctx, deps.Output, deps.Format, deps.ConnectionManager, deps.EnumerationReader, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, moduleName)
+}
+
+
+func describeEnumerationDeps(ctx context.Context, deps *HandlerDeps, name ast.QualifiedName) error {
+	return describeEnumerationFuture(ctx, deps.Output, deps.EnumerationReader, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, name)
+}
+
+// ── Constants ──
+
+

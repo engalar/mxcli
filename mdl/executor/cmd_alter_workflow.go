@@ -389,3 +389,9 @@ func buildAndBindActivitiesGen(ctx *ExecContext, nodes []ast.WorkflowActivityNod
 	deduplicateActivityNamesGen(acts)
 	return acts
 }
+
+func ExecAlterWorkflowDeps(ctx context.Context, s *ast.AlterWorkflowStmt, deps *HandlerDeps) error {
+	return execAlterWorkflowDepsImpl(ctx, s, deps)
+}
+
+

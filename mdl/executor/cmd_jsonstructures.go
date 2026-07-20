@@ -273,3 +273,16 @@ func findModuleByName(ml backend.ModuleLister, moduleName string) model.ID {
 }
 
 
+
+func listJsonStructuresDeps(ctx context.Context, deps *HandlerDeps, moduleName string) error {
+	return listJsonStructuresFn(ctx, deps, moduleName)
+}
+
+
+func describeJsonStructureDeps(ctx context.Context, deps *HandlerDeps, name ast.QualifiedName) error {
+	return describeJsonStructureFn(ctx, deps, name)
+}
+
+// ── Import / Export Mappings ──
+
+

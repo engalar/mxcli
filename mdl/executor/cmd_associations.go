@@ -491,122 +491,6 @@ func associationDocumentation(s *ast.CreateAssociationStmt) string {
 	return ""
 }
 
-// ExecAlterAssociation handles ALTER ASSOCIATION statements.
-func ExecAlterAssociation(ctx *ExecContext, s *ast.AlterAssociationStmt) error {
-	if !ctx.Connected() {
-		return mdlerrors.NewNotConnected()
-	}
-
-	module, err := findModule(ctx, s.Name.Module)
-	if err != nil {
-		return err
-	}
-
-	dm, err := getDomainModelGenCached(ctx, module.ID)
-	if err != nil {
-		return mdlerrors.NewBackend("get domain model", err)
-	}
-	if dm == nil {
-		return mdlerrors.NewNotFound("association", s.Name.String())
-	}
-
-	// Try intra-module associations first
-	for _, assocElem := range dm.AssociationsItems() {
-		assoc, ok := assocElem.(*genDm.Association)
-		if !ok || assoc.Name() != s.Name.Name {
-			continue
-		}
-		switch s.Operation {
-		case ast.AlterAssociationSetDeleteBehavior:
-			assoc.SetDeleteBehavior(newAssociationDeleteBehaviorGen(s.DeleteBehavior))
-		case ast.AlterAssociationSetOwner:
-			assoc.SetOwner(s.Owner.String())
-		case ast.AlterAssociationSetStorage:
-			assoc.SetStorageFormat(s.Storage.String())
-		case ast.AlterAssociationSetComment:
-			assoc.SetDocumentation(s.Comment)
-		}
-		if err := ctx.DomainModelWriter.UpdateDomainModelGen(dm); err != nil {
-			return mdlerrors.NewBackend("update association", err)
-		}
-		setDomainModelGenCached(ctx, module.ID, dm)
-		fmt.Fprintf(ctx.Output, "Altered association: %s\n", s.Name)
-		return nil
-	}
-
-	// Try cross-module associations
-	for _, crossElem := range dm.CrossAssociationsItems() {
-		ca, ok := crossElem.(*genDm.CrossAssociation)
-		if !ok || ca.Name() != s.Name.Name {
-			continue
-		}
-		switch s.Operation {
-		case ast.AlterAssociationSetDeleteBehavior:
-			ca.SetDeleteBehavior(newAssociationDeleteBehaviorGen(s.DeleteBehavior))
-		case ast.AlterAssociationSetOwner:
-			ca.SetOwner(s.Owner.String())
-		case ast.AlterAssociationSetStorage:
-			ca.SetStorageFormat(s.Storage.String())
-		case ast.AlterAssociationSetComment:
-			ca.SetDocumentation(s.Comment)
-		}
-		if err := ctx.DomainModelWriter.UpdateDomainModelGen(dm); err != nil {
-			return mdlerrors.NewBackend("update cross-module association", err)
-		}
-		setDomainModelGenCached(ctx, module.ID, dm)
-		fmt.Fprintf(ctx.Output, "Altered association: %s\n", s.Name)
-		return nil
-	}
-
-	return mdlerrors.NewNotFound("association", s.Name.String())
-}
-
-// ExecDropAssociation handles DROP ASSOCIATION statements.
-func ExecDropAssociation(ctx *ExecContext, s *ast.DropAssociationStmt) error {
-	if !ctx.Connected() {
-		return mdlerrors.NewNotConnected()
-	}
-
-	// Find module
-	module, err := findModule(ctx, s.Name.Module)
-	if err != nil {
-		return err
-	}
-
-	dm, err := getDomainModelGenCached(ctx, module.ID)
-	if err != nil {
-		return mdlerrors.NewBackend("get domain model", err)
-	}
-	if dm == nil {
-		return mdlerrors.NewNotFound("association", s.Name.String())
-	}
-
-	for _, assocElem := range dm.AssociationsItems() {
-		assoc, ok := assocElem.(*genDm.Association)
-		if !ok || assoc.Name() != s.Name.Name {
-			continue
-		}
-		if err := ctx.DomainModelWriter.DeleteAssociation(model.ID(dm.ID()), model.ID(assoc.ID())); err != nil {
-			return mdlerrors.NewBackend("delete association", err)
-		}
-		fmt.Fprintf(ctx.Output, "Dropped association: %s\n", s.Name)
-		return nil
-	}
-	for _, crossElem := range dm.CrossAssociationsItems() {
-		ca, ok := crossElem.(*genDm.CrossAssociation)
-		if !ok || ca.Name() != s.Name.Name {
-			continue
-		}
-		if err := ctx.DomainModelWriter.DeleteCrossAssociation(model.ID(dm.ID()), model.ID(ca.ID())); err != nil {
-			return mdlerrors.NewBackend("delete cross-module association", err)
-		}
-		fmt.Fprintf(ctx.Output, "Dropped cross-module association: %s\n", s.Name)
-		return nil
-	}
-
-	return mdlerrors.NewNotFound("association", s.Name.String())
-}
-
 // listAssociation handles SHOW ASSOCIATION command.
 func listAssociation(ctx *ExecContext, name *ast.QualifiedName) error {
 	if name == nil {
@@ -947,3 +831,26 @@ func describeAssociation(ctx *ExecContext, name ast.QualifiedName) error {
 }
 
 // --- Executor method wrappers for callers not yet migrated ---
+
+func ExecCreateAssociationDeps(ctx context.Context, s *ast.CreateAssociationStmt, deps *HandlerDeps) error {
+	return execCreateAssociationDepsImpl(ctx, s, deps)
+}
+
+
+func listAssociationsDeps(ctx context.Context, deps *HandlerDeps, moduleName string) error {
+	return listAssociationsFuture(ctx, deps.Output, deps.Format, deps.ModuleLister, deps.DomainModels, moduleName)
+}
+
+
+func listAssociationDeps(ctx context.Context, deps *HandlerDeps, name *ast.QualifiedName) error {
+	return listAssociationFuture(ctx, deps.Output, deps.ModuleLister, deps.DomainModelReader, name)
+}
+
+
+func describeAssociationDeps(ctx context.Context, deps *HandlerDeps, name ast.QualifiedName) error {
+	return describeAssociationFuture(ctx, deps.Output, deps.ModuleLister, deps.DomainModelReader, name)
+}
+
+// ── Microflows / Nanoflows ──
+
+

@@ -3,7 +3,6 @@
 package executor
 
 import (
-	"context"
 	"fmt"
 	"io"
 	"strings"
@@ -1324,7 +1323,7 @@ func extractClientTemplateParameters(ctx *ExecContext, w map[string]any, fieldNa
 }
 
 func (e *Executor) outputWidgetMDLV3(w rawWidget, indent int) {
-	outputWidgetMDLV3(e.newExecContext(context.Background()), w, indent)
+	outputWidgetMDLV3Deps(e.buildHandlerDeps(), w, indent)
 }
 
 // formatPageMicroflowActionGen formats a MicroflowClientAction using the gen
@@ -1366,3 +1365,9 @@ func formatPageMicroflowActionGen(mca *genPg.MicroflowClientAction) string {
 	}
 	return result
 }
+
+func outputWidgetMDLV3Deps(deps *HandlerDeps, w rawWidget, indent int) {
+	outputWidgetMDLV3(execContextFromDeps(deps), w, indent)
+}
+
+

@@ -123,9 +123,9 @@ func TestExecDropEntity_Mock(t *testing.T) {
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb))
-	err := ExecDropEntity(ctx, &ast.DropEntityStmt{
+	err := ExecDropEntityDeps(ctx, &ast.DropEntityStmt{
 		Name: ast.QualifiedName{Module: "MyModule", Name: "Customer"},
-	})
+	}, ctx.Deps)
 	assertNoError(t, err)
 	assertContainsStr(t, buf.String(), "Dropped entity:")
 	if !called {
@@ -197,9 +197,10 @@ func TestExecDropPage_Mock(t *testing.T) {
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
 	ctx.Pages = makePagesRepo([]*genPg.Page{pg}, mod.ID)
-	err := ExecDropPage(ctx, &ast.DropPageStmt{
+	ctx.Deps = ctx.buildDeps()
+	err := ExecDropPageDeps(ctx, &ast.DropPageStmt{
 		Name: ast.QualifiedName{Module: "MyModule", Name: "HomePage"},
-	})
+	}, ctx.Deps)
 	assertNoError(t, err)
 	assertContainsStr(t, buf.String(), "Dropped page")
 	if !called {
@@ -224,9 +225,10 @@ func TestExecDropSnippet_Mock(t *testing.T) {
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
 	ctx.Snippets = makeSnippetsRepo([]*genPg.Snippet{snp}, mod.ID)
-	err := ExecDropSnippet(ctx, &ast.DropSnippetStmt{
+	ctx.Deps = ctx.buildDeps()
+	err := ExecDropSnippetDeps(ctx, &ast.DropSnippetStmt{
 		Name: ast.QualifiedName{Module: "MyModule", Name: "HeaderSnippet"},
-	})
+	}, ctx.Deps)
 	assertNoError(t, err)
 	assertContainsStr(t, buf.String(), "Dropped snippet")
 	if !called {
@@ -389,9 +391,9 @@ func TestExecDropEntity_Mock_NotFound(t *testing.T) {
 		},
 	}
 	ctx, _ := newMockCtx(t, withBackend(mb))
-	assertError(t, ExecDropEntity(ctx, &ast.DropEntityStmt{
+	assertError(t, ExecDropEntityDeps(ctx, &ast.DropEntityStmt{
 		Name: ast.QualifiedName{Module: "MyModule", Name: "NonExistent"},
-	}))
+	}, ctx.Deps))
 }
 
 func TestExecDropMicroflow_Mock_NotFound(t *testing.T) {
@@ -417,9 +419,9 @@ func TestExecDropPage_Mock_NotFound(t *testing.T) {
 	mb := &mock.MockBackend{IsConnectedFunc: func() bool { return true }}
 	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
 	ctx.Pages = makePagesRepo(nil, mod.ID)
-	assertError(t, ExecDropPage(ctx, &ast.DropPageStmt{
+	assertError(t, ExecDropPageDeps(ctx, &ast.DropPageStmt{
 		Name: ast.QualifiedName{Module: "MyModule", Name: "NonExistent"},
-	}))
+	}, ctx.Deps))
 }
 
 func TestExecDropSnippet_Mock_NotFound(t *testing.T) {
@@ -429,9 +431,9 @@ func TestExecDropSnippet_Mock_NotFound(t *testing.T) {
 	mb := &mock.MockBackend{IsConnectedFunc: func() bool { return true }}
 	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
 	ctx.Snippets = makeSnippetsRepo(nil, mod.ID)
-	assertError(t, ExecDropSnippet(ctx, &ast.DropSnippetStmt{
+	assertError(t, ExecDropSnippetDeps(ctx, &ast.DropSnippetStmt{
 		Name: ast.QualifiedName{Module: "MyModule", Name: "NonExistent"},
-	}))
+	}, ctx.Deps))
 }
 
 func TestExecDropAssociation_Mock_NotFound(t *testing.T) {

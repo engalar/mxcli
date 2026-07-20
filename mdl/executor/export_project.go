@@ -5,7 +5,6 @@ package executor
 import (
 	"bufio"
 	"bytes"
-	"context"
 	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
@@ -207,7 +206,7 @@ func writeFile(path, content string) error {
 //	    _module.mdl                 -- create module Foo;
 //	    ...                         -- per-document files (added in Task 5)
 func (e *Executor) ExportProject(outputDir string, opts ExportOptions) error {
-	ctx := e.newExecContext(context.Background())
+	ctx := execContextFromDeps(e.buildHandlerDeps())
 	if !ctx.Connected() {
 		return fmt.Errorf("not connected to a project")
 	}

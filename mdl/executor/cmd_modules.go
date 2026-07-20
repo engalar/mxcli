@@ -1249,3 +1249,26 @@ func jarDepIdxByCoord(deps []*types.JarDependency, coordinate string) int {
 }
 
 // Executor method wrappers for callers in unmigrated files.
+
+func listModulesDeps(ctx context.Context, deps *HandlerDeps) error {
+	return listModulesFuture(ctx, deps.Output, deps.Format, deps.ConnectionManager, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, deps.DomainModels)
+}
+
+
+func describeModuleDeps(ctx context.Context, deps *HandlerDeps, moduleName string, withAll bool) error {
+	return describeModuleFuture(ctx, deps.Output,
+		moduleName, withAll,
+		deps.ModuleLister, deps.MetadataReader, deps.FolderManager,
+		deps.EnumerationReader, deps.ConstantReader,
+		deps.DomainModels, deps.Security,
+		deps.MicroflowRepo, deps.NanoflowRepo,
+		deps.PageRepo, deps.SnippetRepo, deps.LayoutRepo, deps.WorkflowRepo,
+		deps.ImageBackend, deps.NavigationReader)
+}
+
+// execListJarDependenciesDeps and execDescribeJarDependencyDeps are
+// defined in cmd_modules.go.
+
+// ── Catalog ──
+
+

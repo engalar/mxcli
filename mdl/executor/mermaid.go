@@ -3,7 +3,6 @@
 package executor
 
 import (
-	"context"
 	"fmt"
 	"strings"
 
@@ -54,7 +53,7 @@ func describeMermaid(ctx *ExecContext, objectType, name string) error {
 
 // DescribeMermaid is a method wrapper for external callers.
 func (e *Executor) DescribeMermaid(objectType, name string) error {
-	return describeMermaid(e.newExecContext(context.Background()), objectType, name)
+	return describeMermaidDeps(e.buildHandlerDeps(), objectType, name)
 }
 
 // buildEntityNames builds a map from entity ID to qualified name (Module.Entity)
@@ -181,3 +180,9 @@ func mermaidTruncate(s string, max int) string {
 	}
 	return s[:max-3] + "..."
 }
+
+func describeMermaidDeps(deps *HandlerDeps, objectType, name string) error {
+	return describeMermaid(execContextFromDeps(deps), objectType, name)
+}
+
+

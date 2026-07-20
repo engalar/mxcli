@@ -3,6 +3,7 @@
 package executor
 
 import (
+	"context"
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 )
@@ -17,3 +18,15 @@ func execShowContext(ctx *ExecContext, s *ast.ShowStmt) error {
 		"SHOW CONTEXT OF has been replaced by MXGraph-based commands.\n" +
 			"Use SHOW CALLERS OF / SHOW CALLEES OF / SHOW REFERENCES TO / SHOW IMPACT OF instead.")
 }
+
+func execShowContextDeps(ctx context.Context, deps *HandlerDeps, s *ast.ShowStmt) error {
+	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
+		return mdlerrors.NewNotConnected()
+	}
+	return mdlerrors.NewUnsupported(
+		"SHOW CONTEXT OF has been replaced by MXGraph-based commands.\n" +
+			"Use SHOW CALLERS OF / SHOW CALLEES OF / SHOW REFERENCES TO / SHOW IMPACT OF instead.")
+}
+
+// ── Security ──
+

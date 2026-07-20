@@ -12,6 +12,7 @@
 package executor
 
 import (
+	"context"
 	"fmt"
 	"sort"
 	"strings"
@@ -379,3 +380,14 @@ func describeEntityGen(ctx *ExecContext, name ast.QualifiedName) error {
 	fmt.Fprintln(ctx.Output, "/")
 	return nil
 }
+
+func listEntitiesGenDeps(ctx context.Context, deps *HandlerDeps, moduleName string) error {
+	return listEntitiesGenFuture(ctx, deps.Output, deps.Format, deps.ModuleLister, deps.DomainModels, moduleName)
+}
+
+func describeEntityGenDeps(ctx context.Context, deps *HandlerDeps, name ast.QualifiedName) error {
+	return describeEntityGenFuture(ctx, deps.Output, deps.ModuleLister, deps.DomainModels, deps.Security, name)
+}
+
+// ── Associations ──
+

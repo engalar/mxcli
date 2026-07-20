@@ -3,7 +3,6 @@
 package executor
 
 import (
-	"context"
 	"fmt"
 	"io/fs"
 	"os"
@@ -80,7 +79,7 @@ func sortMDLFiles(paths []string) []string {
 // order, and executes each against the connected project. _marketplace.mdl
 // is always skipped (it is informational only).
 func (e *Executor) ImportProject(inputDir string, opts ImportOptions) error {
-	ctx := e.newExecContext(context.Background())
+	ctx := execContextFromDeps(e.buildHandlerDeps())
 	if !ctx.Connected() {
 		return fmt.Errorf("not connected to a project")
 	}

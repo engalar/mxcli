@@ -568,3 +568,26 @@ func describeJavaScriptActionGenFn(ctx context.Context, name ast.QualifiedName, 
 	}
 	return nil
 }
+
+func listJavaActionsGenDeps(ctx context.Context, deps *HandlerDeps, moduleName string) error {
+	return listJavaActionsFuture(ctx, deps.Output, deps.Format, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, deps.JavaActionRepo, moduleName)
+}
+
+
+func listJavaScriptActionsGenDeps(ctx context.Context, deps *HandlerDeps, moduleName string) error {
+	return listJavaScriptActionsFuture(ctx, deps.Output, deps.Format, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, deps.JavaScriptActionRepo, moduleName)
+}
+
+
+func describeJavaActionGenDeps(ctx context.Context, deps *HandlerDeps, name ast.QualifiedName) error {
+	return describeJavaActionGenFuture(ctx, deps.Output, deps.JavaActionRepo, name)
+}
+
+
+func describeJavaScriptActionGenDeps(ctx context.Context, deps *HandlerDeps, name ast.QualifiedName) error {
+	return describeJavaScriptActionGenFn(ctx, name, deps)
+}
+
+// ── Modules ──
+
+

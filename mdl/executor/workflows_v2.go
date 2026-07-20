@@ -25,6 +25,7 @@
 package executor
 
 import (
+	"context"
 	"fmt"
 	"sort"
 	"strings"
@@ -1136,3 +1137,16 @@ func formatStandaloneAnnotationGen(elem element.Element, indent string) string {
 	escaped := strings.ReplaceAll(desc, "'", "''")
 	return fmt.Sprintf("%sannotation '%s'", indent, escaped)
 }
+
+func listWorkflowsGenDeps(ctx context.Context, deps *HandlerDeps, moduleName string) error {
+	return listWorkflowsFuture(ctx, deps.Output, deps.Format, deps.ConnectionManager, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, deps.WorkflowRepo, moduleName)
+}
+
+
+func describeWorkflowGenDeps(ctx context.Context, deps *HandlerDeps, name ast.QualifiedName) error {
+	return describeWorkflowGenFuture(ctx, deps.Output, deps.WorkflowRepo, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, name)
+}
+
+// ── Java / JavaScript Actions ──
+
+

@@ -374,3 +374,9 @@ func validateCreateEntityTypeRefsGen(ctx *ExecContext, s *ast.CreateEntityStmt) 
 	}
 	return nil
 }
+
+func ExecCreateEntityDeps(ctx context.Context, s *ast.CreateEntityStmt, deps *HandlerDeps) error {
+	return execCreateEntityGenDeps(ctx, s, deps)
+}
+
+
