@@ -50,6 +50,7 @@ func TestExecCreateLayout_CallsCreateLayoutGen(t *testing.T) {
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(mkHierarchy(mod)))
 	ctx.Layouts = makeLayoutsRepo(nil, mod.ID)
+	ctx.Deps = ctx.buildDeps()
 
 	if err := ExecCreateOrModifyLayoutFn(ctx, layoutStmt("Mod", "MyLayout"), ctx.Deps); err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -92,6 +93,7 @@ func TestExecCreateLayout_AlreadyExists(t *testing.T) {
 
 	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(mkHierarchy(mod)))
 	ctx.Layouts = makeLayoutsRepo([]*genPg.Layout{existing}, mod.ID)
+	ctx.Deps = ctx.buildDeps()
 
 	s := layoutStmt("Mod", "MyLayout") // IsModify=false → must error
 	err := ExecCreateOrModifyLayoutFn(ctx, s, ctx.Deps)
@@ -129,6 +131,7 @@ func TestExecCreateLayout_ModifyReplacesExisting(t *testing.T) {
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(mkHierarchy(mod)))
 	ctx.Layouts = makeLayoutsRepo([]*genPg.Layout{existing}, mod.ID)
+	ctx.Deps = ctx.buildDeps()
 
 	s := layoutStmt("Mod", "MyLayout")
 	s.IsModify = true

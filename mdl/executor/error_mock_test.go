@@ -55,6 +55,7 @@ func TestShowPages_Mock_BackendError(t *testing.T) {
 	ctx.Pages = &repostesting.RecordingPageRepository{
 		ListAllFunc: func() ([]*genPg.Page, error) { return nil, errBackend },
 	}
+	ctx.Deps = ctx.buildDeps()
 	assertError(t, listPagesGen(ctx, ""))
 }
 
@@ -64,6 +65,7 @@ func TestShowSnippets_Mock_BackendError(t *testing.T) {
 	ctx.Snippets = &repostesting.RecordingSnippetRepository{
 		ListAllFunc: func() ([]*genPg.Snippet, error) { return nil, errBackend },
 	}
+	ctx.Deps = ctx.buildDeps()
 	assertError(t, listSnippetsGen(ctx, ""))
 }
 
@@ -73,6 +75,7 @@ func TestShowLayouts_Mock_BackendError(t *testing.T) {
 	ctx.Layouts = &repostesting.RecordingLayoutRepository{
 		ListAllFunc: func() ([]*genPg.Layout, error) { return nil, errBackend },
 	}
+	ctx.Deps = ctx.buildDeps()
 	assertError(t, listLayoutsGen(ctx, ""))
 }
 
@@ -82,6 +85,7 @@ func TestShowWorkflows_Mock_BackendError(t *testing.T) {
 	ctx.Workflows = &repostesting.RecordingWorkflowRepository{
 		ListAllFunc: func() ([]*genWf.Workflow, error) { return nil, errBackend },
 	}
+	ctx.Deps = ctx.buildDeps()
 	assertError(t, listWorkflowsGen(ctx, ""))
 }
 
@@ -329,6 +333,7 @@ func TestDescribeWorkflow_Mock_BackendError(t *testing.T) {
 	ctx.Workflows = &repostesting.RecordingWorkflowRepository{
 		ListAllFunc: func() ([]*genWf.Workflow, error) { return nil, errBackend },
 	}
+	ctx.Deps = ctx.buildDeps()
 	assertError(t, describeWorkflowGen(ctx, ast.QualifiedName{Module: "M", Name: "W"}))
 }
 

@@ -183,6 +183,7 @@ func TestExecCreateNanoflowGen_ValidationFailures(t *testing.T) {
 	t.Run("nil ctx.Nanoflows", func(t *testing.T) {
 		bare := *ctx
 		bare.Nanoflows = nil
+		bare.Deps = bare.buildDeps()
 		stmt := &ast.CreateNanoflowStmt{
 			Name: ast.QualifiedName{Module: "MyFirstModule", Name: "NF_NoRepo"},
 		}
@@ -255,6 +256,7 @@ func TestExecCreateNanoflowGen_PrintsCreatedToOutput(t *testing.T) {
 
 	var buf bytes.Buffer
 	ctx.Output = &buf
+	ctx.Deps = ctx.buildDeps()
 
 	stmt := &ast.CreateNanoflowStmt{
 		Name: ast.QualifiedName{Module: "MyFirstModule", Name: "NF_PrintCheck"},

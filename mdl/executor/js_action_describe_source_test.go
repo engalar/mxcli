@@ -86,6 +86,7 @@ export async function ` + first.Name() + `(input) {
 
 	var buf bytes.Buffer
 	ctx.Output = &buf
+	ctx.Deps = ctx.buildDeps()
 
 	if err := describeJavaScriptActionGen(ctx, ast.QualifiedName{Module: modName, Name: first.Name()}); err != nil {
 		t.Fatalf("describeJavaScriptActionGen: %v", err)
@@ -166,6 +167,7 @@ func TestDescribeJavaScriptActionGen_NoSourceFile(t *testing.T) {
 
 	var buf bytes.Buffer
 	ctx.Output = &buf
+	ctx.Deps = ctx.buildDeps()
 
 	if err := describeJavaScriptActionGen(ctx, ast.QualifiedName{Module: modName, Name: first.Name()}); err != nil {
 		t.Fatalf("describeJavaScriptActionGen: %v", err)

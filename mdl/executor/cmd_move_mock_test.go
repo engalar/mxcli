@@ -54,6 +54,7 @@ func TestMove_Page_ToFolder(t *testing.T) {
 	h := mkHierarchy(mod)
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
 	ctx.Pages = makePagesRepo([]*genPg.Page{pg}, mod.ID)
+	ctx.Deps = ctx.buildDeps()
 	assertNoError(t, execMoveFn(ctx, &ast.MoveStmt{
 		DocumentType: ast.DocumentTypePage,
 		Name:         ast.QualifiedName{Module: "MyModule", Name: "MyPage"},
@@ -82,6 +83,7 @@ func TestMove_Page_NotFound(t *testing.T) {
 	h := mkHierarchy(mod)
 	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
 	ctx.Pages = makePagesRepo(nil, mod.ID)
+	ctx.Deps = ctx.buildDeps()
 	err := execMoveFn(ctx, &ast.MoveStmt{
 		DocumentType: ast.DocumentTypePage,
 		Name:         ast.QualifiedName{Module: "MyModule", Name: "NonExistent"},
@@ -114,6 +116,7 @@ func TestMove_Page_CrossModule(t *testing.T) {
 	h := mkHierarchy(srcMod, dstMod)
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
 	ctx.Pages = makePagesRepo([]*genPg.Page{pg}, srcMod.ID)
+	ctx.Deps = ctx.buildDeps()
 	assertNoError(t, execMoveFn(ctx, &ast.MoveStmt{
 		DocumentType: ast.DocumentTypePage,
 		Name:         ast.QualifiedName{Module: "SrcModule", Name: "MyPage"},
@@ -166,6 +169,7 @@ func TestMove_Page_BackendError(t *testing.T) {
 	h := mkHierarchy(mod)
 	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
 	ctx.Pages = makePagesRepo([]*genPg.Page{pg}, mod.ID)
+	ctx.Deps = ctx.buildDeps()
 	err := execMoveFn(ctx, &ast.MoveStmt{
 		DocumentType: ast.DocumentTypePage,
 		Name:         ast.QualifiedName{Module: "MyModule", Name: "MyPage"},

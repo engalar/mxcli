@@ -52,6 +52,7 @@ func TestMultipleParametersHaveDistinctPositions(t *testing.T) {
 
 	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(mkHierarchy(mod)))
 	ctx.Microflows = repo
+	ctx.Deps = ctx.buildDeps()
 
 	stmt := &ast.CreateMicroflowStmt{
 		Name: ast.QualifiedName{Module: "MyModule", Name: "DoWork"},
@@ -177,6 +178,7 @@ func TestExecCreateMicroflowGenEntityParamEnumRefPopulatesVarTypes(t *testing.T)
 
 	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(mkHierarchy(mod)))
 	ctx.Microflows = repo
+	ctx.Deps = ctx.buildDeps()
 
 	// "HD.Ticket" parsed as TypeEnumeration+EnumRef — the real production case.
 	ticketRef := ast.QualifiedName{Module: "HD", Name: "Ticket"}
@@ -281,6 +283,7 @@ func TestExecCreateMicroflowGen_WarnsOnRemovedParam(t *testing.T) {
 	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(mkHierarchy(mod)))
 	ctx.Microflows = repo
 	ctx.Output = &buf
+	ctx.Deps = ctx.buildDeps()
 
 	stmt := &ast.CreateMicroflowStmt{
 		Name:           ast.QualifiedName{Module: "Common_Utils", Name: "GET_Message_ById"},
