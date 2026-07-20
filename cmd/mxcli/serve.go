@@ -56,13 +56,12 @@ Examples:
   mxcli serve -p app.mpr
   mxcli serve -p app.mpr --port 8080
 `,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		projectPath, _ := cmd.Flags().GetString("project")
 		port, _ := cmd.Flags().GetInt("port")
 
 		if projectPath == "" {
-			fmt.Println("Error: --project (-p) is required")
-			return
+			return fmt.Errorf("--project (-p) is required")
 		}
 
 		fmt.Printf("Starting visualization server for: %s\n", projectPath)
@@ -75,9 +74,7 @@ Examples:
 			serveSVG(w, r, projectPath)
 		})
 
-		if err := http.ListenAndServe(fmt.Sprintf(":%d", port), nil); err != nil {
-			fmt.Printf("Server error: %v\n", err)
-		}
+		return http.ListenAndServe(fmt.Sprintf(":%d", port), nil)
 	},
 }
 
