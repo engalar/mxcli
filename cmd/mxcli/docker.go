@@ -71,11 +71,10 @@ Examples:
   mxcli docker run -p app.mpr --fresh --wait
   mxcli docker run -p app.mpr --skip-check
 `,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		projectPath, _ := cmd.Flags().GetString("project")
 		if projectPath == "" {
-			fmt.Fprintln(os.Stderr, "Error: --project (-p) is required")
-			os.Exit(1)
+			return fmt.Errorf("--project (-p) is required")
 		}
 
 		mxbuildPath, _ := cmd.Flags().GetString("mxbuild-path")
@@ -97,10 +96,7 @@ Examples:
 			Stderr:      os.Stderr,
 		}
 
-		if err := docker.Run(opts); err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-			os.Exit(1)
-		}
+		return docker.Run(opts)
 	},
 }
 
@@ -129,11 +125,10 @@ Examples:
   mxcli docker build -p app.mpr --mxbuild-path /path/to/mxbuild -o ./output
   mxcli docker build -p app.mpr --dry-run
 `,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		projectPath, _ := cmd.Flags().GetString("project")
 		if projectPath == "" {
-			fmt.Fprintln(os.Stderr, "Error: --project (-p) is required")
-			os.Exit(1)
+			return fmt.Errorf("--project (-p) is required")
 		}
 
 		mxbuildPath, _ := cmd.Flags().GetString("mxbuild-path")
@@ -149,10 +144,7 @@ Examples:
 			Stdout:      os.Stdout,
 		}
 
-		if err := docker.Build(opts); err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-			os.Exit(1)
-		}
+		return docker.Build(opts)
 	},
 }
 
@@ -180,11 +172,10 @@ Examples:
   mxcli docker check -p app.mpr --no-update-widgets
   mxcli docker check -p app.mpr --update-widgets
 `,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		projectPath, _ := cmd.Flags().GetString("project")
 		if projectPath == "" {
-			fmt.Fprintln(os.Stderr, "Error: --project (-p) is required")
-			os.Exit(1)
+			return fmt.Errorf("--project (-p) is required")
 		}
 
 		mxbuildPath, _ := cmd.Flags().GetString("mxbuild-path")
@@ -200,10 +191,7 @@ Examples:
 			Stderr:             os.Stderr,
 		}
 
-		if err := docker.Check(opts); err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-			os.Exit(1)
-		}
+		return docker.Check(opts)
 	},
 }
 
@@ -226,11 +214,10 @@ Examples:
   mxcli docker init -p app.mpr -o /custom/docker/dir
   mxcli docker init -p app.mpr --port-offset 1   # Ports: 8081/8091/5433
 `,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		projectPath, _ := cmd.Flags().GetString("project")
 		if projectPath == "" {
-			fmt.Fprintln(os.Stderr, "Error: --project (-p) is required")
-			os.Exit(1)
+			return fmt.Errorf("--project (-p) is required")
 		}
 
 		outputDir, _ := cmd.Flags().GetString("output")
@@ -245,10 +232,7 @@ Examples:
 			Stdout:      os.Stdout,
 		}
 
-		if err := docker.Init(opts); err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-			os.Exit(1)
-		}
+		return docker.Init(opts)
 	},
 }
 
@@ -268,11 +252,10 @@ Examples:
   mxcli docker up -p app.mpr --fresh   # Remove volumes first
   mxcli docker up -p app.mpr --detach --wait
 `,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		projectPath, _ := cmd.Flags().GetString("project")
 		if projectPath == "" {
-			fmt.Fprintln(os.Stderr, "Error: --project (-p) is required")
-			os.Exit(1)
+			return fmt.Errorf("--project (-p) is required")
 		}
 
 		detach, _ := cmd.Flags().GetBool("detach")
@@ -287,16 +270,15 @@ Examples:
 		}
 
 		if err := docker.Up(opts, detach, fresh); err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-			os.Exit(1)
+			return fmt.Errorf("docker up: %w", err)
 		}
 
 		if wait && detach {
 			if err := docker.WaitForReady(opts, time.Duration(waitTimeout)*time.Second); err != nil {
-				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-				os.Exit(1)
+				return fmt.Errorf("waiting for ready: %w", err)
 			}
 		}
+		return nil
 	},
 }
 
@@ -309,11 +291,10 @@ Examples:
   mxcli docker down -p app.mpr
   mxcli docker down -p app.mpr --volumes   # Also remove data volumes
 `,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		projectPath, _ := cmd.Flags().GetString("project")
 		if projectPath == "" {
-			fmt.Fprintln(os.Stderr, "Error: --project (-p) is required")
-			os.Exit(1)
+			return fmt.Errorf("--project (-p) is required")
 		}
 
 		volumes, _ := cmd.Flags().GetBool("volumes")
@@ -324,10 +305,7 @@ Examples:
 			Stderr:      os.Stderr,
 		}
 
-		if err := docker.Down(opts, volumes); err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-			os.Exit(1)
-		}
+		return docker.Down(opts, volumes)
 	},
 }
 
@@ -341,11 +319,10 @@ Examples:
   mxcli docker logs -p app.mpr --follow
   mxcli docker logs -p app.mpr --tail 50
 `,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		projectPath, _ := cmd.Flags().GetString("project")
 		if projectPath == "" {
-			fmt.Fprintln(os.Stderr, "Error: --project (-p) is required")
-			os.Exit(1)
+			return fmt.Errorf("--project (-p) is required")
 		}
 
 		follow, _ := cmd.Flags().GetBool("follow")
@@ -357,10 +334,7 @@ Examples:
 			Stderr:      os.Stderr,
 		}
 
-		if err := docker.Logs(opts, follow, tail); err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-			os.Exit(1)
-		}
+		return docker.Logs(opts, follow, tail)
 	},
 }
 
@@ -372,11 +346,10 @@ var dockerStatusCmd = &cobra.Command{
 Examples:
   mxcli docker status -p app.mpr
 `,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		projectPath, _ := cmd.Flags().GetString("project")
 		if projectPath == "" {
-			fmt.Fprintln(os.Stderr, "Error: --project (-p) is required")
-			os.Exit(1)
+			return fmt.Errorf("--project (-p) is required")
 		}
 
 		opts := docker.RuntimeOptions{
@@ -385,10 +358,7 @@ Examples:
 			Stderr:      os.Stderr,
 		}
 
-		if err := docker.Status(opts); err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-			os.Exit(1)
-		}
+		return docker.Status(opts)
 	},
 }
 
@@ -418,11 +388,10 @@ Examples:
   # Skip mx check for faster iteration
   mxcli docker reload -p app.mpr --skip-check
 `,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		projectPath, _ := cmd.Flags().GetString("project")
 		if projectPath == "" {
-			fmt.Fprintln(os.Stderr, "Error: --project (-p) is required")
-			os.Exit(1)
+			return fmt.Errorf("--project (-p) is required")
 		}
 
 		mxbuildPath, _ := cmd.Flags().GetString("mxbuild-path")
@@ -434,8 +403,7 @@ Examples:
 		dockerDir := filepath.Join(filepath.Dir(projectPath), ".docker")
 		caller, err := docker.NewDockerExecM2EECaller(dockerDir, token)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-			os.Exit(1)
+			return fmt.Errorf("creating M2EE caller: %w", err)
 		}
 
 		opts := docker.ReloadOptions{
@@ -449,10 +417,7 @@ Examples:
 			Stderr:      os.Stderr,
 		}
 
-		if err := docker.Reload(opts); err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-			os.Exit(1)
-		}
+		return docker.Reload(opts)
 	},
 }
 
@@ -465,11 +430,10 @@ Examples:
   mxcli docker shell -p app.mpr
   mxcli docker shell -p app.mpr --exec "ls -la /mendix"
 `,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		projectPath, _ := cmd.Flags().GetString("project")
 		if projectPath == "" {
-			fmt.Fprintln(os.Stderr, "Error: --project (-p) is required")
-			os.Exit(1)
+			return fmt.Errorf("--project (-p) is required")
 		}
 
 		execCmd, _ := cmd.Flags().GetString("exec")
@@ -480,10 +444,7 @@ Examples:
 			Stderr:      os.Stderr,
 		}
 
-		if err := docker.Shell(opts, execCmd); err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-			os.Exit(1)
-		}
+		return docker.Shell(opts, execCmd)
 	},
 }
 
@@ -546,5 +507,4 @@ func init() {
 	dockerCmd.AddCommand(dockerStatusCmd)
 	dockerCmd.AddCommand(dockerShellCmd)
 	dockerCmd.AddCommand(dockerReloadCmd)
-	rootCmd.AddCommand(dockerCmd)
 }
