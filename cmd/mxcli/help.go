@@ -41,17 +41,17 @@ Examples:
   mxcli syntax security entity-access           # Entity access rules
   mxcli syntax entity                           # Legacy alias → domain-model.entity
 `,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		jsonFlag, _ := cmd.Flags().GetBool("json")
 
 		// No args: show full index (JSON) or help text
 		if len(args) == 0 {
 			if jsonFlag {
 				syntax.WriteJSON(os.Stdout, syntax.All())
-				return
+				return nil
 			}
 			cmd.Help()
-			return
+			return nil
 		}
 
 		// Build registry path from args
@@ -68,14 +68,13 @@ Examples:
 			} else {
 				syntax.WriteText(os.Stdout, features)
 			}
-			return
+			return nil
 		}
 
 		fmt.Printf("Unknown topic: %s\n\n", path)
 		cmd.Help()
+		return nil
 	},
 }
 
-func init() {
-	rootCmd.AddCommand(syntaxCmd)
-}
+

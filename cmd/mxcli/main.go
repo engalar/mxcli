@@ -416,6 +416,7 @@ func init() {
 	rootCmd.AddCommand(buildCmd())
 	rootCmd.AddCommand(runCmd())
 	rootCmd.AddCommand(reloadCmd())
+	rootCmd.AddCommand(syntaxCmd)
 }
 
 
