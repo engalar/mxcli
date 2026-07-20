@@ -8,7 +8,3 @@ var explainCmd = &cobra.Command{
 	Use:   "explain",
 	Short: "Explain MDL constructs (expressions, hints, slots)",
 }
-
-func init() {
-	rootCmd.AddCommand(explainCmd)
-}

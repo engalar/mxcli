@@ -241,5 +241,4 @@ func init() {
 	exprCmd.AddCommand(exprValidateCmd)
 	exprCmd.AddCommand(exprRepairCmd)
 	exprCmd.AddCommand(exprReportCmd)
-	rootCmd.AddCommand(exprCmd)
 }

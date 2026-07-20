@@ -14,7 +14,6 @@ import (
 )
 
 func init() {
-	rootCmd.AddCommand(ontoCmd)
 	ontoCmd.AddCommand(ontoSchemaCmd)
 	ontoCmd.AddCommand(ontoExploreCmd)
 	ontoCmd.AddCommand(ontoPathCmd)

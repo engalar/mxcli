@@ -164,7 +164,6 @@ func init() {
 	widgetCmd.AddCommand(widgetNewCmd)
 	widgetCmd.AddCommand(widgetBuildCmd)
 	widgetCmd.AddCommand(widgetInstallCmd)
-	rootCmd.AddCommand(widgetCmd)
 }
 
 func runWidgetInstall(cmd *cobra.Command, args []string) error {

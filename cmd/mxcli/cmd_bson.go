@@ -16,8 +16,6 @@ Subcommands:
 }
 
 func init() {
-	rootCmd.AddCommand(bsonCmd)
-
 	// Register subcommands
 	bsonCmd.AddCommand(bsonDumpCmd)
 	bsonCmd.AddCommand(discoverCmd)

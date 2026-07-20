@@ -119,5 +119,4 @@ Examples:
 func init() {
 	analyzeCmd.Flags().Int("depth", 0, "Max traversal depth for flow analysis (0=unlimited)")
 	analyzeCmd.Flags().Bool("perf", false, "Show performance timing breakdown")
-	rootCmd.AddCommand(analyzeCmd)
 }

@@ -69,7 +69,6 @@ func init() {
 
 	catalogCmd.AddCommand(catalogSearchCmd)
 	catalogCmd.AddCommand(catalogShowCmd)
-	rootCmd.AddCommand(catalogCmd)
 }
 
 func runCatalogSearch(cmd *cobra.Command, args []string) error {

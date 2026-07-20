@@ -34,7 +34,6 @@ func init() {
 	extractTemplatesCmd.Flags().StringP("output", "o", "", "Output directory for templates")
 	extractTemplatesCmd.MarkFlagRequired("project")
 	extractTemplatesCmd.MarkFlagRequired("output")
-	rootCmd.AddCommand(extractTemplatesCmd)
 }
 
 // extractedWidgetTemplate is the JSON structure for a widget template file.

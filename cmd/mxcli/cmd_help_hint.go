@@ -45,6 +45,4 @@ func runHelpHint(out io.Writer, code string) error {
 	return nil
 }
 
-func init() {
-	rootCmd.AddCommand(hintCmd)
-}
+

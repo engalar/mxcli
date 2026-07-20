@@ -69,8 +69,6 @@ func init() {
 	marketplaceCmd.AddCommand(marketplaceSearchCmd)
 	marketplaceCmd.AddCommand(marketplaceInfoCmd)
 	marketplaceCmd.AddCommand(marketplaceVersionsCmd)
-
-	rootCmd.AddCommand(marketplaceCmd)
 }
 
 // newMarketplaceClient builds an authenticated marketplace client using
