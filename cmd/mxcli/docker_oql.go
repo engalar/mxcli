@@ -33,7 +33,7 @@ Examples:
   mxcli oql --direct --host localhost --port 8090 --token 'AdminPassword1!' "SELECT 1"
 `,
 	Args: cobra.ExactArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		query := args[0]
 		projectPath, _ := cmd.Flags().GetString("project")
 		host, _ := cmd.Flags().GetString("host")
@@ -54,20 +54,19 @@ Examples:
 
 		result, err := docker.ExecuteOQL(opts, query)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-			os.Exit(1)
+			return fmt.Errorf("executing OQL: %w", err)
 		}
 
 		if jsonOutput {
 			if err := docker.FormatOQLJSON(os.Stdout, result); err != nil {
-				fmt.Fprintf(os.Stderr, "Error formatting JSON: %v\n", err)
-				os.Exit(1)
+				return fmt.Errorf("formatting JSON: %w", err)
 			}
 		} else {
 			docker.FormatOQLTable(os.Stdout, result)
 		}
 
 		fmt.Fprintf(os.Stderr, "(%d rows)\n", len(result.Rows))
+		return nil
 	},
 }
 
@@ -77,6 +76,4 @@ func init() {
 	oqlCmd.Flags().String("token", "", "M2EE admin password")
 	oqlCmd.Flags().BoolP("json", "j", false, "Output as JSON array")
 	oqlCmd.Flags().Bool("direct", false, "Connect via HTTP directly (bypass docker exec)")
-
-	rootCmd.AddCommand(oqlCmd)
 }

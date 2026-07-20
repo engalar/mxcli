@@ -76,7 +76,7 @@ Examples:
   mxcli init --container-runtime podman
 `,
 	Args: cobra.MaximumNArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		projectDir := "."
 		if len(args) > 0 {
 			projectDir = args[0]
@@ -84,18 +84,15 @@ Examples:
 
 		absDir, err := filepath.Abs(projectDir)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error resolving path: %v\n", err)
-			os.Exit(1)
+			return fmt.Errorf("resolving path: %w", err)
 		}
 
 		info, err := os.Stat(absDir)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error: directory does not exist: %s\n", absDir)
-			os.Exit(1)
+			return fmt.Errorf("directory does not exist: %s", absDir)
 		}
 		if !info.IsDir() {
-			fmt.Fprintf(os.Stderr, "Error: not a directory: %s\n", absDir)
-			os.Exit(1)
+			return fmt.Errorf("not a directory: %s", absDir)
 		}
 
 		mprFile := findMprFile(absDir)
@@ -115,7 +112,7 @@ Examples:
 		for _, dir := range []string{commandsDir, lintRulesDir, claudeSkillsDir} {
 			if err := os.MkdirAll(dir, 0755); err != nil {
 				fmt.Fprintf(os.Stderr, "Error creating %s: %v\n", dir, err)
-				os.Exit(1)
+				return fmt.Errorf("creating directory: %s", dir)
 			}
 		}
 
@@ -123,14 +120,14 @@ Examples:
 		settingsPath := filepath.Join(claudeDir, "settings.json")
 		if err := os.WriteFile(settingsPath, []byte(generateClaudeSettings(projectName, mprFile)), 0644); err != nil {
 			fmt.Fprintf(os.Stderr, "Error writing settings.json: %v\n", err)
-			os.Exit(1)
+			return fmt.Errorf("writing settings.json: %w", err)
 		}
 		fmt.Println("  Created .claude/settings.json")
 
 		claudeMDPath := filepath.Join(absDir, "CLAUDE.md")
 		if err := os.WriteFile(claudeMDPath, []byte(generateClaudeMD(projectName, mprFile, isDevcontainer())), 0644); err != nil {
 			fmt.Fprintf(os.Stderr, "Error writing CLAUDE.md: %v\n", err)
-			os.Exit(1)
+			return fmt.Errorf("writing CLAUDE.md: %w", err)
 		}
 		fmt.Println("  Created CLAUDE.md")
 
@@ -325,6 +322,7 @@ Examples:
 		fmt.Println("  2. Ask Claude: 'explore this project'")
 		fmt.Println("  3. See mdl-examples/helpdesk-app.mdl for a comprehensive MDL reference")
 		fmt.Println("  4. Use './mxcli -p " + mprFile + "' to work with the project")
+		return nil
 	},
 }
 
@@ -362,6 +360,5 @@ func isDevcontainer() bool {
 }
 
 func init() {
-	rootCmd.AddCommand(initCmd)
 	initCmd.Flags().StringVar(&initContainerRuntime, "container-runtime", "docker", "Container runtime for devcontainer (docker or podman)")
 }

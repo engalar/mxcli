@@ -63,7 +63,7 @@ Examples:
   mxcli sql --alias mydb --json "SELECT * FROM orders"
 `,
 	Args: cobra.MaximumNArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		driverName, _ := cmd.Flags().GetString("driver")
 		dsn, _ := cmd.Flags().GetString("dsn")
 		alias, _ := cmd.Flags().GetString("alias")
@@ -73,52 +73,43 @@ Examples:
 		functions, _ := cmd.Flags().GetBool("functions")
 		describe, _ := cmd.Flags().GetString("describe")
 
-		// Default alias
 		if alias == "" {
 			alias = "default"
 		}
 
-		// Parse explicit driver (if provided)
 		var driver sqllib.DriverName
 		if driverName != "" {
 			var err error
 			driver, err = sqllib.ParseDriver(driverName)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-				os.Exit(1)
+				return fmt.Errorf("parsing driver: %w", err)
 			}
 		}
 
-		// Resolve DSN and driver
 		resolved, err := sqllib.ResolveConnection(sqllib.ResolveOptions{
 			DSN:    dsn,
 			Alias:  alias,
 			Driver: driver,
 		})
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-			os.Exit(1)
+			return fmt.Errorf("resolving connection: %w", err)
 		}
 
-		// Use resolved driver, or default to postgres if still unknown
 		if resolved.Driver == "" {
 			resolved.Driver = sqllib.DriverPostgres
 		}
 
-		// Connect
 		mgr := sqllib.NewManager()
 		defer mgr.CloseAll()
 
 		if err := mgr.Connect(resolved.Driver, resolved.DSN, alias); err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-			os.Exit(1)
+			return fmt.Errorf("connecting: %w", err)
 		}
 
 		conn, _ := mgr.Get(alias)
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
 
-		// Dispatch: --tables, --views, --functions, --describe, or query
 		var result *sqllib.QueryResult
 		switch {
 		case tables:
@@ -131,27 +122,25 @@ Examples:
 			result, err = sqllib.DescribeTable(ctx, conn, describe)
 		default:
 			if len(args) == 0 {
-				fmt.Fprintln(os.Stderr, "Error: query argument required (or use --tables / --views / --functions / --describe)")
-				os.Exit(1)
+				return fmt.Errorf("query argument required (or use --tables / --views / --functions / --describe)")
 			}
 			result, err = sqllib.Execute(ctx, conn, args[0])
 		}
 
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-			os.Exit(1)
+			return fmt.Errorf("query failed: %w", err)
 		}
 
 		if jsonOutput {
 			if err := sqllib.FormatJSON(os.Stdout, result); err != nil {
-				fmt.Fprintf(os.Stderr, "Error formatting JSON: %v\n", err)
-				os.Exit(1)
+				return fmt.Errorf("formatting JSON: %w", err)
 			}
 		} else {
 			sqllib.FormatTable(os.Stdout, result)
 		}
 
 		fmt.Fprintf(os.Stderr, "(%d rows)\n", len(result.Rows))
+		return nil
 	},
 }
 
@@ -164,6 +153,4 @@ func init() {
 	sqlCmd.Flags().Bool("views", false, "List views")
 	sqlCmd.Flags().Bool("functions", false, "List functions and procedures")
 	sqlCmd.Flags().String("describe", "", "Describe the named table's or view's columns")
-
-	rootCmd.AddCommand(sqlCmd)
 }

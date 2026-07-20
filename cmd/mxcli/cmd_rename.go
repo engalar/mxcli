@@ -36,11 +36,10 @@ Example:
   mxcli rename -p app.mpr entity MyModule.Customer Client --dry-run
 `,
 	Args: cobra.ExactArgs(3),
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		projectPath, _ := cmd.Flags().GetString("project")
 		if projectPath == "" {
-			fmt.Fprintln(os.Stderr, "Error: --project (-p) is required")
-			os.Exit(1)
+			return fmt.Errorf("--project (-p) is required")
 		}
 
 		dryRun, _ := cmd.Flags().GetBool("dry-run")
@@ -73,9 +72,7 @@ Example:
 		case "MODULE":
 			mdlCmd = fmt.Sprintf("RENAME MODULE %s TO %s%s", qualifiedName, newName, dryRunSuffix)
 		default:
-			fmt.Fprintf(os.Stderr, "Unknown type: %s\n", args[0])
-			fmt.Fprintln(os.Stderr, "Valid types: entity, microflow, nanoflow, page, enumeration, association, constant, module")
-			os.Exit(1)
+			return fmt.Errorf("unknown type: %s. Valid types: entity, microflow, nanoflow, page, enumeration, association, constant, module", args[0])
 		}
 
 		exec, logger := buildExec("subcommand", cmd.OutOrStdout())
@@ -86,8 +83,7 @@ Example:
 		connectProg, _ := visitor.Build(fmt.Sprintf("CONNECT LOCAL '%s' FOR WRITING", projectPath))
 		for _, stmt := range connectProg.Statements {
 			if err := exec.Execute(stmt); err != nil {
-				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-				os.Exit(1)
+				return fmt.Errorf("connecting: %w", err)
 			}
 		}
 
@@ -97,19 +93,18 @@ Example:
 			for _, err := range errs {
 				fmt.Fprintf(os.Stderr, "Parse error: %v\n", err)
 			}
-			os.Exit(1)
+			return fmt.Errorf("parse failed")
 		}
 
 		for _, stmt := range renameProg.Statements {
 			if err := exec.Execute(stmt); err != nil {
-				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-				os.Exit(1)
+				return fmt.Errorf("executing rename: %w", err)
 			}
 		}
+		return nil
 	},
 }
 
 func init() {
 	renameCmd.Flags().Bool("dry-run", false, "Preview changes without modifying")
-	rootCmd.AddCommand(renameCmd)
 }
