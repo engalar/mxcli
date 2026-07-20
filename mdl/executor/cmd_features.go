@@ -76,6 +76,12 @@ func checkFeature(ctx *ExecContext, area, name, statement, hint string) error {
 	return mdlerrors.NewUnsupported(msg)
 }
 
+// ExecShowFeaturesFn is the HandlerDeps version of execShowFeatures.
+func ExecShowFeaturesFn(ctx context.Context, s *ast.ShowFeaturesStmt, deps *HandlerDeps) error {
+	tmpCtx := NewExecContext(ctx, deps)
+	return execShowFeatures(tmpCtx, s)
+}
+
 // execShowFeatures handles SHOW FEATURES, SHOW FEATURES FOR VERSION, and
 // SHOW FEATURES ADDED SINCE commands.
 func execShowFeatures(ctx *ExecContext, s *ast.ShowFeaturesStmt) error {

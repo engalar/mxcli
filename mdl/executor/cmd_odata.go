@@ -2294,4 +2294,50 @@ func ExecCreateExternalEntityFn(ctx context.Context, s *ast.CreateExternalEntity
 	return nil
 }
 
+// listODataClientsDeps is the HandlerDeps version of listODataClients.
+func listODataClientsDeps(ctx context.Context, deps *HandlerDeps, format OutputFormat, moduleName string) error {
+	tmpCtx := NewExecContext(ctx, deps)
+	tmpCtx.Format = format
+	return listODataClients(tmpCtx, moduleName)
+}
+
+// listODataServicesDeps is the HandlerDeps version of listODataServices.
+func listODataServicesDeps(ctx context.Context, deps *HandlerDeps, format OutputFormat, moduleName string) error {
+	tmpCtx := NewExecContext(ctx, deps)
+	tmpCtx.Format = format
+	return listODataServices(tmpCtx, moduleName)
+}
+
+// listExternalEntitiesDeps is the HandlerDeps version of listExternalEntities.
+func listExternalEntitiesDeps(ctx context.Context, deps *HandlerDeps, format OutputFormat, moduleName string) error {
+	tmpCtx := NewExecContext(ctx, deps)
+	tmpCtx.Format = format
+	return listExternalEntities(tmpCtx, moduleName)
+}
+
+// listExternalActionsDeps is the HandlerDeps version of listExternalActions.
+func listExternalActionsDeps(ctx context.Context, deps *HandlerDeps, format OutputFormat, moduleName string) error {
+	tmpCtx := NewExecContext(ctx, deps)
+	tmpCtx.Format = format
+	return listExternalActions(tmpCtx, moduleName)
+}
+
+// describeODataClientDeps is the HandlerDeps version of describeODataClient.
+func describeODataClientDeps(ctx context.Context, deps *HandlerDeps, name ast.QualifiedName) error {
+	tmpCtx := NewExecContext(ctx, deps)
+	return describeODataClient(tmpCtx, name)
+}
+
+// describeODataServiceDeps is the HandlerDeps version of describeODataService.
+func describeODataServiceDeps(ctx context.Context, deps *HandlerDeps, name ast.QualifiedName) error {
+	tmpCtx := NewExecContext(ctx, deps)
+	return describeODataService(tmpCtx, name)
+}
+
+// describeExternalEntityDeps is the HandlerDeps version of describeExternalEntity.
+func describeExternalEntityDeps(ctx context.Context, deps *HandlerDeps, name ast.QualifiedName) error {
+	tmpCtx := NewExecContext(ctx, deps)
+	return describeExternalEntity(tmpCtx, name)
+}
+
 // Executor wrappers for unmigrated callers.

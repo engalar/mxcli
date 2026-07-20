@@ -2978,8 +2978,7 @@ func NewExecContext(ctx context.Context, deps *HandlerDeps) *ExecContext {
 // ────────────────────────────────────────────────────────────
 
 func ExecAlterModuleJarDepFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := NewExecContext(ctx, deps)
-	return execAlterModuleJarDep(ectx, stmt.(*ast.AlterModuleJarDepStmt))
+	return execAlterModuleJarDepFn(ctx, stmt.(*ast.AlterModuleJarDepStmt), deps)
 }
 
 func ExecCreateJavaActionFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
@@ -3031,8 +3030,7 @@ func ExecAlterSettingsFuture(ctx context.Context, stmt ast.Statement, deps *Hand
 }
 
 func ExecTranslateFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := NewExecContext(ctx, deps)
-	return translateDocument(ectx, stmt.(*ast.TranslateStmt))
+	return ExecTranslateFn(ctx, stmt.(*ast.TranslateStmt), deps)
 }
 
 func ExecTranslateMicroflowFuture(ctx context.Context, deps *HandlerDeps) error {
@@ -3156,13 +3154,14 @@ func ExecUpdateWidgetsFuture(ctx context.Context, stmt ast.Statement, deps *Hand
 }
 
 func ExecSelectFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := NewExecContext(ctx, deps)
-	return execCatalogQuery(ectx, stmt.(*ast.SelectStmt).Query)
+	return mdlerrors.NewUnsupported(
+		"SELECT FROM CATALOG is no longer available. " +
+			"The catalog SQLite system has been replaced by MXGraph. " +
+			"Use SHOW commands (SHOW MODULES, SHOW ENTITIES, SHOW PAGES) directly.")
 }
 
 func ExecDescribeTranslationsFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := NewExecContext(ctx, deps)
-	return describeTranslations(ectx, stmt.(*ast.DescribeTranslationsStmt))
+	return ExecDescribeTranslationsFn(ctx, stmt.(*ast.DescribeTranslationsStmt), deps)
 }
 
 func ExecDescribeCatalogTableFuture(ctx context.Context, deps *HandlerDeps) error {
@@ -3170,8 +3169,7 @@ func ExecDescribeCatalogTableFuture(ctx context.Context, deps *HandlerDeps) erro
 }
 
 func ExecShowFeaturesFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := NewExecContext(ctx, deps)
-	return execShowFeatures(ectx, stmt.(*ast.ShowFeaturesStmt))
+	return ExecShowFeaturesFn(ctx, stmt.(*ast.ShowFeaturesStmt), deps)
 }
 
 func ExecShowDesignPropertiesFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
@@ -3191,16 +3189,11 @@ func ExecShowThemeVariablesFuture(ctx context.Context, stmt ast.Statement, deps 
 }
 
 func ExecSearchFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := NewExecContext(ctx, deps)
-	return execSearch(ectx, stmt.(*ast.SearchStmt))
+	return ExecSearchFn(ctx, stmt.(*ast.SearchStmt), deps)
 }
 
 func ExecRefreshCatalogFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := NewExecContext(ctx, deps)
-	if err := execRefreshCatalogStmt(ectx, stmt.(*ast.RefreshCatalogStmt)); err != nil {
-		return err
-	}
-	return buildGraph(ectx)
+	return ExecRefreshCatalogFn(ctx, stmt.(*ast.RefreshCatalogStmt), deps)
 }
 
 func execLintFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
@@ -3212,8 +3205,7 @@ func execDefineFragmentFuture(ctx context.Context, stmt ast.Statement, deps *Han
 }
 
 func execDescribeFragmentFromFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := NewExecContext(ctx, deps)
-	return describeFragmentFrom(ectx, stmt.(*ast.DescribeFragmentFromStmt))
+	return ExecDescribeFragmentFromFn(ctx, stmt.(*ast.DescribeFragmentFromStmt), deps)
 }
 
 func execSQLConnectFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
@@ -3257,13 +3249,11 @@ func execImportFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps
 }
 
 func ExecCreateModelFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := NewExecContext(ctx, deps)
-	return execCreateAgentEditorModel(ectx, stmt.(*ast.CreateModelStmt))
+	return execCreateAgentEditorModelFn(ctx, stmt.(*ast.CreateModelStmt), deps)
 }
 
 func ExecDropModelFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := NewExecContext(ctx, deps)
-	return execDropAgentEditorModel(ectx, stmt.(*ast.DropModelStmt))
+	return execDropAgentEditorModelFn(ctx, stmt.(*ast.DropModelStmt), deps)
 }
 
 func execCreateConsumedMCPServiceFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
@@ -3293,65 +3283,49 @@ func execDropAgentFuture(ctx context.Context, stmt ast.Statement, deps *HandlerD
 // Missing Fn wrappers (bridges to old *ExecContext functions for handlers that
 // reference Fn patterns in handler_deps.go but don't have native Fn versions yet).
 func ExecCreateModuleFn(ctx context.Context, s *ast.CreateModuleStmt, deps *HandlerDeps) error {
-	ectx := NewExecContext(ctx, deps)
-	return execCreateModule(ectx, s)
+	return execCreateModuleDeps(ctx, s, deps)
 }
 
 func ExecDropModuleFn(ctx context.Context, s *ast.DropModuleStmt, deps *HandlerDeps) error {
-	ectx := NewExecContext(ctx, deps)
-	return execDropModule(ectx, s)
+	return execDropModuleDeps(ctx, s, deps)
 }
 
 func ExecCreatePageV3Fn(ctx context.Context, s *ast.CreatePageStmtV3, deps *HandlerDeps) error {
-	ectx := NewExecContext(ctx, deps)
-	return ExecCreatePageV3(ectx, s)
+	return ExecCreatePageV3Deps(ctx, s, deps)
 }
 
 func ExecCreateSnippetV3Fn(ctx context.Context, s *ast.CreateSnippetStmtV3, deps *HandlerDeps) error {
-	ectx := NewExecContext(ctx, deps)
-	return ExecCreateSnippetV3(ectx, s)
+	return ExecCreateSnippetV3Deps(ctx, s, deps)
 }
 
 func ExecAlterPageFn(ctx context.Context, s *ast.AlterPageStmt, deps *HandlerDeps) error {
-	ectx := NewExecContext(ctx, deps)
-	return ExecAlterPage(ectx, s)
+	return ExecAlterPageDeps(ctx, s, deps)
 }
 
 func listODataClientsFn(ctx context.Context, deps *HandlerDeps, format OutputFormat, moduleName string) error {
-	ectx := NewExecContext(ctx, deps)
-	ectx.Format = format
-	return listODataClients(ectx, moduleName)
+	return listODataClientsDeps(ctx, deps, format, moduleName)
 }
 
 func listODataServicesFn(ctx context.Context, deps *HandlerDeps, format OutputFormat, moduleName string) error {
-	ectx := NewExecContext(ctx, deps)
-	ectx.Format = format
-	return listODataServices(ectx, moduleName)
+	return listODataServicesDeps(ctx, deps, format, moduleName)
 }
 
 func listExternalEntitiesFn(ctx context.Context, deps *HandlerDeps, format OutputFormat, moduleName string) error {
-	ectx := NewExecContext(ctx, deps)
-	ectx.Format = format
-	return listExternalEntities(ectx, moduleName)
+	return listExternalEntitiesDeps(ctx, deps, format, moduleName)
 }
 
 func listExternalActionsFn(ctx context.Context, deps *HandlerDeps, format OutputFormat, moduleName string) error {
-	ectx := NewExecContext(ctx, deps)
-	ectx.Format = format
-	return listExternalActions(ectx, moduleName)
+	return listExternalActionsDeps(ctx, deps, format, moduleName)
 }
 
 func describeODataClientFn(ctx context.Context, deps *HandlerDeps, name ast.QualifiedName) error {
-	ectx := NewExecContext(ctx, deps)
-	return describeODataClient(ectx, name)
+	return describeODataClientDeps(ctx, deps, name)
 }
 
 func describeODataServiceFn(ctx context.Context, deps *HandlerDeps, name ast.QualifiedName) error {
-	ectx := NewExecContext(ctx, deps)
-	return describeODataService(ectx, name)
+	return describeODataServiceDeps(ctx, deps, name)
 }
 
 func describeExternalEntityFn(ctx context.Context, deps *HandlerDeps, name ast.QualifiedName) error {
-	ectx := NewExecContext(ctx, deps)
-	return describeExternalEntity(ectx, name)
+	return describeExternalEntityDeps(ctx, deps, name)
 }

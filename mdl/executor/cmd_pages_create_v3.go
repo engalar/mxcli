@@ -3,6 +3,7 @@
 package executor
 
 import (
+	"context"
 	"fmt"
 	"log"
 
@@ -16,6 +17,12 @@ import (
 // ============================================================================
 // V3 Page Creation
 // ============================================================================
+
+// ExecCreatePageV3Deps is the HandlerDeps version of ExecCreatePageV3.
+func ExecCreatePageV3Deps(ctx context.Context, s *ast.CreatePageStmtV3, deps *HandlerDeps) error {
+	tmpCtx := NewExecContext(ctx, deps)
+	return ExecCreatePageV3(tmpCtx, s)
+}
 
 // ExecCreatePageV3 handles CREATE PAGE statement with V3 syntax.
 func ExecCreatePageV3(ctx *ExecContext, s *ast.CreatePageStmtV3) error {
@@ -160,6 +167,12 @@ func ExecCreatePageV3(ctx *ExecContext, s *ast.CreatePageStmtV3) error {
 
 	fmt.Fprintf(ctx.Output, "Created page %s\n", s.Name.String())
 	return nil
+}
+
+// ExecCreateSnippetV3Deps is the HandlerDeps version of ExecCreateSnippetV3.
+func ExecCreateSnippetV3Deps(ctx context.Context, s *ast.CreateSnippetStmtV3, deps *HandlerDeps) error {
+	tmpCtx := NewExecContext(ctx, deps)
+	return ExecCreateSnippetV3(tmpCtx, s)
 }
 
 // ExecCreateSnippetV3 handles CREATE SNIPPET statement with V3 syntax.

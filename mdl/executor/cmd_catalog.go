@@ -4,6 +4,7 @@
 package executor
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -39,6 +40,17 @@ func execShowCatalogStatus(ctx *ExecContext) error {
 	return nil
 }
 
+// ExecRefreshCatalogFn is the HandlerDeps version of ExecRefreshCatalog.
+func ExecRefreshCatalogFn(ctx context.Context, s *ast.RefreshCatalogStmt, deps *HandlerDeps) error {
+	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
+		return mdlerrors.NewNotConnected()
+	}
+	fmt.Fprintf(deps.Output, "Catalog system has been replaced by MXGraph.\n")
+	fmt.Fprintf(deps.Output, "Index building is handled automatically.\n")
+	tmpCtx := NewExecContext(ctx, deps)
+	return buildGraph(tmpCtx)
+}
+
 // execRefreshCatalogStmt handles REFRESH CATALOG.
 // Catalog building is removed; the graph is built separately.
 func execRefreshCatalogStmt(ctx *ExecContext, stmt *ast.RefreshCatalogStmt) error {
@@ -48,6 +60,14 @@ func execRefreshCatalogStmt(ctx *ExecContext, stmt *ast.RefreshCatalogStmt) erro
 	fmt.Fprintf(ctx.Output, "Catalog system has been replaced by MXGraph.\n")
 	fmt.Fprintf(ctx.Output, "Index building is handled automatically.\n")
 	return nil
+}
+
+// ExecSearchFn is the HandlerDeps version of execSearch.
+func ExecSearchFn(ctx context.Context, s *ast.SearchStmt, deps *HandlerDeps) error {
+	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
+		return mdlerrors.NewNotConnected()
+	}
+	return searchBackendDeps(deps, s.Query)
 }
 
 // execSearch handles SEARCH 'keyword'.
@@ -121,6 +141,68 @@ func searchBackend(ctx *ExecContext, keyword string) error {
 		fmt.Fprintf(ctx.Output, "  %-12s %s\n", m.kind, m.name)
 	}
 	fmt.Fprintf(ctx.Output, "\n%d match(es) found\n", len(matches))
+	return nil
+}
+
+// searchBackendDeps is the HandlerDeps version of searchBackend.
+func searchBackendDeps(deps *HandlerDeps, keyword string) error {
+	type match struct{ kind, name, location string }
+	var matches []match
+	upperKw := strings.ToUpper(keyword)
+
+	if r := deps.MicroflowRepo; r != nil {
+		mfs, err := r.ListAll()
+		if err == nil {
+			for _, mf := range mfs {
+				if mf == nil {
+					continue
+				}
+				if strings.Contains(strings.ToUpper(mf.Name()), upperKw) {
+					matches = append(matches, match{"microflow", mf.Name(), ""})
+				}
+			}
+		}
+	}
+
+	if r := deps.PageRepo; r != nil {
+		pages, err := r.ListAll()
+		if err == nil {
+			for _, p := range pages {
+				if p == nil {
+					continue
+				}
+				if strings.Contains(strings.ToUpper(p.Name()), upperKw) {
+					matches = append(matches, match{"page", p.Name(), ""})
+				}
+			}
+		}
+	}
+
+	if r := deps.NanoflowRepo; r != nil {
+		nfs, err := r.ListAll()
+		if err == nil {
+			for _, nf := range nfs {
+				if nf == nil {
+					continue
+				}
+				if strings.Contains(strings.ToUpper(nf.Name()), upperKw) {
+					matches = append(matches, match{"nanoflow", nf.Name(), ""})
+				}
+			}
+		}
+	}
+
+	if len(matches) == 0 {
+		fmt.Fprintf(deps.Output, "No results found for %q\n", keyword)
+		return nil
+	}
+
+	fmt.Fprintf(deps.Output, "Search results for %q:\n", keyword)
+	fmt.Fprintln(deps.Output, strings.Repeat("-", 80))
+	for _, m := range matches {
+		fmt.Fprintf(deps.Output, "  %-12s %s\n", m.kind, m.name)
+	}
+	fmt.Fprintf(deps.Output, "\n%d match(es) found\n", len(matches))
 	return nil
 }
 

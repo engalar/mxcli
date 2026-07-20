@@ -3,6 +3,7 @@
 package executor
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -11,6 +12,12 @@ import (
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 	"github.com/mendixlabs/mxcli/model"
 )
+
+// ExecTranslateFn is the HandlerDeps version of translateDocument.
+func ExecTranslateFn(ctx context.Context, s *ast.TranslateStmt, deps *HandlerDeps) error {
+	tmpCtx := NewExecContext(ctx, deps)
+	return translateDocument(tmpCtx, s)
+}
 
 // translateDocument dispatches a TRANSLATE statement to the doc-type handler.
 func translateDocument(ctx *ExecContext, stmt *ast.TranslateStmt) error {

@@ -9,6 +9,7 @@
 package executor
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/mendixlabs/mxcli/mdl/types"
@@ -131,6 +132,12 @@ func describeAgentEditorModel(ctx *ExecContext, name ast.QualifiedName) error {
 	return nil
 }
 
+// execCreateAgentEditorModelFn is the HandlerDeps version of execCreateAgentEditorModel.
+func execCreateAgentEditorModelFn(ctx context.Context, s *ast.CreateModelStmt, deps *HandlerDeps) error {
+	tmpCtx := NewExecContext(ctx, deps)
+	return execCreateAgentEditorModel(tmpCtx, s)
+}
+
 // execCreateAgentEditorModel handles CREATE MODEL Module.Name (...).
 func execCreateAgentEditorModel(ctx *ExecContext, s *ast.CreateModelStmt) error {
 	if !ctx.Connected() {
@@ -190,6 +197,12 @@ func execCreateAgentEditorModel(ctx *ExecContext, s *ast.CreateModelStmt) error 
 	invalidateHierarchy(ctx)
 	fmt.Fprintf(ctx.Output, "Created model: %s\n", s.Name)
 	return nil
+}
+
+// execDropAgentEditorModelFn is the HandlerDeps version of execDropAgentEditorModel.
+func execDropAgentEditorModelFn(ctx context.Context, s *ast.DropModelStmt, deps *HandlerDeps) error {
+	tmpCtx := NewExecContext(ctx, deps)
+	return execDropAgentEditorModel(tmpCtx, s)
 }
 
 // execDropAgentEditorModel handles DROP MODEL Module.Name.

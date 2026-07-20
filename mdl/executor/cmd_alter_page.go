@@ -3,6 +3,7 @@
 package executor
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"sort"
@@ -16,6 +17,12 @@ import (
 	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 	genPg "github.com/mendixlabs/mxcli/modelsdk/gen/pages"
 )
+
+// ExecAlterPageDeps is the HandlerDeps version of ExecAlterPage.
+func ExecAlterPageDeps(ctx context.Context, s *ast.AlterPageStmt, deps *HandlerDeps) error {
+	tmpCtx := NewExecContext(ctx, deps)
+	return ExecAlterPage(tmpCtx, s)
+}
 
 // ExecAlterPage handles ALTER PAGE/SNIPPET Module.Name { operations }.
 func ExecAlterPage(ctx *ExecContext, s *ast.AlterPageStmt) error {

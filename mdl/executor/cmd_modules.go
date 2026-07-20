@@ -4,6 +4,7 @@
 package executor
 
 import (
+	"context"
 	"fmt"
 	"sort"
 	"strings"
@@ -15,6 +16,12 @@ import (
 	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 	genSec "github.com/mendixlabs/mxcli/modelsdk/gen/security"
 )
+
+// execCreateModuleDeps is the HandlerDeps version of execCreateModule.
+func execCreateModuleDeps(ctx context.Context, s *ast.CreateModuleStmt, deps *HandlerDeps) error {
+	tmpCtx := NewExecContext(ctx, deps)
+	return execCreateModule(tmpCtx, s)
+}
 
 // execCreateModule handles CREATE MODULE statements.
 func execCreateModule(ctx *ExecContext, s *ast.CreateModuleStmt) error {
@@ -49,6 +56,12 @@ func execCreateModule(ctx *ExecContext, s *ast.CreateModuleStmt) error {
 
 	fmt.Fprintf(ctx.Output, "Created module: %s\n", s.Name)
 	return nil
+}
+
+// execDropModuleDeps is the HandlerDeps version of execDropModule.
+func execDropModuleDeps(ctx context.Context, s *ast.DropModuleStmt, deps *HandlerDeps) error {
+	tmpCtx := NewExecContext(ctx, deps)
+	return execDropModule(tmpCtx, s)
 }
 
 // execDropModule handles DROP MODULE statements.
@@ -921,6 +934,36 @@ func execDescribeJarDependency(ctx *ExecContext, moduleName, coordinate string) 
 			fmt.Fprintf(ctx.Output, "  add exclusion '%s:%s';\n", excl.GroupID, excl.ArtifactID)
 		}
 	}
+	return nil
+}
+
+// execAlterModuleJarDepFn is the HandlerDeps version of execAlterModuleJarDep.
+func execAlterModuleJarDepFn(ctx context.Context, s *ast.AlterModuleJarDepStmt, deps *HandlerDeps) error {
+	if !deps.ConnectionManager.IsConnected() {
+		return mdlerrors.NewNotConnected()
+	}
+
+	module, err := deps.ModuleLister.GetModuleByName(s.ModuleName)
+	if err != nil {
+		return fmt.Errorf("module '%s' not found: %w", s.ModuleName, err)
+	}
+
+	ms, err := deps.ModuleSettingsReader.GetModuleSettings(module.ID)
+	if err != nil {
+		return fmt.Errorf("failed to read module settings: %w", err)
+	}
+
+	for _, action := range s.Actions {
+		if err := applyJarDepAction(ms, action, s.ModuleName); err != nil {
+			return err
+		}
+	}
+
+	if err := deps.ModuleSettingsWriter.UpdateModuleSettings(ms); err != nil {
+		return mdlerrors.NewBackend("update module settings", err)
+	}
+
+	fmt.Fprintf(deps.Output, "Updated jar dependencies for module '%s'\n", s.ModuleName)
 	return nil
 }
 

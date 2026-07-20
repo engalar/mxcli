@@ -3,6 +3,7 @@
 package executor
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"sort"
@@ -12,6 +13,12 @@ import (
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 	"github.com/mendixlabs/mxcli/model"
 )
+
+// ExecDescribeTranslationsFn is the HandlerDeps version of describeTranslations.
+func ExecDescribeTranslationsFn(ctx context.Context, s *ast.DescribeTranslationsStmt, deps *HandlerDeps) error {
+	tmpCtx := NewExecContext(ctx, deps)
+	return describeTranslations(tmpCtx, s)
+}
 
 func describeTranslations(ctx *ExecContext, stmt *ast.DescribeTranslationsStmt) error {
 	ps, err := ctx.SettingsReader.GetProjectSettings()
