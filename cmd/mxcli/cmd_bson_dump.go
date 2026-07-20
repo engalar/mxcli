@@ -54,7 +54,7 @@ Examples:
   # Extract raw BSON baseline for roundtrip testing
   mxcli bson dump -p app.mpr --type page --object "PgTest.MyPage" --format bson > mypage.mxunit
 `,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		projectPath, _ := cmd.Flags().GetString("project")
 		objectType, _ := cmd.Flags().GetString("type")
 		objectName, _ := cmd.Flags().GetString("object")
@@ -62,15 +62,13 @@ Examples:
 		compareFlag, _ := cmd.Flags().GetStringSlice("compare")
 
 		if projectPath == "" {
-			fmt.Fprintln(os.Stderr, "Error: --project (-p) is required")
-			os.Exit(1)
+			return fmt.Errorf("--project (-p) is required")
 		}
 
 		// Open the project
 		reader, err := mmpr.Open(projectPath)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error opening project: %v\n", err)
-			os.Exit(1)
+			return fmt.Errorf("opening project: %w", err)
 		}
 		defer reader.Close()
 
@@ -98,20 +96,19 @@ Examples:
 							fmt.Printf("  %s (%s)\n", qn, t)
 						}
 					}
-					return
+					return nil
 				}
 			}
 			// Fallback: O(N) scan via reader
 			units, err := reader.ListRawUnits(objectType)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-				os.Exit(1)
+				return fmt.Errorf("listing raw units: %w", err)
 			}
 			fmt.Printf("Objects of type '%s':\n", objectType)
 			for _, u := range units {
 				fmt.Printf("  %s (%s)\n", u.QualifiedName, u.Type)
 			}
-			return
+			return nil
 		}
 
 		format, _ := cmd.Flags().GetString("format")
@@ -120,32 +117,28 @@ Examples:
 		if len(compareFlag) == 2 {
 			obj1, err := reader.GetRawUnitByName(objectType, compareFlag[0])
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "Error getting %s: %v\n", compareFlag[0], err)
-				os.Exit(1)
+				return fmt.Errorf("getting %s: %w", compareFlag[0], err)
 			}
 
 			obj2, err := reader.GetRawUnitByName(objectType, compareFlag[1])
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "Error getting %s: %v\n", compareFlag[1], err)
-				os.Exit(1)
+				return fmt.Errorf("getting %s: %w", compareFlag[1], err)
 			}
 
 			// Parse BSON to bson.D to preserve key order
 			var raw1, raw2 bson.D
 			if err := bson.Unmarshal(obj1.Contents, &raw1); err != nil {
-				fmt.Fprintf(os.Stderr, "Error parsing BSON for %s: %v\n", compareFlag[0], err)
-				os.Exit(1)
+				return fmt.Errorf("parsing BSON for %s: %w", compareFlag[0], err)
 			}
 			if err := bson.Unmarshal(obj2.Contents, &raw2); err != nil {
-				fmt.Fprintf(os.Stderr, "Error parsing BSON for %s: %v\n", compareFlag[1], err)
-				os.Exit(1)
+				return fmt.Errorf("parsing BSON for %s: %w", compareFlag[1], err)
 			}
 
 			if format == "ndsl" {
 				fmt.Printf("=== LEFT: %s ===\n%s\n\n=== RIGHT: %s ===\n%s\n",
 					compareFlag[0], bsondebug.Render(raw1, 0),
 					compareFlag[1], bsondebug.Render(raw2, 0))
-				return
+				return nil
 			}
 
 			// Print diff report
@@ -159,7 +152,7 @@ Examples:
 					fmt.Println(d)
 				}
 			}
-			return
+			return nil
 		}
 
 		// Dump single object
@@ -172,8 +165,7 @@ Examples:
 						nodeID := string(nodes[0].ID)
 						contents, err := reader.GetRawUnitBytes(nodeID)
 						if err == nil && len(contents) > 0 {
-							outputBson(contents, format)
-							return
+							return outputBson(contents, format)
 						}
 					}
 				}
@@ -181,46 +173,41 @@ Examples:
 			// Fallback: O(N) scan via reader
 			obj, err := reader.GetRawUnitByName(objectType, objectName)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-				os.Exit(1)
+				return fmt.Errorf("getting object: %w", err)
 			}
-			outputBson(obj.Contents, format)
-			return
+			return outputBson(obj.Contents, format)
 		}
 
 		// No action specified
-		fmt.Fprintln(os.Stderr, "Error: specify --list, --object, or --compare")
-		os.Exit(1)
+		return fmt.Errorf("specify --list, --object, or --compare")
 	},
 }
 
 // outputBson formats and writes raw BSON bytes in the specified format.
-func outputBson(contents []byte, format string) {
+func outputBson(contents []byte, format string) error {
 	if format == "bson" {
-		os.Stdout.Write(contents)
-		return
+		_, err := os.Stdout.Write(contents)
+		return err
 	}
 	if format == "ndsl" {
 		var doc bson.D
 		if err := bson.Unmarshal(contents, &doc); err != nil {
-			fmt.Fprintf(os.Stderr, "Error parsing BSON: %v\n", err)
-			os.Exit(1)
+			return fmt.Errorf("parsing BSON: %w", err)
 		}
 		fmt.Println(bsondebug.Render(doc, 0))
-		return
+		return nil
 	}
 	// Default: JSON
 	var raw any
 	if err := bson.Unmarshal(contents, &raw); err != nil {
-		fmt.Fprintf(os.Stderr, "Error parsing BSON: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("parsing BSON: %w", err)
 	}
 	jsonBytes, err := json.MarshalIndent(raw, "", "  ")
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error converting to JSON: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("converting to JSON: %w", err)
 	}
 	fmt.Println(string(jsonBytes))
+	return nil
 }
 
 // skipDiffNoise returns true for fields that are always different between
