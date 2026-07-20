@@ -216,7 +216,7 @@ func (b *MprBackend) cloneAndUpdateColumnsProperty(templateProp bson.D, columnsE
 		if templateColumnObj != nil {
 			columnObjects = append(columnObjects, b.cloneAndUpdateColumnObject(templateColumnObj, col, columnsEntry.NestedPropertyIDs))
 		} else {
-			columnObjects = append(columnObjects, b.buildDataGrid2ColumnObject(col, columnsEntry.ObjectTypeID, columnsEntry.NestedPropertyIDs))
+			columnObjects = append(columnObjects, b.buildDataGrid2ColumnObject(col, columnsEntry.ObjectTypeID, columnsEntry.NestedPropertyIDs, columnsEntry.NestedKeyOrder))
 		}
 	}
 
@@ -463,7 +463,7 @@ func (b *MprBackend) cloneAndUpdateColumnProperties(templateProps bson.A, column
 	return result
 }
 
-func (b *MprBackend) buildDataGrid2ColumnObject(col *backend.DataGridColumnSpec, columnObjectTypeID string, columnPropertyIDs map[string]types.PropertyTypeIDEntry) bson.D {
+func (b *MprBackend) buildDataGrid2ColumnObject(col *backend.DataGridColumnSpec, columnObjectTypeID string, columnPropertyIDs map[string]types.PropertyTypeIDEntry, columnKeyOrder []string) bson.D {
 	attrPath := col.Attribute
 
 	contentWidgets := col.ChildWidgetsBSON
@@ -471,12 +471,16 @@ func (b *MprBackend) buildDataGrid2ColumnObject(col *backend.DataGridColumnSpec,
 
 	properties := bson.A{int32(2)}
 
-	// Sort keys for deterministic BSON output.
-	colKeys := make([]string, 0, len(columnPropertyIDs))
-	for k := range columnPropertyIDs {
-		colKeys = append(colKeys, k)
+	// Use NestedKeyOrder (template PropertyTypes order) to avoid CE0463.
+	// Fall back to alphabetical sort when order is not captured.
+	colKeys := columnKeyOrder
+	if len(colKeys) == 0 {
+		colKeys = make([]string, 0, len(columnPropertyIDs))
+		for k := range columnPropertyIDs {
+			colKeys = append(colKeys, k)
+		}
+		sort.Strings(colKeys)
 	}
-	sort.Strings(colKeys)
 
 	for _, key := range colKeys {
 		entry := columnPropertyIDs[key]

@@ -6,9 +6,7 @@ package widgets
 import (
 	"bytes"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
-	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -116,8 +114,8 @@ type WidgetTemplate struct {
 var generatedCache sync.Map
 
 // getOrGenerateTemplate returns a WidgetTemplate for widgetID. It first checks the
-// session cache, then attempts to derive a template from the project's .mpk widget
-// file or existing widget instances. Returns nil, nil when the widget is unknown.
+// session cache, then generates a template from the project's .mpk widget file.
+// Returns nil, nil when the widget is unknown.
 func getOrGenerateTemplate(widgetID, projectPath string) (*WidgetTemplate, error) {
 	// 1. Session cache of previously generated templates
 	if cached, ok := generatedCache.Load(widgetID); ok {
@@ -128,33 +126,7 @@ func getOrGenerateTemplate(widgetID, projectPath string) (*WidgetTemplate, error
 		return nil, nil
 	}
 
-	// 2.5. User-saved template from 'mxcli widget extract' (.mxcli/widgets/<mdlname>.json).
-	// This sits before Studio Pro extraction so that a manually curated template wins
-	// over auto-derived ones, but after embedded templates which are authoritative.
-	if projectPath != "" {
-		projectDir := filepath.Dir(projectPath)
-		parts := strings.Split(widgetID, ".")
-		mdlName := strings.ToLower(parts[len(parts)-1])
-		userTmplPath := filepath.Join(projectDir, ".mxcli", "widgets", mdlName+".json")
-		if data, err := os.ReadFile(userTmplPath); err == nil {
-			var tmpl WidgetTemplate
-			if err := json.Unmarshal(data, &tmpl); err == nil && tmpl.Type != nil {
-				generatedCache.Store(widgetID, &tmpl)
-				return &tmpl, nil
-			}
-		}
-	}
-
-	// 3. Extract Type BSON from existing widget instances in the project.
-	// Widget instances created by Studio Pro have a correct CustomWidgets$CustomWidgetType
-	// embedded in the page document. Reusing that Type avoids CE0463 that arises when
-	// GenerateFromMPK (derived from MPK XML alone) produces subtly different BSON.
-	if tmpl := extractTemplateFromProject(widgetID, projectPath); tmpl != nil {
-		generatedCache.Store(widgetID, tmpl)
-		return tmpl, nil
-	}
-
-	// 4. Derive from MPK in project/widgets/ (fallback when no existing instances).
+	// 2. Derive from MPK in project/widgets/.
 	projectDir := filepath.Dir(projectPath)
 	mpkPath, err := mpk.FindMPK(projectDir, widgetID)
 	if err != nil {
@@ -197,10 +169,10 @@ func GetTemplateFullBSON(widgetID string, idGenerator func() string, projectPath
 		return nil, nil, nil, "", false, nil
 	}
 
-	// Deep-clone and augment from .mpk (skip for generated templates — already complete)
-	if !tmpl.Generated {
-		tmpl = augmentFromMPK(tmpl, widgetID, projectPath)
-	}
+	// Augment from .mpk to reconcile with the installed widget version.
+	// This handles version drift — property additions/removals, enum value changes,
+	// and system property alignment that GenerateFromMPK may miss.
+	tmpl = augmentFromMPK(tmpl, widgetID, projectPath)
 	stableIds := tmpl.StableIds
 
 	// Phase 1: Build old→new ID mappings.
@@ -252,6 +224,7 @@ func jsonToBSONWithMappingAndObjectType(data map[string]any, idMapping map[strin
 	var dataSourceProp string
 	var nestedObjectTypeID string
 	var nestedPropertyIDs map[string]PropertyTypeIDEntry
+	var nestedKeyOrder []string
 
 	// First pass: detect type
 	if typeVal, ok := data["$Type"]; ok {
@@ -293,7 +266,8 @@ func jsonToBSONWithMappingAndObjectType(data map[string]any, idMapping map[strin
 		} else if key == "ValueType" && isPropertyType {
 			// For PropertyTypes, extract ValueType info including nested ObjectType, DefaultValue, Type, Required
 			nestedPropertyIDs = make(map[string]PropertyTypeIDEntry)
-			elem.Value = jsonValueToBSONWithNestedObjectType(val, idMapping, &valueTypeID, &nestedObjectTypeID, nestedPropertyIDs, &defaultValue, &valueType, &required, &dataSourceProp)
+			nestedKeyOrder = nil
+			elem.Value = jsonValueToBSONWithNestedObjectType(val, idMapping, &valueTypeID, &nestedObjectTypeID, nestedPropertyIDs, &nestedKeyOrder, &defaultValue, &valueType, &required, &dataSourceProp)
 		} else {
 			elem.Value = jsonValueToBSONWithMappingAndObjectType(val, idMapping, propertyTypeIDs, &valueTypeID, key == "ValueType", objectTypeID)
 		}
@@ -314,6 +288,7 @@ func jsonToBSONWithMappingAndObjectType(data map[string]any, idMapping map[strin
 		if nestedObjectTypeID != "" {
 			entry.ObjectTypeID = nestedObjectTypeID
 			entry.NestedPropertyIDs = nestedPropertyIDs
+			entry.NestedKeyOrder = nestedKeyOrder
 		}
 		propertyTypeIDs[propertyKey] = entry
 	}
@@ -322,7 +297,7 @@ func jsonToBSONWithMappingAndObjectType(data map[string]any, idMapping map[strin
 }
 
 // jsonValueToBSONWithNestedObjectType extracts ValueType info including nested ObjectType, DefaultValue, and Type.
-func jsonValueToBSONWithNestedObjectType(val any, idMapping map[string]string, valueTypeID *string, nestedObjectTypeID *string, nestedPropertyIDs map[string]PropertyTypeIDEntry, defaultValue *string, valueType *string, required *bool, dataSourceProperty ...*string) any {
+func jsonValueToBSONWithNestedObjectType(val any, idMapping map[string]string, valueTypeID *string, nestedObjectTypeID *string, nestedPropertyIDs map[string]PropertyTypeIDEntry, nestedKeyOrder *[]string, defaultValue *string, valueType *string, required *bool, dataSourceProperty ...*string) any {
 	switch v := val.(type) {
 	case map[string]any:
 		result := make(bson.D, 0, len(v))
@@ -343,7 +318,7 @@ func jsonValueToBSONWithNestedObjectType(val any, idMapping map[string]string, v
 				}
 			} else if key == "ObjectType" {
 				// Extract nested ObjectType and its PropertyTypes
-				elem.Value = extractNestedObjectType(fieldVal, idMapping, nestedObjectTypeID, nestedPropertyIDs)
+				elem.Value = extractNestedObjectType(fieldVal, idMapping, nestedObjectTypeID, nestedPropertyIDs, nestedKeyOrder)
 			} else if key == "DefaultValue" {
 				// Extract default value
 				if dv, ok := fieldVal.(string); ok {
@@ -382,7 +357,7 @@ func jsonValueToBSONWithNestedObjectType(val any, idMapping map[string]string, v
 }
 
 // extractNestedObjectType extracts ObjectType ID and its PropertyType IDs.
-func extractNestedObjectType(val any, idMapping map[string]string, objectTypeID *string, nestedPropertyIDs map[string]PropertyTypeIDEntry) any {
+func extractNestedObjectType(val any, idMapping map[string]string, objectTypeID *string, nestedPropertyIDs map[string]PropertyTypeIDEntry, nestedKeyOrder *[]string) any {
 	if val == nil {
 		return nil
 	}
@@ -409,7 +384,7 @@ func extractNestedObjectType(val any, idMapping map[string]string, objectTypeID 
 			}
 		} else if key == "PropertyTypes" {
 			// Extract PropertyTypes within the nested ObjectType
-			elem.Value = extractNestedPropertyTypes(fieldVal, idMapping, nestedPropertyIDs)
+			elem.Value = extractNestedPropertyTypes(fieldVal, idMapping, nestedPropertyIDs, nestedKeyOrder)
 		} else {
 			elem.Value = jsonValueToBSONSimple(fieldVal, idMapping)
 		}
@@ -421,7 +396,7 @@ func extractNestedObjectType(val any, idMapping map[string]string, objectTypeID 
 }
 
 // extractNestedPropertyTypes extracts PropertyType IDs from a nested ObjectType's PropertyTypes array.
-func extractNestedPropertyTypes(val any, idMapping map[string]string, nestedPropertyIDs map[string]PropertyTypeIDEntry) any {
+func extractNestedPropertyTypes(val any, idMapping map[string]string, nestedPropertyIDs map[string]PropertyTypeIDEntry, nestedKeyOrder *[]string) any {
 	arr, ok := val.([]any)
 	if !ok {
 		return jsonValueToBSONSimple(val, idMapping)
@@ -483,6 +458,12 @@ func extractNestedPropertyTypes(val any, idMapping map[string]string, nestedProp
 
 					// Record the nested property type
 					if propKey != "" {
+						// Capture template PropertyTypes order (first occurrence) so the
+						// object-list item builder emits nested properties in schema order
+						// rather than alphabetical — Studio Pro raises CE0463 otherwise.
+						if _, exists := nestedPropertyIDs[propKey]; !exists && nestedKeyOrder != nil {
+							*nestedKeyOrder = append(*nestedKeyOrder, propKey)
+						}
 						nestedPropertyIDs[propKey] = PropertyTypeIDEntry{
 							PropertyTypeID: propTypeID,
 							ValueTypeID:    valueTypeID,

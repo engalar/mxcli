@@ -730,7 +730,7 @@ func createDefaultClientTemplateBSON(text string) bson.D {
 // ---------------------------------------------------------------------------
 
 func ensureRequiredObjectLists(obj bson.D, propertyTypeIDs map[string]types.PropertyTypeIDEntry) bson.D {
-	// Sort keys for deterministic BSON output.
+	// Determine iteration order: use alphabetically sorted keys for determinism.
 	keys := make([]string, 0, len(propertyTypeIDs))
 	for k := range propertyTypeIDs {
 		keys = append(keys, k)
@@ -768,7 +768,7 @@ func ensureRequiredObjectLists(obj bson.D, propertyTypeIDs map[string]types.Prop
 			for _, elem := range val {
 				if elem.Key == "Objects" {
 					if arr, ok := elem.Value.(bson.A); ok && len(arr) <= 1 {
-						defaultObj := createDefaultWidgetObject(entry.ObjectTypeID, entry.NestedPropertyIDs)
+						defaultObj := createDefaultWidgetObject(entry.ObjectTypeID, entry.NestedPropertyIDs, entry.NestedKeyOrder)
 						newArr := bson.A{int32(2), defaultObj}
 						result := make(bson.D, 0, len(val))
 						for _, e := range val {
@@ -788,14 +788,20 @@ func ensureRequiredObjectLists(obj bson.D, propertyTypeIDs map[string]types.Prop
 	return obj
 }
 
-func createDefaultWidgetObject(objectTypeID string, nestedProps map[string]types.PropertyTypeIDEntry) bson.D {
+func createDefaultWidgetObject(objectTypeID string, nestedProps map[string]types.PropertyTypeIDEntry, keyOrder []string) bson.D {
 	propsArr := bson.A{int32(2)}
-	// Sort keys for deterministic BSON output.
-	nestedKeys := make([]string, 0, len(nestedProps))
-	for k := range nestedProps {
-		nestedKeys = append(nestedKeys, k)
+	// Use keyOrder (NestedKeyOrder) when available to avoid CE0463.
+	// Fall back to alphabetical sort for determinism.
+	var nestedKeys []string
+	if len(keyOrder) > 0 {
+		nestedKeys = keyOrder
+	} else {
+		nestedKeys = make([]string, 0, len(nestedProps))
+		for k := range nestedProps {
+			nestedKeys = append(nestedKeys, k)
+		}
+		sort.Strings(nestedKeys)
 	}
-	sort.Strings(nestedKeys)
 	for _, k := range nestedKeys {
 		entry := nestedProps[k]
 		prop := createDefaultWidgetProperty(entry)
