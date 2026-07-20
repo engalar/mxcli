@@ -4,7 +4,6 @@ package main
 
 import (
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/mendixlabs/mxcli/mdl/visitor"
@@ -23,13 +22,12 @@ Examples:
   mxcli callers -p app.mpr Module.ProcessOrder --transitive
 `,
 	Args: cobra.ExactArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		projectPath, _ := cmd.Flags().GetString("project")
 		transitive, _ := cmd.Flags().GetBool("transitive")
 
 		if projectPath == "" {
-			fmt.Fprintln(os.Stderr, "Error: --project (-p) is required")
-			os.Exit(1)
+			return fmt.Errorf("--project (-p) is required")
 		}
 
 		mdlCmd := fmt.Sprintf("SHOW CALLERS OF %s", args[0])
@@ -37,10 +35,7 @@ Examples:
 			mdlCmd += " TRANSITIVE"
 		}
 
-		if err := executeMDL(projectPath, mdlCmd, cmd.OutOrStdout()); err != nil {
-			fmt.Fprintf(cmd.ErrOrStderr(), "Error: %v\n", err)
-			return
-		}
+		return executeMDL(projectPath, mdlCmd, cmd.OutOrStdout())
 	},
 }
 
@@ -56,13 +51,12 @@ Examples:
   mxcli callees -p app.mpr Module.MainFlow --transitive
 `,
 	Args: cobra.ExactArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		projectPath, _ := cmd.Flags().GetString("project")
 		transitive, _ := cmd.Flags().GetBool("transitive")
 
 		if projectPath == "" {
-			fmt.Fprintln(os.Stderr, "Error: --project (-p) is required")
-			os.Exit(1)
+			return fmt.Errorf("--project (-p) is required")
 		}
 
 		mdlCmd := fmt.Sprintf("SHOW CALLEES OF %s", args[0])
@@ -70,10 +64,7 @@ Examples:
 			mdlCmd += " TRANSITIVE"
 		}
 
-		if err := executeMDL(projectPath, mdlCmd, cmd.OutOrStdout()); err != nil {
-			fmt.Fprintf(cmd.ErrOrStderr(), "Error: %v\n", err)
-			return
-		}
+		return executeMDL(projectPath, mdlCmd, cmd.OutOrStdout())
 	},
 }
 
@@ -87,19 +78,15 @@ Examples:
   mxcli refs -p app.mpr Module.OrderPage
 `,
 	Args: cobra.ExactArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		projectPath, _ := cmd.Flags().GetString("project")
 
 		if projectPath == "" {
-			fmt.Fprintln(os.Stderr, "Error: --project (-p) is required")
-			os.Exit(1)
+			return fmt.Errorf("--project (-p) is required")
 		}
 
 		mdlCmd := fmt.Sprintf("SHOW REFERENCES TO %s", args[0])
-		if err := executeMDL(projectPath, mdlCmd, cmd.OutOrStdout()); err != nil {
-			fmt.Fprintf(cmd.ErrOrStderr(), "Error: %v\n", err)
-			return
-		}
+		return executeMDL(projectPath, mdlCmd, cmd.OutOrStdout())
 	},
 }
 
@@ -113,19 +100,15 @@ Examples:
   mxcli impact -p app.mpr Module.OrderStatus
 `,
 	Args: cobra.ExactArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		projectPath, _ := cmd.Flags().GetString("project")
 
 		if projectPath == "" {
-			fmt.Fprintln(os.Stderr, "Error: --project (-p) is required")
-			os.Exit(1)
+			return fmt.Errorf("--project (-p) is required")
 		}
 
 		mdlCmd := fmt.Sprintf("SHOW IMPACT OF %s", args[0])
-		if err := executeMDL(projectPath, mdlCmd, cmd.OutOrStdout()); err != nil {
-			fmt.Fprintf(cmd.ErrOrStderr(), "Error: %v\n", err)
-			return
-		}
+		return executeMDL(projectPath, mdlCmd, cmd.OutOrStdout())
 	},
 }
 
@@ -149,15 +132,14 @@ Examples:
   mxcli structure -p app.mpr --all
 `,
 	Args: cobra.NoArgs,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		projectPath, _ := cmd.Flags().GetString("project")
 		depth, _ := cmd.Flags().GetInt("depth")
 		module, _ := cmd.Flags().GetString("module")
 		all, _ := cmd.Flags().GetBool("all")
 
 		if projectPath == "" {
-			fmt.Fprintln(os.Stderr, "Error: --project (-p) is required")
-			os.Exit(1)
+			return fmt.Errorf("--project (-p) is required")
 		}
 
 		mdlCmd := "SHOW STRUCTURE"
@@ -170,10 +152,7 @@ Examples:
 		if all {
 			mdlCmd += " ALL"
 		}
-		if err := executeMDL(projectPath, mdlCmd, cmd.OutOrStdout()); err != nil {
-			fmt.Fprintf(cmd.ErrOrStderr(), "Error: %v\n", err)
-			return
-		}
+		return executeMDL(projectPath, mdlCmd, cmd.OutOrStdout())
 	},
 }
 
@@ -203,23 +182,19 @@ Examples:
   mxcli context -p app.mpr Module.ImportCsvData
 `,
 	Args: cobra.ExactArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		projectPath, _ := cmd.Flags().GetString("project")
 		depth, _ := cmd.Flags().GetInt("depth")
 
 		if projectPath == "" {
-			fmt.Fprintln(os.Stderr, "Error: --project (-p) is required")
-			os.Exit(1)
+			return fmt.Errorf("--project (-p) is required")
 		}
 
 		mdlCmd := fmt.Sprintf("SHOW CONTEXT OF %s", args[0])
 		if depth > 0 {
 			mdlCmd += fmt.Sprintf(" DEPTH %d", depth)
 		}
-		if err := executeMDL(projectPath, mdlCmd, cmd.OutOrStdout()); err != nil {
-			fmt.Fprintf(cmd.ErrOrStderr(), "Error: %v\n", err)
-			return
-		}
+		return executeMDL(projectPath, mdlCmd, cmd.OutOrStdout())
 	},
 }
 
@@ -242,14 +217,13 @@ Examples:
   mxcli search -p app.mpr "error" -q --format names | xargs -I {} mxcli describe -p app.mpr microflow {}
 `,
 	Args: cobra.ExactArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		projectPath, _ := cmd.Flags().GetString("project")
 		format := resolveFormat(cmd, "table")
 		quiet, _ := cmd.Flags().GetBool("quiet")
 
 		if projectPath == "" {
-			fmt.Fprintln(os.Stderr, "Error: --project (-p) is required")
-			os.Exit(1)
+			return fmt.Errorf("--project (-p) is required")
 		}
 
 		exec, logger := buildExec("subcommand", cmd.OutOrStdout())
@@ -263,16 +237,15 @@ Examples:
 		connectProg, _ := visitor.Build(fmt.Sprintf("CONNECT LOCAL '%s'", projectPath))
 		for _, stmt := range connectProg.Statements {
 			if err := exec.Execute(stmt); err != nil {
-				fmt.Fprintf(os.Stderr, "Error connecting: %v\n", err)
-				os.Exit(1)
+				return fmt.Errorf("connecting: %w", err)
 			}
 		}
 
 		// Execute search with format option
 		query := strings.ReplaceAll(args[0], "'", "''")
 		if err := exec.Search(query, format); err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-			os.Exit(1)
+			return fmt.Errorf("searching: %w", err)
 		}
+		return nil
 	},
 }

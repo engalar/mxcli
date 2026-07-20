@@ -79,11 +79,10 @@ Example:
   mxcli describe -p app.mpr data transformer MyModule.TransformCustomer
 `,
 	Args: cobra.MinimumNArgs(2),
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		projectPath, _ := cmd.Flags().GetString("project")
 		if projectPath == "" {
-			fmt.Fprintln(os.Stderr, "Error: --project (-p) is required")
-			os.Exit(1)
+			return fmt.Errorf("--project (-p) is required")
 		}
 
 		// Support multi-word types: "business event service Module.Name" → type="BUSINESS EVENT SERVICE", name="Module.Name"
@@ -164,10 +163,7 @@ Example:
 		case "SYSTEMOVERVIEW":
 			mdlCmd = "" // handled directly by format-specific path
 		default:
-			fmt.Fprintf(os.Stderr, "Unknown type: %s\n", strings.Join(args[:len(args)-1], " "))
-			fmt.Fprintln(os.Stderr, "Valid types: module, entity, association, enumeration, constant, microflow, nanoflow, workflow, page, snippet, layout, javaaction, jsonstructure, importmapping, exportmapping, restclient, odataclient, odataservice, imagecollection, businesseventservice, databaseconnection, agent, aimodel, knowledgebase, consumedmcpservice, datatransformer, modulerole, userrole, projectsecurity, settings, demouser, navigation, systemoverview")
-			fmt.Fprintln(os.Stderr, "Multi-word types also accepted: json structure, import mapping, export mapping, rest client, image collection, business event service, agent, model, knowledge base, consumed mcp service, data transformer, etc.")
-			os.Exit(1)
+			return fmt.Errorf("unknown type: %s\nValid types: module, entity, association, enumeration, constant, microflow, nanoflow, workflow, page, snippet, layout, javaaction, jsonstructure, importmapping, exportmapping, restclient, odataclient, odataservice, imagecollection, businesseventservice, databaseconnection, agent, aimodel, knowledgebase, consumedmcpservice, datatransformer, modulerole, userrole, projectsecurity, settings, demouser, navigation, systemoverview\nMulti-word types also accepted: json structure, import mapping, export mapping, rest client, image collection, business event service, agent, model, knowledge base, consumed mcp service, data transformer, etc.", objectType)
 		}
 
 		exec, logger := buildExec("subcommand", cmd.OutOrStdout())
@@ -179,8 +175,7 @@ Example:
 		connectProg, _ := visitor.Build(fmt.Sprintf("CONNECT LOCAL '%s'", projectPath))
 		for _, stmt := range connectProg.Statements {
 			if err := exec.Execute(stmt); err != nil {
-				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-				os.Exit(1)
+				return fmt.Errorf("connecting: %w", err)
 			}
 		}
 
@@ -192,53 +187,44 @@ Example:
 		typeArg := strings.Join(args[:len(args)-1], " ")
 		if format == "mermaid" {
 			if err := exec.DescribeMermaid(typeArg, name); err != nil {
-				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-				os.Exit(1)
+				return fmt.Errorf("describing as mermaid: %w", err)
 			}
-			return
+			return nil
 		} else if format == "elk" {
 			upper := objectType
 			if upper == "SYSTEMOVERVIEW" {
 				if err := exec.ModuleOverview(); err != nil {
-					fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-					os.Exit(1)
+					return fmt.Errorf("module overview: %w", err)
 				}
 			} else if upper == "ENTITY" || upper == "DOMAINMODEL" || upper == "EXTERNALENTITY" || upper == "EXTERNAL ENTITY" {
 				if err := exec.DomainModelELK(name); err != nil {
-					fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-					os.Exit(1)
+					return fmt.Errorf("domain model ELK: %w", err)
 				}
 			} else if upper == "MICROFLOW" {
 				if err := exec.MicroflowELK(name); err != nil {
-					fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-					os.Exit(1)
+					return fmt.Errorf("microflow ELK: %w", err)
 				}
 			} else if upper == "NANOFLOW" {
 				if err := exec.NanoflowELK(name); err != nil {
-					fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-					os.Exit(1)
+					return fmt.Errorf("nanoflow ELK: %w", err)
 				}
 			} else if upper == "PAGE" {
 				if err := exec.PageWireframeJSON(name); err != nil {
-					fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-					os.Exit(1)
+					return fmt.Errorf("page wireframe: %w", err)
 				}
 			} else if upper == "SNIPPET" {
 				if err := exec.SnippetWireframeJSON(name); err != nil {
-					fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-					os.Exit(1)
+					return fmt.Errorf("snippet wireframe: %w", err)
 				}
 			} else {
-				fmt.Fprintf(os.Stderr, "ELK format not supported for type: %s\n", typeArg)
-				os.Exit(1)
+				return fmt.Errorf("ELK format not supported for type: %s", typeArg)
 			}
-			return
+			return nil
 		}
 
 		// SYSTEMOVERVIEW requires elk format
 		if mdlCmd == "" {
-			fmt.Fprintf(os.Stderr, "Type %s requires --format elk\n", args[0])
-			os.Exit(1)
+			return fmt.Errorf("type %s requires --format elk", args[0])
 		}
 
 		// Execute describe command
@@ -247,14 +233,14 @@ Example:
 			for _, err := range errs {
 				fmt.Fprintf(os.Stderr, "Parse error: %v\n", err)
 			}
-			os.Exit(1)
+			return fmt.Errorf("parse failed")
 		}
 
 		for _, stmt := range descProg.Statements {
 			if err := exec.Execute(stmt); err != nil {
-				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-				os.Exit(1)
+				return fmt.Errorf("executing describe: %w", err)
 			}
 		}
+		return nil
 	},
 }
