@@ -748,9 +748,7 @@ type ExecContext struct {
 	ModuleWriter                backend.ModuleWriter
 	DomainModelReader           backend.DomainModelReader
 	DomainModelWriter           backend.DomainModelWriter
-	MicroflowReader             backend.MicroflowReader
 	MicroflowWriter             backend.MicroflowWriter
-	WorkflowReader              backend.WorkflowReader
 	WorkflowWriter              backend.WorkflowWriter
 	PageReader                  backend.PageReader
 	PageWriter                  backend.PageWriter
@@ -856,9 +854,7 @@ func (ctx *ExecContext) initRoles() {
 		ctx.ModuleWriter = bf.ModuleWriter()
 		ctx.DomainModelReader = bf.DomainModelReader()
 		ctx.DomainModelWriter = bf.DomainModelWriter()
-		ctx.MicroflowReader = bf.MicroflowReader()
 		ctx.MicroflowWriter = bf.MicroflowWriter()
-		ctx.WorkflowReader = bf.WorkflowReader()
 		ctx.WorkflowWriter = bf.WorkflowWriter()
 		ctx.PageReader = bf.PageReader()
 		ctx.PageWriter = bf.PageWriter()
@@ -909,9 +905,7 @@ func (ctx *ExecContext) initRoles() {
 	ctx.ModuleWriter = ctx.Backend
 	ctx.DomainModelReader = ctx.Backend
 	ctx.DomainModelWriter = ctx.Backend
-	ctx.MicroflowReader = ctx.Backend
 	ctx.MicroflowWriter = ctx.Backend
-	ctx.WorkflowReader = ctx.Backend
 	ctx.WorkflowWriter = ctx.Backend
 	ctx.PageReader = ctx.Backend
 	ctx.PageWriter = ctx.Backend
@@ -965,9 +959,7 @@ func (ctx *ExecContext) buildDeps() *HandlerDeps {
 		ModuleWriter:               ctx.ModuleWriter,
 		DomainModelReader:          ctx.DomainModelReader,
 		DomainModelWriter:          ctx.DomainModelWriter,
-		MicroflowReader:            ctx.MicroflowReader,
 		MicroflowWriter:            ctx.MicroflowWriter,
-		WorkflowReader:             ctx.WorkflowReader,
 		WorkflowWriter:             ctx.WorkflowWriter,
 		PageReader:                 ctx.PageReader,
 		PageWriter:                 ctx.PageWriter,

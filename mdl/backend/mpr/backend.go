@@ -53,6 +53,8 @@ type MprBackend struct {
 	rawUnits        *rawUnitBackend
 	metadata        *metadataBackend
 	mappings        *mappingBackend
+	settings        *settingsBackend
+	navigation      *navigationBackend
 
 	// graph is the in-memory project graph built at startup.
 	graph *graphcatalog.ProjectGraph

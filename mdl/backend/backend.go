@@ -55,9 +55,7 @@ type FullBackend interface {
 	ModuleWriter
 	DomainModelReader
 	DomainModelWriter
-	MicroflowReader
 	MicroflowWriter
-	WorkflowReader
 	WorkflowWriter
 	JavaActionReader
 	JavaActionWriter

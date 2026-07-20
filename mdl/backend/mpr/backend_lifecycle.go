@@ -91,6 +91,8 @@ func (b *MprBackend) Connect(path string) error {
 	b.rawUnits = newRawUnitBackend(r, mw)
 	b.metadata = newMetadataBackend(r)
 	b.mappings = newMappingBackend(r)
+	b.settings = newSettingsBackend(r)
+	b.navigation = newNavigationBackend(r)
 	b.subBackendsReady = true
 	return nil
 }
@@ -236,6 +238,12 @@ func (b *MprBackend) initSubBackends() {
 		if w, ok := b.msdkWriter.(*modelsdkmpr.Writer); ok {
 			b.security = newSecurityBackend(w)
 		}
+	}
+	if b.settings == nil {
+		b.settings = newSettingsBackend(b.reader)
+	}
+	if b.navigation == nil {
+		b.navigation = newNavigationBackend(b.reader)
 	}
 }
 

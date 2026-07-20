@@ -25,20 +25,10 @@ func listWorkflowsWithContainerGen(ctx *ExecContext) ([]ContainerWithGen[*genWf.
 		return nil, nil
 	}
 	listFn := func() ([]*genWf.Workflow, error) {
-		// Prefer ctx.Workflows (gen-native repo wired via the duck-type
-		// provider on MprBackend); fall back to ctx.Backend.ListWorkflowsGen
-		// which goes through the regular FullBackend interface (used by
-		// MockBackend tests that wire ListWorkflowsGenFunc).
-		var all []*genWf.Workflow
-		var err error
-		switch {
-		case ctx.Workflows != nil:
-			all, err = ctx.Workflows.ListAll()
-		case ctx.WorkflowReader != nil:
-			all, err = ctx.WorkflowReader.ListWorkflowsGen()
-		default:
+		if ctx.Workflows == nil {
 			return nil, nil
 		}
+		all, err := ctx.Workflows.ListAll()
 		if err != nil {
 			return nil, err
 		}
@@ -59,11 +49,11 @@ func listWorkflowsWithContainerGen(ctx *ExecContext) ([]ContainerWithGen[*genWf.
 	// ctx.Workflows; tests that don't need container linkage can return
 	// "" from this helper since the hierarchy walker tolerates it.
 	resolveFn := func(id element.ID) (element.ID, error) {
-		if ctx.Workflows != nil {
-			c, err := ctx.Workflows.GetContainerUUID(model.ID(id))
-			return element.ID(c), err
+		if ctx.Workflows == nil {
+			return "", nil
 		}
-		return "", nil
+		c, err := ctx.Workflows.GetContainerUUID(model.ID(id))
+		return element.ID(c), err
 	}
 	return listUnitsWithContainerGen(
 		listFn,
@@ -91,16 +81,10 @@ func listWorkflowsWithContainerGenDeps(deps *HandlerDeps) ([]ContainerWithGen[*g
 		return nil, nil
 	}
 	listFn := func() ([]*genWf.Workflow, error) {
-		var all []*genWf.Workflow
-		var err error
-		switch {
-		case deps.WorkflowRepo != nil:
-			all, err = deps.WorkflowRepo.ListAll()
-		case deps.WorkflowReader != nil:
-			all, err = deps.WorkflowReader.ListWorkflowsGen()
-		default:
+		if deps.WorkflowRepo == nil {
 			return nil, nil
 		}
+		all, err := deps.WorkflowRepo.ListAll()
 		if err != nil {
 			return nil, err
 		}
@@ -113,11 +97,11 @@ func listWorkflowsWithContainerGenDeps(deps *HandlerDeps) ([]ContainerWithGen[*g
 		return filtered, nil
 	}
 	resolveFn := func(id element.ID) (element.ID, error) {
-		if deps.WorkflowRepo != nil {
-			c, err := deps.WorkflowRepo.GetContainerUUID(model.ID(id))
-			return element.ID(c), err
+		if deps.WorkflowRepo == nil {
+			return "", nil
 		}
-		return "", nil
+		c, err := deps.WorkflowRepo.GetContainerUUID(model.ID(id))
+		return element.ID(c), err
 	}
 	return listUnitsWithContainerGen(
 		listFn,

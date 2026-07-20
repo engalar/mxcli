@@ -194,6 +194,13 @@ func withNanoflowsRepo(r repos.NanoflowRepository) mockCtxOption {
 	return func(ctx *ExecContext) { ctx.Nanoflows = r }
 }
 
+// withWorkflowsRepo wires a modelsdk-native WorkflowRepository into the
+// ExecContext. Tests typically pass a
+// repostesting.RecordingWorkflowRepository.
+func withWorkflowsRepo(r repos.WorkflowRepository) mockCtxOption {
+	return func(ctx *ExecContext) { ctx.Workflows = r }
+}
+
 // withSecurityRepo wires a modelsdk-native SecurityRepository into the
 // ExecContext. Use with a repostesting.RecordingSecurityRepository to
 // seed gen-typed fixtures for tests that exercise gen security paths.

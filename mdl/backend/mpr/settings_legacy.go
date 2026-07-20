@@ -19,18 +19,6 @@ import (
 
 const projectSettingsBsonType = "Settings$ProjectSettings"
 
-func (b *MprBackend) getProjectSettingsFromRaw() (*model.ProjectSettings, error) {
-	rawUnits, err := b.msdkReader.ListRawUnitsByType(projectSettingsBsonType)
-	if err != nil {
-		return nil, err
-	}
-	if len(rawUnits) == 0 {
-		return nil, fmt.Errorf("project settings not found")
-	}
-	ru := rawUnits[0]
-	return parseProjectSettingsRaw(string(ru.ID), string(ru.ContainerID), ru.Contents)
-}
-
 func parseProjectSettingsRaw(unitID, _ string, contents []byte) (*model.ProjectSettings, error) {
 	if len(contents) < 4 {
 		return nil, fmt.Errorf("contents too short for project settings %s", unitID)

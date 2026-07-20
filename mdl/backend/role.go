@@ -9,7 +9,6 @@ import (
 	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 	genJA "github.com/mendixlabs/mxcli/modelsdk/gen/javaactions"
 	genJSA "github.com/mendixlabs/mxcli/modelsdk/gen/javascriptactions"
-	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 	genSec "github.com/mendixlabs/mxcli/modelsdk/gen/security"
 	genWf "github.com/mendixlabs/mxcli/modelsdk/gen/workflows"
 )
@@ -69,24 +68,10 @@ type DomainModelWriter interface {
 	RelayoutDomainModel(domainModelID model.ID) error
 }
 
-// MicroflowReader provides read-only microflow/nanoflow queries.
-type MicroflowReader interface {
-	ListMicroflowsGen() ([]*genMf.Microflow, error)
-	ListNanoflowsGen() ([]*genMf.Nanoflow, error)
-	GetMicroflowGen(id model.ID) (*genMf.Microflow, error)
-	IsRule(qualifiedName string) (bool, error)
-}
-
 // MicroflowWriter provides microflow/nanoflow deletions.
 type MicroflowWriter interface {
 	DeleteMicroflow(id model.ID) error
 	DeleteNanoflow(id model.ID) error
-}
-
-// WorkflowReader provides read-only workflow queries.
-type WorkflowReader interface {
-	ListWorkflowsGen() ([]*genWf.Workflow, error)
-	GetWorkflowGen(id model.ID) (*genWf.Workflow, error)
 }
 
 // WorkflowWriter provides workflow mutations.

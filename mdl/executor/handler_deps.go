@@ -32,9 +32,7 @@ type HandlerDeps struct {
 	ModuleSettingsWriter backend.ModuleSettingsWriter
 	DomainModelReader    backend.DomainModelReader
 	DomainModelWriter    backend.DomainModelWriter
-	MicroflowReader      backend.MicroflowReader
 	MicroflowWriter      backend.MicroflowWriter
-	WorkflowReader       backend.WorkflowReader
 	WorkflowWriter       backend.WorkflowWriter
 	PageReader           backend.PageReader
 	PageWriter           backend.PageWriter
@@ -895,9 +893,7 @@ func (e *Executor) buildHandlerDeps() *HandlerDeps {
 		ModuleWriter:         e.backend,
 		DomainModelReader:    e.backend,
 		DomainModelWriter:    e.backend,
-		MicroflowReader:      e.backend,
 		MicroflowWriter:      e.backend,
-		WorkflowReader:       e.backend,
 		WorkflowWriter:       e.backend,
 		PageReader:           e.backend,
 		PageWriter:           e.backend,

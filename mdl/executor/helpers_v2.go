@@ -46,46 +46,20 @@ func paramEntityRef(dt ast.DataType) *ast.QualifiedName {
 	return nil
 }
 
-// listMicroflowsGen returns every microflow in the project as gen
-// objects. Resolution order:
-//
-//  1. ctx.Microflows.ListAll() — the modelsdk-native repo, populated by
-//     MprBackend in production and by tests via withMicroflowsRepo.
-//  2. ctx.MicroflowReader.ListMicroflowsGen() — the gen-typed surface added in
-//     Followup C; mock-only test contexts that have not wired a
-//     ctx.Microflows repo can still seed data here.
-//  3. (nil, nil) when neither path is available — callers treat this as
-//     "no microflows in project".
+// listMicroflowsGen returns every microflow in the project as gen objects.
 func listMicroflowsGen(ctx *ExecContext) ([]*genMf.Microflow, error) {
-	if ctx == nil {
+	if ctx == nil || ctx.Microflows == nil {
 		return nil, nil
 	}
-	if ctx.Microflows != nil {
-		return ctx.Microflows.ListAll()
-	}
-	if ctx.Backend != nil {
-		return ctx.MicroflowReader.ListMicroflowsGen()
-	}
-	return nil, nil
+	return ctx.Microflows.ListAll()
 }
 
 // listNanoflowsGen returns every nanoflow in the project as gen objects.
-// Resolution order mirrors listMicroflowsGen:
-//
-//  1. ctx.Nanoflows.List("") — repo path.
-//  2. ctx.MicroflowReader.ListNanoflowsGen() — backend surface.
-//  3. (nil, nil) — no nanoflows.
 func listNanoflowsGen(ctx *ExecContext) ([]*genMf.Nanoflow, error) {
-	if ctx == nil {
+	if ctx == nil || ctx.Nanoflows == nil {
 		return nil, nil
 	}
-	if ctx.Nanoflows != nil {
-		return ctx.Nanoflows.List("")
-	}
-	if ctx.Backend != nil {
-		return ctx.MicroflowReader.ListNanoflowsGen()
-	}
-	return nil, nil
+	return ctx.Nanoflows.List("")
 }
 
 // genFlowContainerModule resolves the owning module name for a gen

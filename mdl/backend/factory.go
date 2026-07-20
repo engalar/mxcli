@@ -12,9 +12,7 @@ type BackendFactory interface {
 	ModuleWriter() ModuleWriter
 	DomainModelReader() DomainModelReader
 	DomainModelWriter() DomainModelWriter
-	MicroflowReader() MicroflowReader
 	MicroflowWriter() MicroflowWriter
-	WorkflowReader() WorkflowReader
 	WorkflowWriter() WorkflowWriter
 	PageReader() PageReader
 	PageWriter() PageWriter

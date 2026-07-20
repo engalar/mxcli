@@ -11,6 +11,7 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	"github.com/mendixlabs/mxcli/mdl/backend/mock"
+	"github.com/mendixlabs/mxcli/mdl/repos/testing"
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
 	genWf "github.com/mendixlabs/mxcli/modelsdk/gen/workflows"
@@ -733,7 +734,10 @@ func TestExecCreateWorkflowGen_NewUnit_RoutesThroughCreate(t *testing.T) {
 		},
 	}
 	h := mkHierarchy(mod)
-	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
+	wfRepo := &repostesting.RecordingWorkflowRepository{
+		ListAllFunc: func() ([]*genWf.Workflow, error) { return nil, nil },
+	}
+	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h), withWorkflowsRepo(wfRepo))
 
 	stmt := &ast.CreateWorkflowStmt{
 		Name:            ast.QualifiedName{Module: "BPModule", Name: "Approve"},

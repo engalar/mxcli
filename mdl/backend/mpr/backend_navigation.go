@@ -18,10 +18,12 @@ import (
 // ---------------------------------------------------------------------------
 
 func (b *MprBackend) ListNavigationDocuments() ([]*types.NavigationDocument, error) {
-	return b.listNavigationDocumentsFromRaw()
+	b.initSubBackends()
+	return b.navigation.ListNavigationDocuments()
 }
 func (b *MprBackend) GetNavigation() (*types.NavigationDocument, error) {
-	return b.getNavigationFromRaw()
+	b.initSubBackends()
+	return b.navigation.GetNavigation()
 }
 func (b *MprBackend) UpdateNavigationProfile(navDocID model.ID, profileName string, spec types.NavigationProfileSpec) error {
 	return b.updateNavigationProfileViaModelsdk(navDocID, profileName, spec)
@@ -276,13 +278,8 @@ func (b *MprBackend) DeleteJsonStructure(id string) error {
 // ---------------------------------------------------------------------------
 
 func (b *MprBackend) GetProjectSettings() (*model.ProjectSettings, error) {
-	// TODO(phase4): migrate to mprread. Settings$ProjectSettings holds a polymorphic
-	// Settings array (10+ Part subtypes: WebUI, Integration, Configuration, Model,
-	// Convention, Language, Certificate, Workflows, JarDeployment, Distribution).
-	// model.ProjectSettings.RawParts []map[string]any is critical for round-trip
-	// fidelity of unrecognized part types — gen-typed read drops this.
-	// gen package: modelsdk/gen/settings (Settings$ProjectSettings).
-	return b.getProjectSettingsFromRaw()
+	b.initSubBackends()
+	return b.settings.GetProjectSettings()
 }
 func (b *MprBackend) UpdateProjectSettings(ps *model.ProjectSettings) error {
 	return b.updateProjectSettingsViaModelsdk(ps)

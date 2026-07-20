@@ -174,7 +174,7 @@ func loadPages(ctx *ExecContext) (*pageLoad, error) {
 
 // loadMicroflows fetches all microflows from the backend exactly once.
 func loadMicroflows(ctx *ExecContext) (*mfLoad, error) {
-	mfs, err := ctx.MicroflowReader.ListMicroflowsGen()
+	mfs, err := ctx.Microflows.ListAll()
 	if err != nil {
 		return nil, err
 	}

@@ -25,36 +25,6 @@ import (
 
 const navigationDocumentBsonType = "Navigation$NavigationDocument"
 
-func (b *MprBackend) listNavigationDocumentsFromRaw() ([]*types.NavigationDocument, error) {
-	rawUnits, err := b.msdkReader.ListRawUnitsByType(navigationDocumentBsonType)
-	if err != nil {
-		return nil, err
-	}
-	out := make([]*types.NavigationDocument, 0, len(rawUnits))
-	for _, ru := range rawUnits {
-		if ru == nil {
-			continue
-		}
-		nav, err := parseNavigationDocumentRaw(string(ru.ID), string(ru.ContainerID), ru.Contents)
-		if err != nil {
-			return nil, fmt.Errorf("parse navigation %s: %w", ru.ID, err)
-		}
-		out = append(out, nav)
-	}
-	return out, nil
-}
-
-func (b *MprBackend) getNavigationFromRaw() (*types.NavigationDocument, error) {
-	docs, err := b.listNavigationDocumentsFromRaw()
-	if err != nil {
-		return nil, err
-	}
-	if len(docs) == 0 {
-		return nil, fmt.Errorf("no navigation document found")
-	}
-	return docs[0], nil
-}
-
 func parseNavigationDocumentRaw(unitID, containerID string, contents []byte) (*types.NavigationDocument, error) {
 	if len(contents) < 4 {
 		return nil, fmt.Errorf("contents too short (%d bytes) for unit %s", len(contents), unitID)
