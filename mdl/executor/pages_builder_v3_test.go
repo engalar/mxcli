@@ -12,6 +12,7 @@ import (
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/modelsdk/codec"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
+	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 	genPg "github.com/mendixlabs/mxcli/modelsdk/gen/pages"
 	genTexts "github.com/mendixlabs/mxcli/modelsdk/gen/texts"
 	"go.mongodb.org/mongo-driver/v2/bson"
@@ -428,6 +429,48 @@ func TestBuildTabPageV3_CaptionIsTextsText(t *testing.T) {
 	// Must be *genTexts.Text (Texts$Text), NOT *genPg.ClientTemplate (Forms$ClientTemplate).
 	if _, isText := cap.(*genTexts.Text); !isText {
 		t.Errorf("TabPage Caption is %T — must be *genTexts.Text, not ClientTemplate", cap)
+	}
+}
+
+// TestResolveEntity_FromCache verifies that resolveEntity finds entities
+// that were created in the same session via the createdEntities cache.
+// Regression guard for "entity not found: HD.PasswordForm" error.
+func TestResolveEntity_FromCache(t *testing.T) {
+	mod := mkModule("HD")
+
+	mb := &mock.MockBackend{
+		IsConnectedFunc: func() bool { return true },
+		ListDomainModelsGenFunc: func() ([]*genDm.DomainModel, error) {
+			return nil, nil
+		},
+	}
+	entityID := model.ID("ent-session-1")
+	cache := &executorCache{
+		sessionTracker: sessionTracker{
+			createdEntities: map[string]*createdEntityInfo{
+				"HD.PasswordForm": {
+					ID:         entityID,
+					Name:       "PasswordForm",
+					ModuleName: "HD",
+				},
+			},
+		},
+	}
+	h := mkHierarchy(mod)
+	withContainer(h, mod.ID, mod.ID)
+
+	pb := &pageBuilder{
+		domainModelReader: mb,
+		execCache:         cache,
+	}
+	pb.execCache.hierarchy = h
+
+	id, err := pb.resolveEntity(ast.QualifiedName{Module: "HD", Name: "PasswordForm"})
+	if err != nil {
+		t.Fatalf("resolveEntity returned error: %v", err)
+	}
+	if id != entityID {
+		t.Fatalf("expected ID %q, got %q", entityID, id)
 	}
 }
 

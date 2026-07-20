@@ -24,6 +24,8 @@ type RecordingSecurityRepository struct {
 	GetModuleSecFunc    func(model.ID) (*genSec.ModuleSecurity, error)
 	UpdateFunc          func(*genSec.ProjectSecurity) error
 	UpdateModuleSecFunc func(ModuleSecurityUpdateCall) error
+	EnsureFunc          func() (*genSec.ProjectSecurity, error)
+	EnsureCalls         int
 }
 
 var _ repos.SecurityRepository = (*RecordingSecurityRepository)(nil)
@@ -59,4 +61,12 @@ func (m *RecordingSecurityRepository) UpdateModuleSecurity(id model.ID, s *genSe
 		return m.UpdateModuleSecFunc(call)
 	}
 	return nil
+}
+
+func (m *RecordingSecurityRepository) Ensure() (*genSec.ProjectSecurity, error) {
+	m.EnsureCalls++
+	if m.EnsureFunc != nil {
+		return m.EnsureFunc()
+	}
+	return m.Get()
 }

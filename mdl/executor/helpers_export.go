@@ -134,6 +134,10 @@ func TrackModifiedDomainModelWrap(ctx *ExecContext, moduleID model.ID, moduleNam
 	ctx.trackModifiedDomainModel(moduleID, moduleName)
 }
 
+func TrackCreatedEntityWrap(ctx *ExecContext, moduleName, entityName string, entityID model.ID) {
+	ctx.trackCreatedEntity(moduleName, entityName, entityID)
+}
+
 func InvalidateHierarchyWrap(ctx *ExecContext) {
 	invalidateHierarchy(ctx)
 }

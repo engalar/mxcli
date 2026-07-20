@@ -279,6 +279,18 @@ func (pb *pageBuilder) resolveLayout(layoutName string) (model.ID, error) {
 
 // resolveEntity finds an entity by qualified name.
 func (pb *pageBuilder) resolveEntity(entityRef ast.QualifiedName) (model.ID, error) {
+	// Check in-memory cache first: entity may have been created during this session
+	// and not yet visible via backend reads (script buffer/EXECUTE SCRIPT).
+	if pb.execCache != nil && pb.execCache.createdEntities != nil {
+		qualifiedName := entityRef.Module + "." + entityRef.Name
+		if info, ok := pb.execCache.createdEntities[qualifiedName]; ok {
+			return info.ID, nil
+		}
+		if info, ok := pb.execCache.createdEntities[entityRef.Name]; ok {
+			return info.ID, nil
+		}
+	}
+
 	pairs, err := pb.getDomainModelsWithContainer()
 	if err != nil {
 		return "", mdlerrors.NewBackend("list domain models", err)

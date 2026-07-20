@@ -160,6 +160,7 @@ func persistEntityDirect(ctx *ExecContext, s *ast.CreateEntityStmt, dm *genDm.Do
 		if err := ctx.DomainModelWriter.CreateEntityGen(model.ID(dm.ID()), gen); err != nil {
 			return mdlerrors.NewBackend("CREATE ENTITY: create", err)
 		}
+		ctx.trackCreatedEntity(s.Name.Module, s.Name.Name, model.ID(gen.ID()))
 	}
 
 	invalidateDomainModelGenForModule(ctx, module.ID)

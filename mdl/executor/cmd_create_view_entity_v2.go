@@ -124,6 +124,7 @@ func execCreateViewEntityGenDeps(ctx context.Context, s *ast.CreateViewEntityStm
 	if err := deps.DomainModelWriter.CreateEntityGen(model.ID(dm.ID()), entity); err != nil {
 		return mdlerrors.NewBackend("create view entity", err)
 	}
+	trackCreatedEntityDeps(deps, s.Name.Module, s.Name.Name, model.ID(entity.ID()))
 	invalidateDomainModelGenForModuleDeps(deps, module.ID)
 	invalidateHierarchyDeps(deps)
 	invalidateDomainModelsCacheDeps(deps)

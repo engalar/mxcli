@@ -55,6 +55,7 @@ type DomainModelDeps struct {
 	PruneInvalidUserRoles      func(exclude *model.ID) error
 	CascadeRemoveRoleFromMicroflows func(moduleID model.ID, qualifiedRole string) error
 	CascadeRemoveRoleFromNanoflows  func(moduleID model.ID, qualifiedRole string) error
+	TrackCreatedEntity         func(moduleName, entityName string, entityID model.ID)
 
 	FindModuleName func(containerID model.ID) string
 	FindModuleID   func(containerID model.ID) model.ID

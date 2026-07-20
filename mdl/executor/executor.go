@@ -31,6 +31,7 @@ type sessionTracker struct {
 	createdNanoflows  map[string]*createdNanoflowInfo
 	createdPages      map[string]*createdPageInfo
 	createdSnippets   map[string]*createdSnippetInfo
+	createdEntities   map[string]*createdEntityInfo
 
 	droppedMicroflows map[string]*droppedUnitInfo
 	droppedNanoflows  map[string]*droppedUnitInfo
@@ -85,6 +86,13 @@ type createdSnippetInfo struct {
 	Name        string
 	ModuleName  string
 	ContainerID model.ID
+}
+
+// createdEntityInfo tracks an entity created during this session.
+type createdEntityInfo struct {
+	ID         model.ID
+	Name       string
+	ModuleName string
 }
 
 // droppedUnitInfo remembers the original UnitID and ContainerID of a document
@@ -1167,6 +1175,20 @@ func (ctx *ExecContext) trackCreatedSnippet(moduleName, snippetName string, id, 
 		Name:        snippetName,
 		ModuleName:  moduleName,
 		ContainerID: containerID,
+	}
+}
+
+// trackCreatedEntity registers an entity created during this session.
+func (ctx *ExecContext) trackCreatedEntity(moduleName, entityName string, id model.ID) {
+	ctx.ensureCache()
+	if ctx.Cache.createdEntities == nil {
+		ctx.Cache.createdEntities = make(map[string]*createdEntityInfo)
+	}
+	qualifiedName := moduleName + "." + entityName
+	ctx.Cache.createdEntities[qualifiedName] = &createdEntityInfo{
+		ID:         id,
+		Name:       entityName,
+		ModuleName: moduleName,
 	}
 }
 

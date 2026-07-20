@@ -133,6 +133,9 @@ func persistEntityDirectFn(ctx context.Context, s *ast.CreateEntityStmt, dm *gen
 		if err := d.DomainModelWriter.CreateEntityGen(model.ID(dm.ID()), gen); err != nil {
 			return mdlerrors.NewBackend("CREATE ENTITY: create", err)
 		}
+		if d.TrackCreatedEntity != nil {
+			d.TrackCreatedEntity(s.Name.Module, s.Name.Name, model.ID(gen.ID()))
+		}
 	}
 
 	d.InvalidateDomainModelGenCache(module.ID)
@@ -662,6 +665,9 @@ func ExecCreateViewEntityFn(ctx context.Context, s *ast.CreateViewEntityStmt, d 
 
 	if err := d.DomainModelWriter.CreateEntityGen(model.ID(dm.ID()), entity); err != nil {
 		return mdlerrors.NewBackend("create view entity", err)
+	}
+	if d.TrackCreatedEntity != nil {
+		d.TrackCreatedEntity(s.Name.Module, s.Name.Name, model.ID(entity.ID()))
 	}
 	d.InvalidateDomainModelGenCache(module.ID)
 	d.InvalidateHierarchy()

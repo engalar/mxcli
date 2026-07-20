@@ -27,7 +27,7 @@ func getProjectSecurityGen(ctx *ExecContext) (*genSec.ProjectSecurity, error) {
 	if ctx.Cache != nil && ctx.Cache.projectSecurityGen != nil {
 		return ctx.Cache.projectSecurityGen, nil
 	}
-	ps, err := ctx.Security.Get()
+	ps, err := ctx.Security.Ensure()
 	if err != nil {
 		return nil, err
 	}
@@ -75,7 +75,7 @@ func getProjectSecurityGenDeps(deps *HandlerDeps) (*genSec.ProjectSecurity, erro
 	if deps.Cache != nil && deps.Cache.projectSecurityGen != nil {
 		return deps.Cache.projectSecurityGen, nil
 	}
-	ps, err := deps.Security.Get()
+	ps, err := deps.Security.Ensure()
 	if err != nil {
 		return nil, err
 	}

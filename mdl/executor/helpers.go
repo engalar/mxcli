@@ -809,6 +809,21 @@ func trackModifiedDomainModelDeps(deps *HandlerDeps, moduleID model.ID, moduleNa
 	deps.Cache.modifiedDomainModels[moduleID] = moduleName
 }
 
+func trackCreatedEntityDeps(deps *HandlerDeps, moduleName, entityName string, entityID model.ID) {
+	if deps.Cache == nil {
+		deps.Cache = &executorCache{}
+	}
+	if deps.Cache.createdEntities == nil {
+		deps.Cache.createdEntities = make(map[string]*createdEntityInfo)
+	}
+	qualifiedName := moduleName + "." + entityName
+	deps.Cache.createdEntities[qualifiedName] = &createdEntityInfo{
+		ID:         entityID,
+		Name:       entityName,
+		ModuleName: moduleName,
+	}
+}
+
 // writeResultDeps renders a TableResult to deps.Output in the current format.
 func writeResultDeps(deps *HandlerDeps, r *TableResult) error {
 	return writeResultTo(deps.Output, deps.Format, r)
@@ -872,46 +887,18 @@ func NewMinimalExecCtx(ctx context.Context, deps *HandlerDeps) *ExecContext {
 }
 
 func newMinimalExecCtx(ctx context.Context, deps *HandlerDeps) *ExecContext {
-	return &ExecContext{
-		Context:            ctx,
-		Output:             deps.Output,
-		StatusOutput:       deps.StatusOutput,
-		Logger:             deps.Logger,
-		Quiet:              deps.Quiet,
-		Format:             deps.Format,
-		Cache:              deps.Cache,
-		MprPath:            deps.MprPath,
-		Fragments:          deps.Fragments,
-		ModuleLister:       deps.ModuleLister,
-		MetadataReader:     deps.MetadataReader,
-		FolderManager:      deps.FolderManager,
-		ConnectionManager:  deps.ConnectionManager,
-		ServiceLister:      deps.ServiceLister,
-		ServiceWriter:      deps.ServiceWriter,
-		CacheInvalidator:   deps.CacheInvalidator,
-		DomainModels:       deps.DomainModels,
-		DomainModelReader:  deps.DomainModelReader,
-		DomainModelWriter:  deps.DomainModelWriter,
-		ModuleWriter:       deps.ModuleWriter,
-		Microflows:                  deps.MicroflowRepo,
-		Nanoflows:                   deps.NanoflowRepo,
-		Pages:                       deps.PageRepo,
-		Layouts:                     deps.LayoutRepo,
-		Snippets:                    deps.SnippetRepo,
-		Workflows:                   deps.WorkflowRepo,
-		JavaActions:                 deps.JavaActionRepo,
-		JavaScriptActions:           deps.JavaScriptActionRepo,
-		PageWriter:                  deps.PageWriter,
-		ConstantReader:              deps.ConstantReader,
-		ConstantWriter:              deps.ConstantWriter,
-		EnumerationReader:           deps.EnumerationReader,
-		EnumerationWriter:           deps.EnumerationWriter,
-		SecurityModuleManager:       deps.SecurityModuleManager,
-		SecurityEntityAccessManager: deps.SecurityEntityAccessManager,
-		ScriptTransactionManager:    deps.ScriptTransactionManager,
-		WorkflowMutationOperator:    deps.WorkflowMutationOperator,
-		Deps:                        deps,
-	}
+	ec := execContextFromDeps(deps)
+	ec.Context = ctx
+	ec.DomainModels = deps.DomainModels
+	ec.Microflows = deps.MicroflowRepo
+	ec.Nanoflows = deps.NanoflowRepo
+	ec.Pages = deps.PageRepo
+	ec.Layouts = deps.LayoutRepo
+	ec.Snippets = deps.SnippetRepo
+	ec.Workflows = deps.WorkflowRepo
+	ec.JavaActions = deps.JavaActionRepo
+	ec.JavaScriptActions = deps.JavaScriptActionRepo
+	return ec
 }
 
 // ----------------------------------------------------------------------------

@@ -122,6 +122,9 @@ func RegisterHandlers(r *executor.Registry, deps *executor.HandlerDeps) {
 		TrackModifiedDomainModel: func(moduleID model.ID, moduleName string) {
 			executor.TrackModifiedDomainModelWrap(ectx, moduleID, moduleName)
 		},
+		TrackCreatedEntity: func(moduleName, entityName string, entityID model.ID) {
+			executor.TrackCreatedEntityWrap(ectx, moduleName, entityName, entityID)
+		},
 
 		ValidateModuleRole: func(role ast.QualifiedName) (bool, error) {
 			return false, fmt.Errorf("ValidateModuleRole not wired")

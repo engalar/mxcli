@@ -3,9 +3,15 @@
 package repos
 
 import (
+	"errors"
+
 	"github.com/mendixlabs/mxcli/model"
 	genSec "github.com/mendixlabs/mxcli/modelsdk/gen/security"
 )
+
+// ErrProjectSecurityNotFound is returned by Get when no ProjectSecurity unit
+// exists in the project. Callers should use Ensure() to lazily create one.
+var ErrProjectSecurityNotFound = errors.New("ProjectSecurity unit not found")
 
 // Security is project-scoped: ProjectSecurity is a singleton root, so
 // Reader.Get takes no ID. ModuleRole / ModuleSecurity / DemoUser are
@@ -22,6 +28,7 @@ type SecurityReader interface {
 type SecurityWriter interface {
 	Update(s *genSec.ProjectSecurity) error
 	UpdateModuleSecurity(moduleID model.ID, s *genSec.ModuleSecurity) error
+	Ensure() (*genSec.ProjectSecurity, error)
 }
 
 type SecurityRepository interface {

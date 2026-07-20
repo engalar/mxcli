@@ -92,7 +92,10 @@ func RegisterHandlers(r *executor.Registry, deps *executor.HandlerDeps) {
 		},
 
 		GetProjectSecurityGen: func() (*genSec.ProjectSecurity, error) {
-			return executor.GetProjectSecurityGenWrap(ectx)
+			if deps.Security == nil {
+				return nil, nil
+			}
+			return deps.Security.Ensure()
 		},
 		InvalidateProjectSecurityCache: func() {
 			executor.InvalidateProjectSecurityCacheWrap(ectx)

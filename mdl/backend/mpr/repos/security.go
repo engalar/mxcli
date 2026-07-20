@@ -7,10 +7,12 @@
 package mprrepos
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/mendixlabs/mxcli/mdl/repos"
 	"github.com/mendixlabs/mxcli/model"
+	"github.com/mendixlabs/mxcli/modelsdk/element"
 	genSec "github.com/mendixlabs/mxcli/modelsdk/gen/security"
 	mmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
 )
@@ -59,7 +61,7 @@ func (r *securityRepo) Get() (*genSec.ProjectSecurity, error) {
 		found = ref.ID
 	}
 	if found == "" {
-		return nil, fmt.Errorf("no %s unit in project", projectSecurityTypeName)
+		return nil, fmt.Errorf("%w: no %s unit in project", repos.ErrProjectSecurityNotFound, projectSecurityTypeName)
 	}
 	bytes, err := r.r.GetRawUnitBytes(found)
 	if err != nil {
@@ -125,6 +127,33 @@ func (r *securityRepo) Update(s *genSec.ProjectSecurity) error {
 		return err
 	}
 	return r.sink.UpdateRawUnit(string(s.ID()), contents)
+}
+
+// Ensure returns the ProjectSecurity unit, creating a default one if it
+// does not exist. Uses GetProjectRootID for the root container UUID.
+func (r *securityRepo) Ensure() (*genSec.ProjectSecurity, error) {
+	ps, err := r.Get()
+	if err == nil {
+		return ps, nil
+	}
+	if !errors.Is(err, repos.ErrProjectSecurityNotFound) {
+		return nil, err
+	}
+	rootID, err := r.r.GetProjectRootID()
+	if err != nil {
+		return nil, fmt.Errorf("get project root: %w", err)
+	}
+	unitID := mmpr.GenerateID()
+	ps = genSec.NewProjectSecurity()
+	ps.SetID(element.ID(unitID))
+	contents, err := r.enc.Encode(ps)
+	if err != nil {
+		return nil, fmt.Errorf("encode ProjectSecurity: %w", err)
+	}
+	if err := r.sink.InsertUnit(unitID, rootID, "ProjectSecurity", projectSecurityTypeName, contents); err != nil {
+		return nil, fmt.Errorf("insert ProjectSecurity: %w", err)
+	}
+	return r.Get()
 }
 
 // UpdateModuleSecurity writes a ModuleSecurity unit back. moduleID is
