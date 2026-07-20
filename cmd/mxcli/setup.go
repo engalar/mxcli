@@ -49,23 +49,19 @@ Examples:
   mxcli setup mxbuild --version 11.6.3
   mxcli setup mxbuild -p app.mpr --dry-run
 `,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		projectPath, _ := cmd.Flags().GetString("project")
 		versionStr, _ := cmd.Flags().GetString("version")
 		dryRun, _ := cmd.Flags().GetBool("dry-run")
 
-		// Determine version
 		if versionStr == "" && projectPath == "" {
-			fmt.Fprintln(os.Stderr, "Error: specify --project (-p) or --version")
-			os.Exit(1)
+			return fmt.Errorf("specify --project (-p) or --version")
 		}
 
 		if versionStr == "" {
-			// Detect from project
 			reader, err := mmpr.Open(projectPath)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "Error opening project: %v\n", err)
-				os.Exit(1)
+				return fmt.Errorf("opening project: %w", err)
 			}
 			pv := reader.ProjectVersion()
 			reader.Close()
@@ -87,16 +83,16 @@ Examples:
 			} else {
 				fmt.Fprintf(os.Stdout, "  Status:       not cached, would download\n")
 			}
-			return
+			return nil
 		}
 
 		path, err := docker.DownloadMxBuild(versionStr, os.Stdout)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-			os.Exit(1)
+			return fmt.Errorf("downloading mxbuild: %w", err)
 		}
 
 		fmt.Fprintf(os.Stdout, "\nMxBuild ready: %s\n", path)
+		return nil
 	},
 }
 
@@ -115,23 +111,19 @@ Examples:
   mxcli setup mxruntime --version 11.6.3
   mxcli setup mxruntime -p app.mpr --dry-run
 `,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		projectPath, _ := cmd.Flags().GetString("project")
 		versionStr, _ := cmd.Flags().GetString("version")
 		dryRun, _ := cmd.Flags().GetBool("dry-run")
 
-		// Determine version
 		if versionStr == "" && projectPath == "" {
-			fmt.Fprintln(os.Stderr, "Error: specify --project (-p) or --version")
-			os.Exit(1)
+			return fmt.Errorf("specify --project (-p) or --version")
 		}
 
 		if versionStr == "" {
-			// Detect from project
 			reader, err := mmpr.Open(projectPath)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "Error opening project: %v\n", err)
-				os.Exit(1)
+				return fmt.Errorf("opening project: %w", err)
 			}
 			pv := reader.ProjectVersion()
 			reader.Close()
@@ -152,16 +144,16 @@ Examples:
 			} else {
 				fmt.Fprintf(os.Stdout, "  Status:    not cached, would download\n")
 			}
-			return
+			return nil
 		}
 
 		path, err := docker.DownloadRuntime(versionStr, os.Stdout)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-			os.Exit(1)
+			return fmt.Errorf("downloading runtime: %w", err)
 		}
 
 		fmt.Fprintf(os.Stdout, "\nMendix runtime ready: %s\n", path)
+		return nil
 	},
 }
 
@@ -251,7 +243,7 @@ Examples:
   mxcli setup mxcli --tag v0.4.0               # Specific release
   mxcli setup mxcli --tag nightly              # Latest nightly build
 `,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		targetOS, _ := cmd.Flags().GetString("os")
 		targetArch, _ := cmd.Flags().GetString("arch")
 		output, _ := cmd.Flags().GetString("output")
@@ -271,15 +263,15 @@ Examples:
 			fmt.Fprintf(os.Stdout, "  Arch:   %s\n", targetArch)
 			fmt.Fprintf(os.Stdout, "  URL:    %s\n", url)
 			fmt.Fprintf(os.Stdout, "  Output: %s\n", output)
-			return
+			return nil
 		}
 
 		if err := downloadMxcliBinary(repo, tag, targetOS, targetArch, output, os.Stdout); err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-			os.Exit(1)
+			return fmt.Errorf("downloading mxcli: %w", err)
 		}
 
 		fmt.Fprintf(os.Stdout, "\nmxcli ready: %s\n", output)
+		return nil
 	},
 }
 
@@ -448,5 +440,4 @@ func init() {
 	setupCmd.AddCommand(setupMxRuntimeCmd)
 	setupCmd.AddCommand(setupMxcliCmd)
 	setupCmd.AddCommand(setupCompletionsCmd)
-	rootCmd.AddCommand(setupCmd)
 }

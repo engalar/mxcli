@@ -419,6 +419,7 @@ func init() {
 	rootCmd.AddCommand(initCmd)
 	rootCmd.AddCommand(newCmd)
 	rootCmd.AddCommand(dockerCmd)
+	rootCmd.AddCommand(setupCmd)
 	rootCmd.AddCommand(buildCmd())
 	rootCmd.AddCommand(runCmd())
 	rootCmd.AddCommand(reloadCmd())
