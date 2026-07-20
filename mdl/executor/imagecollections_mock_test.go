@@ -31,7 +31,7 @@ func TestShowImageCollections_Mock(t *testing.T) {
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
-	assertNoError(t, listImageCollections(ctx, ""))
+	assertNoError(t, listImageCollectionsFn(ctx, ctx.Deps.Output, ctx.Deps.Format, ctx.Deps, ""))
 
 	out := buf.String()
 	assertContainsStr(t, out, "Image Collection")
@@ -64,7 +64,7 @@ func TestShowImageCollections_FilterByModule(t *testing.T) {
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
-	assertNoError(t, listImageCollections(ctx, "Icons"))
+	assertNoError(t, listImageCollectionsFn(ctx, ctx.Deps.Output, ctx.Deps.Format, ctx.Deps, "Icons"))
 
 	out := buf.String()
 	assertContainsStr(t, out, "Icons.AppIcons")
@@ -81,7 +81,7 @@ func TestDescribeImageCollection_NotFound(t *testing.T) {
 	}
 
 	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
-	assertError(t, describeImageCollection(ctx, ast.QualifiedName{Module: "Icons", Name: "NoSuch"}))
+	assertError(t, describeImageCollectionFn(ctx, ctx.Deps.Output, ctx.Deps, ast.QualifiedName{Module: "Icons", Name: "NoSuch"}))
 }
 
 func TestDescribeImageCollection_Mock(t *testing.T) {
@@ -102,7 +102,7 @@ func TestDescribeImageCollection_Mock(t *testing.T) {
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
-	assertNoError(t, describeImageCollection(ctx, ast.QualifiedName{Module: "Icons", Name: "AppIcons"}))
+	assertNoError(t, describeImageCollectionFn(ctx, ctx.Deps.Output, ctx.Deps, ast.QualifiedName{Module: "Icons", Name: "AppIcons"}))
 
 	out := buf.String()
 	assertContainsStr(t, out, "create or modify image collection")

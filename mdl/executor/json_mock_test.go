@@ -199,7 +199,7 @@ func TestShowPublishedRestServices_Mock_JSON(t *testing.T) {
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withFormat(FormatJSON), withHierarchy(h))
-	assertNoError(t, listPublishedRestServices(ctx, ""))
+	assertNoError(t, listPublishedRestServicesFn(ctx, ctx.Deps.Output, FormatJSON, ctx.Deps, ""))
 	assertValidJSON(t, buf.String())
 	assertContainsStr(t, buf.String(), "PubRest1")
 }
@@ -265,7 +265,7 @@ func TestShowImageCollections_Mock_JSON(t *testing.T) {
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withFormat(FormatJSON), withHierarchy(h))
-	assertNoError(t, listImageCollections(ctx, ""))
+	assertNoError(t, listImageCollectionsFn(ctx, ctx.Deps.Output, FormatJSON, ctx.Deps, ""))
 	assertValidJSON(t, buf.String())
 	assertContainsStr(t, buf.String(), "Icons")
 }
@@ -286,7 +286,7 @@ func TestShowJsonStructures_Mock_JSON(t *testing.T) {
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withFormat(FormatJSON), withHierarchy(h))
-	assertNoError(t, listJsonStructures(ctx, ""))
+	assertNoError(t, listJsonStructuresFn(ctx, ctx.Deps, ""))
 	assertValidJSON(t, buf.String())
 	assertContainsStr(t, buf.String(), "OrderSchema")
 }
@@ -535,7 +535,7 @@ func TestShowPublishedRestServices_Mock_JSON_EmptyResult(t *testing.T) {
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withFormat(FormatJSON), withHierarchy(h))
-	assertNoError(t, listPublishedRestServices(ctx, ""))
+	assertNoError(t, listPublishedRestServicesFn(ctx, ctx.Deps.Output, FormatJSON, ctx.Deps, ""))
 	assertValidJSON(t, buf.String())
 	assertNotContainsStr(t, buf.String(), "No published rest services found")
 }

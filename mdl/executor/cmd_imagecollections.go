@@ -366,27 +366,6 @@ func findModuleFn(ml backend.ModuleLister, name string) (*model.Module, error) {
 }
 
 // ────────────────────────────────────────────────────────────
-// Old ExecContext wrappers (delegate to Fn versions)
-// ────────────────────────────────────────────────────────────
-
-
-
-func describeImageCollection(ctx *ExecContext, name ast.QualifiedName) error {
-	deps := ctx.Deps
-	return describeImageCollectionFn(ctx, deps.Output, deps, name)
-}
-
-func listImageCollections(ctx *ExecContext, moduleName string) error {
-	deps := ctx.Deps
-	return listImageCollectionsFn(ctx, deps.Output, deps.Format, deps, moduleName)
-}
-
-func findImageCollection(ctx *ExecContext, moduleName, collectionName string) *types.ImageCollection {
-	return findImageCollectionFn(ctx.Deps, moduleName, collectionName)
-}
-
-
-// ────────────────────────────────────────────────────────────
 // Stateless helpers (no ctx/deps needed)
 // ────────────────────────────────────────────────────────────
 

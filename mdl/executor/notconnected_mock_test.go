@@ -108,7 +108,7 @@ func TestDescribeDataTransformer_Mock_NotConnected(t *testing.T) {
 
 func TestDescribePublishedRestService_Mock_NotConnected(t *testing.T) {
 	ctx, _ := newMockCtx(t, withBackend(disconnectedBackend()))
-	assertError(t, describePublishedRestService(ctx, ast.QualifiedName{Module: "M", Name: "R"}))
+	assertError(t, describePublishedRestServiceFn(ctx, ctx.Deps.Output, ctx.Deps, ast.QualifiedName{Module: "M", Name: "R"}))
 }
 
 func TestExecCreateModule_Mock_NotConnected(t *testing.T) {

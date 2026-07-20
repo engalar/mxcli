@@ -34,7 +34,7 @@ func TestShowPublishedRestServices_Mock(t *testing.T) {
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
-	assertNoError(t, listPublishedRestServices(ctx, ""))
+	assertNoError(t, listPublishedRestServicesFn(ctx, ctx.Deps.Output, ctx.Deps.Format, ctx.Deps, ""))
 
 	out := buf.String()
 	assertContainsStr(t, out, "QualifiedName")
@@ -62,7 +62,7 @@ func TestDescribePublishedRestService_Mock(t *testing.T) {
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
-	assertNoError(t, describePublishedRestService(ctx, ast.QualifiedName{Module: "MyModule", Name: "OrderAPI"}))
+	assertNoError(t, describePublishedRestServiceFn(ctx, ctx.Deps.Output, ctx.Deps, ast.QualifiedName{Module: "MyModule", Name: "OrderAPI"}))
 
 	out := buf.String()
 	assertContainsStr(t, out, "create or modify published rest service")
@@ -77,7 +77,7 @@ func TestDescribePublishedRestService_NotFound(t *testing.T) {
 		},
 	}
 	ctx, _ := newMockCtx(t, withBackend(mb))
-	assertError(t, describePublishedRestService(ctx, ast.QualifiedName{Module: "X", Name: "NoSuch"}))
+	assertError(t, describePublishedRestServiceFn(ctx, ctx.Deps.Output, ctx.Deps, ast.QualifiedName{Module: "X", Name: "NoSuch"}))
 }
 
 func TestShowPublishedRestServices_FilterByModule(t *testing.T) {
@@ -99,6 +99,6 @@ func TestShowPublishedRestServices_FilterByModule(t *testing.T) {
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
-	assertNoError(t, listPublishedRestServices(ctx, "Sales"))
+	assertNoError(t, listPublishedRestServicesFn(ctx, ctx.Deps.Output, ctx.Deps.Format, ctx.Deps, "Sales"))
 	assertContainsStr(t, buf.String(), "Sales.SalesAPI")
 }

@@ -206,20 +206,6 @@ func findJsonStructureFn(deps *HandlerDeps, moduleName, structName string) *type
 	return nil
 }
 
-func listJsonStructures(ctx *ExecContext, moduleName string) error {
-	return listJsonStructuresFn(ctx, ctx.Deps, moduleName)
-}
-
-func describeJsonStructure(ctx *ExecContext, name ast.QualifiedName) error {
-	return describeJsonStructureFn(ctx, ctx.Deps, name)
-}
-
-
-
-func findJsonStructure(ctx *ExecContext, moduleName, structName string) *types.JsonStructure {
-	return findJsonStructureFn(ctx.Deps, moduleName, structName)
-}
-
 // collectCustomNameMappings walks the element tree and returns JSON key → ExposedName
 // mappings where the ExposedName differs from the auto-generated default (capitalizeFirst).
 func collectCustomNameMappings(elements []*types.JsonElement) map[string]string {

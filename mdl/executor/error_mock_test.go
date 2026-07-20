@@ -122,7 +122,7 @@ func TestShowPublishedRestServices_Mock_BackendError(t *testing.T) {
 		ListPublishedRestServicesFunc: func() ([]*model.PublishedRestService, error) { return nil, errBackend },
 	}
 	ctx, _ := newMockCtx(t, withBackend(mb))
-	assertError(t, listPublishedRestServices(ctx, ""))
+	assertError(t, listPublishedRestServicesFn(ctx, ctx.Deps.Output, ctx.Deps.Format, ctx.Deps, ""))
 }
 
 func TestShowJavaActions_Mock_BackendError(t *testing.T) {
@@ -153,7 +153,7 @@ func TestShowImageCollections_Mock_BackendError(t *testing.T) {
 		ListImageCollectionsFunc: func() ([]*types.ImageCollection, error) { return nil, errBackend },
 	}
 	ctx, _ := newMockCtx(t, withBackend(mb))
-	assertError(t, listImageCollections(ctx, ""))
+	assertError(t, listImageCollectionsFn(ctx, ctx.Deps.Output, ctx.Deps.Format, ctx.Deps, ""))
 }
 
 func TestShowJsonStructures_Mock_BackendError(t *testing.T) {
@@ -162,7 +162,7 @@ func TestShowJsonStructures_Mock_BackendError(t *testing.T) {
 		ListJsonStructuresFunc: func() ([]*types.JsonStructure, error) { return nil, errBackend },
 	}
 	ctx, _ := newMockCtx(t, withBackend(mb))
-	assertError(t, listJsonStructures(ctx, ""))
+	assertError(t, listJsonStructuresFn(ctx, ctx.Deps, ""))
 }
 
 func TestShowNavigation_Mock_BackendError(t *testing.T) {
@@ -379,7 +379,7 @@ func TestDescribeImageCollection_Mock_BackendError(t *testing.T) {
 		ListImageCollectionsFunc: func() ([]*types.ImageCollection, error) { return nil, errBackend },
 	}
 	ctx, _ := newMockCtx(t, withBackend(mb))
-	assertError(t, describeImageCollection(ctx, ast.QualifiedName{Module: "M", Name: "I"}))
+	assertError(t, describeImageCollectionFn(ctx, ctx.Deps.Output, ctx.Deps, ast.QualifiedName{Module: "M", Name: "I"}))
 }
 
 func TestDescribeDatabaseConnection_Mock_BackendError(t *testing.T) {

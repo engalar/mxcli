@@ -28,7 +28,7 @@ func TestShowJsonStructures_Mock(t *testing.T) {
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
-	assertNoError(t, listJsonStructures(ctx, ""))
+	assertNoError(t, listJsonStructuresFn(ctx, ctx.Deps, ""))
 
 	out := buf.String()
 	assertContainsStr(t, out, "json Structure")
@@ -59,7 +59,7 @@ func TestShowJsonStructures_FilterByModule(t *testing.T) {
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
-	assertNoError(t, listJsonStructures(ctx, "OrderMgmt"))
+	assertNoError(t, listJsonStructuresFn(ctx, ctx.Deps, "OrderMgmt"))
 
 	out := buf.String()
 	assertContainsStr(t, out, "OrderMgmt.OrderSchema")
@@ -83,7 +83,7 @@ func TestDescribeJsonStructure_Mock(t *testing.T) {
 	}
 
 	ctx, buf := newMockCtx(t, withBackend(mb), withHierarchy(h))
-	assertNoError(t, describeJsonStructure(ctx, ast.QualifiedName{Module: "OrderMgmt", Name: "OrderSchema"}))
+	assertNoError(t, describeJsonStructureFn(ctx, ctx.Deps, ast.QualifiedName{Module: "OrderMgmt", Name: "OrderSchema"}))
 	assertContainsStr(t, buf.String(), "create or modify json structure")
 }
 
@@ -97,5 +97,5 @@ func TestDescribeJsonStructure_NotFound(t *testing.T) {
 	}
 
 	ctx, _ := newMockCtx(t, withBackend(mb), withHierarchy(h))
-	assertError(t, describeJsonStructure(ctx, ast.QualifiedName{Module: "OrderMgmt", Name: "NoSuch"}))
+	assertError(t, describeJsonStructureFn(ctx, ctx.Deps, ast.QualifiedName{Module: "OrderMgmt", Name: "NoSuch"}))
 }
