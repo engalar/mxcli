@@ -198,7 +198,7 @@ func readVersionFile(path string) string {
 }
 
 // runSetupShow prints a structured overview of all key mxcli environment paths.
-func runSetupShow(cmd *cobra.Command, _ []string) {
+func runSetupShow(cmd *cobra.Command, _ []string) error {
 	out := cmd.OutOrStdout()
 	useColor := colorSupport()
 
@@ -300,6 +300,7 @@ func runSetupShow(cmd *cobra.Command, _ []string) {
 		fmt.Fprintf(out, "  java:     %s  %s, %s\n", javaPath, foundTag(true, useColor), javaVersion)
 	}
 
+	return nil
 }
 
 var setupShowCmd = &cobra.Command{
@@ -316,7 +317,7 @@ Reports:
 Examples:
   mxcli setup show
 `,
-	Run: runSetupShow,
+	RunE: runSetupShow,
 }
 
 func init() {

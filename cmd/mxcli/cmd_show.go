@@ -14,5 +14,5 @@ var showCmd = &cobra.Command{
 	Long:              `Show is an alias for describe. Use "mxcli describe <type> <name>" to describe project elements.`,
 	ValidArgsFunction: completion.ShowValidArgsFunction(comp),
 	Args:              cobra.MinimumNArgs(2),
-	Run:               describeCmd.Run,
+	RunE:              describeCmd.RunE,
 }

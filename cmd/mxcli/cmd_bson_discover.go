@@ -27,7 +27,7 @@ Examples:
   # Scan a specific workflow
   mxcli bson discover -p app.mpr --type workflow --object "Module.WfName"
 `,
-	Run: runDiscover,
+	RunE: runDiscover,
 }
 
 func init() {
@@ -35,20 +35,18 @@ func init() {
 	discoverCmd.Flags().StringP("object", "o", "", "Specific object qualified name (e.g., Module.WfName)")
 }
 
-func runDiscover(cmd *cobra.Command, args []string) {
+func runDiscover(cmd *cobra.Command, args []string) error {
 	projectPath, _ := cmd.Flags().GetString("project")
 	objectType, _ := cmd.Flags().GetString("type")
 	objectName, _ := cmd.Flags().GetString("object")
 
 	if projectPath == "" {
-		fmt.Fprintln(os.Stderr, "Error: --project (-p) is required")
-		os.Exit(1)
+		return fmt.Errorf("--project (-p) is required")
 	}
 
 	reader, err := mmpr.Open(projectPath)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error opening project: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("opening project: %w", err)
 	}
 	defer reader.Close()
 
@@ -57,20 +55,17 @@ func runDiscover(cmd *cobra.Command, args []string) {
 	if objectName != "" {
 		unit, err := reader.GetRawUnitByName(objectType, objectName)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error getting %s: %v\n", objectName, err)
-			os.Exit(1)
+			return fmt.Errorf("getting %s: %w", objectName, err)
 		}
 		parsed, err := unmarshalBsonFields(unit.Contents)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error parsing BSON for %s: %v\n", objectName, err)
-			os.Exit(1)
+			return fmt.Errorf("parsing BSON for %s: %w", objectName, err)
 		}
 		rawUnits = collectNestedUnits(unit.QualifiedName, parsed)
 	} else {
 		units, err := reader.ListRawUnits(objectType)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error listing %s units: %v\n", objectType, err)
-			os.Exit(1)
+			return fmt.Errorf("listing %s units: %w", objectType, err)
 		}
 		for _, unit := range units {
 			parsed, err := unmarshalBsonFields(unit.Contents)
@@ -84,13 +79,13 @@ func runDiscover(cmd *cobra.Command, args []string) {
 	}
 
 	if len(rawUnits) == 0 {
-		fmt.Fprintln(os.Stderr, "No objects found")
-		os.Exit(1)
+		return fmt.Errorf("no objects found")
 	}
 
 	// Run discover with empty MDL text (pure field inventory mode).
 	dr := bsondiscover.RunDiscover(rawUnits, "")
 	fmt.Print(bsondiscover.FormatResult(dr))
+	return nil
 }
 
 // unmarshalBsonFields parses raw BSON bytes into a map.
