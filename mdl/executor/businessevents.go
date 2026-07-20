@@ -3,6 +3,7 @@
 package executor
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -416,6 +417,149 @@ func generateChannelName() string {
 	// Generate a UUID-like hex string
 	uuid := types.GenerateID()
 	return strings.ReplaceAll(uuid, "-", "")
+}
+
+func ExecCreateBusinessEventServiceFn(ctx context.Context, s *ast.CreateBusinessEventServiceStmt, deps *HandlerDeps) error {
+	if !deps.ConnectionManager.IsConnected() {
+		return mdlerrors.NewNotConnectedWrite()
+	}
+
+	moduleName := s.Name.Module
+	ectx := NewExecContext(ctx, deps)
+	module, err := findModule(ectx, moduleName)
+	if err != nil {
+		return mdlerrors.NewNotFound("module", moduleName)
+	}
+
+	existingServices, _ := deps.ServiceLister.ListBusinessEventServices()
+	h, err := getHierarchy(ectx)
+	if err != nil {
+		return mdlerrors.NewBackend("build hierarchy", err)
+	}
+
+	var existingID model.ID
+	for _, existing := range existingServices {
+		existModID := h.FindModuleID(existing.ContainerID)
+		existModName := h.GetModuleName(existModID)
+		if strings.EqualFold(existModName, moduleName) && strings.EqualFold(existing.Name, s.Name.Name) {
+			if !s.CreateOrModify {
+				return mdlerrors.NewAlreadyExistsMsg("business event service", moduleName+"."+s.Name.Name, fmt.Sprintf("business event service already exists: %s.%s (use create or modify to update)", moduleName, s.Name.Name))
+			}
+			existingID = existing.ID
+			break
+		}
+	}
+
+	containerID := module.ID
+	if s.Folder != "" {
+		folderID, err := resolveFolder(ectx, module.ID, s.Folder, nil)
+		if err != nil {
+			return mdlerrors.NewBackend(fmt.Sprintf("resolve folder '%s'", s.Folder), err)
+		}
+		containerID = folderID
+	}
+
+	svc := &model.BusinessEventService{
+		ContainerID:   containerID,
+		Name:          s.Name.Name,
+		Documentation: s.Documentation,
+		ExportLevel:   "Hidden",
+	}
+	if existingID != "" {
+		svc.ID = existingID
+	}
+
+	def := &model.BusinessEventDefinition{
+		ServiceName:     s.ServiceName,
+		EventNamePrefix: s.EventNamePrefix,
+	}
+	def.TypeName = "BusinessEvents$BusinessEventDefinition"
+
+	for _, msgDef := range s.Messages {
+		ch := &model.BusinessEventChannel{
+			ChannelName: generateChannelName(),
+		}
+		ch.TypeName = "BusinessEvents$Channel"
+
+		msg := &model.BusinessEventMessage{
+			MessageName: msgDef.MessageName,
+		}
+		msg.TypeName = "BusinessEvents$Message"
+
+		switch strings.ToLower(msgDef.Operation) {
+		case "publish":
+			msg.CanSubscribe = true
+		case "subscribe":
+			msg.CanPublish = true
+		}
+
+		for _, attrDef := range msgDef.Attributes {
+			attr := &model.BusinessEventAttribute{
+				AttributeName: attrDef.Name,
+				AttributeType: attrDef.TypeName,
+			}
+			attr.TypeName = "BusinessEvents$MessageAttribute"
+			msg.Attributes = append(msg.Attributes, attr)
+		}
+
+		ch.Messages = append(ch.Messages, msg)
+		def.Channels = append(def.Channels, ch)
+
+		op := &model.ServiceOperation{
+			MessageName: msgDef.MessageName,
+			Operation:   strings.ToLower(msgDef.Operation),
+			Entity:      msgDef.Entity,
+			Microflow:   msgDef.Microflow,
+		}
+		op.TypeName = "BusinessEvents$ServiceOperation"
+		svc.OperationImplementations = append(svc.OperationImplementations, op)
+	}
+
+	svc.Definition = def
+
+	if existingID != "" {
+		if err := deps.ServiceWriter.UpdateBusinessEventService(svc); err != nil {
+			return mdlerrors.NewBackend("update business event service", err)
+		}
+		fmt.Fprintf(deps.Output, "Modified business event service: %s.%s\n", moduleName, s.Name.Name)
+	} else {
+		if err := deps.ServiceWriter.CreateBusinessEventService(svc); err != nil {
+			return mdlerrors.NewBackend("create business event service", err)
+		}
+		fmt.Fprintf(deps.Output, "Created business event service: %s.%s\n", moduleName, s.Name.Name)
+	}
+	return nil
+}
+
+func ExecDropBusinessEventServiceFn(ctx context.Context, s *ast.DropBusinessEventServiceStmt, deps *HandlerDeps) error {
+	if !deps.ConnectionManager.IsConnected() {
+		return mdlerrors.NewNotConnectedWrite()
+	}
+
+	services, err := deps.ServiceLister.ListBusinessEventServices()
+	if err != nil {
+		return mdlerrors.NewBackend("list business event services", err)
+	}
+
+	ectx := NewExecContext(ctx, deps)
+	h, err := getHierarchy(ectx)
+	if err != nil {
+		return mdlerrors.NewBackend("build hierarchy", err)
+	}
+
+	for _, svc := range services {
+		modID := h.FindModuleID(svc.ContainerID)
+		moduleName := h.GetModuleName(modID)
+		if strings.EqualFold(moduleName, s.Name.Module) && strings.EqualFold(svc.Name, s.Name.Name) {
+			if err := deps.ServiceWriter.DeleteBusinessEventService(svc.ID); err != nil {
+				return mdlerrors.NewBackend("delete business event service", err)
+			}
+			fmt.Fprintf(deps.Output, "Dropped business event service: %s.%s\n", moduleName, svc.Name)
+			return nil
+		}
+	}
+
+	return mdlerrors.NewNotFound("business event service", s.Name.String())
 }
 
 // Executor wrappers for unmigrated callers.

@@ -3,6 +3,7 @@
 package executor
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 	"strings"
@@ -518,4 +519,201 @@ func settingsValueToString(val any) string {
 	default:
 		return fmt.Sprintf("%v", v)
 	}
+}
+
+func ExecCreateConfigurationFn(ctx context.Context, s *ast.CreateConfigurationStmt, deps *HandlerDeps) error {
+	if !deps.ConnectionManager.IsConnected() {
+		return mdlerrors.NewNotConnectedWrite()
+	}
+
+	ps, err := deps.SettingsReader.GetProjectSettings()
+	if err != nil {
+		return mdlerrors.NewBackend("read project settings", err)
+	}
+
+	if ps.Configuration == nil {
+		return mdlerrors.NewNotFound("settings section", "configuration")
+	}
+
+	for _, cfg := range ps.Configuration.Configurations {
+		if strings.EqualFold(cfg.Name, s.Name) {
+			return mdlerrors.NewAlreadyExists("configuration", s.Name)
+		}
+	}
+
+	newCfg := &model.ServerConfiguration{
+		Name:           s.Name,
+		DatabaseType:   "HSQLDB",
+		HttpPortNumber: 8080,
+		ConstantValues: []*model.ConstantValue{},
+	}
+	newCfg.TypeName = "Settings$ServerConfiguration"
+
+	for key, val := range s.Properties {
+		valStr := settingsValueToString(val)
+		switch key {
+		case "DatabaseType":
+			newCfg.DatabaseType = valStr
+		case "DatabaseUrl":
+			newCfg.DatabaseUrl = valStr
+		case "DatabaseName":
+			newCfg.DatabaseName = valStr
+		case "DatabaseUserName":
+			newCfg.DatabaseUserName = valStr
+		case "DatabasePassword":
+			newCfg.DatabasePassword = valStr
+		case "HttpPortNumber":
+			if v, err := strconv.Atoi(valStr); err == nil {
+				newCfg.HttpPortNumber = v
+			}
+		case "ServerPortNumber":
+			if v, err := strconv.Atoi(valStr); err == nil {
+				newCfg.ServerPortNumber = v
+			}
+		case "ApplicationRootUrl":
+			newCfg.ApplicationRootUrl = valStr
+		default:
+			return mdlerrors.NewUnsupported("unknown configuration property: " + key)
+		}
+	}
+
+	ps.Configuration.Configurations = append(ps.Configuration.Configurations, newCfg)
+
+	if err := deps.SettingsWriter.UpdateProjectSettings(ps); err != nil {
+		return mdlerrors.NewBackend("update project settings", err)
+	}
+
+	fmt.Fprintf(deps.Output, "Created configuration: %s\n", s.Name)
+	return nil
+}
+
+func ExecDropConfigurationFn(ctx context.Context, s *ast.DropConfigurationStmt, deps *HandlerDeps) error {
+	if !deps.ConnectionManager.IsConnected() {
+		return mdlerrors.NewNotConnectedWrite()
+	}
+
+	ps, err := deps.SettingsReader.GetProjectSettings()
+	if err != nil {
+		return mdlerrors.NewBackend("read project settings", err)
+	}
+
+	if ps.Configuration == nil {
+		return mdlerrors.NewNotFound("settings section", "configuration")
+	}
+
+	for i, cfg := range ps.Configuration.Configurations {
+		if strings.EqualFold(cfg.Name, s.Name) {
+			ps.Configuration.Configurations = append(
+				ps.Configuration.Configurations[:i],
+				ps.Configuration.Configurations[i+1:]...,
+			)
+			if err := deps.SettingsWriter.UpdateProjectSettings(ps); err != nil {
+				return mdlerrors.NewBackend("update project settings", err)
+			}
+			fmt.Fprintf(deps.Output, "Dropped configuration: %s\n", s.Name)
+			return nil
+		}
+	}
+
+	return mdlerrors.NewNotFound("configuration", s.Name)
+}
+
+func ExecAlterSettingsFn(ctx context.Context, s *ast.AlterSettingsStmt, deps *HandlerDeps) error {
+	if !deps.ConnectionManager.IsConnected() {
+		return mdlerrors.NewNotConnectedWrite()
+	}
+
+	ps, err := deps.SettingsReader.GetProjectSettings()
+	if err != nil {
+		return mdlerrors.NewBackend("read project settings", err)
+	}
+
+	section := strings.ToLower(s.Section)
+	switch section {
+	case "model":
+		if ps.Model == nil {
+			return mdlerrors.NewNotFound("settings section", "model")
+		}
+		for key, val := range s.Properties {
+			valStr := settingsValueToString(val)
+			switch key {
+			case "AfterStartupMicroflow":
+				ps.Model.AfterStartupMicroflow = valStr
+			case "BeforeShutdownMicroflow":
+				ps.Model.BeforeShutdownMicroflow = valStr
+			case "HealthCheckMicroflow":
+				ps.Model.HealthCheckMicroflow = valStr
+			case "HashAlgorithm":
+				ps.Model.HashAlgorithm = valStr
+			case "BcryptCost":
+				if v, err := strconv.Atoi(valStr); err == nil {
+					ps.Model.BcryptCost = v
+				}
+			case "JavaVersion":
+				ps.Model.JavaVersion = valStr
+			case "RoundingMode":
+				ps.Model.RoundingMode = valStr
+			case "AllowUserMultipleSessions":
+				ps.Model.AllowUserMultipleSessions = valStr == "true"
+			case "ScheduledEventTimeZoneCode":
+				ps.Model.ScheduledEventTimeZoneCode = valStr
+			default:
+				return mdlerrors.NewUnsupported("unknown model setting: " + key)
+			}
+		}
+
+	case "language":
+		if ps.Language == nil {
+			return mdlerrors.NewNotFound("settings section", "language")
+		}
+		for key, val := range s.Properties {
+			valStr := settingsValueToString(val)
+			switch key {
+			case "DefaultLanguageCode":
+				ps.Language.DefaultLanguageCode = valStr
+			default:
+				return mdlerrors.NewUnsupported("unknown language setting: " + key)
+			}
+		}
+
+	case "workflows":
+		if ps.Workflows == nil {
+			return mdlerrors.NewNotFound("settings section", "workflows")
+		}
+		for key, val := range s.Properties {
+			valStr := settingsValueToString(val)
+			switch key {
+			case "UserEntity":
+				ps.Workflows.UserEntity = valStr
+			case "DefaultTaskParallelism":
+				if v, err := strconv.Atoi(valStr); err == nil {
+					ps.Workflows.DefaultTaskParallelism = v
+				}
+			case "WorkflowEngineParallelism":
+				if v, err := strconv.Atoi(valStr); err == nil {
+					ps.Workflows.WorkflowEngineParallelism = v
+				}
+			default:
+				return mdlerrors.NewUnsupported("unknown workflow setting: " + key)
+			}
+		}
+
+	case "configuration":
+		ectx := NewExecContext(ctx, deps)
+		return alterSettingsConfiguration(ectx, ps, s)
+
+	case "constant":
+		ectx := NewExecContext(ctx, deps)
+		return alterSettingsConstant(ectx, ps, s)
+
+	default:
+		return mdlerrors.NewUnsupported(fmt.Sprintf("unknown settings section: %s (expected model, configuration, constant, LANGUAGE, or workflows)", section))
+	}
+
+	if err := deps.SettingsWriter.UpdateProjectSettings(ps); err != nil {
+		return mdlerrors.NewBackend("update project settings", err)
+	}
+
+	fmt.Fprintf(deps.Output, "Updated %s settings\n", section)
+	return nil
 }

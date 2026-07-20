@@ -3027,8 +3027,7 @@ func ExecAlterImageCollectionFuture(ctx context.Context, stmt ast.Statement, dep
 }
 
 func ExecAlterSettingsFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := NewExecContext(ctx, deps)
-	return alterSettings(ectx, stmt.(*ast.AlterSettingsStmt))
+	return ExecAlterSettingsFn(ctx, stmt.(*ast.AlterSettingsStmt), deps)
 }
 
 func ExecTranslateFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
@@ -3041,23 +3040,19 @@ func ExecTranslateMicroflowFuture(ctx context.Context, deps *HandlerDeps) error 
 }
 
 func ExecCreateConfigurationFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := NewExecContext(ctx, deps)
-	return createConfiguration(ectx, stmt.(*ast.CreateConfigurationStmt))
+	return ExecCreateConfigurationFn(ctx, stmt.(*ast.CreateConfigurationStmt), deps)
 }
 
 func ExecDropConfigurationFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := NewExecContext(ctx, deps)
-	return dropConfiguration(ectx, stmt.(*ast.DropConfigurationStmt))
+	return ExecDropConfigurationFn(ctx, stmt.(*ast.DropConfigurationStmt), deps)
 }
 
 func ExecCreateBusinessEventServiceFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := NewExecContext(ctx, deps)
-	return createBusinessEventService(ectx, stmt.(*ast.CreateBusinessEventServiceStmt))
+	return ExecCreateBusinessEventServiceFn(ctx, stmt.(*ast.CreateBusinessEventServiceStmt), deps)
 }
 
 func ExecDropBusinessEventServiceFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
-	ectx := NewExecContext(ctx, deps)
-	return dropBusinessEventService(ectx, stmt.(*ast.DropBusinessEventServiceStmt))
+	return ExecDropBusinessEventServiceFn(ctx, stmt.(*ast.DropBusinessEventServiceStmt), deps)
 }
 
 func ExecCreateODataClientFuture(ctx context.Context, stmt ast.Statement, deps *HandlerDeps) error {
