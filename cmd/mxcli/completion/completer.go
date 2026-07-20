@@ -110,7 +110,7 @@ func (c *Completer) MicroflowSuggestions(prefix string) []string {
 	if !c.ready {
 		return nil
 	}
-	list, err := c.be.MicroflowReader().ListMicroflowsGen()
+	list, err := c.be.ListMicroflowsGen()
 	if err != nil {
 		return nil
 	}
@@ -122,7 +122,7 @@ func (c *Completer) NanoflowSuggestions(prefix string) []string {
 	if !c.ready {
 		return nil
 	}
-	list, err := c.be.MicroflowReader().ListNanoflowsGen()
+	list, err := c.be.ListNanoflowsGen()
 	if err != nil {
 		return nil
 	}
