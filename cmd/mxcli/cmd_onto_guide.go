@@ -31,7 +31,7 @@ var ontoGuideCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		if globalJSONFlag {
+		if config.JSONOutput {
 			return json.NewEncoder(cmd.OutOrStdout()).Encode(result)
 		}
 		w := cmd.OutOrStdout()

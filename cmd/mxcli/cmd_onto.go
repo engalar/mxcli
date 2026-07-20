@@ -143,7 +143,7 @@ var ontoSchemaCmd = &cobra.Command{
 			return err
 		}
 		result := q.Schema()
-		if globalJSONFlag {
+		if config.JSONOutput {
 			return json.NewEncoder(cmd.OutOrStdout()).Encode(result)
 		}
 		w := cmd.OutOrStdout()
@@ -177,7 +177,7 @@ var ontoExploreCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		if globalJSONFlag {
+		if config.JSONOutput {
 			return json.NewEncoder(cmd.OutOrStdout()).Encode(result)
 		}
 		w := cmd.OutOrStdout()
@@ -215,7 +215,7 @@ var ontoPathCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		if globalJSONFlag {
+		if config.JSONOutput {
 			return json.NewEncoder(cmd.OutOrStdout()).Encode(schemas)
 		}
 		w := cmd.OutOrStdout()

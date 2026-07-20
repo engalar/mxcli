@@ -29,13 +29,23 @@ import (
 )
 
 var (
-	version = "dev"
-	Version   = ""
-	BuildTime = ""
-	CommitSHA = ""
+	BuildVersion = "dev"
+	Version      = ""
+	BuildTime    = ""
+	CommitSHA    = ""
 )
 
+var version = BuildVersion // alias for internal use
+
 const warningBanner = "WARNING: This is a vibe-coded PoC, alpha quality, use with caution.\n"
+
+// Config holds runtime configuration set from CLI flags.
+type Config struct {
+	JSONOutput   bool
+	VerboseLevel int
+}
+
+var config Config
 
 func main() {
 	// CPU profiling (dev): set MXCLI_CPU_PROFILE=profile.prof
@@ -193,18 +203,11 @@ Examples:
 	},
 }
 
-// globalJSONFlag is set by PersistentPreRun when --json is passed.
-var globalJSONFlag bool
-
-// globalVerboseLevel is set by PersistentPreRunE when -v or -vv is passed.
-// 0 = off, 1 = trace (human-readable text), 2 = debug (JSON).
-var globalVerboseLevel int
-
 // resolveFormat returns the effective output format for a command.
 // If the global --json flag is set and the command has a --format flag, it returns "json".
 // Otherwise it returns the command's --format flag value (or the provided default).
 func resolveFormat(cmd *cobra.Command, defaultFormat string) string {
-	if globalJSONFlag {
+	if config.JSONOutput {
 		return "json"
 	}
 	if cmd.Flags().Lookup("format") != nil {
@@ -218,11 +221,11 @@ func resolveFormat(cmd *cobra.Command, defaultFormat string) string {
 // A fresh MprBackend is created per CONNECT statement.
 // The caller must call logger.Close() and exec.Close() when done.
 func buildExec(mode string, out io.Writer) (*executor.Executor, *diaglog.Logger) {
-	logger := diaglog.Init(version, mode, globalVerboseLevel)
+	logger := diaglog.Init(version, mode, config.VerboseLevel)
 	b := executor.Build().Out(out).WithLogger(logger).WithFactory(func() backend.ConnectionBackend {
 		return mprbackend.New()
 	})
-	if globalJSONFlag {
+	if config.JSONOutput {
 		b = b.Format(executor.FormatJSON)
 	}
 	exec := b.Create()
@@ -294,7 +297,7 @@ func init() {
 	rootCmd.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {
 		// Read verbose level (CountP: -v=1, -vv=2)
 		if v, err := cmd.Root().PersistentFlags().GetCount("verbose"); err == nil {
-			globalVerboseLevel = v
+			config.VerboseLevel = v
 		}
 
 		// Auto-discover project if -p not specified
@@ -306,7 +309,7 @@ func init() {
 		}
 
 		// Set global JSON flag
-		globalJSONFlag, _ = cmd.Root().PersistentFlags().GetBool("json")
+		config.JSONOutput, _ = cmd.Root().PersistentFlags().GetBool("json")
 
 		// Normalise -p to an absolute path.
 		// Use forward slashes on Windows: MDL single-quoted strings interpret

@@ -19,7 +19,7 @@ func runInit(t *testing.T, dir string) {
 		vsixData = prevVsix
 	})
 	vsixData = nil
-	initCmd.Run(initCmd, []string{dir})
+	_ = initCmd.RunE(initCmd, []string{dir})
 }
 
 // ── Unit tests: generateClaudeMD ─────────────────────────────────────────────
