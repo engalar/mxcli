@@ -35,6 +35,7 @@ func (b *MprBackend) writeUnitContents(unitID model.ID, contents []byte) error {
 		if b.writer != nil {
 			b.writer.ConcreteReader().SetOverlay(string(unitID), contents)
 		}
+		b.InvalidateCache()
 		return nil
 	}
 
@@ -44,6 +45,7 @@ func (b *MprBackend) writeUnitContents(unitID model.ID, contents []byte) error {
 		if err := b.scriptBuf.AddUpdate(string(unitID), contents); err != nil {
 			return fmt.Errorf("write unit (in script buffer): %w", err)
 		}
+		b.InvalidateCache()
 		return nil
 	}
 
