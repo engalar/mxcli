@@ -26,7 +26,7 @@ Examples:
   mxcli import -p app.mpr --input ./export-dir --dry-run
   mxcli import -p app.mpr --input ./export-dir --skip-errors
 `,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		projectPath, _ := cmd.Flags().GetString("project")
 		inputDir, _ := cmd.Flags().GetString("input")
 		moduleFilter, _ := cmd.Flags().GetString("module")
@@ -34,18 +34,15 @@ Examples:
 		skipErrors, _ := cmd.Flags().GetBool("skip-errors")
 
 		if projectPath == "" {
-			fmt.Fprintln(os.Stderr, "Error: --project (-p) is required")
-			os.Exit(1)
+			return fmt.Errorf("--project (-p) is required")
 		}
 		if inputDir == "" {
-			fmt.Fprintln(os.Stderr, "Error: --input is required")
-			os.Exit(1)
+			return fmt.Errorf("--input is required")
 		}
 
 		be, err := mprbackend.NewFromPath(projectPath)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error connecting to %s: %v\n", projectPath, err)
-			os.Exit(1)
+			return fmt.Errorf("connecting to %s: %w", projectPath, err)
 		}
 		defer func() { _ = be.Disconnect() }()
 
@@ -66,8 +63,7 @@ Examples:
 		}
 
 		if err := exec.ImportProject(inputDir, opts); err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-			os.Exit(1)
+			return fmt.Errorf("importing project: %w", err)
 		}
 
 		if dryRun {
@@ -75,6 +71,7 @@ Examples:
 		} else {
 			fmt.Fprintf(os.Stderr, "Done in %.1fs\n", time.Since(start).Seconds())
 		}
+		return nil
 	},
 }
 

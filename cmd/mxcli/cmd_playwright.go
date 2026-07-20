@@ -51,7 +51,7 @@ Examples:
   mxcli playwright verify tests/ --base-url http://localhost:9090
 `,
 	Args: cobra.MinimumNArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		list, _ := cmd.Flags().GetBool("list")
 		junitOutput, _ := cmd.Flags().GetString("junit")
 		verbose, _ := cmd.Flags().GetBool("verbose")
@@ -63,8 +63,7 @@ Examples:
 
 		timeout, err := time.ParseDuration(timeoutStr)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Invalid timeout: %v\n", err)
-			os.Exit(1)
+			return fmt.Errorf("invalid timeout: %w", err)
 		}
 
 		// Auto-detect port from .docker/.env when --base-url is not explicitly set
@@ -76,10 +75,9 @@ Examples:
 
 		if list {
 			if err := playwright.ListScripts(args, os.Stdout); err != nil {
-				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-				os.Exit(1)
+				return fmt.Errorf("listing scripts: %w", err)
 			}
-			return
+			return nil
 		}
 
 		opts := playwright.VerifyOptions{
@@ -97,13 +95,13 @@ Examples:
 
 		result, err := playwright.Verify(opts)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-			os.Exit(1)
+			return fmt.Errorf("playwright verify: %w", err)
 		}
 
 		if !result.AllPassed() {
-			os.Exit(1)
+			return fmt.Errorf("some tests failed")
 		}
+		return nil
 	},
 }
 

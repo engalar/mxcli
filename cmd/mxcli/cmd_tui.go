@@ -41,7 +41,7 @@ Example:
   mxcli tui -p app.mpr
   mxcli tui -c
 `,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		projectPath, _ := cmd.Flags().GetString("project")
 		continueSession, _ := cmd.Flags().GetBool("continue")
 		mxcliPath := resolveMxcliPath()
@@ -65,26 +65,24 @@ Example:
 			if !term.IsTerminal(int(os.Stdin.Fd())) {
 				fmt.Fprintln(os.Stderr, "Error: --project (-p) is required when stdin is not an interactive terminal")
 				fmt.Fprintln(os.Stderr, "\nExample: mxcli tui -p app.mpr")
-				os.Exit(1)
+				return fmt.Errorf("--project (-p) is required")
 			}
 			picker := tui.NewPickerModel()
 			p := tea.NewProgram(picker, tea.WithAltScreen())
 			result, err := p.Run()
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-				os.Exit(1)
+				return fmt.Errorf("TUI picker: %w", err)
 			}
 			m := result.(tui.PickerModel)
 			if m.Chosen() == "" {
-				return
+				return nil
 			}
 			projectPath = m.Chosen()
 		}
 
 		// Verify project file exists
 		if _, err := os.Stat(projectPath); err != nil {
-			fmt.Fprintf(os.Stderr, "Error: project file not found: %s\n", projectPath)
-			os.Exit(1)
+			return fmt.Errorf("project file not found: %s", projectPath)
 		}
 
 		tui.SaveHistory(projectPath)
@@ -112,9 +110,9 @@ Example:
 		}
 
 		if _, err := p.Run(); err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-			os.Exit(1)
+			return fmt.Errorf("TUI runtime: %w", err)
 		}
+		return nil
 	},
 }
 

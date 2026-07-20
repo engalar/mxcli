@@ -59,7 +59,7 @@ Examples:
   mxcli test tests/ -p app.mpr --verbose
 `,
 	Args: cobra.MinimumNArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		projectPath, _ := cmd.Flags().GetString("project")
 		list, _ := cmd.Flags().GetBool("list")
 		junitOutput, _ := cmd.Flags().GetString("junit")
@@ -70,23 +70,18 @@ Examples:
 
 		timeout, err := time.ParseDuration(timeoutStr)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Invalid timeout: %v\n", err)
-			os.Exit(1)
+			return fmt.Errorf("invalid timeout: %w", err)
 		}
 
 		if list {
-			// Just list tests, no execution needed
 			if err := testrunner.ListTests(args, os.Stdout); err != nil {
-				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-				os.Exit(1)
+				return fmt.Errorf("listing tests: %w", err)
 			}
-			return
+			return nil
 		}
 
-		// Execution requires a project
 		if projectPath == "" {
-			fmt.Fprintln(os.Stderr, "Error: --project (-p) is required for test execution")
-			os.Exit(1)
+			return fmt.Errorf("--project (-p) is required for test execution")
 		}
 
 		opts := testrunner.RunOptions{
@@ -103,12 +98,12 @@ Examples:
 
 		result, err := testrunner.Run(opts)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-			os.Exit(1)
+			return fmt.Errorf("running tests: %w", err)
 		}
 
 		if !result.AllPassed() {
-			os.Exit(1)
+			return fmt.Errorf("some tests failed")
 		}
+		return nil
 	},
 }
