@@ -11,11 +11,10 @@ import (
 // ────────────────────────────────────────────────────────────────────
 // Bridge functions: *HandlerDeps → *ExecContext adapters.
 //
-// These bridge functions create a temporary *ExecContext via NewExecContext
-// and delegate to the old *ExecContext-based implementation. They exist so
-// that registry files (handler_deps.go, show_registry.go, describe_registry.go)
-// no longer call NewExecContext directly, concentrating the bridge in a single
-// package. Once every underlying function is fully migrated to *HandlerDeps,
+// Wherever a Future implementation exists, the bridge bypasses
+// NewExecContext entirely and delegates directly. Functions without
+// Future counterparts still use the ExecContext bridge.
+// Once every underlying function is fully migrated to *HandlerDeps,
 // this entire file can be deleted.
 // ────────────────────────────────────────────────────────────────────
 
@@ -37,18 +36,15 @@ func ExecCreateViewEntityDeps(ctx context.Context, s *ast.CreateViewEntityStmt, 
 }
 
 func listEntitiesGenDeps(ctx context.Context, deps *HandlerDeps, moduleName string) error {
-	ectx := NewExecContext(ctx, deps)
-	return listEntitiesGen(ectx, moduleName)
+	return listEntitiesGenFuture(ctx, deps.Output, deps.Format, deps.ModuleLister, deps.DomainModels, moduleName)
 }
 
 func listEntityDeps(ctx context.Context, deps *HandlerDeps, name *ast.QualifiedName) error {
-	ectx := NewExecContext(ctx, deps)
-	return listEntity(ectx, name)
+	return listEntityFuture(ctx, deps.Output, deps.ModuleLister, deps.DomainModels, name)
 }
 
 func describeEntityGenDeps(ctx context.Context, deps *HandlerDeps, name ast.QualifiedName) error {
-	ectx := NewExecContext(ctx, deps)
-	return describeEntityGen(ectx, name)
+	return describeEntityGenFuture(ctx, deps.Output, deps.ModuleLister, deps.DomainModels, deps.Security, name)
 }
 
 // ── Associations ──
@@ -69,40 +65,33 @@ func ExecDropAssociationGenDeps(ctx context.Context, s *ast.DropAssociationStmt,
 }
 
 func listAssociationsDeps(ctx context.Context, deps *HandlerDeps, moduleName string) error {
-	ectx := NewExecContext(ctx, deps)
-	return listAssociations(ectx, moduleName)
+	return listAssociationsFuture(ctx, deps.Output, deps.Format, deps.ModuleLister, deps.DomainModels, moduleName)
 }
 
 func listAssociationDeps(ctx context.Context, deps *HandlerDeps, name *ast.QualifiedName) error {
-	ectx := NewExecContext(ctx, deps)
-	return listAssociation(ectx, name)
+	return listAssociationFuture(ctx, deps.Output, deps.ModuleLister, deps.DomainModelReader, name)
 }
 
 func describeAssociationDeps(ctx context.Context, deps *HandlerDeps, name ast.QualifiedName) error {
-	ectx := NewExecContext(ctx, deps)
-	return describeAssociation(ectx, name)
+	return describeAssociationFuture(ctx, deps.Output, deps.ModuleLister, deps.DomainModelReader, name)
 }
 
 // ── Microflows / Nanoflows ──
 
 func listMicroflowsDeps(ctx context.Context, deps *HandlerDeps, moduleName string) error {
-	ectx := NewExecContext(ctx, deps)
-	return listMicroflows(ectx, moduleName)
+	return listMicroflowsFuture(ctx, deps.Output, deps.Format, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, deps.MicroflowRepo, moduleName)
 }
 
 func listNanoflowsDeps(ctx context.Context, deps *HandlerDeps, moduleName string) error {
-	ectx := NewExecContext(ctx, deps)
-	return listNanoflows(ectx, moduleName)
+	return listNanoflowsFuture(ctx, deps.Output, deps.Format, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, deps.NanoflowRepo, moduleName)
 }
 
 func describeMicroflowGenDeps(ctx context.Context, deps *HandlerDeps, name ast.QualifiedName) error {
-	ectx := NewExecContext(ctx, deps)
-	return describeMicroflowGen(ectx, name)
+	return describeMicroflowGenFuture(ctx, deps.Output, deps.MicroflowRepo, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, name)
 }
 
 func describeNanoflowGenDeps(ctx context.Context, deps *HandlerDeps, name ast.QualifiedName) error {
-	ectx := NewExecContext(ctx, deps)
-	return describeNanoflowGen(ectx, name)
+	return describeNanoflowGenFuture(ctx, deps.Output, deps.NanoflowRepo, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, name)
 }
 
 // ── Pages / Snippets / Layouts ──
@@ -118,33 +107,27 @@ func ExecDropSnippetDeps(ctx context.Context, s *ast.DropSnippetStmt, deps *Hand
 }
 
 func listPagesGenDeps(ctx context.Context, deps *HandlerDeps, moduleName string) error {
-	ectx := NewExecContext(ctx, deps)
-	return listPagesGen(ectx, moduleName)
+	return listPagesFuture(ctx, deps.Output, deps.Format, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, deps.PageRepo, moduleName)
 }
 
 func listSnippetsGenDeps(ctx context.Context, deps *HandlerDeps, moduleName string) error {
-	ectx := NewExecContext(ctx, deps)
-	return listSnippetsGen(ectx, moduleName)
+	return listSnippetsFuture(ctx, deps.Output, deps.Format, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, deps.SnippetRepo, moduleName)
 }
 
 func listLayoutsGenDeps(ctx context.Context, deps *HandlerDeps, moduleName string) error {
-	ectx := NewExecContext(ctx, deps)
-	return listLayoutsGen(ectx, moduleName)
+	return listLayoutsFuture(ctx, deps.Output, deps.Format, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, deps.LayoutRepo, moduleName)
 }
 
 func describePageDeps(ctx context.Context, deps *HandlerDeps, name ast.QualifiedName) error {
-	ectx := NewExecContext(ctx, deps)
-	return describePage(ectx, name)
+	return describePageFuture(ctx, deps.Output, deps.PageRepo, deps.ImageBackend, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, name)
 }
 
 func describeSnippetDeps(ctx context.Context, deps *HandlerDeps, name ast.QualifiedName) error {
-	ectx := NewExecContext(ctx, deps)
-	return describeSnippet(ectx, name)
+	return describeSnippetFuture(ctx, deps.Output, deps.SnippetRepo, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, name)
 }
 
 func describeLayoutDeps(ctx context.Context, deps *HandlerDeps, name ast.QualifiedName) error {
-	ectx := NewExecContext(ctx, deps)
-	return describeLayout(ectx, name)
+	return describeLayoutFuture(ctx, deps.Output, deps.LayoutRepo, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, name)
 }
 
 // ── Workflows ──
@@ -155,30 +138,25 @@ func ExecAlterWorkflowDeps(ctx context.Context, s *ast.AlterWorkflowStmt, deps *
 }
 
 func listWorkflowsGenDeps(ctx context.Context, deps *HandlerDeps, moduleName string) error {
-	ectx := NewExecContext(ctx, deps)
-	return listWorkflowsGen(ectx, moduleName)
+	return listWorkflowsFuture(ctx, deps.Output, deps.Format, deps.ConnectionManager, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, deps.WorkflowRepo, moduleName)
 }
 
 func describeWorkflowGenDeps(ctx context.Context, deps *HandlerDeps, name ast.QualifiedName) error {
-	ectx := NewExecContext(ctx, deps)
-	return describeWorkflowGen(ectx, name)
+	return describeWorkflowGenFuture(ctx, deps.Output, deps.WorkflowRepo, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, name)
 }
 
 // ── Java / JavaScript Actions ──
 
 func listJavaActionsGenDeps(ctx context.Context, deps *HandlerDeps, moduleName string) error {
-	ectx := NewExecContext(ctx, deps)
-	return listJavaActionsGen(ectx, moduleName)
+	return listJavaActionsFuture(ctx, deps.Output, deps.Format, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, deps.JavaActionRepo, moduleName)
 }
 
 func listJavaScriptActionsGenDeps(ctx context.Context, deps *HandlerDeps, moduleName string) error {
-	ectx := NewExecContext(ctx, deps)
-	return listJavaScriptActionsGen(ectx, moduleName)
+	return listJavaScriptActionsFuture(ctx, deps.Output, deps.Format, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, deps.JavaScriptActionRepo, moduleName)
 }
 
 func describeJavaActionGenDeps(ctx context.Context, deps *HandlerDeps, name ast.QualifiedName) error {
-	ectx := NewExecContext(ctx, deps)
-	return describeJavaActionGen(ectx, name)
+	return describeJavaActionGenFuture(ctx, deps.Output, deps.JavaActionRepo, name)
 }
 
 func describeJavaScriptActionGenDeps(ctx context.Context, deps *HandlerDeps, name ast.QualifiedName) error {
@@ -189,13 +167,18 @@ func describeJavaScriptActionGenDeps(ctx context.Context, deps *HandlerDeps, nam
 // ── Modules ──
 
 func listModulesDeps(ctx context.Context, deps *HandlerDeps) error {
-	ectx := NewExecContext(ctx, deps)
-	return listModules(ectx)
+	return listModulesFuture(ctx, deps.Output, deps.Format, deps.ConnectionManager, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, deps.DomainModels)
 }
 
 func describeModuleDeps(ctx context.Context, deps *HandlerDeps, moduleName string, withAll bool) error {
-	ectx := NewExecContext(ctx, deps)
-	return describeModule(ectx, moduleName, withAll)
+	return describeModuleFuture(ctx, deps.Output,
+		moduleName, withAll,
+		deps.ModuleLister, deps.MetadataReader, deps.FolderManager,
+		deps.EnumerationReader, deps.ConstantReader,
+		deps.DomainModels, deps.Security,
+		deps.MicroflowRepo, deps.NanoflowRepo,
+		deps.PageRepo, deps.SnippetRepo, deps.LayoutRepo, deps.WorkflowRepo,
+		deps.ImageBackend, deps.NavigationReader)
 }
 
 func execListJarDependenciesDeps(ctx context.Context, deps *HandlerDeps, inModule string) error {
@@ -211,20 +194,17 @@ func execDescribeJarDependencyDeps(ctx context.Context, deps *HandlerDeps, modul
 // ── Catalog ──
 
 func execShowCatalogTablesDeps(ctx context.Context, deps *HandlerDeps) error {
-	ectx := NewExecContext(ctx, deps)
-	return execShowCatalogTables(ectx)
+	return execShowCatalogTablesFuture(ctx, deps.Output)
 }
 
 func execShowCatalogStatusDeps(ctx context.Context, deps *HandlerDeps) error {
-	ectx := NewExecContext(ctx, deps)
-	return execShowCatalogStatus(ectx)
+	return execShowCatalogStatusFuture(ctx, deps.Output)
 }
 
 // ── Version ──
 
 func listVersionDeps(ctx context.Context, deps *HandlerDeps) error {
-	ectx := NewExecContext(ctx, deps)
-	return listVersion(ectx)
+	return listVersionFuture(ctx, deps.Output, deps.ConnectionManager)
 }
 
 // ── Context / Structure ──
@@ -237,63 +217,51 @@ func execShowContextDeps(ctx context.Context, deps *HandlerDeps, s *ast.ShowStmt
 // ── Security ──
 
 func listProjectSecurityGenDeps(ctx context.Context, deps *HandlerDeps) error {
-	ectx := NewExecContext(ctx, deps)
-	return listProjectSecurityGen(ectx)
+	return listProjectSecurityFuture(ctx, deps.Output, deps.Format, deps.Security)
 }
 
 func listModuleRolesGenDeps(ctx context.Context, deps *HandlerDeps, moduleName string) error {
-	ectx := NewExecContext(ctx, deps)
-	return listModuleRolesGen(ectx, moduleName)
+	return listModuleRolesFuture(ctx, deps.Output, deps.Format, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, deps.Security, moduleName)
 }
 
 func listUserRolesGenDeps(ctx context.Context, deps *HandlerDeps) error {
-	ectx := NewExecContext(ctx, deps)
-	return listUserRolesGen(ectx)
+	return listUserRolesFuture(ctx, deps.Output, deps.Format, deps.Security)
 }
 
 func listDemoUsersGenDeps(ctx context.Context, deps *HandlerDeps) error {
-	ectx := NewExecContext(ctx, deps)
-	return listDemoUsersGen(ectx)
+	return listDemoUsersFuture(ctx, deps.Output, deps.Format, deps.Security)
 }
 
 func listAccessOnEntityGenDeps(ctx context.Context, deps *HandlerDeps, name *ast.QualifiedName) error {
-	ectx := NewExecContext(ctx, deps)
-	return listAccessOnEntityGen(ectx, name)
+	return listAccessOnEntityFuture(ctx, deps.Output, deps.Format, deps.ModuleLister, deps.DomainModels, name)
 }
 
 func listAccessOnMicroflowGenDeps(ctx context.Context, deps *HandlerDeps, name *ast.QualifiedName) error {
-	ectx := NewExecContext(ctx, deps)
-	return listAccessOnMicroflowGen(ectx, name)
+	return listAccessOnMicroflowFuture(ctx, deps.Output, deps.Format, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, deps.MicroflowRepo, name)
 }
 
 func listAccessOnPageGenDeps(ctx context.Context, deps *HandlerDeps, name *ast.QualifiedName) error {
-	ectx := NewExecContext(ctx, deps)
-	return listAccessOnPageGen(ectx, name)
+	return listAccessOnPageFuture(ctx, deps.Output, deps.Format, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, deps.PageRepo, name)
 }
 
 func listAccessOnNanoflowGenDeps(ctx context.Context, deps *HandlerDeps, name *ast.QualifiedName) error {
-	ectx := NewExecContext(ctx, deps)
-	return listAccessOnNanoflowGen(ectx, name)
+	return listAccessOnNanoflowFuture(ctx, deps.Output, deps.Format, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, deps.NanoflowRepo, name)
 }
 
 func listSecurityMatrixGenDeps(ctx context.Context, deps *HandlerDeps, moduleName string) error {
-	ectx := NewExecContext(ctx, deps)
-	return listSecurityMatrixGen(ectx, moduleName)
+	return listSecurityMatrixFuture(ctx, deps.Output, deps.Format, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, deps.Security, deps.DomainModels, deps.MicroflowRepo, deps.PageRepo, moduleName)
 }
 
 func describeModuleRoleGenDeps(ctx context.Context, deps *HandlerDeps, name ast.QualifiedName) error {
-	ectx := NewExecContext(ctx, deps)
-	return describeModuleRoleGen(ectx, name)
+	return describeModuleRoleGenFuture(ctx, deps.Output, deps.Security, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, name)
 }
 
 func describeUserRoleGenDeps(ctx context.Context, deps *HandlerDeps, name ast.QualifiedName) error {
-	ectx := NewExecContext(ctx, deps)
-	return describeUserRoleGen(ectx, name)
+	return describeUserRoleGenFuture(ctx, deps.Output, deps.Security, name)
 }
 
 func describeDemoUserGenDeps(ctx context.Context, deps *HandlerDeps, userName string) error {
-	ectx := NewExecContext(ctx, deps)
-	return describeDemoUserGen(ectx, userName)
+	return describeDemoUserGenFuture(ctx, deps.Output, deps.Security, userName)
 }
 
 // ── Enumerations ──
@@ -309,13 +277,11 @@ func ExecDropEnumerationDeps(ctx context.Context, s *ast.DropEnumerationStmt, de
 }
 
 func listEnumerationsDeps(ctx context.Context, deps *HandlerDeps, moduleName string) error {
-	ectx := NewExecContext(ctx, deps)
-	return listEnumerations(ectx, moduleName)
+	return listEnumerationsFuture(ctx, deps.Output, deps.Format, deps.ConnectionManager, deps.EnumerationReader, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, moduleName)
 }
 
 func describeEnumerationDeps(ctx context.Context, deps *HandlerDeps, name ast.QualifiedName) error {
-	ectx := NewExecContext(ctx, deps)
-	return describeEnumeration(ectx, name)
+	return describeEnumerationFuture(ctx, deps.Output, deps.EnumerationReader, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, name)
 }
 
 // ── Constants ──
@@ -331,18 +297,15 @@ func ExecDropConstantDeps(ctx context.Context, stmt *ast.DropConstantStmt, deps 
 }
 
 func listConstantsDeps(ctx context.Context, deps *HandlerDeps, moduleName string) error {
-	ectx := NewExecContext(ctx, deps)
-	return listConstants(ectx, moduleName)
+	return listConstantsFuture(ctx, deps.Output, deps.Format, deps.ConnectionManager, deps.ConstantReader, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, moduleName)
 }
 
 func listConstantValuesDeps(ctx context.Context, deps *HandlerDeps, moduleName string) error {
-	ectx := NewExecContext(ctx, deps)
-	return listConstantValues(ectx, moduleName)
+	return listConstantValuesFuture(ctx, deps.Output, deps.Format, deps.ConnectionManager, deps.ConstantReader, deps.SettingsReader, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, moduleName)
 }
 
 func describeConstantDeps(ctx context.Context, deps *HandlerDeps, name ast.QualifiedName) error {
-	ectx := NewExecContext(ctx, deps)
-	return describeConstant(ectx, name)
+	return describeConstantFuture(ctx, deps.Output, deps.ConstantReader, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, name)
 }
 
 // ── Languages / Settings ──
@@ -353,45 +316,37 @@ func AlterLanguageDeps(ctx context.Context, stmt *ast.AlterLanguageStmt, deps *H
 }
 
 func listLanguagesDeps(ctx context.Context, deps *HandlerDeps) error {
-	ectx := NewExecContext(ctx, deps)
-	return listLanguages(ectx)
+	return listLanguagesFuture(ctx, deps.Output, deps.Format, deps.SettingsReader)
 }
 
 func listSupportedLanguagesDeps(ctx context.Context, deps *HandlerDeps) error {
-	ectx := NewExecContext(ctx, deps)
-	return listSupportedLanguages(ectx)
+	return listSupportedLanguagesFuture(ctx, deps.Output, deps.Format)
 }
 
 func listSettingsDeps(ctx context.Context, deps *HandlerDeps) error {
-	ectx := NewExecContext(ctx, deps)
-	return listSettings(ectx)
+	return listSettingsFuture(ctx, deps.Output, deps.Format, deps.SettingsReader)
 }
 
 func describeSettingsDeps(ctx context.Context, deps *HandlerDeps) error {
-	ectx := NewExecContext(ctx, deps)
-	return describeSettings(ectx)
+	return describeSettingsFuture(ctx, deps.Output, deps.ConnectionManager, deps.SettingsReader)
 }
 
 // ── Navigation ──
 
 func listNavigationDeps(ctx context.Context, deps *HandlerDeps) error {
-	ectx := NewExecContext(ctx, deps)
-	return listNavigation(ectx)
+	return listNavigationFuture(ctx, deps.Output, deps.NavigationReader)
 }
 
 func listNavigationMenuDeps(ctx context.Context, deps *HandlerDeps, name *ast.QualifiedName) error {
-	ectx := NewExecContext(ctx, deps)
-	return listNavigationMenu(ectx, name)
+	return listNavigationMenuFuture(ctx, deps.Output, deps.NavigationReader, name)
 }
 
 func listNavigationHomesDeps(ctx context.Context, deps *HandlerDeps) error {
-	ectx := NewExecContext(ctx, deps)
-	return listNavigationHomes(ectx)
+	return listNavigationHomesFuture(ctx, deps.Output, deps.NavigationReader)
 }
 
 func describeNavigationDeps(ctx context.Context, deps *HandlerDeps, name ast.QualifiedName) error {
-	ectx := NewExecContext(ctx, deps)
-	return describeNavigation(ectx, name)
+	return describeNavigationFuture(ctx, deps.Output, deps.NavigationReader, name)
 }
 
 // ── OData ──
@@ -404,18 +359,15 @@ func describeNavigationDeps(ctx context.Context, deps *HandlerDeps, name ast.Qua
 // ── Business Events ──
 
 func listBusinessEventServicesDeps(ctx context.Context, deps *HandlerDeps, inModule string) error {
-	ectx := NewExecContext(ctx, deps)
-	return listBusinessEventServices(ectx, inModule)
+	return listBusinessEventServicesFuture(ctx, deps.Output, deps.Format, deps.ConnectionManager, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, deps.BusinessEventBackend, inModule)
 }
 
 func listBusinessEventClientsDeps(ctx context.Context, deps *HandlerDeps, inModule string) error {
-	ectx := NewExecContext(ctx, deps)
-	return listBusinessEventClients(ectx, inModule)
+	return listBusinessEventClientsFuture(ctx, deps.Output)
 }
 
 func listBusinessEventsDeps(ctx context.Context, deps *HandlerDeps, inModule string) error {
-	ectx := NewExecContext(ctx, deps)
-	return listBusinessEvents(ectx, inModule)
+	return listBusinessEventsFuture(ctx, deps.Output, deps.Format, deps.ConnectionManager, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, deps.BusinessEventBackend, inModule)
 }
 
 func describeBusinessEventServiceDeps(ctx context.Context, deps *HandlerDeps, name ast.QualifiedName) error {
@@ -426,13 +378,11 @@ func describeBusinessEventServiceDeps(ctx context.Context, deps *HandlerDeps, na
 // ── Fragments ──
 
 func listFragmentsDeps(ctx context.Context, deps *HandlerDeps) error {
-	ectx := NewExecContext(ctx, deps)
-	return listFragments(ectx)
+	return listFragmentsFuture(ctx, deps.Output, deps.Fragments)
 }
 
 func describeFragmentDeps(ctx context.Context, deps *HandlerDeps, name ast.QualifiedName) error {
-	ectx := NewExecContext(ctx, deps)
-	return describeFragment(ectx, name)
+	return describeFragmentFuture(ctx, deps.Output, deps.Fragments, name)
 }
 
 // ── Database Connections ──
@@ -448,8 +398,7 @@ func listDatabaseConnectionsDeps(ctx context.Context, deps *HandlerDeps, moduleN
 }
 
 func describeDatabaseConnectionDeps(ctx context.Context, deps *HandlerDeps, name ast.QualifiedName) error {
-	ectx := NewExecContext(ctx, deps)
-	return describeDatabaseConnection(ectx, name)
+	return describeDatabaseConnectionFuture(ctx, deps.Output, deps.ServiceLister, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, name)
 }
 
 // ── Image Collections ──
@@ -460,8 +409,7 @@ func listImageCollectionsDeps(ctx context.Context, deps *HandlerDeps, moduleName
 }
 
 func describeImageCollectionDeps(ctx context.Context, deps *HandlerDeps, name ast.QualifiedName) error {
-	ectx := NewExecContext(ctx, deps)
-	return describeImageCollection(ectx, name)
+	return describeImageCollectionFuture(ctx, deps.Output, deps.ImageBackend, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, name)
 }
 
 // ── Agent Editor ──
