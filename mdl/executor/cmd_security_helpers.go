@@ -9,6 +9,7 @@
 package executor
 
 import (
+	"context"
 	"errors"
 	"fmt"
 
@@ -73,4 +74,19 @@ func ExecGrantWorkflowAccess(ctx *ExecContext, s *ast.GrantWorkflowAccessStmt) e
 // ExecRevokeWorkflowAccess handles REVOKE EXECUTE ON WORKFLOW. Not supported.
 func ExecRevokeWorkflowAccess(ctx *ExecContext, s *ast.RevokeWorkflowAccessStmt) error {
 	return mdlerrors.NewUnsupported("revoke execute on workflow is not supported: Mendix workflows do not have document-level AllowedModuleRoles (unlike microflows and pages). Workflow access is controlled through the microflow that triggers the workflow and UserTask targeting")
+}
+
+// ExecGrantWorkflowAccessDeps is the HandlerDeps version of ExecGrantWorkflowAccess.
+func ExecGrantWorkflowAccessDeps(_ context.Context, _ *ast.GrantWorkflowAccessStmt, _ *HandlerDeps) error {
+	return mdlerrors.NewUnsupported("grant execute on workflow is not supported: Mendix workflows do not have document-level AllowedModuleRoles (unlike microflows and pages). Workflow access is controlled through the microflow that triggers the workflow and UserTask targeting")
+}
+
+// ExecRevokeWorkflowAccessDeps is the HandlerDeps version of ExecRevokeWorkflowAccess.
+func ExecRevokeWorkflowAccessDeps(_ context.Context, _ *ast.RevokeWorkflowAccessStmt, _ *HandlerDeps) error {
+	return mdlerrors.NewUnsupported("revoke execute on workflow is not supported: Mendix workflows do not have document-level AllowedModuleRoles (unlike microflows and pages). Workflow access is controlled through the microflow that triggers the workflow and UserTask targeting")
+}
+
+// listAccessOnWorkflowDeps is the HandlerDeps version of listAccessOnWorkflow.
+func listAccessOnWorkflowDeps(_ context.Context, _ *HandlerDeps, _ *ast.QualifiedName) error {
+	return mdlerrors.NewUnsupported("show access on workflow is not supported: Mendix workflows do not have document-level AllowedModuleRoles (unlike microflows and pages). Workflow access is controlled through the microflow that triggers the workflow and UserTask targeting")
 }

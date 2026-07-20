@@ -400,32 +400,26 @@ func (e *Executor) registerFutureOverlays() {
 	})
 
 	r.RegisterFuture("CreateEntity", func(ctx context.Context, stmt ast.Statement) error {
-		ectx := NewExecContext(ctx, deps)
-		return ExecCreateEntity(ectx, stmt.(*ast.CreateEntityStmt))
+		return ExecCreateEntityDeps(ctx, stmt.(*ast.CreateEntityStmt), deps)
 	})
 	r.RegisterFuture("AlterEntity", func(ctx context.Context, stmt ast.Statement) error {
 		return ExecAlterEntityGenFn(ctx, stmt.(*ast.AlterEntityStmt), deps)
 	})
 	r.RegisterFuture("DropEntity", func(ctx context.Context, stmt ast.Statement) error {
-		ectx := NewExecContext(ctx, deps)
-		return ExecDropEntity(ectx, stmt.(*ast.DropEntityStmt))
+		return ExecDropEntityDeps(ctx, stmt.(*ast.DropEntityStmt), deps)
 	})
 	r.RegisterFuture("CreateViewEntity", func(ctx context.Context, stmt ast.Statement) error {
-		ectx := NewExecContext(ctx, deps)
-		return ExecCreateViewEntity(ectx, stmt.(*ast.CreateViewEntityStmt))
+		return ExecCreateViewEntityDeps(ctx, stmt.(*ast.CreateViewEntityStmt), deps)
 	})
 
 	r.RegisterFuture("CreateAssociation", func(ctx context.Context, stmt ast.Statement) error {
-		ectx := NewExecContext(ctx, deps)
-		return ExecCreateAssociation(ectx, stmt.(*ast.CreateAssociationStmt))
+		return ExecCreateAssociationDeps(ctx, stmt.(*ast.CreateAssociationStmt), deps)
 	})
 	r.RegisterFuture("AlterAssociation", func(ctx context.Context, stmt ast.Statement) error {
-		ectx := NewExecContext(ctx, deps)
-		return ExecAlterAssociationGen(ectx, stmt.(*ast.AlterAssociationStmt))
+		return ExecAlterAssociationGenDeps(ctx, stmt.(*ast.AlterAssociationStmt), deps)
 	})
 	r.RegisterFuture("DropAssociation", func(ctx context.Context, stmt ast.Statement) error {
-		ectx := NewExecContext(ctx, deps)
-		return ExecDropAssociationGen(ectx, stmt.(*ast.DropAssociationStmt))
+		return ExecDropAssociationGenDeps(ctx, stmt.(*ast.DropAssociationStmt), deps)
 	})
 
 	// ────────────────────────────────────────────────────
@@ -453,15 +447,13 @@ func (e *Executor) registerFutureOverlays() {
 		return ExecCreatePageV3Fn(ctx, stmt.(*ast.CreatePageStmtV3), deps)
 	})
 	r.RegisterFuture("DropPage", func(ctx context.Context, stmt ast.Statement) error {
-		ectx := NewExecContext(ctx, deps)
-		return ExecDropPage(ectx, stmt.(*ast.DropPageStmt))
+		return ExecDropPageDeps(ctx, stmt.(*ast.DropPageStmt), deps)
 	})
 	r.RegisterFuture("CreateSnippetStmtV3", func(ctx context.Context, stmt ast.Statement) error {
 		return ExecCreateSnippetV3Fn(ctx, stmt.(*ast.CreateSnippetStmtV3), deps)
 	})
 	r.RegisterFuture("DropSnippet", func(ctx context.Context, stmt ast.Statement) error {
-		ectx := NewExecContext(ctx, deps)
-		return ExecDropSnippet(ectx, stmt.(*ast.DropSnippetStmt))
+		return ExecDropSnippetDeps(ctx, stmt.(*ast.DropSnippetStmt), deps)
 	})
 
 	// Layout handler
@@ -482,8 +474,7 @@ func (e *Executor) registerFutureOverlays() {
 		return ExecDropWorkflowGenFn(ctx, stmt.(*ast.DropWorkflowStmt), deps)
 	})
 	r.RegisterFuture("AlterWorkflow", func(ctx context.Context, stmt ast.Statement) error {
-		ectx := NewExecContext(ctx, deps)
-		return ExecAlterWorkflow(ectx, stmt.(*ast.AlterWorkflowStmt))
+		return ExecAlterWorkflowDeps(ctx, stmt.(*ast.AlterWorkflowStmt), deps)
 	})
 
 	// ────────────────────────────────────────────────────
@@ -530,12 +521,10 @@ func (e *Executor) registerFutureOverlays() {
 		return ExecRevokeNanoflowAccessGenFn(ctx, stmt.(*ast.RevokeNanoflowAccessStmt), deps)
 	})
 	r.RegisterFuture("GrantWorkflowAccess", func(ctx context.Context, stmt ast.Statement) error {
-		ectx := NewExecContext(ctx, deps)
-		return ExecGrantWorkflowAccess(ectx, stmt.(*ast.GrantWorkflowAccessStmt))
+		return ExecGrantWorkflowAccessDeps(ctx, stmt.(*ast.GrantWorkflowAccessStmt), deps)
 	})
 	r.RegisterFuture("RevokeWorkflowAccess", func(ctx context.Context, stmt ast.Statement) error {
-		ectx := NewExecContext(ctx, deps)
-		return ExecRevokeWorkflowAccess(ectx, stmt.(*ast.RevokeWorkflowAccessStmt))
+		return ExecRevokeWorkflowAccessDeps(ctx, stmt.(*ast.RevokeWorkflowAccessStmt), deps)
 	})
 	r.RegisterFuture("GrantODataServiceAccess", func(ctx context.Context, stmt ast.Statement) error {
 		return ExecGrantODataServiceAccessGenFn(ctx, stmt.(*ast.GrantODataServiceAccessStmt), deps)
@@ -562,8 +551,7 @@ func (e *Executor) registerFutureOverlays() {
 		return ExecDropDemoUserGenFn(ctx, stmt.(*ast.DropDemoUserStmt), deps)
 	})
 	r.RegisterFuture("AlterLanguage", func(ctx context.Context, stmt ast.Statement) error {
-		ectx := NewExecContext(ctx, deps)
-		return AlterLanguage(ectx, stmt.(*ast.AlterLanguageStmt))
+		return AlterLanguageDeps(ctx, stmt.(*ast.AlterLanguageStmt), deps)
 	})
 
 	// ────────────────────────────────────────────────────
@@ -572,25 +560,21 @@ func (e *Executor) registerFutureOverlays() {
 
 	// Enumeration CRUD
 	r.RegisterFuture("CreateEnumeration", func(ctx context.Context, stmt ast.Statement) error {
-		ectx := NewExecContext(nil, deps)
-		return ExecCreateEnumeration(ectx, stmt.(*ast.CreateEnumerationStmt))
+		return ExecCreateEnumerationDeps(ctx, stmt.(*ast.CreateEnumerationStmt), deps)
 	})
 	r.RegisterFuture("AlterEnumeration", func(ctx context.Context, stmt ast.Statement) error {
 		return fmt.Errorf("alter enumeration not yet implemented")
 	})
 	r.RegisterFuture("DropEnumeration", func(ctx context.Context, stmt ast.Statement) error {
-		ectx := NewExecContext(nil, deps)
-		return ExecDropEnumeration(ectx, stmt.(*ast.DropEnumerationStmt))
+		return ExecDropEnumerationDeps(ctx, stmt.(*ast.DropEnumerationStmt), deps)
 	})
 
 	// Constant CRUD
 	r.RegisterFuture("CreateConstant", func(ctx context.Context, stmt ast.Statement) error {
-		ectx := NewExecContext(nil, deps)
-		return ExecCreateConstant(ectx, stmt.(*ast.CreateConstantStmt))
+		return ExecCreateConstantDeps(ctx, stmt.(*ast.CreateConstantStmt), deps)
 	})
 	r.RegisterFuture("DropConstant", func(ctx context.Context, stmt ast.Statement) error {
-		ectx := NewExecContext(nil, deps)
-		return ExecDropConstant(ectx, stmt.(*ast.DropConstantStmt))
+		return ExecDropConstantDeps(ctx, stmt.(*ast.DropConstantStmt), deps)
 	})
 
 	// Module settings
@@ -600,8 +584,7 @@ func (e *Executor) registerFutureOverlays() {
 
 	// Database connection
 	r.RegisterFuture("CreateDatabaseConnection", func(ctx context.Context, stmt ast.Statement) error {
-		ectx := NewExecContext(nil, deps)
-		return ExecCreateDatabaseConnection(ectx, stmt.(*ast.CreateDatabaseConnectionStmt))
+		return ExecCreateDatabaseConnectionDeps(ctx, stmt.(*ast.CreateDatabaseConnectionStmt), deps)
 	})
 
 	// Java/JavaScript action CRUD
