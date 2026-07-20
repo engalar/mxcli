@@ -6,6 +6,7 @@ import (
 	"context"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
+	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 )
 
 // ────────────────────────────────────────────────────────────────────
@@ -21,18 +22,15 @@ import (
 // ── Entities ──
 
 func ExecCreateEntityDeps(ctx context.Context, s *ast.CreateEntityStmt, deps *HandlerDeps) error {
-	ectx := NewExecContext(ctx, deps)
-	return ExecCreateEntity(ectx, s)
+	return execCreateEntityGenDeps(ctx, s, deps)
 }
 
 func ExecDropEntityDeps(ctx context.Context, s *ast.DropEntityStmt, deps *HandlerDeps) error {
-	ectx := NewExecContext(ctx, deps)
-	return ExecDropEntity(ectx, s)
+	return execDropEntityGenDeps(ctx, s, deps)
 }
 
 func ExecCreateViewEntityDeps(ctx context.Context, s *ast.CreateViewEntityStmt, deps *HandlerDeps) error {
-	ectx := NewExecContext(ctx, deps)
-	return ExecCreateViewEntity(ectx, s)
+	return execCreateViewEntityGenDeps(ctx, s, deps)
 }
 
 func listEntitiesGenDeps(ctx context.Context, deps *HandlerDeps, moduleName string) error {
@@ -50,18 +48,15 @@ func describeEntityGenDeps(ctx context.Context, deps *HandlerDeps, name ast.Qual
 // ── Associations ──
 
 func ExecCreateAssociationDeps(ctx context.Context, s *ast.CreateAssociationStmt, deps *HandlerDeps) error {
-	ectx := NewExecContext(ctx, deps)
-	return ExecCreateAssociation(ectx, s)
+	return execCreateAssociationDepsImpl(ctx, s, deps)
 }
 
 func ExecAlterAssociationGenDeps(ctx context.Context, s *ast.AlterAssociationStmt, deps *HandlerDeps) error {
-	ectx := NewExecContext(ctx, deps)
-	return ExecAlterAssociationGen(ectx, s)
+	return execAlterAssociationGenDeps(ctx, s, deps)
 }
 
 func ExecDropAssociationGenDeps(ctx context.Context, s *ast.DropAssociationStmt, deps *HandlerDeps) error {
-	ectx := NewExecContext(ctx, deps)
-	return ExecDropAssociationGen(ectx, s)
+	return execDropAssociationGenDeps(ctx, s, deps)
 }
 
 func listAssociationsDeps(ctx context.Context, deps *HandlerDeps, moduleName string) error {
@@ -97,13 +92,11 @@ func describeNanoflowGenDeps(ctx context.Context, deps *HandlerDeps, name ast.Qu
 // ── Pages / Snippets / Layouts ──
 
 func ExecDropPageDeps(ctx context.Context, s *ast.DropPageStmt, deps *HandlerDeps) error {
-	ectx := NewExecContext(ctx, deps)
-	return ExecDropPage(ectx, s)
+	return execDropPageDepsImpl(ctx, s, deps)
 }
 
 func ExecDropSnippetDeps(ctx context.Context, s *ast.DropSnippetStmt, deps *HandlerDeps) error {
-	ectx := NewExecContext(ctx, deps)
-	return ExecDropSnippet(ectx, s)
+	return execDropSnippetDepsImpl(ctx, s, deps)
 }
 
 func listPagesGenDeps(ctx context.Context, deps *HandlerDeps, moduleName string) error {
@@ -133,8 +126,7 @@ func describeLayoutDeps(ctx context.Context, deps *HandlerDeps, name ast.Qualifi
 // ── Workflows ──
 
 func ExecAlterWorkflowDeps(ctx context.Context, s *ast.AlterWorkflowStmt, deps *HandlerDeps) error {
-	ectx := NewExecContext(ctx, deps)
-	return ExecAlterWorkflow(ectx, s)
+	return execAlterWorkflowDepsImpl(ctx, s, deps)
 }
 
 func listWorkflowsGenDeps(ctx context.Context, deps *HandlerDeps, moduleName string) error {
@@ -160,8 +152,7 @@ func describeJavaActionGenDeps(ctx context.Context, deps *HandlerDeps, name ast.
 }
 
 func describeJavaScriptActionGenDeps(ctx context.Context, deps *HandlerDeps, name ast.QualifiedName) error {
-	ectx := NewExecContext(ctx, deps)
-	return describeJavaScriptActionGen(ectx, name)
+	return describeJavaScriptActionGenFn(ctx, name, deps)
 }
 
 // ── Modules ──
@@ -181,15 +172,8 @@ func describeModuleDeps(ctx context.Context, deps *HandlerDeps, moduleName strin
 		deps.ImageBackend, deps.NavigationReader)
 }
 
-func execListJarDependenciesDeps(ctx context.Context, deps *HandlerDeps, inModule string) error {
-	ectx := NewExecContext(ctx, deps)
-	return execListJarDependencies(ectx, inModule)
-}
-
-func execDescribeJarDependencyDeps(ctx context.Context, deps *HandlerDeps, moduleName, coordinate string) error {
-	ectx := NewExecContext(ctx, deps)
-	return execDescribeJarDependency(ectx, moduleName, coordinate)
-}
+// execListJarDependenciesDeps and execDescribeJarDependencyDeps are
+// defined in cmd_modules.go.
 
 // ── Catalog ──
 
@@ -210,8 +194,12 @@ func listVersionDeps(ctx context.Context, deps *HandlerDeps) error {
 // ── Context / Structure ──
 
 func execShowContextDeps(ctx context.Context, deps *HandlerDeps, s *ast.ShowStmt) error {
-	ectx := NewExecContext(ctx, deps)
-	return execShowContext(ectx, s)
+	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
+		return mdlerrors.NewNotConnected()
+	}
+	return mdlerrors.NewUnsupported(
+		"SHOW CONTEXT OF has been replaced by MXGraph-based commands.\n" +
+			"Use SHOW CALLERS OF / SHOW CALLEES OF / SHOW REFERENCES TO / SHOW IMPACT OF instead.")
 }
 
 // ── Security ──
@@ -267,13 +255,11 @@ func describeDemoUserGenDeps(ctx context.Context, deps *HandlerDeps, userName st
 // ── Enumerations ──
 
 func ExecCreateEnumerationDeps(ctx context.Context, s *ast.CreateEnumerationStmt, deps *HandlerDeps) error {
-	ectx := NewExecContext(ctx, deps)
-	return ExecCreateEnumeration(ectx, s)
+	return execCreateEnumerationDepsImpl(ctx, s, deps)
 }
 
 func ExecDropEnumerationDeps(ctx context.Context, s *ast.DropEnumerationStmt, deps *HandlerDeps) error {
-	ectx := NewExecContext(ctx, deps)
-	return ExecDropEnumeration(ectx, s)
+	return execDropEnumerationDepsImpl(ctx, s, deps)
 }
 
 func listEnumerationsDeps(ctx context.Context, deps *HandlerDeps, moduleName string) error {
@@ -287,13 +273,11 @@ func describeEnumerationDeps(ctx context.Context, deps *HandlerDeps, name ast.Qu
 // ── Constants ──
 
 func ExecCreateConstantDeps(ctx context.Context, stmt *ast.CreateConstantStmt, deps *HandlerDeps) error {
-	ectx := NewExecContext(ctx, deps)
-	return ExecCreateConstant(ectx, stmt)
+	return execCreateConstantDepsImpl(ctx, stmt, deps)
 }
 
 func ExecDropConstantDeps(ctx context.Context, stmt *ast.DropConstantStmt, deps *HandlerDeps) error {
-	ectx := NewExecContext(ctx, deps)
-	return ExecDropConstant(ectx, stmt)
+	return execDropConstantDepsImpl(ctx, stmt, deps)
 }
 
 func listConstantsDeps(ctx context.Context, deps *HandlerDeps, moduleName string) error {
@@ -311,8 +295,7 @@ func describeConstantDeps(ctx context.Context, deps *HandlerDeps, name ast.Quali
 // ── Languages / Settings ──
 
 func AlterLanguageDeps(ctx context.Context, stmt *ast.AlterLanguageStmt, deps *HandlerDeps) error {
-	ectx := NewExecContext(ctx, deps)
-	return AlterLanguage(ectx, stmt)
+	return alterLanguageDepsImpl(ctx, stmt, deps)
 }
 
 func listLanguagesDeps(ctx context.Context, deps *HandlerDeps) error {
@@ -370,11 +353,6 @@ func listBusinessEventsDeps(ctx context.Context, deps *HandlerDeps, inModule str
 	return listBusinessEventsFuture(ctx, deps.Output, deps.Format, deps.ConnectionManager, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, deps.BusinessEventBackend, inModule)
 }
 
-func describeBusinessEventServiceDeps(ctx context.Context, deps *HandlerDeps, name ast.QualifiedName) error {
-	ectx := NewExecContext(ctx, deps)
-	return describeBusinessEventService(ectx, name)
-}
-
 // ── Fragments ──
 
 func listFragmentsDeps(ctx context.Context, deps *HandlerDeps) error {
@@ -388,13 +366,7 @@ func describeFragmentDeps(ctx context.Context, deps *HandlerDeps, name ast.Quali
 // ── Database Connections ──
 
 func ExecCreateDatabaseConnectionDeps(ctx context.Context, stmt *ast.CreateDatabaseConnectionStmt, deps *HandlerDeps) error {
-	ectx := NewExecContext(ctx, deps)
-	return ExecCreateDatabaseConnection(ectx, stmt)
-}
-
-func listDatabaseConnectionsDeps(ctx context.Context, deps *HandlerDeps, moduleName string) error {
-	ectx := NewExecContext(ctx, deps)
-	return listDatabaseConnections(ectx, moduleName)
+	return execCreateDatabaseConnectionDepsImpl(ctx, stmt, deps)
 }
 
 func describeDatabaseConnectionDeps(ctx context.Context, deps *HandlerDeps, name ast.QualifiedName) error {
@@ -404,162 +376,61 @@ func describeDatabaseConnectionDeps(ctx context.Context, deps *HandlerDeps, name
 // ── Image Collections ──
 
 func listImageCollectionsDeps(ctx context.Context, deps *HandlerDeps, moduleName string) error {
-	ectx := NewExecContext(ctx, deps)
-	return listImageCollections(ectx, moduleName)
+	return listImageCollectionsFn(ctx, deps.Output, deps.Format, deps, moduleName)
 }
 
 func describeImageCollectionDeps(ctx context.Context, deps *HandlerDeps, name ast.QualifiedName) error {
 	return describeImageCollectionFuture(ctx, deps.Output, deps.ImageBackend, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, name)
 }
 
-// ── Agent Editor ──
-
-func listAgentEditorModelsDeps(ctx context.Context, deps *HandlerDeps, moduleName string) error {
-	ectx := NewExecContext(ctx, deps)
-	return listAgentEditorModels(ectx, moduleName)
-}
-
-func listAgentEditorAgentsDeps(ctx context.Context, deps *HandlerDeps, moduleName string) error {
-	ectx := NewExecContext(ctx, deps)
-	return listAgentEditorAgents(ectx, moduleName)
-}
-
-func listAgentEditorKnowledgeBasesDeps(ctx context.Context, deps *HandlerDeps, moduleName string) error {
-	ectx := NewExecContext(ctx, deps)
-	return listAgentEditorKnowledgeBases(ectx, moduleName)
-}
-
-func listAgentEditorConsumedMCPServicesDeps(ctx context.Context, deps *HandlerDeps, moduleName string) error {
-	ectx := NewExecContext(ctx, deps)
-	return listAgentEditorConsumedMCPServices(ectx, moduleName)
-}
-
-func describeAgentEditorModelDeps(ctx context.Context, deps *HandlerDeps, name ast.QualifiedName) error {
-	ectx := NewExecContext(ctx, deps)
-	return describeAgentEditorModel(ectx, name)
-}
-
-func describeAgentEditorAgentDeps(ctx context.Context, deps *HandlerDeps, name ast.QualifiedName) error {
-	ectx := NewExecContext(ctx, deps)
-	return describeAgentEditorAgent(ectx, name)
-}
-
-func describeAgentEditorKnowledgeBaseDeps(ctx context.Context, deps *HandlerDeps, name ast.QualifiedName) error {
-	ectx := NewExecContext(ctx, deps)
-	return describeAgentEditorKnowledgeBase(ectx, name)
-}
-
-func describeAgentEditorConsumedMCPServiceDeps(ctx context.Context, deps *HandlerDeps, name ast.QualifiedName) error {
-	ectx := NewExecContext(ctx, deps)
-	return describeAgentEditorConsumedMCPService(ectx, name)
-}
-
 // ── REST / External Services ──
 
-func listRestClientsDeps(ctx context.Context, deps *HandlerDeps, moduleName string) error {
-	ectx := NewExecContext(ctx, deps)
-	return listRestClients(ectx, moduleName)
-}
-
 func listPublishedRestServicesDeps(ctx context.Context, deps *HandlerDeps, moduleName string) error {
-	ectx := NewExecContext(ctx, deps)
-	return listPublishedRestServices(ectx, moduleName)
+	return listPublishedRestServicesFn(ctx, deps.Output, deps.Format, deps, moduleName)
 }
 
 func listDataTransformersDeps(ctx context.Context, deps *HandlerDeps, moduleName string) error {
-	ectx := NewExecContext(ctx, deps)
-	return listDataTransformers(ectx, moduleName)
-}
-
-func describeRestClientDeps(ctx context.Context, deps *HandlerDeps, name ast.QualifiedName) error {
-	ectx := NewExecContext(ctx, deps)
-	return describeRestClient(ectx, name)
+	return listDataTransformersFn(ctx, moduleName, deps)
 }
 
 func describePublishedRestServiceDeps(ctx context.Context, deps *HandlerDeps, name ast.QualifiedName) error {
-	ectx := NewExecContext(ctx, deps)
-	return describePublishedRestService(ectx, name)
+	return describePublishedRestServiceFn(ctx, deps.Output, deps, name)
 }
 
 func describeDataTransformerDeps(ctx context.Context, deps *HandlerDeps, name ast.QualifiedName) error {
-	ectx := NewExecContext(ctx, deps)
-	return describeDataTransformer(ectx, name)
-}
-
-// ── Contracts ──
-
-func listContractEntitiesDeps(ctx context.Context, deps *HandlerDeps, name *ast.QualifiedName) error {
-	ectx := NewExecContext(ctx, deps)
-	return listContractEntities(ectx, name)
-}
-
-func listContractActionsDeps(ctx context.Context, deps *HandlerDeps, name *ast.QualifiedName) error {
-	ectx := NewExecContext(ctx, deps)
-	return listContractActions(ectx, name)
-}
-
-func listContractChannelsDeps(ctx context.Context, deps *HandlerDeps, name *ast.QualifiedName) error {
-	ectx := NewExecContext(ctx, deps)
-	return listContractChannels(ectx, name)
-}
-
-func listContractMessagesDeps(ctx context.Context, deps *HandlerDeps, name *ast.QualifiedName) error {
-	ectx := NewExecContext(ctx, deps)
-	return listContractMessages(ectx, name)
-}
-
-func describeContractEntityDeps(ctx context.Context, deps *HandlerDeps, name ast.QualifiedName, format string) error {
-	ectx := NewExecContext(ctx, deps)
-	return describeContractEntity(ectx, name, format)
-}
-
-func describeContractActionDeps(ctx context.Context, deps *HandlerDeps, name ast.QualifiedName, format string) error {
-	ectx := NewExecContext(ctx, deps)
-	return describeContractAction(ectx, name, format)
-}
-
-func describeContractMessageDeps(ctx context.Context, deps *HandlerDeps, name ast.QualifiedName) error {
-	ectx := NewExecContext(ctx, deps)
-	return describeContractMessage(ectx, name)
+	return describeDataTransformerFn(ctx, name, deps)
 }
 
 // ── JSON Structures ──
 
 func listJsonStructuresDeps(ctx context.Context, deps *HandlerDeps, moduleName string) error {
-	ectx := NewExecContext(ctx, deps)
-	return listJsonStructures(ectx, moduleName)
+	return listJsonStructuresFn(ctx, deps, moduleName)
 }
 
 func describeJsonStructureDeps(ctx context.Context, deps *HandlerDeps, name ast.QualifiedName) error {
-	ectx := NewExecContext(ctx, deps)
-	return describeJsonStructure(ectx, name)
+	return describeJsonStructureFn(ctx, deps, name)
 }
 
 // ── Import / Export Mappings ──
 
 func listImportMappingsDeps(ctx context.Context, deps *HandlerDeps, inModule string) error {
-	ectx := NewExecContext(ctx, deps)
-	return listImportMappings(ectx, inModule)
+	return listImportMappingsFn(ctx, inModule, deps)
 }
 
 func listExportMappingsDeps(ctx context.Context, deps *HandlerDeps, inModule string) error {
-	ectx := NewExecContext(ctx, deps)
-	return listExportMappings(ectx, inModule)
+	return listExportMappingsFn(ctx, inModule, deps)
 }
 
 func describeImportMappingDeps(ctx context.Context, deps *HandlerDeps, name ast.QualifiedName) error {
-	ectx := NewExecContext(ctx, deps)
-	return describeImportMapping(ectx, name)
+	return describeImportMappingFn(ctx, name, deps)
 }
 
 func describeExportMappingDeps(ctx context.Context, deps *HandlerDeps, name ast.QualifiedName) error {
-	ectx := NewExecContext(ctx, deps)
-	return describeExportMapping(ectx, name)
+	return describeExportMappingFn(ctx, name, deps)
 }
 
 // ── Widgets ──
 
 func describeWidgetDeps(ctx context.Context, deps *HandlerDeps, name ast.QualifiedName) error {
-	ectx := NewExecContext(ctx, deps)
-	return describeWidget(ectx, name)
+	return describeWidgetFn(ctx, deps.Output, deps, name)
 }

@@ -9,6 +9,7 @@
 package executor
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/mendixlabs/mxcli/mdl/types"
@@ -16,6 +17,131 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 )
+
+func listAgentEditorKnowledgeBasesDeps(ctx context.Context, deps *HandlerDeps, moduleName string) error {
+	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
+		return mdlerrors.NewNotConnected()
+	}
+
+	kbs, err := deps.AgentEditorOperator.ListAgentEditorKnowledgeBases()
+	if err != nil {
+		return mdlerrors.NewBackend("list knowledge bases", err)
+	}
+
+	h, err := GetOrBuildHierarchy(deps)
+	if err != nil {
+		return err
+	}
+
+	result := &TableResult{
+		Columns: []string{"Qualified Name", "Module", "Name", "Provider", "Key Constant", "Embedding Model"},
+	}
+
+	for _, k := range kbs {
+		modID := h.FindModuleID(k.ContainerID)
+		modName := h.GetModuleName(modID)
+		if moduleName != "" && modName != moduleName {
+			continue
+		}
+		keyConstant := ""
+		if k.Key != nil {
+			keyConstant = k.Key.QualifiedName
+		}
+		result.Rows = append(result.Rows, []any{
+			fmt.Sprintf("%s.%s", modName, k.Name),
+			modName,
+			k.Name,
+			k.Provider,
+			keyConstant,
+			k.ModelDisplayName,
+		})
+	}
+
+	result.Summary = fmt.Sprintf("(%d knowledge base(s))", len(result.Rows))
+	return writeResultTo(deps.Output, deps.Format, result)
+}
+
+func describeAgentEditorKnowledgeBaseDeps(ctx context.Context, deps *HandlerDeps, name ast.QualifiedName) error {
+	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
+		return mdlerrors.NewNotConnected()
+	}
+
+	k := findAgentEditorKnowledgeBaseDeps(deps, name.Module, name.Name)
+	if k == nil {
+		return mdlerrors.NewNotFound("knowledge base", name.String())
+	}
+
+	h, err := GetOrBuildHierarchy(deps)
+	if err != nil {
+		return err
+	}
+	modID := h.FindModuleID(k.ContainerID)
+	modName := h.GetModuleName(modID)
+	qualifiedName := fmt.Sprintf("%s.%s", modName, k.Name)
+
+	if k.Documentation != "" {
+		fmt.Fprintf(deps.Output, "/**\n * %s\n */\n", k.Documentation)
+	}
+
+	fmt.Fprintf(deps.Output, "create knowledge base %s (\n", qualifiedName)
+
+	var lines []string
+	if k.Provider != "" {
+		lines = append(lines, fmt.Sprintf("  Provider: %s", k.Provider))
+	}
+	if k.Key != nil && k.Key.QualifiedName != "" {
+		lines = append(lines, fmt.Sprintf("  Key: %s", k.Key.QualifiedName))
+	}
+	if k.ModelDisplayName != "" {
+		lines = append(lines, fmt.Sprintf("  ModelDisplayName: '%s'", escapeSQLString(k.ModelDisplayName)))
+	}
+	if k.ModelName != "" {
+		lines = append(lines, fmt.Sprintf("  ModelName: '%s'", escapeSQLString(k.ModelName)))
+	}
+	if k.KeyName != "" {
+		lines = append(lines, fmt.Sprintf("  KeyName: '%s'", escapeSQLString(k.KeyName)))
+	}
+	if k.KeyID != "" {
+		lines = append(lines, fmt.Sprintf("  KeyId: '%s'", escapeSQLString(k.KeyID)))
+	}
+	if k.Environment != "" {
+		lines = append(lines, fmt.Sprintf("  Environment: '%s'", escapeSQLString(k.Environment)))
+	}
+	if k.DeepLinkURL != "" {
+		lines = append(lines, fmt.Sprintf("  DeepLinkURL: '%s'", escapeSQLString(k.DeepLinkURL)))
+	}
+
+	for i, line := range lines {
+		if i < len(lines)-1 {
+			fmt.Fprintln(deps.Output, line+",")
+		} else {
+			fmt.Fprintln(deps.Output, line)
+		}
+	}
+
+	fmt.Fprintln(deps.Output, ");")
+	fmt.Fprintln(deps.Output, "/")
+	return nil
+}
+
+func findAgentEditorKnowledgeBaseDeps(deps *HandlerDeps, moduleName, kbName string) *types.KnowledgeBase {
+	kbs, err := deps.AgentEditorOperator.ListAgentEditorKnowledgeBases()
+	if err != nil {
+		return nil
+	}
+	h, err := GetOrBuildHierarchy(deps)
+	if err != nil {
+		return nil
+	}
+	for _, k := range kbs {
+		modID := h.FindModuleID(k.ContainerID)
+		modName := h.GetModuleName(modID)
+		if k.Name == kbName && modName == moduleName {
+			return k
+		}
+	}
+	return nil
+}
 
 // listAgentEditorKnowledgeBases handles SHOW KNOWLEDGE BASES [IN module].
 func listAgentEditorKnowledgeBases(ctx *ExecContext, moduleName string) error {

@@ -821,6 +821,79 @@ func describeModule(ctx *ExecContext, moduleName string, withAll bool) error {
 // =============================================================================
 
 // execListJarDependencies implements: LIST JAR DEPENDENCIES [IN module]
+func execListJarDependenciesDeps(ctx context.Context, deps *HandlerDeps, inModule string) error {
+	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
+		return mdlerrors.NewNotConnected()
+	}
+
+	modules, err := deps.ModuleLister.ListModules()
+	if err != nil {
+		return mdlerrors.NewBackend("list modules", err)
+	}
+
+	type row struct {
+		module   string
+		group    string
+		artifact string
+		version  string
+		included string
+	}
+	var rows []row
+
+	for _, m := range modules {
+		if m.Name == "System" {
+			continue
+		}
+		if inModule != "" && m.Name != inModule {
+			continue
+		}
+		ms, err := deps.ModuleSettingsReader.GetModuleSettings(m.ID)
+		if err != nil {
+			continue
+		}
+		for _, dep := range ms.JarDependencies {
+			inc := "yes"
+			if !dep.IsIncluded {
+				inc = "no"
+			}
+			rows = append(rows, row{m.Name, dep.GroupID, dep.ArtifactID, dep.Version, inc})
+		}
+	}
+
+	if len(rows) == 0 {
+		fmt.Fprintln(deps.Output, "(no jar dependencies)")
+		return nil
+	}
+
+	colModule, colGroup, colArtifact, colVersion := 6, 5, 8, 7
+	for _, r := range rows {
+		if len(r.module) > colModule {
+			colModule = len(r.module)
+		}
+		if len(r.group) > colGroup {
+			colGroup = len(r.group)
+		}
+		if len(r.artifact) > colArtifact {
+			colArtifact = len(r.artifact)
+		}
+		if len(r.version) > colVersion {
+			colVersion = len(r.version)
+		}
+	}
+
+	fmtLine := fmt.Sprintf("%%-%ds  %%-%ds  %%-%ds  %%-%ds  %%s\n",
+		colModule, colGroup, colArtifact, colVersion)
+	sep := func(n int) string { return strings.Repeat("-", n) }
+	fmt.Fprintf(deps.Output, fmtLine, "Module", "Group", "Artifact", "Version", "Included")
+	fmt.Fprintf(deps.Output, fmtLine,
+		sep(colModule), sep(colGroup), sep(colArtifact), sep(colVersion), "--------")
+	for _, r := range rows {
+		fmt.Fprintf(deps.Output, fmtLine, r.module, r.group, r.artifact, r.version, r.included)
+	}
+	fmt.Fprintf(deps.Output, "(%d jar %s)\n", len(rows), pluralize(len(rows), "dependency", "dependencies"))
+	return nil
+}
+
 func execListJarDependencies(ctx *ExecContext, inModule string) error {
 	if !ctx.Connected() {
 		return mdlerrors.NewNotConnected()
@@ -932,6 +1005,47 @@ func execDescribeJarDependency(ctx *ExecContext, moduleName, coordinate string) 
 			fmt.Fprintf(ctx.Output, "alter module %s set jar dependency '%s:%s'\n",
 				moduleName, dep.GroupID, dep.ArtifactID)
 			fmt.Fprintf(ctx.Output, "  add exclusion '%s:%s';\n", excl.GroupID, excl.ArtifactID)
+		}
+	}
+	return nil
+}
+
+func execDescribeJarDependencyDeps(ctx context.Context, deps *HandlerDeps, moduleName, coordinate string) error {
+	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
+		return mdlerrors.NewNotConnected()
+	}
+
+	module, err := deps.ModuleLister.GetModuleByName(moduleName)
+	if err != nil {
+		return fmt.Errorf("module '%s' not found: %w", moduleName, err)
+	}
+
+	ms, err := deps.ModuleSettingsReader.GetModuleSettings(module.ID)
+	if err != nil {
+		return fmt.Errorf("failed to read module settings: %w", err)
+	}
+
+	dep := jarDepByCoord(ms.JarDependencies, coordinate)
+	if dep == nil {
+		return fmt.Errorf("jar dependency '%s' not found in module '%s'", coordinate, moduleName)
+	}
+
+	inc := "true"
+	if !dep.IsIncluded {
+		inc = "false"
+	}
+	fmt.Fprintf(deps.Output, "alter module %s\n", moduleName)
+	fmt.Fprintf(deps.Output, "  add jar dependency (\n")
+	fmt.Fprintf(deps.Output, "    group    = '%s',\n", dep.GroupID)
+	fmt.Fprintf(deps.Output, "    artifact = '%s',\n", dep.ArtifactID)
+	fmt.Fprintf(deps.Output, "    version  = '%s',\n", dep.Version)
+	fmt.Fprintf(deps.Output, "    included = %s,\n", inc)
+	fmt.Fprintf(deps.Output, "  );\n")
+	if len(dep.Exclusions) > 0 {
+		for _, excl := range dep.Exclusions {
+			fmt.Fprintf(deps.Output, "alter module %s set jar dependency '%s:%s'\n",
+				moduleName, dep.GroupID, dep.ArtifactID)
+			fmt.Fprintf(deps.Output, "  add exclusion '%s:%s';\n", excl.GroupID, excl.ArtifactID)
 		}
 	}
 	return nil

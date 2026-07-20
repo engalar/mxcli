@@ -4,6 +4,7 @@
 package executor
 
 import (
+	"context"
 	"fmt"
 	"sort"
 	"strings"
@@ -14,6 +15,267 @@ import (
 	"github.com/mendixlabs/mxcli/modelsdk/element"
 	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 )
+
+// execCreateAssociationDepsImpl is the HandlerDeps implementation for CREATE ASSOCIATION.
+func execCreateAssociationDepsImpl(ctx context.Context, s *ast.CreateAssociationStmt, deps *HandlerDeps) error {
+	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
+		return mdlerrors.NewNotConnected()
+	}
+
+	module, err := findOrCreateModuleDeps(ctx, deps, s.Name.Module)
+	if err != nil {
+		return err
+	}
+
+	dm, err := getDomainModelGenCachedDeps(ctx, deps, module.ID)
+	if err != nil {
+		return mdlerrors.NewBackend("get domain model", err)
+	}
+	if dm == nil {
+		return mdlerrors.NewBackend("get domain model", nil)
+	}
+
+	parentModule := s.Parent.Module
+	if parentModule == "" {
+		parentModule = s.Name.Module
+	}
+	parentEntity, _, err := findEntityInDMsDeps(ctx, deps, ast.QualifiedName{Module: parentModule, Name: s.Parent.Name})
+	if err != nil {
+		return mdlerrors.NewBackend("get parent entity", err)
+	}
+	if parentEntity == nil {
+		return mdlerrors.NewNotFound("parent entity", s.Parent.String())
+	}
+	parentID := element.ID(parentEntity.ID())
+
+	childModule := s.Child.Module
+	if childModule == "" {
+		childModule = s.Name.Module
+	}
+	childEntity, _, err := findEntityInDMsDeps(ctx, deps, ast.QualifiedName{Module: childModule, Name: s.Child.Name})
+	if err != nil {
+		return mdlerrors.NewBackend("get child entity", err)
+	}
+	if childEntity == nil {
+		return mdlerrors.NewNotFound("child entity", s.Child.String())
+	}
+	childID := element.ID(childEntity.ID())
+
+	parentPersistable := entityPersistableGen(parentEntity)
+	childPersistable := entityPersistableGen(childEntity)
+	if parentPersistable && !childPersistable {
+		return mdlerrors.NewValidationf(
+			"association owner must be the non-persistent entity: %q is persistable but %q is non-persistent — reverse the direction: from %s to %s",
+			s.Parent.String(), s.Child.String(), s.Child.String(), s.Parent.String(),
+		)
+	}
+
+	isCrossModule := parentModule != childModule
+
+	if s.CreateOrModify {
+		if !isCrossModule {
+			for _, assocElem := range dm.AssociationsItems() {
+				assoc, ok := assocElem.(*genDm.Association)
+				if !ok || assoc.Name() != s.Name.Name {
+					continue
+				}
+				assoc.SetType(astAssociationTypeStringGen(s))
+				assoc.SetOwner(astAssociationOwnerStringGen(s))
+				assoc.SetStorageFormat(astAssociationStorageStringGen(s))
+				assoc.SetDeleteBehavior(astAssociationDeleteBehaviorGen(s))
+				if doc := associationDocumentation(s); doc != "" {
+					assoc.SetDocumentation(doc)
+				}
+				if err := deps.DomainModelWriter.UpdateDomainModelGen(dm); err != nil {
+					return mdlerrors.NewBackend("update association", err)
+				}
+				setDomainModelGenCachedDeps(deps, module.ID, dm)
+				invalidateHierarchyDeps(deps)
+				invalidateDomainModelsCacheDeps(deps)
+				trackModifiedDomainModelDeps(deps, module.ID, module.Name)
+				fmt.Fprintf(deps.Output, "Modified association: %s\n", s.Name)
+				return nil
+			}
+		} else {
+			childRef := childModule + "." + s.Child.Name
+			for _, crossElem := range dm.CrossAssociationsItems() {
+				ca, ok := crossElem.(*genDm.CrossAssociation)
+				if !ok || ca.Name() != s.Name.Name {
+					continue
+				}
+				ca.SetType(AstAssociationTypeStringGen(s))
+				ca.SetOwner(AstAssociationOwnerStringGen(s))
+				ca.SetStorageFormat(AstAssociationStorageStringGen(s))
+				ca.SetDeleteBehavior(AstAssociationDeleteBehaviorGen(s))
+				ca.SetChildQualifiedName(childRef)
+				if doc := associationDocumentation(s); doc != "" {
+					ca.SetDocumentation(doc)
+				}
+				if err := deps.DomainModelWriter.UpdateDomainModelGen(dm); err != nil {
+					return mdlerrors.NewBackend("update cross-module association", err)
+				}
+				setDomainModelGenCachedDeps(deps, module.ID, dm)
+				invalidateHierarchyDeps(deps)
+				invalidateDomainModelsCacheDeps(deps)
+				trackModifiedDomainModelDeps(deps, module.ID, module.Name)
+				fmt.Fprintf(deps.Output, "Modified association: %s\n", s.Name)
+				return nil
+			}
+		}
+	}
+
+	if isCrossModule {
+		if !s.CreateOrModify {
+			for _, crossElem := range dm.CrossAssociationsItems() {
+				ca, ok := crossElem.(*genDm.CrossAssociation)
+				if ok && ca.Name() == s.Name.Name {
+					return mdlerrors.NewAlreadyExists("association", s.Name.String())
+				}
+			}
+			for _, assocElem := range dm.AssociationsItems() {
+				assoc, ok := assocElem.(*genDm.Association)
+				if ok && assoc.Name() == s.Name.Name {
+					return mdlerrors.NewAlreadyExists("association", s.Name.String())
+				}
+			}
+		}
+		ca := genDm.NewCrossAssociation()
+		ca.SetName(s.Name.Name)
+		ca.SetParentID(parentID)
+		ca.SetChildQualifiedName(childModule + "." + s.Child.Name)
+		ca.SetType(astAssociationTypeStringGen(s))
+		ca.SetOwner(astAssociationOwnerStringGen(s))
+		ca.SetStorageFormat(astAssociationStorageStringGen(s))
+		ca.SetDeleteBehavior(astAssociationDeleteBehaviorGen(s))
+		if doc := associationDocumentation(s); doc != "" {
+			ca.SetDocumentation(doc)
+		}
+		dm.AddCrossAssociations(ca)
+		if err := deps.DomainModelWriter.UpdateDomainModelGen(dm); err != nil {
+			return mdlerrors.NewBackend("create cross-module association", err)
+		}
+		setDomainModelGenCachedDeps(deps, module.ID, dm)
+	} else {
+		if !s.CreateOrModify {
+			for _, assocElem := range dm.AssociationsItems() {
+				assoc, ok := assocElem.(*genDm.Association)
+				if ok && assoc.Name() == s.Name.Name {
+					return mdlerrors.NewAlreadyExists("association", s.Name.String())
+				}
+			}
+			for _, crossElem := range dm.CrossAssociationsItems() {
+				ca, ok := crossElem.(*genDm.CrossAssociation)
+				if ok && ca.Name() == s.Name.Name {
+					return mdlerrors.NewAlreadyExists("association", s.Name.String())
+				}
+			}
+		}
+		assoc := astToAssociationGen(s, parentID, childID)
+		if doc := associationDocumentation(s); doc != "" {
+			assoc.SetDocumentation(doc)
+		}
+		if err := deps.DomainModelWriter.CreateAssociationGen(model.ID(dm.ID()), assoc); err != nil {
+			return mdlerrors.NewBackend("create association", err)
+		}
+		invalidateDomainModelGenForModuleDeps(deps, module.ID)
+	}
+
+	invalidateHierarchyDeps(deps)
+	invalidateDomainModelsCacheDeps(deps)
+
+	if freshDM, err := getDomainModelGenCachedDeps(ctx, deps, module.ID); err == nil && freshDM != nil {
+		if err := deps.DomainModelWriter.RelayoutDomainModel(model.ID(freshDM.ID())); err != nil {
+			fmt.Fprintf(deps.Output, "warning: auto-layout failed: %v\n", err)
+		} else {
+			invalidateDomainModelGenForModuleDeps(deps, module.ID)
+		}
+	}
+
+	if freshDM, err := getDomainModelGenCachedDeps(ctx, deps, module.ID); err == nil && freshDM != nil {
+		if msgs, err := deps.SecurityEntityAccessManager.ReconcileMemberAccesses(model.ID(freshDM.ID()), module.Name); err == nil {
+			for _, msg := range msgs {
+				fmt.Fprintf(deps.Output, "  reconciled: %s\n", msg)
+			}
+		}
+	}
+
+	trackModifiedDomainModelDeps(deps, module.ID, module.Name)
+	fmt.Fprintf(deps.Output, "Created association: %s\n", s.Name)
+	return nil
+}
+
+// findEntityInDMsDeps finds a gen entity by qualified name across all domain models (HandlerDeps version).
+func findEntityInDMsDeps(ctx context.Context, deps *HandlerDeps, qn ast.QualifiedName) (*genDm.Entity, string, error) {
+	pairs, err := listDomainModelsWithContainerGenDeps(ctx, deps)
+	if err != nil {
+		return nil, "", err
+	}
+	mods, err := deps.ModuleLister.ListModules()
+	if err != nil {
+		return nil, "", err
+	}
+	moduleNames := make(map[model.ID]string, len(mods))
+	for _, m := range mods {
+		moduleNames[m.ID] = m.Name
+	}
+	for _, p := range pairs {
+		if p.DM == nil {
+			continue
+		}
+		modName := moduleNames[p.ContainerID]
+		if modName != qn.Module {
+			continue
+		}
+		for _, e := range p.DM.EntitiesItems() {
+			entity, ok := e.(*genDm.Entity)
+			if !ok {
+				continue
+			}
+			if entity.Name() == qn.Name {
+				return entity, modName, nil
+			}
+		}
+	}
+	return nil, "", nil
+}
+
+// listDomainModelsWithContainerGenDeps is the HandlerDeps version of listDomainModelsWithContainerGen.
+func listDomainModelsWithContainerGenDeps(ctx context.Context, deps *HandlerDeps) ([]DomainModelGenWithContainer, error) {
+	if deps == nil || deps.DomainModels == nil {
+		return nil, nil
+	}
+	if deps.Cache != nil && deps.Cache.domainModelsWithContainerGen != nil {
+		return deps.Cache.domainModelsWithContainerGen, nil
+	}
+
+	mods, err := deps.ModuleLister.ListModules()
+	if err != nil {
+		return nil, err
+	}
+	moduleIDs := make(map[model.ID]bool, len(mods))
+	for _, m := range mods {
+		moduleIDs[m.ID] = true
+	}
+
+	pairs, err := deps.DomainModels.ListAllWithContainerID()
+	if err != nil {
+		return nil, err
+	}
+	out := make([]DomainModelGenWithContainer, 0, len(pairs))
+	for _, p := range pairs {
+		if p.DM == nil {
+			continue
+		}
+		if !moduleIDs[p.ContainerID] {
+			continue
+		}
+		out = append(out, DomainModelGenWithContainer{DM: p.DM, ContainerID: p.ContainerID})
+	}
+	if deps.Cache != nil {
+		deps.Cache.domainModelsWithContainerGen = out
+	}
+	return out, nil
+}
 
 // ExecCreateAssociation handles CREATE ASSOCIATION statements.
 func ExecCreateAssociation(ctx *ExecContext, s *ast.CreateAssociationStmt) error {

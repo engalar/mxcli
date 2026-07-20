@@ -8,7 +8,9 @@
 package executor
 
 import (
+	"context"
 	"fmt"
+	"io"
 	"strings"
 
 	"github.com/mendixlabs/mxcli/mdl/types"
@@ -16,6 +18,227 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 )
+
+func listAgentEditorAgentsDeps(ctx context.Context, deps *HandlerDeps, moduleName string) error {
+	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
+		return mdlerrors.NewNotConnected()
+	}
+
+	agents, err := deps.AgentEditorOperator.ListAgentEditorAgents()
+	if err != nil {
+		return mdlerrors.NewBackend("list agents", err)
+	}
+
+	h, err := GetOrBuildHierarchy(deps)
+	if err != nil {
+		return err
+	}
+
+	result := &TableResult{
+		Columns: []string{"Qualified Name", "Module", "Name", "Usage", "Model", "Tools", "KBs"},
+	}
+
+	for _, a := range agents {
+		modID := h.FindModuleID(a.ContainerID)
+		modName := h.GetModuleName(modID)
+		if moduleName != "" && modName != moduleName {
+			continue
+		}
+		modelName := ""
+		if a.Model != nil {
+			modelName = a.Model.QualifiedName
+		}
+		result.Rows = append(result.Rows, []any{
+			fmt.Sprintf("%s.%s", modName, a.Name),
+			modName,
+			a.Name,
+			a.UsageType,
+			modelName,
+			len(a.Tools),
+			len(a.KBTools),
+		})
+	}
+
+	result.Summary = fmt.Sprintf("(%d agent(s))", len(result.Rows))
+	return writeResultTo(deps.Output, deps.Format, result)
+}
+
+func describeAgentEditorAgentDeps(ctx context.Context, deps *HandlerDeps, name ast.QualifiedName) error {
+	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
+		return mdlerrors.NewNotConnected()
+	}
+
+	a := findAgentEditorAgentDeps(deps, name.Module, name.Name)
+	if a == nil {
+		return mdlerrors.NewNotFound("agent", name.String())
+	}
+
+	h, err := GetOrBuildHierarchy(deps)
+	if err != nil {
+		return err
+	}
+	modID := h.FindModuleID(a.ContainerID)
+	modName := h.GetModuleName(modID)
+	qualifiedName := fmt.Sprintf("%s.%s", modName, a.Name)
+
+	if a.Documentation != "" {
+		fmt.Fprintf(deps.Output, "/**\n * %s\n */\n", a.Documentation)
+	}
+
+	fmt.Fprintf(deps.Output, "create agent %s (\n", qualifiedName)
+
+	var lines []string
+	if a.UsageType != "" {
+		lines = append(lines, fmt.Sprintf("  UsageType: %s", a.UsageType))
+	}
+	if a.Description != "" {
+		lines = append(lines, fmt.Sprintf("  Description: '%s'", escapeSQLString(a.Description)))
+	}
+	if a.Model != nil && a.Model.QualifiedName != "" {
+		lines = append(lines, fmt.Sprintf("  Model: %s", a.Model.QualifiedName))
+	}
+	if a.Entity != nil && a.Entity.QualifiedName != "" {
+		lines = append(lines, fmt.Sprintf("  Entity: %s", a.Entity.QualifiedName))
+	}
+	if len(a.Variables) > 0 {
+		var parts []string
+		for _, v := range a.Variables {
+			kind := "String"
+			if v.IsAttributeInEntity {
+				kind = "EntityAttribute"
+			}
+			parts = append(parts, fmt.Sprintf("\"%s\": %s", v.Key, kind))
+		}
+		lines = append(lines, fmt.Sprintf("  Variables: (%s)", strings.Join(parts, ", ")))
+	}
+	if a.MaxTokens != nil {
+		lines = append(lines, fmt.Sprintf("  MaxTokens: %d", *a.MaxTokens))
+	}
+	if a.ToolChoice != "" {
+		lines = append(lines, fmt.Sprintf("  ToolChoice: %s", a.ToolChoice))
+	}
+	if a.Temperature != nil {
+		lines = append(lines, fmt.Sprintf("  Temperature: %g", *a.Temperature))
+	}
+	if a.TopP != nil {
+		lines = append(lines, fmt.Sprintf("  TopP: %g", *a.TopP))
+	}
+	if a.SystemPrompt != "" {
+		lines = append(lines, fmt.Sprintf("  SystemPrompt: %s", formatAgentString(a.SystemPrompt)))
+	}
+	if a.UserPrompt != "" {
+		lines = append(lines, fmt.Sprintf("  UserPrompt: %s", formatAgentString(a.UserPrompt)))
+	}
+
+	for i, line := range lines {
+		if i < len(lines)-1 {
+			fmt.Fprintln(deps.Output, line+",")
+		} else {
+			fmt.Fprintln(deps.Output, line)
+		}
+	}
+
+	hasBody := len(a.Tools) > 0 || len(a.KBTools) > 0
+	if hasBody {
+		fmt.Fprintln(deps.Output, ")")
+		fmt.Fprintln(deps.Output, "{")
+
+		for i, t := range a.Tools {
+			emitToolBlockDeps(deps.Output, t)
+			if i < len(a.Tools)-1 || len(a.KBTools) > 0 {
+				fmt.Fprintln(deps.Output)
+			}
+		}
+		for i, kb := range a.KBTools {
+			emitKBBlockDeps(deps.Output, kb)
+			if i < len(a.KBTools)-1 {
+				fmt.Fprintln(deps.Output)
+			}
+		}
+
+		fmt.Fprintln(deps.Output, "};")
+	} else {
+		fmt.Fprintln(deps.Output, ");")
+	}
+	fmt.Fprintln(deps.Output, "/")
+	return nil
+}
+
+func emitToolBlockDeps(w io.Writer, t types.AgentTool) {
+	switch t.ToolType {
+	case "mcp":
+		if t.Document == nil {
+			return
+		}
+		fmt.Fprintf(w, "  mcp service %s {\n", t.Document.QualifiedName)
+		fmt.Fprintf(w, "    Enabled: %t\n", t.Enabled)
+		if t.Description != "" {
+			fmt.Fprintf(w, "    Description: '%s'\n", escapeSQLString(t.Description))
+		}
+		fmt.Fprintln(w, "  }")
+	default:
+		name := t.Name
+		if name == "" {
+			name = "Tool_" + strings.ReplaceAll(t.ID, "-", "")[:8]
+		}
+		fmt.Fprintf(w, "  tool %s {\n", name)
+		if t.ToolType != "" {
+			fmt.Fprintf(w, "    ToolType: %s,\n", t.ToolType)
+		}
+		if t.Document != nil && t.Document.QualifiedName != "" {
+			fmt.Fprintf(w, "    Document: %s,\n", t.Document.QualifiedName)
+		}
+		fmt.Fprintf(w, "    Enabled: %t", t.Enabled)
+		if t.Description != "" {
+			fmt.Fprintln(w, ",")
+			fmt.Fprintf(w, "    Description: '%s'\n", escapeSQLString(t.Description))
+		} else {
+			fmt.Fprintln(w)
+		}
+		fmt.Fprintln(w, "  }")
+	}
+}
+
+func emitKBBlockDeps(w io.Writer, kb types.AgentKBTool) {
+	name := kb.Name
+	if name == "" {
+		name = "KB_" + strings.ReplaceAll(kb.ID, "-", "")[:8]
+	}
+	fmt.Fprintf(w, "  knowledge base %s {\n", name)
+	if kb.Document != nil && kb.Document.QualifiedName != "" {
+		fmt.Fprintf(w, "    Source: %s,\n", kb.Document.QualifiedName)
+	}
+	if kb.CollectionIdentifier != "" {
+		fmt.Fprintf(w, "    Collection: '%s',\n", escapeSQLString(kb.CollectionIdentifier))
+	}
+	if kb.MaxResults != 0 {
+		fmt.Fprintf(w, "    MaxResults: %d,\n", kb.MaxResults)
+	}
+	if kb.Description != "" {
+		fmt.Fprintf(w, "    Description: '%s',\n", escapeSQLString(kb.Description))
+	}
+	fmt.Fprintf(w, "    Enabled: %t\n", kb.Enabled)
+	fmt.Fprintln(w, "  }")
+}
+
+func findAgentEditorAgentDeps(deps *HandlerDeps, moduleName, agentName string) *types.Agent {
+	agents, err := deps.AgentEditorOperator.ListAgentEditorAgents()
+	if err != nil {
+		return nil
+	}
+	h, err := GetOrBuildHierarchy(deps)
+	if err != nil {
+		return nil
+	}
+	for _, a := range agents {
+		modID := h.FindModuleID(a.ContainerID)
+		modName := h.GetModuleName(modID)
+		if a.Name == agentName && modName == moduleName {
+			return a
+		}
+	}
+	return nil
+}
 
 // listAgentEditorAgents handles SHOW AGENTS [IN module].
 func listAgentEditorAgents(ctx *ExecContext, moduleName string) error {

@@ -13,6 +13,119 @@ import (
 	"github.com/mendixlabs/mxcli/model"
 )
 
+// execCreateConstantDepsImpl is the HandlerDeps implementation for CREATE CONSTANT.
+func execCreateConstantDepsImpl(ctx context.Context, stmt *ast.CreateConstantStmt, deps *HandlerDeps) error {
+	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
+		return mdlerrors.NewNotConnectedWrite()
+	}
+
+	if stmt.Name.Module == "" {
+		return mdlerrors.NewValidation("module name required for constant: use create constant Module.ConstantName")
+	}
+
+	module, err := findOrCreateModuleDeps(ctx, deps, stmt.Name.Module)
+	if err != nil {
+		return err
+	}
+
+	constType := astDataTypeToConstantDataType(stmt.DataType)
+
+	defaultValue := ""
+	if stmt.DefaultValue != nil {
+		defaultValue = fmt.Sprintf("%v", stmt.DefaultValue)
+	}
+
+	existingConstants, err := deps.ConstantReader.ListConstants()
+	if err == nil {
+		h, _ := GetOrBuildHierarchy(deps)
+		for _, c := range existingConstants {
+			modID := h.FindModuleID(c.ContainerID)
+			modName := h.GetModuleName(modID)
+			if strings.EqualFold(modName, stmt.Name.Module) && strings.EqualFold(c.Name, stmt.Name.Name) {
+				if stmt.CreateOrModify {
+					if stmt.Comment != "" {
+						c.Documentation = stmt.Comment
+					} else {
+						c.Documentation = stmt.Documentation
+					}
+					c.Type = constType
+					c.DefaultValue = defaultValue
+					c.ExposedToClient = stmt.ExposedToClient
+					if err := deps.ConstantWriter.UpdateConstant(c); err != nil {
+						return mdlerrors.NewBackend("update constant", err)
+					}
+					invalidateHierarchyDeps(deps)
+					fmt.Fprintf(deps.Output, "Modified constant: %s.%s\n", modName, c.Name)
+					return nil
+				}
+				return mdlerrors.NewAlreadyExistsMsg("constant", modName+"."+c.Name, fmt.Sprintf("constant already exists: %s.%s (use create or modify to update)", modName, c.Name))
+			}
+		}
+	}
+
+	doc := stmt.Comment
+	if doc == "" {
+		doc = stmt.Documentation
+	}
+
+	containerID := module.ID
+	if stmt.Folder != "" {
+		folderID, err := resolveFolderDeps(deps, module.ID, stmt.Folder, nil)
+		if err != nil {
+			return mdlerrors.NewBackend(fmt.Sprintf("resolve folder %s", stmt.Folder), err)
+		}
+		containerID = folderID
+	}
+
+	constant := &model.Constant{
+		ContainerID:     containerID,
+		Name:            stmt.Name.Name,
+		Documentation:   doc,
+		Type:            constType,
+		DefaultValue:    defaultValue,
+		ExposedToClient: stmt.ExposedToClient,
+	}
+
+	if err := deps.ConstantWriter.CreateConstant(constant); err != nil {
+		return mdlerrors.NewBackend("create constant", err)
+	}
+	invalidateHierarchyDeps(deps)
+	fmt.Fprintf(deps.Output, "Created constant: %s.%s\n", stmt.Name.Module, stmt.Name.Name)
+	return nil
+}
+
+// execDropConstantDepsImpl is the HandlerDeps implementation for DROP CONSTANT.
+func execDropConstantDepsImpl(ctx context.Context, stmt *ast.DropConstantStmt, deps *HandlerDeps) error {
+	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
+		return mdlerrors.NewNotConnectedWrite()
+	}
+
+	constants, err := deps.ConstantReader.ListConstants()
+	if err != nil {
+		return mdlerrors.NewBackend("list constants", err)
+	}
+
+	h, err := GetOrBuildHierarchy(deps)
+	if err != nil {
+		return mdlerrors.NewBackend("build hierarchy", err)
+	}
+
+	for _, c := range constants {
+		modID := h.FindModuleID(c.ContainerID)
+		modName := h.GetModuleName(modID)
+		if strings.EqualFold(modName, stmt.Name.Module) && strings.EqualFold(c.Name, stmt.Name.Name) {
+			if err := deps.ConstantWriter.DeleteConstant(c.ID); err != nil {
+				return mdlerrors.NewBackend("drop constant", err)
+			}
+			invalidateHierarchyDeps(deps)
+			fmt.Fprintf(deps.Output, "Dropped constant: %s.%s\n", modName, c.Name)
+			return nil
+		}
+	}
+
+	return mdlerrors.NewNotFound("constant", stmt.Name.String())
+}
+
 // listConstants handles SHOW CONSTANTS command.
 func listConstants(ctx *ExecContext, moduleName string) error {
 	constants, err := ctx.ConstantReader.ListConstants()

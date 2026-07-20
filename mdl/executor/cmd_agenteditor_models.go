@@ -249,6 +249,133 @@ func resolveConstantRef(ctx *ExecContext, name ast.QualifiedName) (*types.Consta
 }
 
 // findAgentEditorModel looks up a model by module and name.
+func listAgentEditorModelsDeps(ctx context.Context, deps *HandlerDeps, moduleName string) error {
+	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
+		return mdlerrors.NewNotConnected()
+	}
+
+	models, err := deps.AgentEditorOperator.ListAgentEditorModels()
+	if err != nil {
+		return mdlerrors.NewBackend("list models", err)
+	}
+
+	h, err := GetOrBuildHierarchy(deps)
+	if err != nil {
+		return err
+	}
+
+	result := &TableResult{
+		Columns: []string{"Qualified Name", "Module", "Name", "Provider", "Key Constant", "Display Name"},
+	}
+
+	for _, m := range models {
+		modID := h.FindModuleID(m.ContainerID)
+		modName := h.GetModuleName(modID)
+		if moduleName != "" && modName != moduleName {
+			continue
+		}
+
+		keyConstant := ""
+		if m.Key != nil {
+			keyConstant = m.Key.QualifiedName
+		}
+
+		result.Rows = append(result.Rows, []any{
+			fmt.Sprintf("%s.%s", modName, m.Name),
+			modName,
+			m.Name,
+			m.Provider,
+			keyConstant,
+			m.DisplayName,
+		})
+	}
+
+	result.Summary = fmt.Sprintf("(%d model(s))", len(result.Rows))
+	return writeResultTo(deps.Output, deps.Format, result)
+}
+
+func describeAgentEditorModelDeps(ctx context.Context, deps *HandlerDeps, name ast.QualifiedName) error {
+	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
+		return mdlerrors.NewNotConnected()
+	}
+
+	m := findAgentEditorModelDeps(deps, name.Module, name.Name)
+	if m == nil {
+		return mdlerrors.NewNotFound("model", name.String())
+	}
+
+	h, err := GetOrBuildHierarchy(deps)
+	if err != nil {
+		return err
+	}
+	modID := h.FindModuleID(m.ContainerID)
+	modName := h.GetModuleName(modID)
+	qualifiedName := fmt.Sprintf("%s.%s", modName, m.Name)
+
+	if m.Documentation != "" {
+		fmt.Fprintf(deps.Output, "/**\n * %s\n */\n", m.Documentation)
+	}
+
+	fmt.Fprintf(deps.Output, "create model %s (\n", qualifiedName)
+
+	var lines []string
+	if m.Provider != "" {
+		lines = append(lines, fmt.Sprintf("  Provider: %s", m.Provider))
+	}
+	if m.Key != nil && m.Key.QualifiedName != "" {
+		lines = append(lines, fmt.Sprintf("  Key: %s", m.Key.QualifiedName))
+	}
+	if m.DisplayName != "" {
+		lines = append(lines, fmt.Sprintf("  DisplayName: '%s'", escapeSQLString(m.DisplayName)))
+	}
+	if m.KeyName != "" {
+		lines = append(lines, fmt.Sprintf("  KeyName: '%s'", escapeSQLString(m.KeyName)))
+	}
+	if m.KeyID != "" {
+		lines = append(lines, fmt.Sprintf("  KeyId: '%s'", escapeSQLString(m.KeyID)))
+	}
+	if m.Environment != "" {
+		lines = append(lines, fmt.Sprintf("  Environment: '%s'", escapeSQLString(m.Environment)))
+	}
+	if m.ResourceName != "" {
+		lines = append(lines, fmt.Sprintf("  ResourceName: '%s'", escapeSQLString(m.ResourceName)))
+	}
+	if m.DeepLinkURL != "" {
+		lines = append(lines, fmt.Sprintf("  DeepLinkURL: '%s'", escapeSQLString(m.DeepLinkURL)))
+	}
+
+	for i, line := range lines {
+		if i < len(lines)-1 {
+			fmt.Fprintln(deps.Output, line+",")
+		} else {
+			fmt.Fprintln(deps.Output, line)
+		}
+	}
+
+	fmt.Fprintln(deps.Output, ");")
+	fmt.Fprintln(deps.Output, "/")
+	return nil
+}
+
+func findAgentEditorModelDeps(deps *HandlerDeps, moduleName, modelName string) *types.Model {
+	models, err := deps.AgentEditorOperator.ListAgentEditorModels()
+	if err != nil {
+		return nil
+	}
+	h, err := GetOrBuildHierarchy(deps)
+	if err != nil {
+		return nil
+	}
+	for _, m := range models {
+		modID := h.FindModuleID(m.ContainerID)
+		modName := h.GetModuleName(modID)
+		if m.Name == modelName && modName == moduleName {
+			return m
+		}
+	}
+	return nil
+}
+
 func findAgentEditorModel(ctx *ExecContext, moduleName, modelName string) *types.Model {
 	models, err := ctx.AgentEditorOperator.ListAgentEditorModels()
 	if err != nil {

@@ -12,6 +12,8 @@
 package executor
 
 import (
+	"context"
+
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 	"github.com/mendixlabs/mxcli/model"
@@ -179,6 +181,84 @@ func invalidatePagesGenCache(ctx *ExecContext) {
 // pages.PageParameter.EntityName fallback chain. Returns "" when the
 // parameter is a primitive type (caller dispatches to MDL primitives via
 // pageParamTypeMDL or similar) or when no entity is referenced.
+// listPagesWithContainerGenDeps is the HandlerDeps version of listPagesWithContainerGen.
+func listPagesWithContainerGenDeps(ctx context.Context, deps *HandlerDeps) ([]ContainerWithGen[*genPg.Page], error) {
+	if deps == nil || deps.PageRepo == nil {
+		return nil, nil
+	}
+	if deps.Cache != nil && deps.Cache.pagesWithContainerGen != nil {
+		return deps.Cache.pagesWithContainerGen, nil
+	}
+
+	all, err := deps.PageRepo.ListAll()
+	if err != nil {
+		return nil, err
+	}
+	filtered := all[:0]
+	for _, p := range all {
+		if p != nil {
+			filtered = append(filtered, p)
+		}
+	}
+
+	var out []ContainerWithGen[*genPg.Page]
+	for _, p := range filtered {
+		cid, err := deps.PageRepo.GetContainerUUID(model.ID(p.ID()))
+		if err != nil {
+			continue
+		}
+		out = append(out, ContainerWithGen[*genPg.Page]{Elem: p, ContainerID: element.ID(cid)})
+	}
+	if deps.Cache != nil {
+		deps.Cache.pagesWithContainerGen = out
+	}
+	return out, nil
+}
+
+// listSnippetsWithContainerGenDeps is the HandlerDeps version of listSnippetsWithContainerGen.
+func listSnippetsWithContainerGenDeps(ctx context.Context, deps *HandlerDeps) ([]ContainerWithGen[*genPg.Snippet], error) {
+	if deps == nil || deps.SnippetRepo == nil {
+		return nil, nil
+	}
+	if deps.Cache != nil && deps.Cache.snippetsWithContainerGen != nil {
+		return deps.Cache.snippetsWithContainerGen, nil
+	}
+
+	all, err := deps.SnippetRepo.ListAll()
+	if err != nil {
+		return nil, err
+	}
+	filtered := all[:0]
+	for _, p := range all {
+		if p != nil {
+			filtered = append(filtered, p)
+		}
+	}
+
+	var out []ContainerWithGen[*genPg.Snippet]
+	for _, p := range filtered {
+		cid, err := deps.SnippetRepo.GetContainerUUID(model.ID(p.ID()))
+		if err != nil {
+			continue
+		}
+		out = append(out, ContainerWithGen[*genPg.Snippet]{Elem: p, ContainerID: element.ID(cid)})
+	}
+	if deps.Cache != nil {
+		deps.Cache.snippetsWithContainerGen = out
+	}
+	return out, nil
+}
+
+// invalidatePagesGenCacheDeps is the HandlerDeps version of invalidatePagesGenCache.
+func invalidatePagesGenCacheDeps(deps *HandlerDeps) {
+	if deps == nil || deps.Cache == nil {
+		return
+	}
+	deps.Cache.pagesWithContainerGen = nil
+	deps.Cache.layoutsWithContainerGen = nil
+	deps.Cache.snippetsWithContainerGen = nil
+}
+
 func parameterEntityNameGen(paramType element.Element) string {
 	if paramType == nil {
 		return ""

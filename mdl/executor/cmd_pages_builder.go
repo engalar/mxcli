@@ -438,6 +438,78 @@ func (pb *pageBuilder) createFolder(name string, containerID model.ID) (model.ID
 	return folder.ID, nil
 }
 
+// execDropPageDepsImpl is the HandlerDeps implementation for DROP PAGE.
+func execDropPageDepsImpl(ctx context.Context, s *ast.DropPageStmt, deps *HandlerDeps) error {
+	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
+		return mdlerrors.NewNotConnectedWrite()
+	}
+
+	h, err := GetOrBuildHierarchy(deps)
+	if err != nil {
+		return mdlerrors.NewBackend("build hierarchy", err)
+	}
+
+	pairs, err := listPagesWithContainerGenDeps(ctx, deps)
+	if err != nil {
+		return mdlerrors.NewBackend("list pages", err)
+	}
+
+	for _, p := range pairs {
+		if p.Elem == nil {
+			continue
+		}
+		modID := h.FindModuleID(model.ID(p.ContainerID))
+		modName := h.GetModuleName(modID)
+		if modName == s.Name.Module && p.Elem.Name() == s.Name.Name {
+			pgID := model.ID(p.Elem.ID())
+			if err := deps.PageWriter.DeletePageGen(pgID); err != nil {
+				return mdlerrors.NewBackend("delete page", err)
+			}
+			invalidatePagesGenCacheDeps(deps)
+			fmt.Fprintf(deps.Output, "Dropped page %s\n", s.Name.String())
+			return nil
+		}
+	}
+
+	return mdlerrors.NewNotFound("page", s.Name.String())
+}
+
+// execDropSnippetDepsImpl is the HandlerDeps implementation for DROP SNIPPET.
+func execDropSnippetDepsImpl(ctx context.Context, s *ast.DropSnippetStmt, deps *HandlerDeps) error {
+	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
+		return mdlerrors.NewNotConnectedWrite()
+	}
+
+	h, err := GetOrBuildHierarchy(deps)
+	if err != nil {
+		return mdlerrors.NewBackend("build hierarchy", err)
+	}
+
+	pairs, err := listSnippetsWithContainerGenDeps(ctx, deps)
+	if err != nil {
+		return mdlerrors.NewBackend("list snippets", err)
+	}
+
+	for _, p := range pairs {
+		if p.Elem == nil {
+			continue
+		}
+		modID := h.FindModuleID(model.ID(p.ContainerID))
+		modName := h.GetModuleName(modID)
+		if modName == s.Name.Module && p.Elem.Name() == s.Name.Name {
+			snpID := model.ID(p.Elem.ID())
+			if err := deps.PageWriter.DeleteSnippetGen(snpID); err != nil {
+				return mdlerrors.NewBackend("delete snippet", err)
+			}
+			invalidatePagesGenCacheDeps(deps)
+			fmt.Fprintf(deps.Output, "Dropped snippet %s\n", s.Name.String())
+			return nil
+		}
+	}
+
+	return mdlerrors.NewNotFound("snippet", s.Name.String())
+}
+
 // ExecDropPage handles DROP PAGE statement.
 func ExecDropPage(ctx *ExecContext, s *ast.DropPageStmt) error {
 	if !ctx.ConnectedForWrite() {

@@ -28,6 +28,66 @@ func safeIdent(name string) string {
 	return `"` + name + `"`
 }
 
+func listRestClientsDeps(ctx context.Context, deps *HandlerDeps, moduleName string) error {
+	services, err := deps.ServiceLister.ListConsumedRestServices()
+	if err != nil {
+		return mdlerrors.NewBackend("list consumed rest services", err)
+	}
+
+	h, err := GetOrBuildHierarchy(deps)
+	if err != nil {
+		return mdlerrors.NewBackend("build hierarchy", err)
+	}
+
+	type row struct {
+		module        string
+		qualifiedName string
+		baseUrl       string
+		auth          string
+		ops           int
+	}
+	var rows []row
+
+	for _, svc := range services {
+		modID := h.FindModuleID(svc.ContainerID)
+		modName := h.GetModuleName(modID)
+		if moduleName != "" && !strings.EqualFold(modName, moduleName) {
+			continue
+		}
+
+		auth := "none"
+		if svc.Authentication != nil {
+			auth = strings.ToUpper(svc.Authentication.Scheme)
+		}
+
+		baseUrl := svc.BaseUrl
+		if len(baseUrl) > 60 {
+			baseUrl = baseUrl[:57] + "..."
+		}
+
+		qn := modName + "." + svc.Name
+		rows = append(rows, row{modName, qn, baseUrl, auth, len(svc.Operations)})
+	}
+
+	if len(rows) == 0 && deps.Format != FormatJSON {
+		fmt.Fprintln(deps.Output, "No consumed rest services found.")
+		return nil
+	}
+
+	sort.Slice(rows, func(i, j int) bool {
+		return strings.ToLower(rows[i].qualifiedName) < strings.ToLower(rows[j].qualifiedName)
+	})
+
+	result := &TableResult{
+		Columns: []string{"Module", "QualifiedName", "BaseURL", "Auth", "Operations"},
+		Summary: fmt.Sprintf("(%d rest clients)", len(rows)),
+	}
+	for _, r := range rows {
+		result.Rows = append(result.Rows, []any{r.module, r.qualifiedName, r.baseUrl, r.auth, r.ops})
+	}
+	return writeResultTo(deps.Output, deps.Format, result)
+}
+
 // listRestClients handles SHOW REST CLIENTS [IN module] command.
 func listRestClients(ctx *ExecContext, moduleName string) error {
 
@@ -88,6 +148,82 @@ func listRestClients(ctx *ExecContext, moduleName string) error {
 		result.Rows = append(result.Rows, []any{r.module, r.qualifiedName, r.baseUrl, r.auth, r.ops})
 	}
 	return writeResult(ctx, result)
+}
+
+func describeRestClientDeps(ctx context.Context, deps *HandlerDeps, name ast.QualifiedName) error {
+	services, err := deps.ServiceLister.ListConsumedRestServices()
+	if err != nil {
+		return mdlerrors.NewBackend("list consumed rest services", err)
+	}
+
+	h, err := GetOrBuildHierarchy(deps)
+	if err != nil {
+		return mdlerrors.NewBackend("build hierarchy", err)
+	}
+
+	for _, svc := range services {
+		modID := h.FindModuleID(svc.ContainerID)
+		modName := h.GetModuleName(modID)
+		if strings.EqualFold(modName, name.Module) && strings.EqualFold(svc.Name, name.Name) {
+			return outputConsumedRestServiceMDLDeps(deps.Output, deps, svc, modName)
+		}
+	}
+
+	return mdlerrors.NewNotFound("consumed rest service", name.String())
+}
+
+func outputConsumedRestServiceMDLDeps(w io.Writer, deps *HandlerDeps, svc *model.ConsumedRestService, moduleName string) error {
+	if svc.Documentation != "" {
+		outputJavadoc(w, svc.Documentation)
+	}
+
+	fmt.Fprintf(w, "create rest client %s.%s (\n", moduleName, svc.Name)
+	fmt.Fprintf(w, "  BaseUrl: '%s',\n", svc.BaseUrl)
+	if svc.Authentication == nil {
+		fmt.Fprintln(w, "  Authentication: none")
+	} else {
+		username := resolveAndFormatRestAuthValueDeps(deps, svc.Authentication.Username)
+		password := resolveAndFormatRestAuthValueDeps(deps, svc.Authentication.Password)
+		fmt.Fprintf(w, "  Authentication: basic (Username: %s, Password: %s)\n",
+			username, password)
+	}
+	fmt.Fprintln(w, ")")
+	fmt.Fprintln(w, "{")
+
+	for i, op := range svc.Operations {
+		if i > 0 {
+			fmt.Fprintln(w)
+		}
+		outputRestOperation(w, op)
+	}
+
+	fmt.Fprintln(w, "};")
+	return nil
+}
+
+func resolveAndFormatRestAuthValueDeps(deps *HandlerDeps, value string) string {
+	if !strings.HasPrefix(value, "$") {
+		return "'" + value + "'"
+	}
+	qualifiedName := strings.TrimPrefix(value, "$")
+	if deps.ConnectionManager != nil && deps.ConnectionManager.IsConnected() {
+		parts := strings.SplitN(qualifiedName, ".", 2)
+		if len(parts) == 2 {
+			moduleName, constName := parts[0], parts[1]
+			if constants, err := deps.ConstantReader.ListConstants(); err == nil {
+				for _, c := range constants {
+					if !strings.EqualFold(c.Name, constName) {
+						continue
+					}
+					if mod, err := deps.ModuleLister.GetModule(c.ContainerID); err == nil &&
+						strings.EqualFold(mod.Name, moduleName) {
+						return fmt.Sprintf("$%s.%s", moduleName, constName)
+					}
+				}
+			}
+		}
+	}
+	return "'$" + qualifiedName + "'"
 }
 
 // describeRestClient handles DESCRIBE REST CLIENT command.

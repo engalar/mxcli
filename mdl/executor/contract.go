@@ -5,6 +5,7 @@ package executor
 import (
 	"context"
 	"fmt"
+	"io"
 	"sort"
 	"strings"
 
@@ -1745,6 +1746,481 @@ func ExecCreateExternalEntitiesFn(ctx context.Context, s *ast.CreateExternalEnti
 
 	fmt.Fprintf(deps.Output, "\nFrom %s into %s: %d created, %d updated, %d skipped, %d failed\n",
 		svcQN, targetModule, created, updated, skipped, failed)
+
+	return nil
+}
+
+// ── HandlerDeps versions of contract functions ──
+
+func parseServiceContractDeps(deps *HandlerDeps, name ast.QualifiedName) (*types.EdmxDocument, string, error) {
+	services, err := deps.ServiceLister.ListConsumedODataServices()
+	if err != nil {
+		return nil, "", mdlerrors.NewBackend("list consumed OData services", err)
+	}
+
+	h, err := GetOrBuildHierarchy(deps)
+	if err != nil {
+		return nil, "", mdlerrors.NewBackend("build hierarchy", err)
+	}
+
+	for _, svc := range services {
+		modID := h.FindModuleID(svc.ContainerID)
+		modName := h.GetModuleName(modID)
+
+		if !strings.EqualFold(modName, name.Module) || !strings.EqualFold(svc.Name, name.Name) {
+			continue
+		}
+
+		svcQN := modName + "." + svc.Name
+
+		if svc.Metadata == "" {
+			return nil, svcQN, mdlerrors.NewValidationf("no cached contract metadata for %s (MetadataUrl: %s). The service metadata has not been downloaded yet", svcQN, svc.MetadataUrl)
+		}
+
+		doc, err := types.ParseEdmx(svc.Metadata)
+		if err != nil {
+			return nil, svcQN, mdlerrors.NewBackend(fmt.Sprintf("parse contract metadata for %s", svcQN), err)
+		}
+
+		return doc, svcQN, nil
+	}
+
+	return nil, "", mdlerrors.NewNotFound("consumed OData service", name.Module+"."+name.Name)
+}
+
+func parseAsyncAPIContractDeps(deps *HandlerDeps, name ast.QualifiedName) (*types.AsyncAPIDocument, string, error) {
+	services, err := deps.ServiceLister.ListBusinessEventServices()
+	if err != nil {
+		return nil, "", mdlerrors.NewBackend("list business event services", err)
+	}
+
+	h, err := GetOrBuildHierarchy(deps)
+	if err != nil {
+		return nil, "", mdlerrors.NewBackend("build hierarchy", err)
+	}
+
+	for _, svc := range services {
+		modID := h.FindModuleID(svc.ContainerID)
+		modName := h.GetModuleName(modID)
+
+		if !strings.EqualFold(modName, name.Module) || !strings.EqualFold(svc.Name, name.Name) {
+			continue
+		}
+
+		svcQN := modName + "." + svc.Name
+
+		if svc.Document == "" {
+			return nil, svcQN, mdlerrors.NewValidationf("no cached AsyncAPI contract for %s. This service has no Document field (it may be a publisher, not a consumer)", svcQN)
+		}
+
+		doc, err := types.ParseAsyncAPI(svc.Document)
+		if err != nil {
+			return nil, svcQN, mdlerrors.NewBackend(fmt.Sprintf("parse AsyncAPI contract for %s", svcQN), err)
+		}
+
+		return doc, svcQN, nil
+	}
+
+	return nil, "", mdlerrors.NewNotFound("business event service", name.Module+"."+name.Name)
+}
+
+func listContractEntitiesDeps(ctx context.Context, deps *HandlerDeps, name *ast.QualifiedName) error {
+	if name == nil {
+		return mdlerrors.NewValidation("service name required: show contract entities from Module.Service")
+	}
+
+	doc, svcQN, err := parseServiceContractDeps(deps, *name)
+	if err != nil {
+		return err
+	}
+
+	type row struct {
+		entitySet  string
+		entityType string
+		key        string
+		props      int
+		navs       int
+		summary    string
+	}
+
+	esMap := make(map[string]string)
+	for _, es := range doc.EntitySets {
+		esMap[es.EntityType] = es.Name
+	}
+
+	var rows []row
+
+	for _, s := range doc.Schemas {
+		for _, et := range s.EntityTypes {
+			entitySetName := esMap[s.Namespace+"."+et.Name]
+			key := strings.Join(et.KeyProperties, ", ")
+			summary := et.Summary
+			if len(summary) > 60 {
+				summary = summary[:57] + "..."
+			}
+
+			rows = append(rows, row{entitySetName, et.Name, key, len(et.Properties), len(et.NavigationProperties), summary})
+		}
+	}
+
+	if len(rows) == 0 && deps.Format != FormatJSON {
+		fmt.Fprintf(deps.Output, "No entity types found in contract for %s.\n", svcQN)
+		return nil
+	}
+
+	sort.Slice(rows, func(i, j int) bool {
+		return strings.ToLower(rows[i].entityType) < strings.ToLower(rows[j].entityType)
+	})
+
+	result := &TableResult{
+		Columns: []string{"EntitySet", "EntityType", "Key", "Props", "Navs", "Summary"},
+		Summary: fmt.Sprintf("(%d entity types in %s contract)", len(rows), svcQN),
+	}
+	for _, r := range rows {
+		result.Rows = append(result.Rows, []any{r.entitySet, r.entityType, r.key, r.props, r.navs, r.summary})
+	}
+	return writeResultTo(deps.Output, deps.Format, result)
+}
+
+func listContractActionsDeps(ctx context.Context, deps *HandlerDeps, name *ast.QualifiedName) error {
+	if name == nil {
+		return mdlerrors.NewValidation("service name required: show contract actions from Module.Service")
+	}
+
+	doc, svcQN, err := parseServiceContractDeps(deps, *name)
+	if err != nil {
+		return err
+	}
+
+	if len(doc.Actions) == 0 && deps.Format != FormatJSON {
+		fmt.Fprintf(deps.Output, "No actions found in contract for %s.\n", svcQN)
+		return nil
+	}
+
+	type row struct {
+		name       string
+		params     int
+		returnType string
+		bound      string
+	}
+
+	var rows []row
+
+	for _, a := range doc.Actions {
+		ret := a.ReturnType
+		if ret == "" {
+			ret = "(void)"
+		}
+		if idx := strings.LastIndex(ret, "."); idx >= 0 {
+			ret = ret[idx+1:]
+		}
+		if strings.HasPrefix(ret, "Collection(") {
+			inner := ret[len("Collection(") : len(ret)-1]
+			if idx := strings.LastIndex(inner, "."); idx >= 0 {
+				inner = inner[idx+1:]
+			}
+			ret = "Collection(" + inner + ")"
+		}
+
+		bound := "No"
+		if a.IsBound {
+			bound = "Yes"
+		}
+
+		rows = append(rows, row{a.Name, len(a.Parameters), ret, bound})
+	}
+
+	result := &TableResult{
+		Columns: []string{"Action", "Params", "ReturnType", "Bound"},
+		Summary: fmt.Sprintf("(%d actions/functions in %s contract)", len(rows), svcQN),
+	}
+	for _, r := range rows {
+		result.Rows = append(result.Rows, []any{r.name, r.params, r.returnType, r.bound})
+	}
+	return writeResultTo(deps.Output, deps.Format, result)
+}
+
+func listContractChannelsDeps(ctx context.Context, deps *HandlerDeps, name *ast.QualifiedName) error {
+	if name == nil {
+		return mdlerrors.NewValidation("service name required: show contract channels from Module.Service")
+	}
+
+	doc, svcQN, err := parseAsyncAPIContractDeps(deps, *name)
+	if err != nil {
+		return err
+	}
+
+	if len(doc.Channels) == 0 && deps.Format != FormatJSON {
+		fmt.Fprintf(deps.Output, "No channels found in contract for %s.\n", svcQN)
+		return nil
+	}
+
+	type row struct {
+		channel   string
+		operation string
+		opID      string
+		message   string
+	}
+
+	var rows []row
+
+	for _, ch := range doc.Channels {
+		rows = append(rows, row{ch.Name, ch.OperationType, ch.OperationID, ch.MessageRef})
+	}
+
+	result := &TableResult{
+		Columns: []string{"Channel", "Operation", "OperationID", "Message"},
+		Summary: fmt.Sprintf("(%d channels in %s contract)", len(rows), svcQN),
+	}
+	for _, r := range rows {
+		result.Rows = append(result.Rows, []any{r.channel, r.operation, r.opID, r.message})
+	}
+	return writeResultTo(deps.Output, deps.Format, result)
+}
+
+func listContractMessagesDeps(ctx context.Context, deps *HandlerDeps, name *ast.QualifiedName) error {
+	if name == nil {
+		return mdlerrors.NewValidation("service name required: show contract messages from Module.Service")
+	}
+
+	doc, svcQN, err := parseAsyncAPIContractDeps(deps, *name)
+	if err != nil {
+		return err
+	}
+
+	if len(doc.Messages) == 0 && deps.Format != FormatJSON {
+		fmt.Fprintf(deps.Output, "No messages found in contract for %s.\n", svcQN)
+		return nil
+	}
+
+	type row struct {
+		name        string
+		title       string
+		contentType string
+		props       int
+	}
+
+	var rows []row
+
+	for _, msg := range doc.Messages {
+		rows = append(rows, row{msg.Name, msg.Title, msg.ContentType, len(msg.Properties)})
+	}
+
+	sort.Slice(rows, func(i, j int) bool {
+		return strings.ToLower(rows[i].name) < strings.ToLower(rows[j].name)
+	})
+
+	result := &TableResult{
+		Columns: []string{"Message", "Title", "ContentType", "Props"},
+		Summary: fmt.Sprintf("(%d messages in %s contract)", len(rows), svcQN),
+	}
+	for _, r := range rows {
+		result.Rows = append(result.Rows, []any{r.name, r.title, r.contentType, r.props})
+	}
+	return writeResultTo(deps.Output, deps.Format, result)
+}
+
+func describeContractEntityDeps(ctx context.Context, deps *HandlerDeps, name ast.QualifiedName, formatStr string) error {
+	svcName, entityName, err := splitContractRef(name)
+	if err != nil {
+		return err
+	}
+
+	doc, svcQN, err := parseServiceContractDeps(deps, svcName)
+	if err != nil {
+		return err
+	}
+
+	et := doc.FindEntityType(entityName)
+	if et == nil {
+		return mdlerrors.NewNotFoundMsg("entity type", entityName, fmt.Sprintf("entity type %q not found in contract for %s", entityName, svcQN))
+	}
+
+	if strings.EqualFold(formatStr, "mdl") {
+		return outputContractEntityMDLDeps(deps.Output, et, svcQN, doc)
+	}
+
+	fmt.Fprintf(deps.Output, "%s (Key: %s)\n", et.Name, strings.Join(et.KeyProperties, ", "))
+	if et.Summary != "" {
+		fmt.Fprintf(deps.Output, "  Summary: %s\n", et.Summary)
+	}
+	if et.Description != "" {
+		fmt.Fprintf(deps.Output, "  Description: %s\n", et.Description)
+	}
+	fmt.Fprintln(deps.Output)
+
+	nameWidth := len("Property")
+	typeWidth := len("Type")
+	for _, p := range et.Properties {
+		if len(p.Name) > nameWidth {
+			nameWidth = len(p.Name)
+		}
+		typeStr := formatEdmType(p)
+		if len(typeStr) > typeWidth {
+			typeWidth = len(typeStr)
+		}
+	}
+
+	fmt.Fprintf(deps.Output, "  %-*s  %-*s  %s\n", nameWidth, "Property", typeWidth, "Type", "Nullable")
+	fmt.Fprintf(deps.Output, "  %s  %s  %s\n", strings.Repeat("-", nameWidth), strings.Repeat("-", typeWidth), "--------")
+	for _, p := range et.Properties {
+		nullable := "Yes"
+		if p.Nullable != nil && !*p.Nullable {
+			nullable = "No"
+		}
+		fmt.Fprintf(deps.Output, "  %-*s  %-*s  %s\n", nameWidth, p.Name, typeWidth, formatEdmType(p), nullable)
+	}
+
+	if len(et.NavigationProperties) > 0 {
+		fmt.Fprintln(deps.Output)
+		fmt.Fprintln(deps.Output, "  Navigation Properties:")
+		for _, nav := range et.NavigationProperties {
+			multiplicity := "0..1"
+			if nav.IsMany {
+				multiplicity = "*"
+			}
+			target := nav.TargetType
+			if target == "" && nav.ToRole != "" {
+				target = nav.ToRole
+			}
+			fmt.Fprintf(deps.Output, "    → %-20s  (%s %s)\n", nav.Name, target, multiplicity)
+		}
+	}
+
+	return nil
+}
+
+func outputContractEntityMDLDeps(w io.Writer, et *types.EdmEntityType, svcQN string, doc *types.EdmxDocument) error {
+	entitySetName := et.Name + "s"
+	for _, es := range doc.EntitySets {
+		if strings.HasSuffix(es.EntityType, "."+et.Name) || es.EntityType == et.Name {
+			entitySetName = es.Name
+			break
+		}
+	}
+
+	module := svcQN
+	if idx := strings.Index(svcQN, "."); idx >= 0 {
+		module = svcQN[:idx]
+	}
+
+	fmt.Fprintf(w, "create external entity %s.%s\n", module, et.Name)
+	fmt.Fprintf(w, "from odata client %s (\n", svcQN)
+	fmt.Fprintf(w, "    EntitySet: '%s',\n", entitySetName)
+	fmt.Fprintf(w, "    RemoteName: '%s',\n", et.Name)
+	fmt.Fprintf(w, "    Countable: Yes\n")
+	fmt.Fprintln(w, ")")
+	fmt.Fprintln(w, "(")
+
+	for i, p := range et.Properties {
+		if i > 0 {
+			fmt.Fprintln(w)
+		}
+		nullable := ""
+		if p.Nullable != nil && !*p.Nullable {
+			nullable = " not null"
+		}
+		fmt.Fprintf(w, "  %s %s%s", p.Name, shortenEdmType(p.Type), nullable)
+	}
+
+	fmt.Fprintln(w, "\n);")
+	return nil
+}
+
+func describeContractActionDeps(ctx context.Context, deps *HandlerDeps, name ast.QualifiedName, formatStr string) error {
+	svcName, actionName, err := splitContractRef(name)
+	if err != nil {
+		return err
+	}
+
+	doc, svcQN, err := parseServiceContractDeps(deps, svcName)
+	if err != nil {
+		return err
+	}
+
+	var action *types.EdmAction
+	for _, a := range doc.Actions {
+		if strings.EqualFold(a.Name, actionName) {
+			action = a
+			break
+		}
+	}
+	if action == nil {
+		return mdlerrors.NewNotFoundMsg("action", actionName, fmt.Sprintf("action %q not found in contract for %s", actionName, svcQN))
+	}
+
+	fmt.Fprintf(deps.Output, "%s\n", action.Name)
+	if action.IsBound {
+		fmt.Fprintln(deps.Output, "  Bound: Yes")
+	}
+
+	if len(action.Parameters) > 0 {
+		fmt.Fprintln(deps.Output, "  Parameters:")
+		for _, p := range action.Parameters {
+			nullable := ""
+			if p.Nullable != nil && !*p.Nullable {
+				nullable = " not null"
+			}
+			fmt.Fprintf(deps.Output, "    %-20s  %s%s\n", p.Name, shortenEdmType(p.Type), nullable)
+		}
+	}
+
+	if action.ReturnType != "" {
+		fmt.Fprintf(deps.Output, "  Returns: %s\n", shortenEdmType(action.ReturnType))
+	} else {
+		fmt.Fprintln(deps.Output, "  Returns: (void)")
+	}
+
+	return nil
+}
+
+func describeContractMessageDeps(ctx context.Context, deps *HandlerDeps, name ast.QualifiedName) error {
+	svcName, msgName, err := splitContractRef(name)
+	if err != nil {
+		return err
+	}
+
+	doc, svcQN, err := parseAsyncAPIContractDeps(deps, svcName)
+	if err != nil {
+		return err
+	}
+
+	msg := doc.FindMessage(msgName)
+	if msg == nil {
+		return mdlerrors.NewNotFoundMsg("message", msgName, fmt.Sprintf("message %q not found in contract for %s", msgName, svcQN))
+	}
+
+	fmt.Fprintf(deps.Output, "%s\n", msg.Name)
+	if msg.Title != "" {
+		fmt.Fprintf(deps.Output, "  Title: %s\n", msg.Title)
+	}
+	if msg.Description != "" {
+		fmt.Fprintf(deps.Output, "  Description: %s\n", msg.Description)
+	}
+	if msg.ContentType != "" {
+		fmt.Fprintf(deps.Output, "  ContentType: %s\n", msg.ContentType)
+	}
+
+	if len(msg.Properties) > 0 {
+		fmt.Fprintln(deps.Output)
+		nameWidth := len("Property")
+		typeWidth := len("Type")
+		for _, p := range msg.Properties {
+			if len(p.Name) > nameWidth {
+				nameWidth = len(p.Name)
+			}
+			t := asyncTypeString(p)
+			if len(t) > typeWidth {
+				typeWidth = len(t)
+			}
+		}
+
+		fmt.Fprintf(deps.Output, "  %-*s  %-*s\n", nameWidth, "Property", typeWidth, "Type")
+		fmt.Fprintf(deps.Output, "  %s  %s\n", strings.Repeat("-", nameWidth), strings.Repeat("-", typeWidth))
+		for _, p := range msg.Properties {
+			fmt.Fprintf(deps.Output, "  %-*s  %-*s\n", nameWidth, p.Name, typeWidth, asyncTypeString(p))
+		}
+	}
 
 	return nil
 }

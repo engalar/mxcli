@@ -171,6 +171,88 @@ func listBusinessEvents(ctx *ExecContext, inModule string) error {
 }
 
 // describeBusinessEventService outputs the full MDL description of a business event service.
+func describeBusinessEventServiceDeps(ctx context.Context, deps *HandlerDeps, name ast.QualifiedName) error {
+	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
+		return mdlerrors.NewNotConnected()
+	}
+
+	services, err := deps.ServiceLister.ListBusinessEventServices()
+	if err != nil {
+		return mdlerrors.NewBackend("list business event services", err)
+	}
+
+	h, err := GetOrBuildHierarchy(deps)
+	if err != nil {
+		return err
+	}
+
+	var found *model.BusinessEventService
+	var foundModule string
+	for _, svc := range services {
+		modID := h.FindModuleID(svc.ContainerID)
+		moduleName := h.GetModuleName(modID)
+		if strings.EqualFold(moduleName, name.Module) && strings.EqualFold(svc.Name, name.Name) {
+			found = svc
+			foundModule = moduleName
+			break
+		}
+	}
+
+	if found == nil {
+		return mdlerrors.NewNotFound("business event service", name.String())
+	}
+
+	if found.Documentation != "" {
+		outputJavadoc(deps.Output, found.Documentation)
+	}
+	fmt.Fprintf(deps.Output, "create or modify business event service %s.%s\n", foundModule, found.Name)
+
+	if found.Definition != nil {
+		fmt.Fprintf(deps.Output, "(\n")
+		fmt.Fprintf(deps.Output, "  ServiceName: '%s'", found.Definition.ServiceName)
+		if found.Definition.EventNamePrefix != "" {
+			fmt.Fprintf(deps.Output, ",\n  EventNamePrefix: '%s'", found.Definition.EventNamePrefix)
+		} else {
+			fmt.Fprintf(deps.Output, ",\n  EventNamePrefix: ''")
+		}
+		fmt.Fprintf(deps.Output, "\n)\n")
+
+		fmt.Fprintf(deps.Output, "{\n")
+
+		opMap := make(map[string]*model.ServiceOperation)
+		for _, op := range found.OperationImplementations {
+			opMap[op.MessageName] = op
+		}
+
+		for _, ch := range found.Definition.Channels {
+			for _, msg := range ch.Messages {
+				var attrs []string
+				for _, a := range msg.Attributes {
+					attrs = append(attrs, fmt.Sprintf("%s: %s", a.AttributeName, a.AttributeType))
+				}
+
+				opStr := "publish"
+				entityStr := ""
+				if op, ok := opMap[msg.MessageName]; ok {
+					if op.Operation == "subscribe" {
+						opStr = "subscribe"
+					}
+					if op.Entity != "" {
+						entityStr = fmt.Sprintf("\n    entity %s", op.Entity)
+					}
+				}
+
+				fmt.Fprintf(deps.Output, "  message %s (%s) %s%s;\n",
+					msg.MessageName, strings.Join(attrs, ", "), opStr, entityStr)
+			}
+		}
+
+		fmt.Fprintf(deps.Output, "};\n")
+	}
+
+	return nil
+}
+
 func describeBusinessEventService(ctx *ExecContext, name ast.QualifiedName) error {
 	if !ctx.Connected() {
 		return mdlerrors.NewNotConnected()

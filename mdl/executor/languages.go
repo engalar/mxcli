@@ -3,6 +3,7 @@
 package executor
 
 import (
+	"context"
 	"fmt"
 	"sort"
 
@@ -10,6 +11,90 @@ import (
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 	"github.com/mendixlabs/mxcli/model"
 )
+
+// alterLanguageDepsImpl is the HandlerDeps implementation for ALTER LANGUAGE.
+func alterLanguageDepsImpl(ctx context.Context, stmt *ast.AlterLanguageStmt, deps *HandlerDeps) error {
+	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
+		return mdlerrors.NewNotConnectedWrite()
+	}
+
+	if !isValidLanguageCode(stmt.Code) {
+		return mdlerrors.NewValidation(fmt.Sprintf(
+			"'%s' is not a valid Mendix language code. Run SHOW SUPPORTED LANGUAGES to see valid codes.",
+			stmt.Code,
+		))
+	}
+
+	ps, err := deps.SettingsReader.GetProjectSettings()
+	if err != nil {
+		return mdlerrors.NewBackend("read project settings", err)
+	}
+	if ps.Language == nil {
+		ps.Language = &model.LanguageSettings{DefaultLanguageCode: "en_US"}
+	}
+
+	switch stmt.Op {
+	case ast.AlterLanguageAdd:
+		return alterLanguageAddDeps(deps, ps, stmt)
+	case ast.AlterLanguageDrop:
+		return alterLanguageDropDeps(deps, ps, stmt)
+	}
+	return nil
+}
+
+func alterLanguageAddDeps(deps *HandlerDeps, ps *model.ProjectSettings, stmt *ast.AlterLanguageStmt) error {
+	for _, l := range ps.Language.Languages {
+		if l.Code == stmt.Code {
+			fmt.Fprintf(deps.Output, "LANGUAGE %s already registered\n", stmt.Code)
+			return nil
+		}
+	}
+	lang := model.Language{Code: stmt.Code}
+	if stmt.CheckCompleteness != nil {
+		lang.CheckCompleteness = *stmt.CheckCompleteness
+	}
+	if stmt.DateFormat != "" {
+		lang.CustomDateFormat = stmt.DateFormat
+	}
+	if stmt.DateTimeFormat != "" {
+		lang.CustomDateTimeFormat = stmt.DateTimeFormat
+	}
+	if stmt.TimeFormat != "" {
+		lang.CustomTimeFormat = stmt.TimeFormat
+	}
+	ps.Language.Languages = append(ps.Language.Languages, lang)
+	if err := deps.SettingsWriter.UpdateProjectSettings(ps); err != nil {
+		return mdlerrors.NewBackend("update project settings", err)
+	}
+	fmt.Fprintf(deps.Output, "LANGUAGE %s added\n", stmt.Code)
+	return nil
+}
+
+func alterLanguageDropDeps(deps *HandlerDeps, ps *model.ProjectSettings, stmt *ast.AlterLanguageStmt) error {
+	if ps.Language.DefaultLanguageCode == stmt.Code {
+		return mdlerrors.NewValidation(fmt.Sprintf(
+			"cannot drop the default language '%s'. Change DefaultLanguageCode first.",
+			stmt.Code,
+		))
+	}
+	original := len(ps.Language.Languages)
+	filtered := ps.Language.Languages[:0]
+	for _, l := range ps.Language.Languages {
+		if l.Code != stmt.Code {
+			filtered = append(filtered, l)
+		}
+	}
+	ps.Language.Languages = filtered
+	if len(ps.Language.Languages) == original {
+		fmt.Fprintf(deps.Output, "LANGUAGE %s not registered\n", stmt.Code)
+		return nil
+	}
+	if err := deps.SettingsWriter.UpdateProjectSettings(ps); err != nil {
+		return mdlerrors.NewBackend("update project settings", err)
+	}
+	fmt.Fprintf(deps.Output, "LANGUAGE %s dropped\n", stmt.Code)
+	return nil
+}
 
 // listLanguages lists the project's registered languages from project settings.
 func listLanguages(ctx *ExecContext) error {

@@ -44,6 +44,34 @@ func checkFeatureFn(ctx context.Context, deps *HandlerDeps, area, name, statemen
 // checkFeature verifies that a feature is available in the connected project's
 // version. Returns nil if available, or an actionable error with the version
 // requirement and a hint. Safe to call when not connected (returns nil).
+func checkFeatureDeps(deps *HandlerDeps, area, name, statement, hint string) error {
+	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
+		return nil
+	}
+	reg, err := version.Load()
+	if err != nil {
+		return nil
+	}
+	rpv := deps.ConnectionManager.ProjectVersion()
+	pv := version.SemVer{Major: rpv.MajorVersion, Minor: rpv.MinorVersion, Patch: rpv.PatchVersion}
+	if reg.IsAvailable(area, name, pv) {
+		return nil
+	}
+	features := reg.FeaturesForVersion(version.SemVer{Major: 99, Minor: 0, Patch: 0})
+	minV := "a newer version"
+	for _, f := range features {
+		if f.Area == area && f.Name == name {
+			minV = "Mendix " + f.MinVersion.String() + "+"
+			break
+		}
+	}
+	msg := fmt.Sprintf("%s requires %s (project is %s)", statement, minV, rpv.ProductVersion)
+	if hint != "" {
+		msg += "\n  hint: " + hint
+	}
+	return mdlerrors.NewUnsupported(msg)
+}
+
 func checkFeature(ctx *ExecContext, area, name, statement, hint string) error {
 
 	if !ctx.Connected() {

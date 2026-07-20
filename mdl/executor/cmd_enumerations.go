@@ -4,6 +4,7 @@
 package executor
 
 import (
+	"context"
 	"fmt"
 	"sort"
 	"strings"
@@ -13,6 +14,95 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/linter"
 	"github.com/mendixlabs/mxcli/model"
 )
+
+// execCreateEnumerationDepsImpl is the HandlerDeps implementation for CREATE ENUMERATION.
+func execCreateEnumerationDepsImpl(ctx context.Context, s *ast.CreateEnumerationStmt, deps *HandlerDeps) error {
+	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
+		return mdlerrors.NewNotConnected()
+	}
+
+	// Validate enumeration values for reserved words
+	if violations := ValidateEnumeration(s); len(violations) > 0 {
+		var msgs []string
+		for _, v := range violations {
+			msgs = append(msgs, v.Message)
+		}
+		return mdlerrors.NewValidationf("invalid enumeration '%s':\n  - %s",
+			s.Name.String(), strings.Join(msgs, "\n  - "))
+	}
+
+	// Find or auto-create module
+	module, err := findOrCreateModuleDeps(ctx, deps, s.Name.Module)
+	if err != nil {
+		return err
+	}
+
+	// Check if enumeration already exists
+	existingEnum := findEnumerationDeps(deps, s.Name.Module, s.Name.Name)
+	if existingEnum != nil && !s.CreateOrModify {
+		return mdlerrors.NewAlreadyExistsMsg("enumeration", s.Name.Module+"."+s.Name.Name, fmt.Sprintf("enumeration already exists: %s.%s (use create or modify to update)", s.Name.Module, s.Name.Name))
+	}
+
+	// Create enumeration values
+	var values []model.EnumerationValue
+	for _, v := range s.Values {
+		values = append(values, model.EnumerationValue{
+			Name: v.Name,
+			Caption: &model.Text{
+				Translations: map[string]string{"en_US": v.Caption},
+			},
+		})
+	}
+
+	// Create or update enumeration
+	enum := &model.Enumeration{
+		ContainerID:   module.ID,
+		Name:          s.Name.Name,
+		Documentation: s.Documentation,
+		Values:        values,
+	}
+
+	if existingEnum != nil && s.CreateOrModify {
+		enum.ID = existingEnum.ID
+		if err := deps.EnumerationWriter.UpdateEnumeration(enum); err != nil {
+			return mdlerrors.NewBackend("update enumeration", err)
+		}
+		invalidateHierarchyDeps(deps)
+		fmt.Fprintf(deps.Output, "Modified enumeration: %s\n", s.Name)
+		return nil
+	}
+
+	if err := deps.EnumerationWriter.CreateEnumeration(enum); err != nil {
+		return mdlerrors.NewBackend("create enumeration", err)
+	}
+
+	invalidateHierarchyDeps(deps)
+
+	fmt.Fprintf(deps.Output, "Created enumeration: %s\n", s.Name)
+	return nil
+}
+
+// findEnumerationDeps is the HandlerDeps version of findEnumeration.
+func findEnumerationDeps(deps *HandlerDeps, moduleName, enumName string) *model.Enumeration {
+	enums, err := deps.EnumerationReader.ListEnumerations()
+	if err != nil {
+		return nil
+	}
+
+	h, err := GetOrBuildHierarchy(deps)
+	if err != nil {
+		return nil
+	}
+
+	for _, enum := range enums {
+		modID := h.FindModuleID(enum.ContainerID)
+		modName := h.GetModuleName(modID)
+		if enum.Name == enumName && modName == moduleName {
+			return enum
+		}
+	}
+	return nil
+}
 
 // ExecCreateEnumeration handles CREATE ENUMERATION statements.
 func ExecCreateEnumeration(ctx *ExecContext, s *ast.CreateEnumerationStmt) error {
@@ -112,6 +202,54 @@ func findEnumeration(ctx *ExecContext, moduleName, enumName string) *model.Enume
 func execAlterEnumeration(ctx *ExecContext, s *ast.AlterEnumerationStmt) error {
 	// TODO: Implement ALTER ENUMERATION
 	return mdlerrors.NewUnsupported("alter enumeration not yet implemented")
+}
+
+// execDropEnumerationDepsImpl is the HandlerDeps implementation for DROP ENUMERATION.
+func execDropEnumerationDepsImpl(ctx context.Context, s *ast.DropEnumerationStmt, deps *HandlerDeps) error {
+	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
+		return mdlerrors.NewNotConnected()
+	}
+
+	enums, err := deps.EnumerationReader.ListEnumerations()
+	if err != nil {
+		return mdlerrors.NewBackend("list enumerations", err)
+	}
+
+	type match struct {
+		enum   *model.Enumeration
+		module *model.Module
+	}
+	var matches []match
+	for _, enum := range enums {
+		if enum.Name != s.Name.Name {
+			continue
+		}
+		module, err := findModuleByIDDeps(ctx, deps, enum.ContainerID)
+		if err != nil {
+			continue
+		}
+		if s.Name.Module == "" || module.Name == s.Name.Module {
+			matches = append(matches, match{enum, module})
+		}
+	}
+
+	switch len(matches) {
+	case 0:
+		return mdlerrors.NewNotFound("enumeration", s.Name.String())
+	case 1:
+		if err := deps.EnumerationWriter.DeleteEnumeration(matches[0].enum.ID); err != nil {
+			return mdlerrors.NewBackend("delete enumeration", err)
+		}
+		fmt.Fprintf(deps.Output, "Dropped enumeration: %s.%s\n", matches[0].module.Name, s.Name.Name)
+		return nil
+	default:
+		var names []string
+		for _, m := range matches {
+			names = append(names, m.module.Name+"."+s.Name.Name)
+		}
+		return mdlerrors.NewValidationf("ambiguous enumeration name %q — found in: %s; use a fully-qualified name",
+			s.Name.Name, strings.Join(names, ", "))
+	}
 }
 
 // ExecDropEnumeration handles DROP ENUMERATION statements.

@@ -5,6 +5,7 @@
 package executor
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -187,6 +188,97 @@ func createFolder(ctx *ExecContext, name string, containerID model.ID) (model.ID
 	}
 
 	if err := ctx.FolderManager.CreateFolder(folder); err != nil {
+		return "", err
+	}
+
+	return folder.ID, nil
+}
+
+// findEntityDeps is the HandlerDeps version of findEntity.
+func findEntityDeps(ctx context.Context, deps *HandlerDeps, moduleName, entityName string) (*genDm.Entity, error) {
+	module, err := findModuleDeps(ctx, deps, moduleName)
+	if err != nil {
+		return nil, err
+	}
+	dm, err := getDomainModelGenCachedDeps(ctx, deps, module.ID)
+	if err != nil {
+		return nil, mdlerrors.NewBackend("get domain model", err)
+	}
+	for _, entityElem := range dm.EntitiesItems() {
+		entity, ok := entityElem.(*genDm.Entity)
+		if ok && entity != nil && entity.Name() == entityName {
+			return entity, nil
+		}
+	}
+	return nil, mdlerrors.NewNotFound("entity", moduleName+"."+entityName)
+}
+
+// resolveFolderDeps is the HandlerDeps version of resolveFolder.
+func resolveFolderDeps(deps *HandlerDeps, moduleID model.ID, folderPath string, h *ContainerHierarchy) (model.ID, error) {
+	if folderPath == "" {
+		return moduleID, nil
+	}
+
+	if h != nil {
+		if id, ok := h.ResolveFolderPath(moduleID, folderPath); ok {
+			return id, nil
+		}
+	}
+
+	folders, err := deps.FolderManager.ListFolders()
+	if err != nil {
+		return "", mdlerrors.NewBackend("list folders", err)
+	}
+
+	parts := strings.Split(folderPath, "/")
+	currentContainerID := moduleID
+
+	for _, part := range parts {
+		if part == "" {
+			continue
+		}
+
+		var foundFolder *types.FolderInfo
+		for _, f := range folders {
+			if f.ContainerID == currentContainerID && f.Name == part {
+				foundFolder = f
+				break
+			}
+		}
+
+		if foundFolder != nil {
+			currentContainerID = foundFolder.ID
+		} else {
+			parentID := currentContainerID
+			newFolderID, err := createFolderDeps(deps, part, parentID)
+			if err != nil {
+				return "", mdlerrors.NewBackend("create folder "+part, err)
+			}
+			currentContainerID = newFolderID
+
+			folders = append(folders, &types.FolderInfo{
+				ID:          newFolderID,
+				ContainerID: parentID,
+				Name:        part,
+			})
+		}
+	}
+
+	return currentContainerID, nil
+}
+
+// createFolderDeps creates a new folder in the project (HandlerDeps version).
+func createFolderDeps(deps *HandlerDeps, name string, containerID model.ID) (model.ID, error) {
+	folder := &model.Folder{
+		BaseElement: model.BaseElement{
+			ID:       model.ID(types.GenerateID()),
+			TypeName: "Projects$Folder",
+		},
+		ContainerID: containerID,
+		Name:        name,
+	}
+
+	if err := deps.FolderManager.CreateFolder(folder); err != nil {
 		return "", err
 	}
 
@@ -573,6 +665,150 @@ func buildJavaScriptActionQualifiedNames(ctx *ExecContext) map[string]bool {
 		result[qn] = true
 	}
 	return result
+}
+
+// ----------------------------------------------------------------------------
+// Deps helper functions (HandlerDeps versions, no ExecContext needed)
+// ----------------------------------------------------------------------------
+
+// findModuleDeps is the HandlerDeps version of findModule.
+func findModuleDeps(_ context.Context, deps *HandlerDeps, name string) (*model.Module, error) {
+	if name == "" {
+		return nil, mdlerrors.NewValidation("module name is required: objects must be created within a module (use ModuleName.ObjectName syntax)")
+	}
+
+	modules, err := getModulesFromCacheDeps(nil, deps)
+	if err != nil {
+		return nil, mdlerrors.NewBackend("list modules", err)
+	}
+
+	for _, m := range modules {
+		if m.Name == name {
+			return m, nil
+		}
+	}
+
+	return nil, mdlerrors.NewNotFound("module", name)
+}
+
+// getModulesFromCacheDeps returns cached modules or loads them (HandlerDeps version).
+func getModulesFromCacheDeps(_ context.Context, deps *HandlerDeps) ([]*model.Module, error) {
+	if deps.Cache != nil && deps.Cache.modules != nil {
+		return deps.Cache.modules, nil
+	}
+	modules, err := deps.ModuleLister.ListModules()
+	if err != nil {
+		return nil, err
+	}
+	if deps.Cache != nil {
+		deps.Cache.modules = modules
+	}
+	return modules, nil
+}
+
+// findModuleByIDDeps is the HandlerDeps version of findModuleByID.
+func findModuleByIDDeps(_ context.Context, deps *HandlerDeps, id model.ID) (*model.Module, error) {
+	modules, err := getModulesFromCacheDeps(nil, deps)
+	if err != nil {
+		return nil, mdlerrors.NewBackend("list modules", err)
+	}
+
+	for _, m := range modules {
+		if m.ID == id {
+			return m, nil
+		}
+	}
+
+	return nil, mdlerrors.NewNotFoundMsg("module", string(id), "module not found with ID: "+string(id))
+}
+
+// findOrCreateModuleDeps is the HandlerDeps version of findOrCreateModule.
+func findOrCreateModuleDeps(ctx context.Context, deps *HandlerDeps, name string) (*model.Module, error) {
+	m, err := findModuleDeps(ctx, deps, name)
+	if err == nil {
+		return m, nil
+	}
+	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() || name == "" {
+		return nil, err
+	}
+	// Auto-create the module via execCreateModuleDeps
+	if createErr := execCreateModuleDeps(ctx, &ast.CreateModuleStmt{Name: name}, deps); createErr != nil {
+		return nil, mdlerrors.NewBackend("auto-create module "+name, createErr)
+	}
+	return findModuleDeps(ctx, deps, name)
+}
+
+// invalidateHierarchyDeps clears the cached hierarchy (HandlerDeps version).
+func invalidateHierarchyDeps(deps *HandlerDeps) {
+	if deps.Cache != nil {
+		deps.Cache.hierarchy = nil
+	}
+}
+
+// invalidateDomainModelsCacheDeps clears the gen-typed domain-model caches (HandlerDeps version).
+func invalidateDomainModelsCacheDeps(deps *HandlerDeps) {
+	if deps.Cache == nil {
+		return
+	}
+	deps.Cache.domainModelsWithContainerGen = nil
+	deps.Cache.domainModels = nil
+	deps.Cache.domainModelsGen = nil
+	if deps.CacheInvalidator != nil {
+		deps.CacheInvalidator.InvalidateCache()
+	}
+}
+
+// invalidateDomainModelGenForModuleDeps drops the cached DomainModel for a single module.
+func invalidateDomainModelGenForModuleDeps(deps *HandlerDeps, moduleID model.ID) {
+	if deps.Cache == nil || deps.Cache.domainModelByModule == nil {
+		return
+	}
+	delete(deps.Cache.domainModelByModule, moduleID)
+}
+
+// setDomainModelGenCachedDeps updates the cached DomainModel for moduleID (HandlerDeps version).
+func setDomainModelGenCachedDeps(deps *HandlerDeps, moduleID model.ID, dm *genDm.DomainModel) {
+	if deps.Cache == nil {
+		return
+	}
+	if deps.Cache.domainModelByModule == nil {
+		deps.Cache.domainModelByModule = make(map[model.ID]*genDm.DomainModel)
+	}
+	deps.Cache.domainModelByModule[moduleID] = dm
+}
+
+// getDomainModelGenCachedDeps returns the DomainModel for moduleID (HandlerDeps version).
+func getDomainModelGenCachedDeps(_ context.Context, deps *HandlerDeps, moduleID model.ID) (*genDm.DomainModel, error) {
+	if deps.Cache != nil && deps.Cache.domainModelByModule != nil {
+		if dm, ok := deps.Cache.domainModelByModule[moduleID]; ok {
+			return dm, nil
+		}
+	}
+	dm, err := deps.DomainModelReader.GetDomainModelGen(moduleID)
+	if err != nil {
+		return nil, err
+	}
+	if deps.Cache.domainModelByModule == nil {
+		deps.Cache.domainModelByModule = make(map[model.ID]*genDm.DomainModel)
+	}
+	deps.Cache.domainModelByModule[moduleID] = dm
+	return dm, nil
+}
+
+// trackModifiedDomainModelDeps records a domain model modified during execution.
+func trackModifiedDomainModelDeps(deps *HandlerDeps, moduleID model.ID, moduleName string) {
+	if deps.Cache == nil {
+		deps.Cache = &executorCache{}
+	}
+	if deps.Cache.modifiedDomainModels == nil {
+		deps.Cache.modifiedDomainModels = make(map[model.ID]string)
+	}
+	deps.Cache.modifiedDomainModels[moduleID] = moduleName
+}
+
+// writeResultDeps renders a TableResult to deps.Output in the current format.
+func writeResultDeps(deps *HandlerDeps, r *TableResult) error {
+	return writeResultTo(deps.Output, deps.Format, r)
 }
 
 // ----------------------------------------------------------------------------

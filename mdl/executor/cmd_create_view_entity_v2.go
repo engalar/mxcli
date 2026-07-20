@@ -3,6 +3,7 @@
 package executor
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -11,6 +12,125 @@ import (
 	"github.com/mendixlabs/mxcli/model"
 	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 )
+
+// execCreateViewEntityGenDeps is the HandlerDeps implementation for CREATE VIEW ENTITY.
+func execCreateViewEntityGenDeps(ctx context.Context, s *ast.CreateViewEntityStmt, deps *HandlerDeps) error {
+	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
+		return mdlerrors.NewNotConnected()
+	}
+
+	if err := checkFeatureDeps(deps, "domain_model", "view_entities",
+		"create view entity",
+		"upgrade your project to 10.18+ or use a regular entity with a microflow data source"); err != nil {
+		return err
+	}
+
+	if s.Query.RawQuery != "" {
+		if oqlViolations := ValidateOQLSyntax(s.Query.RawQuery); len(oqlViolations) > 0 {
+			var msgs []string
+			for _, v := range oqlViolations {
+				msgs = append(msgs, v.Message)
+			}
+			return mdlerrors.NewValidationf("invalid OQL in view entity '%s':\n  - %s",
+				s.Name.String(), strings.Join(msgs, "\n  - "))
+		}
+	}
+
+	module, err := findModuleDeps(ctx, deps, s.Name.Module)
+	if err != nil {
+		return err
+	}
+
+	dm, err := getDomainModelGenCachedDeps(ctx, deps, module.ID)
+	if err != nil {
+		return mdlerrors.NewBackend("get domain model", err)
+	}
+	if dm == nil {
+		return mdlerrors.NewBackend("get domain model", nil)
+	}
+
+	existingEntity := findEntityInDMGenByName(dm, s.Name.Name)
+	if existingEntity != nil && !s.CreateOrModify && !s.CreateOrReplace {
+		return mdlerrors.NewAlreadyExistsMsg("entity", s.Name.Module+"."+s.Name.Name,
+			fmt.Sprintf("entity already exists: %s.%s (use create or modify to update, or create or replace to drop and recreate)", s.Name.Module, s.Name.Name))
+	}
+
+	if existingEntity != nil && s.CreateOrReplace {
+		if s.Position == nil {
+			x, y, ok := parseLocationBSON(existingEntity.Location())
+			if ok {
+				s.Position = &ast.Position{X: x, Y: y}
+			}
+		}
+		if err := deps.DomainModelWriter.DeleteViewEntitySourceDocumentByName(s.Name.Module, s.Name.Name); err != nil {
+			return mdlerrors.NewBackend("delete existing ViewEntitySourceDocument", err)
+		}
+		if err := deps.DomainModelWriter.DeleteEntity(model.ID(dm.ID()), model.ID(existingEntity.ID())); err != nil {
+			return mdlerrors.NewBackend("delete existing entity for replace", err)
+		}
+		dm, err = getDomainModelGenCachedDeps(ctx, deps, module.ID)
+		if err != nil {
+			return mdlerrors.NewBackend("get domain model after delete", err)
+		}
+		if dm == nil {
+			return mdlerrors.NewBackend("get domain model after delete", nil)
+		}
+		existingEntity = nil
+	}
+
+	location := autoLayoutLocationGen(s.Position, existingEntity, dm)
+	sourceDocRef := s.Name.Module + "." + s.Name.Name
+
+	if existingEntity != nil && s.CreateOrModify {
+		if err := deps.DomainModelWriter.UpdateViewEntitySourceDocument(
+			s.Name.Module, s.Name.Name, s.Query.RawQuery, s.Documentation,
+		); err != nil {
+			return mdlerrors.NewBackend("update ViewEntitySourceDocument", err)
+		}
+	} else {
+		if err := deps.DomainModelWriter.DeleteViewEntitySourceDocumentByName(s.Name.Module, s.Name.Name); err != nil {
+			return mdlerrors.NewBackend("delete existing ViewEntitySourceDocument", err)
+		}
+		if _, err := deps.DomainModelWriter.CreateViewEntitySourceDocument(
+			module.ID,
+			s.Name.Module,
+			s.Name.Name,
+			s.Query.RawQuery,
+			s.Documentation,
+		); err != nil {
+			return mdlerrors.NewBackend("create ViewEntitySourceDocument", err)
+		}
+	}
+
+	entity := astToViewEntityGen(s, sourceDocRef, location)
+	if entity == nil {
+		return mdlerrors.NewValidation("failed to build gen view entity from AST")
+	}
+
+	preserveViewEntityIDs(entity, existingEntity)
+
+	if existingEntity != nil && s.CreateOrModify {
+		if err := deps.DomainModelWriter.UpdateEntityGen(model.ID(dm.ID()), entity); err != nil {
+			return mdlerrors.NewBackend("update view entity", err)
+		}
+		invalidateDomainModelGenForModuleDeps(deps, module.ID)
+		invalidateHierarchyDeps(deps)
+		invalidateDomainModelsCacheDeps(deps)
+		fmt.Fprintf(deps.Output, "Modified view entity: %s\n", s.Name)
+		trackModifiedDomainModelDeps(deps, module.ID, module.Name)
+		return nil
+	}
+
+	if err := deps.DomainModelWriter.CreateEntityGen(model.ID(dm.ID()), entity); err != nil {
+		return mdlerrors.NewBackend("create view entity", err)
+	}
+	invalidateDomainModelGenForModuleDeps(deps, module.ID)
+	invalidateHierarchyDeps(deps)
+	invalidateDomainModelsCacheDeps(deps)
+	fmt.Fprintf(deps.Output, "Created view entity: %s\n", s.Name)
+	trackModifiedDomainModelDeps(deps, module.ID, module.Name)
+	return nil
+}
 
 // execCreateViewEntityGen handles CREATE VIEW ENTITY on the gen-native read +
 // write path, preserving IDs on MODIFY so the sdk-backed writer can update the

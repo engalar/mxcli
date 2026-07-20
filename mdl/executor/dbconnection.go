@@ -3,6 +3,7 @@
 package executor
 
 import (
+	"context"
 	"fmt"
 	"sort"
 	"strings"
@@ -11,6 +12,137 @@ import (
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 	"github.com/mendixlabs/mxcli/model"
 )
+
+// execCreateDatabaseConnectionDepsImpl is the HandlerDeps implementation for CREATE DATABASE CONNECTION.
+func execCreateDatabaseConnectionDepsImpl(ctx context.Context, stmt *ast.CreateDatabaseConnectionStmt, deps *HandlerDeps) error {
+	if deps.ConnectionManager == nil || !deps.ConnectionManager.IsConnected() {
+		return mdlerrors.NewNotConnectedWrite()
+	}
+
+	if stmt.Name.Module == "" {
+		return mdlerrors.NewValidation("module name required: use create database connection Module.ConnectionName")
+	}
+
+	module, err := findModuleDeps(ctx, deps, stmt.Name.Module)
+	if err != nil {
+		return err
+	}
+
+	existing, _ := deps.ServiceLister.ListDatabaseConnections()
+	h, _ := GetOrBuildHierarchy(deps)
+
+	var existingConnID model.ID
+	for _, ex := range existing {
+		modID := h.FindModuleID(ex.ContainerID)
+		modName := h.GetModuleName(modID)
+		if strings.EqualFold(modName, stmt.Name.Module) && strings.EqualFold(ex.Name, stmt.Name.Name) {
+			if stmt.CreateOrModify {
+				existingConnID = ex.ID
+			} else {
+				return mdlerrors.NewAlreadyExistsMsg("database connection", modName+"."+ex.Name, fmt.Sprintf("database connection already exists: %s.%s (use create or modify to update)", modName, ex.Name))
+			}
+		}
+	}
+
+	connStr := stmt.ConnectionString
+	userName := stmt.UserName
+	password := stmt.Password
+
+	connInputValue := ""
+	if stmt.ConnectionStringIsRef {
+		connInputValue = resolveConstantDefaultDeps(deps, connStr)
+	}
+
+	conn := &model.DatabaseConnection{
+		ContainerID:          module.ID,
+		Name:                 stmt.Name.Name,
+		DatabaseType:         stmt.DatabaseType,
+		ConnectionString:     connStr,
+		ConnectionInputValue: connInputValue,
+		UserName:             userName,
+		Password:             password,
+		ExportLevel:          "Hidden",
+	}
+
+	for _, qDef := range stmt.Queries {
+		q := &model.DatabaseQuery{
+			Name:      qDef.Name,
+			QueryType: 1,
+			SQL:       qDef.SQL,
+		}
+		q.TypeName = "DatabaseConnector$DatabaseQuery"
+
+		for _, pDef := range qDef.Parameters {
+			p := &model.DatabaseQueryParameter{
+				ParameterName:         pDef.Name,
+				DefaultValue:          pDef.DefaultValue,
+				EmptyValueBecomesNull: pDef.TestWithNull,
+				DataType:              astDataTypeToDBType(pDef.DataType),
+			}
+			p.TypeName = "DatabaseConnector$QueryParameter"
+			q.Parameters = append(q.Parameters, p)
+		}
+
+		if qDef.Returns.String() != "" {
+			tm := &model.DatabaseTableMapping{
+				Entity: qDef.Returns.String(),
+			}
+			tm.TypeName = "DatabaseConnector$TableMapping"
+
+			for _, m := range qDef.Mappings {
+				cm := &model.DatabaseColumnMapping{
+					Attribute:  qDef.Returns.String() + "." + m.AttributeName,
+					ColumnName: m.ColumnName,
+				}
+				cm.TypeName = "DatabaseConnector$ColumnMapping"
+				tm.Columns = append(tm.Columns, cm)
+			}
+
+			q.TableMappings = append(q.TableMappings, tm)
+		}
+
+		conn.Queries = append(conn.Queries, q)
+	}
+
+	if existingConnID != "" {
+		conn.ID = existingConnID
+		if err := deps.ServiceWriter.UpdateDatabaseConnection(conn); err != nil {
+			return mdlerrors.NewBackend("update database connection", err)
+		}
+		invalidateHierarchyDeps(deps)
+		fmt.Fprintf(deps.Output, "Modified database connection: %s.%s\n", stmt.Name.Module, stmt.Name.Name)
+		return nil
+	}
+
+	if err := deps.ServiceWriter.CreateDatabaseConnection(conn); err != nil {
+		return mdlerrors.NewBackend("create database connection", err)
+	}
+
+	invalidateHierarchyDeps(deps)
+	fmt.Fprintf(deps.Output, "Created database connection: %s.%s\n", stmt.Name.Module, stmt.Name.Name)
+	return nil
+}
+
+// resolveConstantDefaultDeps is the HandlerDeps version of resolveConstantDefault.
+func resolveConstantDefaultDeps(deps *HandlerDeps, qualifiedName string) string {
+	constants, err := deps.ConstantReader.ListConstants()
+	if err != nil {
+		return ""
+	}
+	h, err := GetOrBuildHierarchy(deps)
+	if err != nil {
+		return ""
+	}
+	for _, c := range constants {
+		modID := h.FindModuleID(c.ContainerID)
+		modName := h.GetModuleName(modID)
+		fqn := modName + "." + c.Name
+		if strings.EqualFold(fqn, qualifiedName) {
+			return c.DefaultValue
+		}
+	}
+	return ""
+}
 
 // ExecCreateDatabaseConnection handles CREATE DATABASE CONNECTION command.
 func ExecCreateDatabaseConnection(ctx *ExecContext, stmt *ast.CreateDatabaseConnectionStmt) error {
@@ -128,6 +260,59 @@ func ExecCreateDatabaseConnection(ctx *ExecContext, stmt *ast.CreateDatabaseConn
 	invalidateHierarchy(ctx)
 	fmt.Fprintf(ctx.Output, "Created database connection: %s.%s\n", stmt.Name.Module, stmt.Name.Name)
 	return nil
+}
+
+func listDatabaseConnectionsDeps(ctx context.Context, deps *HandlerDeps, moduleName string) error {
+	connections, err := deps.ServiceLister.ListDatabaseConnections()
+	if err != nil {
+		return mdlerrors.NewBackend("list database connections", err)
+	}
+
+	h, err := GetOrBuildHierarchy(deps)
+	if err != nil {
+		return mdlerrors.NewBackend("build hierarchy", err)
+	}
+
+	type row struct {
+		qualifiedName string
+		module        string
+		name          string
+		folderPath    string
+		dbType        string
+		queries       int
+	}
+	var rows []row
+
+	for _, conn := range connections {
+		modID := h.FindModuleID(conn.ContainerID)
+		modName := h.GetModuleName(modID)
+		if moduleName != "" && !strings.EqualFold(modName, moduleName) {
+			continue
+		}
+
+		qualifiedName := modName + "." + conn.Name
+		folderPath := h.BuildFolderPath(conn.ContainerID)
+
+		rows = append(rows, row{qualifiedName, modName, conn.Name, folderPath, conn.DatabaseType, len(conn.Queries)})
+	}
+
+	if len(rows) == 0 && deps.Format != FormatJSON {
+		fmt.Fprintln(deps.Output, "No database connections found.")
+		return nil
+	}
+
+	sort.Slice(rows, func(i, j int) bool {
+		return strings.ToLower(rows[i].qualifiedName) < strings.ToLower(rows[j].qualifiedName)
+	})
+
+	result := &TableResult{
+		Columns: []string{"Qualified Name", "Module", "Name", "Folder", "Type", "Queries"},
+		Summary: fmt.Sprintf("(%d database connections)", len(rows)),
+	}
+	for _, r := range rows {
+		result.Rows = append(result.Rows, []any{r.qualifiedName, r.module, r.name, r.folderPath, r.dbType, r.queries})
+	}
+	return writeResultTo(deps.Output, deps.Format, result)
 }
 
 // listDatabaseConnections handles SHOW DATABASE CONNECTIONS command.
