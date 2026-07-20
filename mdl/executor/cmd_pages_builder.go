@@ -173,30 +173,17 @@ func (pb *pageBuilder) getLayouts() ([]*genPg.Layout, error) {
 }
 
 // getDomainModelsWithContainer returns gen-typed domain models paired with
-// their owning module ID. Uses the domain-cached listing.
+// their owning module ID. Uses ListDomainModelsGen which includes the
+// virtual System module (built-in entities not stored in the MPR repos).
 func (pb *pageBuilder) getDomainModelsWithContainer() ([]DomainModelGenWithContainer, error) {
-	if pb.execCache != nil && pb.execCache.domainModelsWithContainerGen != nil {
-		return pb.execCache.domainModelsWithContainerGen.Get()
+	dms, err := pb.dmReaderOrBackend().ListDomainModelsGen()
+	if err != nil {
+		return nil, err
 	}
-	var dms []*genDm.DomainModel
-	if pb.execCache != nil && pb.execCache.domainModelsGen != nil {
-		dms = pb.execCache.domainModelsGen
-	} else {
-		var err error
-		dms, err = pb.dmReaderOrBackend().ListDomainModelsGen()
-		if err != nil {
-			return nil, err
-		}
-		if pb.execCache != nil {
-			pb.execCache.domainModelsGen = dms
-		}
-	}
-
 	h, err := pb.getHierarchy()
 	if err != nil {
 		return nil, err
 	}
-
 	out := make([]DomainModelGenWithContainer, 0, len(dms))
 	for _, dm := range dms {
 		if dm == nil {
@@ -207,9 +194,6 @@ func (pb *pageBuilder) getDomainModelsWithContainer() ([]DomainModelGenWithConta
 			DM:          dm,
 			ContainerID: model.ID(containerID),
 		})
-	}
-	if pb.execCache != nil {
-		pb.execCache.domainModelsWithContainerGen.Invalidate()
 	}
 	return out, nil
 }

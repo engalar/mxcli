@@ -13,6 +13,27 @@ import (
 	_ "modernc.org/sqlite"
 )
 
+func TestGetRawEntityByName_SystemEntity(t *testing.T) {
+	r, err := OpenWithOptions("../../testdata/corpus-b/app.mpr", OpenOptions{ReadOnly: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer r.Close()
+
+	// System.WorkflowUserTask is a built-in System entity not stored as a raw unit.
+	// The getRawEntityByName path must fall back to meta.SystemEntities.
+	info, err := r.GetRawUnitByName("entity", "System.WorkflowUserTask")
+	if err != nil {
+		t.Fatalf("expected System.WorkflowUserTask to be found, got: %v", err)
+	}
+	if info.QualifiedName != "System.WorkflowUserTask" {
+		t.Errorf("expected QualifiedName=System.WorkflowUserTask, got %q", info.QualifiedName)
+	}
+	if info.ModuleName != "System" {
+		t.Errorf("expected ModuleName=System, got %q", info.ModuleName)
+	}
+}
+
 func TestListUnitIdentities(t *testing.T) {
 	r, err := OpenWithOptions("../../testdata/corpus-b/app.mpr", OpenOptions{ReadOnly: true})
 	if err != nil {

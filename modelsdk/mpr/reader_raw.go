@@ -15,6 +15,7 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/types"
 	"github.com/mendixlabs/mxcli/model"
+	"github.com/mendixlabs/mxcli/modelsdk/meta"
 )
 
 // GetRawUnit retrieves raw BSON data for a unit by ID as a map.
@@ -463,6 +464,18 @@ func (r *Reader) getRawEntityByName(qualifiedName string) (*types.RawUnitInfo, e
 			}
 		}
 	}
+	// Fallback: check built-in System entities (not stored as raw units)
+	if targetModule == "System" {
+		for _, def := range meta.SystemEntities {
+			if def.Name == targetEntity {
+				return &types.RawUnitInfo{
+					QualifiedName: qualifiedName,
+					Type:          "DomainModels$Entity",
+					ModuleName:    "System",
+				}, nil
+			}
+		}
+	}
 	return nil, fmt.Errorf("entity not found: %s", qualifiedName)
 }
 
@@ -514,6 +527,18 @@ func (r *Reader) getRawAssociationByName(qualifiedName string) (*types.RawUnitIn
 					Type:          "DomainModels$Association",
 					ModuleName:    moduleName,
 					Contents:      assocBytes,
+				}, nil
+			}
+		}
+	}
+	// Fallback: check built-in System associations (not stored as raw units)
+	if targetModule == "System" {
+		for _, def := range meta.SystemAssociations {
+			if def.Name == targetAssoc {
+				return &types.RawUnitInfo{
+					QualifiedName: qualifiedName,
+					Type:          "DomainModels$Association",
+					ModuleName:    "System",
 				}, nil
 			}
 		}
