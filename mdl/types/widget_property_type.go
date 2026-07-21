@@ -19,4 +19,8 @@ type PropertyTypeIDEntry struct {
 	// PropertyTypes order or it raises CE0463 ("widget definition changed"); the
 	// object-list item builder uses this instead of alphabetical map iteration.
 	NestedKeyOrder []string
+	// HasTranslations is true when the property's ValueType has non-empty Translations.
+	// Used by the DataGrid2 builder to decide whether to keep the TextTemplate ClientTemplate
+	// in the WidgetValue for TextTemplate-type properties.
+	HasTranslations bool
 }

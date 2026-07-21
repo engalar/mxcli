@@ -1,0 +1,14 @@
+create module DebugDG;
+
+create persistent entity DebugDG.Item (
+  Name: string(200)
+);
+
+create page DebugDG.ItemList (
+  title: 'Debug DG',
+  layout: Atlas_Core.Atlas_Default
+) {
+  datagrid dgItems (datasource: database DebugDG.Item) {
+    column colName (attribute: Name, caption: 'Name')
+  }
+};

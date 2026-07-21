@@ -162,6 +162,14 @@ func (b *MprBackend) updateDataGrid2Properties(props bson.A, propertyTypeIDs map
 	columnsEntry := propertyTypeIDs["columns"]
 	filtersPlaceholderEntry := propertyTypeIDs["filtersPlaceholder"]
 
+	// Build reverse map: PropertyTypeID → ValueType
+	tpToValueType := make(map[string]string)
+	for _, entry := range propertyTypeIDs {
+		if entry.PropertyTypeID != "" {
+			tpToValueType[entry.PropertyTypeID] = entry.ValueType
+		}
+	}
+
 	for _, propVal := range props {
 		if _, ok := propVal.(int32); ok {
 			continue
@@ -181,11 +189,35 @@ func (b *MprBackend) updateDataGrid2Properties(props bson.A, propertyTypeIDs map
 		} else if typePointer == filtersPlaceholderEntry.PropertyTypeID && len(spec.HeaderWidgetsBSON) > 0 {
 			result = append(result, buildFiltersPlaceholderProperty(filtersPlaceholderEntry, spec.HeaderWidgetsBSON))
 		} else {
-			result = append(result, clonePropertyWithNewIDs(propMap))
+			cloned := clonePropertyWithNewIDs(propMap)
+			// Only nullify TextTemplate for non-TextTemplate properties.
+			if vt, ok := tpToValueType[typePointer]; ok && vt != "TextTemplate" {
+				cloned = nullifyPropertyTextTemplate(cloned)
+			}
+			result = append(result, cloned)
 		}
 	}
 
 	return result
+}
+
+// nullifyPropertyTextTemplate sets TextTemplate to nil in a WidgetProperty's Value in-place.
+// Only nullifies when the field already exists; does NOT add a new TextTemplate field.
+func nullifyPropertyTextTemplate(prop bson.D) bson.D {
+	for _, elem := range prop {
+		if elem.Key == "Value" {
+			if valMap, ok := elem.Value.(bson.D); ok {
+				for j, ve := range valMap {
+					if ve.Key == "TextTemplate" {
+						valMap[j].Value = nil
+						break
+					}
+				}
+			}
+			break
+		}
+	}
+	return prop
 }
 
 func (b *MprBackend) cloneAndUpdateColumnsProperty(templateProp bson.D, columnsEntry types.PropertyTypeIDEntry, propertyTypeIDs map[string]types.PropertyTypeIDEntry, columns []backend.DataGridColumnSpec) bson.D {
@@ -375,7 +407,8 @@ func (b *MprBackend) cloneAndUpdateColumnProperties(templateProps bson.A, column
 					entry := columnPropertyIDs["tooltip"]
 					result = append(result, buildColumnHeaderProperty(entry, tooltipText))
 				} else {
-					result = append(result, clonePropertyWithNewIDs(propMap))
+					entry := columnPropertyIDs["tooltip"]
+					result = append(result, buildColumnHeaderProperty(entry, ""))
 				}
 			}
 		case "exportValue":
@@ -383,7 +416,8 @@ func (b *MprBackend) cloneAndUpdateColumnProperties(templateProps bson.A, column
 				entry := columnPropertyIDs["exportValue"]
 				result = append(result, buildColumnHeaderProperty(entry, ""))
 			} else {
-				result = append(result, clonePropertyWithNewIDs(propMap))
+				entry := columnPropertyIDs["exportValue"]
+				result = append(result, buildColumnHeaderProperty(entry, ""))
 			}
 		case "allowEventPropagation":
 			result = append(result, clonePropertyWithNewIDs(propMap))
@@ -581,6 +615,19 @@ func (b *MprBackend) buildDataGrid2ColumnObject(col *backend.DataGridColumnSpec,
 			hidVal := colPropString(col.Properties, "Hidable", "yes")
 			properties = append(properties, buildColumnPrimitiveProperty(entry, hidVal))
 
+		case "exportValue":
+			// exportValue is VISIBLE only in customContent mode (editorConfig:
+			// hidden when showContentAs != "customContent"). A visible property
+			// carries an empty ClientTemplate; a hidden one is null. Emitting null
+			// while visible triggers CE0463 — confirmed via mx check + the
+			// key-based BSON oracle vs `mx update-widgets` golden. Non-custom
+			// columns fall through to buildColumnDefaultProperty (TextTemplate null).
+			if hasCustomContent {
+				properties = append(properties, buildColumnHeaderProperty(entry, ""))
+			} else {
+				properties = append(properties, buildColumnDefaultProperty(entry))
+			}
+
 		case "tooltip":
 			if hasCustomContent {
 				properties = append(properties, buildColumnDefaultProperty(entry))
@@ -596,7 +643,7 @@ func (b *MprBackend) buildDataGrid2ColumnObject(col *backend.DataGridColumnSpec,
 				if tooltipText != "" {
 					properties = append(properties, buildColumnHeaderProperty(entry, tooltipText))
 				} else {
-					properties = append(properties, buildColumnDefaultProperty(entry))
+					properties = append(properties, buildColumnHeaderProperty(entry, ""))
 				}
 			}
 
@@ -909,16 +956,11 @@ func buildColumnContentProperty(entry types.PropertyTypeIDEntry, widgetsList any
 }
 
 func buildColumnDefaultProperty(entry types.PropertyTypeIDEntry) bson.D {
-	var textTemplate any
-	if entry.ValueType == "TextTemplate" {
-		textTemplate = buildEmptyClientTemplate()
-	}
-
 	return bson.D{
 		{Key: "$ID", Value: bsonutil.NewIDBsonBinary()},
 		{Key: "$Type", Value: "CustomWidgets$WidgetProperty"},
 		{Key: "TypePointer", Value: bsonutil.IDToBsonBinary(entry.PropertyTypeID)},
-		{Key: "Value", Value: buildDefaultWidgetValueBSON(entry, nil, nil, entry.DefaultValue, textTemplate, nil)},
+		{Key: "Value", Value: buildDefaultWidgetValueBSON(entry, nil, nil, entry.DefaultValue, nil, nil)},
 	}
 }
 
@@ -1063,6 +1105,8 @@ func cloneValueWithUpdatedPrimitive(val bson.D, newValue string) bson.D {
 			result = append(result, bson.E{Key: "$ID", Value: bsonutil.NewIDBsonBinary()})
 		} else if elem.Key == "PrimitiveValue" {
 			result = append(result, bson.E{Key: "PrimitiveValue", Value: newValue})
+		} else if elem.Key == "TextTemplate" {
+			result = append(result, bson.E{Key: "TextTemplate", Value: nil})
 		} else {
 			result = append(result, bson.E{Key: elem.Key, Value: deepCloneValue(elem.Value)})
 		}

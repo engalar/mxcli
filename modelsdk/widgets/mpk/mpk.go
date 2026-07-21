@@ -35,16 +35,26 @@ type PropertyDef struct {
 	Caption           string
 	Description       string
 	Category          string // from enclosing propertyGroup captions, joined with "::"
-	Required          bool
+	Required          bool   // true if required="true"; false when attribute absent or required="false"
+	RequiredExplicit  bool   // true if required attribute was explicitly set in XML
 	DefaultValue      string // for enumeration/boolean/integer types
 	IsList            bool
 	IsSystem          bool                  // true for <systemProperty> elements
 	DataSource        string                // dataSource attribute reference
+	OnChange          string                // onChange attribute referencing another property key
 	AllowedTypes      []string              // for attribute properties: Mendix type names ("String", "Decimal", etc.)
+	AssociationTypes  []string              // for association-type attributes ("Reference", "ReferenceSet")
 	ReturnType        *ExpressionReturnType // for expression-type properties
 	EnumerationValues []EnumerationValue    // for enumeration-type properties
 	SelectionTypes    []string              // for selection-type properties ("None", "Single", "Multi")
+	Translations      []PropertyTranslation // for textTemplate properties: embedded translations
 	Children          []PropertyDef         // nested properties for object-type properties
+}
+
+// PropertyTranslation holds one translation from a widget XML <translations> block.
+type PropertyTranslation struct {
+	LanguageCode string // e.g. "en_US"
+	Text         string // translated text
 }
 
 // WidgetDefinition holds the parsed definition of a pluggable widget from an .mpk file.
@@ -129,6 +139,17 @@ type xmlReturnType struct {
 	AssignableTo   string `xml:"assignableTo,attr"`
 }
 
+// xmlAssociationType represents <associationType name="..."/> element.
+type xmlAssociationType struct {
+	Name string `xml:"name,attr"`
+}
+
+// xmlTranslation represents <translation lang="en_US">text</translation> element.
+type xmlTranslation struct {
+	Lang string `xml:"lang,attr"`
+	Text string `xml:",chardata"`
+}
+
 // xmlProperty represents <property key="..." type="..." ...> element.
 type xmlProperty struct {
 	Key               string                `xml:"key,attr"`
@@ -137,12 +158,15 @@ type xmlProperty struct {
 	Required          string                `xml:"required,attr"`
 	IsList            string                `xml:"isList,attr"`
 	DataSource        string                `xml:"dataSource,attr"`
+	OnChange          string                `xml:"onChange,attr"`
 	Caption           string                `xml:"caption"`
 	Description       string                `xml:"description"`
 	AttributeTypes    []xmlAttributeType    `xml:"attributeTypes>attributeType"`
+	AssociationTypes  []xmlAssociationType  `xml:"associationTypes>associationType"`
 	EnumerationValues []xmlEnumerationValue `xml:"enumerationValues>enumerationValue"`
 	SelectionTypes    []xmlSelectionType    `xml:"selectionTypes>selectionType"`
 	ReturnType        *xmlReturnType        `xml:"returnType"`
+	Translations      []xmlTranslation      `xml:"translations>translation"`
 	// Nested properties for object type
 	NestedProps []xmlPropGroup `xml:"properties>propertyGroup"`
 }
@@ -280,16 +304,29 @@ func walkPropertyGroup(pg xmlPropGroup, parentCategory string, def *WidgetDefini
 			}
 		}
 		prop := PropertyDef{
-			Key:          p.Key,
-			Type:         p.Type,
-			Caption:      p.Caption,
-			Description:  p.Description,
-			Category:     category,
-			Required:     p.Required == "true", // default false when attribute absent
-			DefaultValue: p.DefaultValue,
-			IsList:       p.IsList == "true",
-			DataSource:   p.DataSource,
-			AllowedTypes: allowedTypes,
+			Key:              p.Key,
+			Type:             p.Type,
+			Caption:          p.Caption,
+			Description:      p.Description,
+			Category:         category,
+			Required:         p.Required == "true",
+			RequiredExplicit: p.Required != "",
+			DefaultValue:     p.DefaultValue,
+			IsList:           p.IsList == "true",
+			DataSource:       p.DataSource,
+			OnChange:         p.OnChange,
+			AllowedTypes:     allowedTypes,
+		}
+		for _, at := range p.AssociationTypes {
+			if at.Name != "" {
+				prop.AssociationTypes = append(prop.AssociationTypes, at.Name)
+			}
+		}
+		for _, tr := range p.Translations {
+			prop.Translations = append(prop.Translations, PropertyTranslation{
+				LanguageCode: tr.Lang,
+				Text:         strings.TrimSpace(tr.Text),
+			})
 		}
 		if p.ReturnType != nil {
 			prop.ReturnType = &ExpressionReturnType{
@@ -333,6 +370,7 @@ func walkPropertyGroup(pg xmlPropGroup, parentCategory string, def *WidgetDefini
 // collectNestedProperties extracts child properties from nested propertyGroups
 // within an object-type property and appends them to the parent PropertyDef.
 func collectNestedProperties(pg xmlPropGroup, parent *PropertyDef) {
+	category := pg.Caption
 	for _, p := range pg.Properties {
 		var allowedTypes []string
 		for _, at := range p.AttributeTypes {
@@ -341,15 +379,29 @@ func collectNestedProperties(pg xmlPropGroup, parent *PropertyDef) {
 			}
 		}
 		child := PropertyDef{
-			Key:          p.Key,
-			Type:         p.Type,
-			Caption:      p.Caption,
-			Description:  p.Description,
-			Required:     p.Required == "true", // default false when attribute absent
-			DefaultValue: p.DefaultValue,
-			IsList:       p.IsList == "true",
-			DataSource:   p.DataSource,
-			AllowedTypes: allowedTypes,
+			Key:              p.Key,
+			Type:             p.Type,
+			Caption:          p.Caption,
+			Category:         category,
+			Description:      p.Description,
+			Required:         p.Required == "true",
+			RequiredExplicit: p.Required != "",
+			DefaultValue:     p.DefaultValue,
+			IsList:           p.IsList == "true",
+			DataSource:       p.DataSource,
+			OnChange:         p.OnChange,
+			AllowedTypes:     allowedTypes,
+		}
+		for _, at := range p.AssociationTypes {
+			if at.Name != "" {
+				child.AssociationTypes = append(child.AssociationTypes, at.Name)
+			}
+		}
+		for _, tr := range p.Translations {
+			child.Translations = append(child.Translations, PropertyTranslation{
+				LanguageCode: tr.Lang,
+				Text:         strings.TrimSpace(tr.Text),
+			})
 		}
 		if p.ReturnType != nil {
 			child.ReturnType = &ExpressionReturnType{

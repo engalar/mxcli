@@ -147,6 +147,12 @@ func AugmentTemplate(tmpl *WidgetTemplate, def *mpk.WidgetDefinition) error {
 	setArrayField(objType, "PropertyTypes", propTypes)
 	setArrayField(tmpl.Object, "Properties", objProps)
 
+	// NOTE: top-level TextTemplate nullification is no longer done here. It used a
+	// ValueType.Translations heuristic that was uncorrelated with the real
+	// (editorConfig visibility) rule and produced CE0463. The single source of
+	// truth is now normalizeTextTemplateStates (texttemplate.go), invoked from
+	// GetTemplateFullBSON after augmentation for both generated and augmented paths.
+
 	// Augment nested ObjectType properties (e.g., DataGrid2 column properties).
 	// Top-level augmentation syncs the property list, but nested ObjectTypes inside
 	// IsList Object properties also need syncing when the .mpk version differs
@@ -181,10 +187,6 @@ func augmentNestedObjectType(propTypes []any, objProps []any, mpkProp mpk.Proper
 	existingKeys, nestedExemplars := buildExemplarIndex(ctx.nestedPropTypes)
 	missing, staleKeys := diffPropertyKeys(mpkProp.Children, existingKeys)
 
-	if len(missing) == 0 && len(staleKeys) == 0 {
-		return nil
-	}
-
 	nestedPropTypes := ctx.nestedPropTypes
 	nestedObjProps := ctx.nestedObjProps
 
@@ -192,9 +194,12 @@ func augmentNestedObjectType(propTypes []any, objProps []any, mpkProp mpk.Proper
 		nestedPropTypes, nestedObjProps = removeNestedProperties(nestedPropTypes, nestedObjProps, staleKeys)
 	}
 
-	nestedPropTypes, nestedObjProps, err := addMissingProperties(nestedPropTypes, nestedObjProps, nestedExemplars, missing)
-	if err != nil {
-		return err
+	if len(missing) > 0 {
+		var err error
+		nestedPropTypes, nestedObjProps, err = addMissingProperties(nestedPropTypes, nestedObjProps, nestedExemplars, missing)
+		if err != nil {
+			return err
+		}
 	}
 
 	// Write back
@@ -315,20 +320,44 @@ func createPropertyPair(p mpk.PropertyDef, bsonType string) (map[string]any, map
 }
 
 // createDefaultValueType creates a default ValueType structure for a given BSON type.
-// Only type-relevant fields are included to match Studio Pro's expectations.
+// All possible fields are included with zero values to match Studio Pro's BSON
+// structure — mx check raises CE0463 when PropertyTypes in the generated Type
+// are missing fields that the MPK expects.
 func createDefaultValueType(vtID string, bsonType string, p mpk.PropertyDef) map[string]any {
-	allowedTypes := []any{float64(1)}
+	allowedTypes := []any{int32(1)}
 	for _, t := range p.AllowedTypes {
 		allowedTypes = append(allowedTypes, t)
 	}
 
 	vt := map[string]any{
-		"$ID":          vtID,
-		"$Type":        "CustomWidgets$WidgetValueType",
-		"DefaultValue": p.DefaultValue,
-		"IsList":       p.IsList,
-		"Required":     p.Required,
-		"Type":         bsonType,
+		"$ID":                        vtID,
+		"$Type":                      "CustomWidgets$WidgetValueType",
+		"ActionVariables":            []any{int32(2)},
+		"AllowNonPersistableEntities": false,
+		"AllowUpload":                false,
+		"AllowedTypes":               allowedTypes,
+		"AssociationTypes":           []any{int32(1)},
+		"DataSourceProperty":         "",
+		"DefaultValue":               p.DefaultValue,
+		"DefaultType":                "None",
+		"EntityProperty":             "",
+		"EnumerationValues":          []any{int32(2)},
+		"IsList":                     p.IsList,
+		"IsLinked":                   false,
+		"IsMetaData":                 false,
+		"IsPath":                     "No",
+		"Multiline":                  false,
+		"ObjectType":                 nil,
+		"OnChangeProperty":           "",
+		"ParameterIsList":            false,
+		"PathType":                   "None",
+		"Required":                   !p.RequiredExplicit || p.Required,
+		"ReturnType":                 nil,
+		"SelectableObjectsProperty":  "",
+		"SelectionTypes":             []any{int32(1)},
+		"SetLabel":                   false,
+		"Translations":               []any{int32(2)},
+		"Type":                       bsonType,
 	}
 
 	switch bsonType {
@@ -337,6 +366,13 @@ func createDefaultValueType(vtID string, bsonType string, p mpk.PropertyDef) map
 		vt["DataSourceProperty"] = p.DataSource
 		vt["IsPath"] = "No"
 		vt["PathType"] = "None"
+		if len(p.AssociationTypes) > 0 {
+			assocTypes := []any{int32(len(p.AssociationTypes) + 1)}
+			for _, at := range p.AssociationTypes {
+				assocTypes = append(assocTypes, at)
+			}
+			vt["AssociationTypes"] = assocTypes
+		}
 	case "Association":
 		vt["AssociationTypes"] = []any{float64(1)}
 		vt["DataSourceProperty"] = p.DataSource
@@ -345,7 +381,7 @@ func createDefaultValueType(vtID string, bsonType string, p mpk.PropertyDef) map
 	case "Action":
 		vt["ActionVariables"] = []any{float64(2)}
 	case "Boolean", "Integer", "Decimal", "String":
-		// No additional type-specific fields needed
+		// No additional type-specific fields needed beyond defaults
 	case "Enumeration":
 		enumValues := []any{float64(2)}
 		for _, ev := range p.EnumerationValues {
@@ -362,10 +398,12 @@ func createDefaultValueType(vtID string, bsonType string, p mpk.PropertyDef) map
 		vt["ReturnType"] = buildReturnType(bsonType, p)
 	case "DataSource":
 		vt["EntityProperty"] = ""
+		vt["SelectableObjectsProperty"] = ""
+		vt["OnChangeProperty"] = ""
 	case "Icon":
-		// No additional fields needed
+		// No additional fields needed beyond defaults
 	case "Image":
-		// No additional fields needed
+		// No additional fields needed beyond defaults
 	case "Object":
 		if len(p.Children) > 0 {
 			vt["ObjectType"] = buildNestedObjectType(p.Children)
@@ -378,16 +416,33 @@ func createDefaultValueType(vtID string, bsonType string, p mpk.PropertyDef) map
 		vt["DataSourceProperty"] = p.DataSource
 		vt["SelectionTypes"] = selectionTypes
 	case "TextTemplate":
-		vt["Translations"] = []any{float64(2)}
+		if len(p.Translations) > 0 {
+			trans := []any{float64(len(p.Translations) + 1)}
+			for _, tr := range p.Translations {
+				trans = append(trans, map[string]any{
+					"$ID":          placeholderID(),
+					"$Type":        "CustomWidgets$WidgetTranslation",
+					"LanguageCode": tr.LanguageCode,
+					"Text":         tr.Text,
+				})
+			}
+			vt["Translations"] = trans
+		} else {
+			vt["Translations"] = []any{float64(2)}
+		}
 	case "Widgets":
-		// No additional fields needed
+		// No additional fields needed beyond defaults
 	case "File":
-		// No additional fields needed
+		// No additional fields needed beyond defaults
 	}
 
 	if p.DataSource != "" && bsonType != "Attribute" && bsonType != "Association" &&
 		bsonType != "Selection" {
 		vt["DataSourceProperty"] = p.DataSource
+	}
+
+	if p.OnChange != "" && bsonType == "Attribute" {
+		vt["OnChangeProperty"] = p.OnChange
 	}
 
 	return vt
@@ -396,20 +451,31 @@ func createDefaultValueType(vtID string, bsonType string, p mpk.PropertyDef) map
 
 
 // createDefaultWidgetValue creates a default WidgetValue for a given BSON type.
-// Only type-relevant fields are included to match Studio Pro's expectations.
-// Nil-valued fields are omitted during BSON serialization to avoid CE0463.
+// All common fields are included with empty defaults to match Studio Pro's BSON
+// structure — mx check raises CE0463 when expected fields are absent or null.
 func createDefaultWidgetValue(vtID string, bsonType string, p mpk.PropertyDef) map[string]any {
 	val := map[string]any{
 		"$ID":               placeholderID(),
 		"$Type":             "CustomWidgets$WidgetValue",
+		"Action":            createDefaultNoAction(),
 		"AttributeRef":      nil,
 		"DataSource":        nil,
 		"EntityRef":         nil,
+		"Expression":        "",
+		"Form":              "",
 		"Icon":              nil,
+		"Image":             "",
+		"Microflow":         "",
+		"Nanoflow":          "",
+		"Objects":           []any{float64(2)},
+		"PrimitiveValue":    "",
+		"Selection":         "None",
 		"SourceVariable":    nil,
-		"TextTemplate":      nil,
+		"TextTemplate":      createDefaultClientTemplate(),
 		"TranslatableValue": nil,
 		"TypePointer":       vtID,
+		"Widgets":           []any{float64(2)},
+		"XPathConstraint":   "",
 	}
 
 	switch bsonType {
@@ -436,17 +502,11 @@ func createDefaultWidgetValue(vtID string, bsonType string, p mpk.PropertyDef) m
 	case "Expression":
 		if p.DefaultValue != "" {
 			val["Expression"] = p.DefaultValue
-		} else {
-			val["Expression"] = ""
 		}
 	case "TextTemplate":
 		val["TextTemplate"] = createDefaultClientTemplate()
 	case "Action":
 		val["Action"] = createDefaultNoAction()
-	case "Widgets":
-		val["Widgets"] = []any{float64(2)}
-	case "Object":
-		val["Objects"] = []any{float64(2)}
 	case "Selection":
 		if p.DefaultValue != "" {
 			val["Selection"] = p.DefaultValue
@@ -456,13 +516,13 @@ func createDefaultWidgetValue(vtID string, bsonType string, p mpk.PropertyDef) m
 	case "Image":
 		if p.DefaultValue != "" {
 			val["Image"] = p.DefaultValue
+		} else {
+			val["Image"] = ""
 		}
 	case "Attribute":
-		// AttributeRef is nil by default, filled by builder
-	case "Association":
-		// EntityRef is nil by default, filled by builder
+		val["PrimitiveValue"] = ""
 	case "DataSource":
-		// DataSource is nil by default, filled by builder
+		val["PrimitiveValue"] = ""
 	}
 
 	return val
@@ -646,11 +706,15 @@ func buildNestedObjectType(children []mpk.PropertyDef) map[string]any {
 		}
 
 		childVTID := placeholderID()
+		cat := child.Category
+		if cat == "" {
+			cat = "General"
+		}
 		childPT := map[string]any{
 			"$ID":         placeholderID(),
 			"$Type":       "CustomWidgets$WidgetPropertyType",
 			"Caption":     child.Caption,
-			"Category":    "General",
+			"Category":    cat,
 			"Description": child.Description,
 			"IsDefault":   false,
 			"PropertyKey": child.Key,

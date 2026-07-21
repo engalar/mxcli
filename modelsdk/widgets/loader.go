@@ -173,6 +173,12 @@ func GetTemplateFullBSON(widgetID string, idGenerator func() string, projectPath
 	// This handles version drift — property additions/removals, enum value changes,
 	// and system property alignment that GenerateFromMPK may miss.
 	tmpl = augmentFromMPK(tmpl, widgetID, projectPath)
+
+	// Single source of truth for top-level TextTemplate states (CE0463 compliance).
+	// Runs after augmentation (property set is settled) and before ID remapping
+	// (createDefaultClientTemplate emits placeholder IDs that collectIDs rewrites).
+	normalizeTextTemplateStates(tmpl)
+
 	stableIds := tmpl.StableIds
 
 	// Phase 1: Build old→new ID mappings.

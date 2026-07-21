@@ -6,30 +6,12 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"os/exec"
-	"path/filepath"
 	"time"
 
 	"github.com/mendixlabs/mxcli/mdl/executor"
 	"github.com/mendixlabs/mxcli/mdl/visitor"
 	"github.com/spf13/cobra"
 )
-
-// findMxBinaryForProject locates the mx binary for the given project path.
-// Checks PATH first, then falls back to ~/.mxcli/mxbuild/*/modeler/mx.
-func findMxBinaryForProject(projectPath string) (string, error) {
-	if p, err := exec.LookPath("mx"); err == nil {
-		return p, nil
-	}
-	home, _ := os.UserHomeDir()
-	if home != "" {
-		matches, _ := filepath.Glob(filepath.Join(home, ".mxcli", "mxbuild", "*", "modeler", "mx"))
-		if len(matches) > 0 {
-			return matches[len(matches)-1], nil
-		}
-	}
-	return "", fmt.Errorf("mx not found in PATH or ~/.mxcli/mxbuild/")
-}
 
 var execCmd = &cobra.Command{
 	Use:   "exec <file>",
@@ -94,17 +76,6 @@ Example:
 			}
 			fmt.Fprintf(errOut, "Error: %v\n", err)
 			return err
-		}
-		// Normalize pluggable widget definitions after script execution.
-		// mx update-widgets reconciles widget Objects with .mpk Type definitions,
-		// preventing CE0463 ("widget definition changed") on newly created widgets.
-		if projectPath != "" {
-			if mxPath, err := findMxBinaryForProject(projectPath); err == nil {
-				uwCmd := exec.Command(mxPath, "update-widgets", projectPath)
-				if output, err := uwCmd.CombinedOutput(); err != nil {
-					fmt.Fprintf(errOut, "Warning: mx update-widgets failed: %v\n%s\n", err, output)
-				}
-			}
 		}
 		// Print performance report to stderr.
 		exe.PerfReport(errOut)

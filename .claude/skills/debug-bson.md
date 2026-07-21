@@ -289,11 +289,39 @@ for t, props in crash_props.items():
 
 ### CE0463: Widget Definition Changed
 
-**Root cause**: Object property values inconsistent with mode-dependent visibility rules.
+**Root cause**: Object property values inconsistent with the widget's editorConfig
+mode-dependent **visibility** rules. For `TextTemplate` (Forms$ClientTemplate)
+specifically: every WidgetValue carries an empty ClientTemplate when its property
+is VISIBLE in the current mode, and `null` when HIDDEN. Property TYPE is
+irrelevant — visibility decides. (A `ValueType.Translations` heuristic does NOT
+predict this: `loadMoreButtonCaption` ships with a translation yet is hidden by
+default; the accessibility labels ship without one yet are visible.)
 
-**Fix**: Adjust properties based on the widget's current mode. See [PAGE_BSON_SERIALIZATION.md](../../docs/03-development/PAGE_BSON_SERIALIZATION.md#ce0463-widget-definition-changed--root-cause-analysis) for the full analysis.
+**Where mxcli decides it**:
+- Top-level TextTemplate states: `modelsdk/widgets/texttemplate.go`
+  (`normalizeTextTemplateStates` + `defaultHiddenTextTemplates`), the single
+  point run from `GetTemplateFullBSON` for every pluggable widget.
+- Per-column / per-instance / filter-mode states: the concrete builders in
+  `mdl/backend/mpr/datagrid_builder.go` (these are mode-dependent per instance).
 
-**Quick workaround**: Run `mx update-widgets` after creating pages.
+**Key-based BSON oracle (fastest way to converge)**: build the widget with mxcli,
+run `mx update-widgets` on a v1 copy to get the golden, then diff **by
+PropertyKey** (join `Object.Properties[].TypePointer` →
+`Type.ObjectType.PropertyTypes[].$ID` → `PropertyKey`), NOT by numeric index.
+A reusable implementation lives at `scripts/ce0463-tt-oracle.py` (uses the standalone
+`bson` Python package; `bson.loads`/`dumps` round-trips Mendix v1 BSON faithfully).
+Run `ce0463-tt-oracle.py built.mpr golden.mpr` for per-key diffs and
+`ce0463-tt-oracle.py --hidden-set golden.mpr` to enumerate a widget's default-hidden set.
+
+**Confirm causation by mutation (isolate before fixing)**: start from the golden
+(0 errors), flip exactly ONE property in the SQLite `Unit.Contents` BSON, re-run
+`mx check`. If the CE0463 appears, that property is the driver. This disproved
+two plausible-but-wrong hypotheses (Translations count; the dropdown's
+`filterOptions`) — the dropdown driver was actually `attrChoice`/`attr` mode.
+
+**Quick workaround (v1 only)**: Run `mx update-widgets` after creating pages.
+NOTE: for MPR v2 projects this irreversibly converts v2→v1, so mxcli must emit
+correct BSON natively (see `cmd/mxcli/docker/check.go`).
 
 ### CE0642: Property X Is Required
 

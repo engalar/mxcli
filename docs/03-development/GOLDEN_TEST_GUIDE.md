@@ -300,3 +300,305 @@ describe 出来的 MDL 可能引用跨模块的实体/关联。`SetupMDL` 描述
 ### 为什么用 `memory.NewFile` 而不是 `setupTestEnv`？
 
 `setupTestEnv` 复制真实项目文件，有 I/O 开销和依赖（需要共享项目）。`memory.NewFile` 零盘依赖，创建最小 SQLite 文件即可满足 mprbackend 连接要求。
+
+---
+
+## BSON 片段移植诊断法
+
+### 动机
+
+传统 golden 测试是**回归验证**——比较两段 BSON 是否一致。但面对 CE0463 这类错误时，先有 diff 再有修复的顺序是：
+
+```
+diff → guess → fix → mx check → 猜对了吗？
+```
+
+BSON 片段移植法把顺序倒过来：
+
+```
+extract → transplant → mx check → 是这颗碎片导致 CE 吗？
+```
+
+这是**因果分析**而非相关分析：不是"这里 diff 了所以可能是根因"，而是"把这碎片放进去 CE 出现了／消失了，所以必是根因"。
+
+### 场景
+
+- CE0463 / CE1613 / CE7247 等 BSON 结构错误
+- 需要精确定位是 Type 还是 Object 导致
+- 需要确认某个字段的具体值（null vs absent vs empty string）是否触发 CE
+
+### 原理
+
+```
+golden MPR（mx check ✅） + built 的 widget BSON 碎片 → mx check ❌ → 碎片含 CE 根因
+golden MPR（mx check ✅） + golden 的 widget BSON 碎片 → mx check ✅ → 移植操作本身无害
+                                           ↑
+                                    二分缩小范围
+```
+
+### 操作步骤
+
+#### 0. 准备环境
+
+```bash
+# 两个 MPR：一个 passing（golden），一个 failing（built）
+# 使用 MPR v2 格式（SQLite）
+cp fail.mpr  /tmp/built.mpr
+cp pass.mpr  /tmp/golden.mpr
+```
+
+#### 1. 提取 failing widget 的全量 BSON
+
+用 Python 操作底层 SQLite（MPR v2 的 `Unit` 表）：
+
+```python
+import sqlite3, json
+
+bg = sqlite3.connect("/tmp/built.mpr")
+cursor = bg.execute("SELECT UnitID, Contents FROM Unit")
+for row in cursor:
+    blob = row[1]
+    if b"CustomWidgets$CustomWidget" in blob:
+        name = extract_name_from_bson(blob)
+        print(f"Widget: {name}, size={len(blob)}")
+```
+
+或用 Go 的 `codec.Store`：
+
+```go
+store, _ := codec.Open(path)
+for _, u := range store.ListUnits() {
+    raw, _ := store.LoadUnit(u.ID)
+    elem, _ := decoder.Decode(raw)
+    if cw, ok := elem.(*genCw.CustomWidget); ok {
+        fmt.Printf("Widget: %s\n", cw.Name())
+    }
+}
+```
+
+#### 2. 移植到 golden
+
+有两种手段，从简单到精确：
+
+**方法 A：全量 widget 替换（SQLite 直写）**
+
+```python
+gg = sqlite3.connect("/tmp/golden.mpr")
+
+# 在 golden 中找到同名 widget 的 UnitID
+golden_row = gg.execute(
+    "SELECT UnitID FROM Unit WHERE Contents LIKE ?",
+    (b"%dgTickets%",)
+).fetchone()
+
+# 用 built 的 blob 替换
+built_blob = bg.execute(
+    "SELECT Contents FROM Unit WHERE UnitID=?",
+    (golden_row[0],)
+).fetchone()
+
+gg.execute("UPDATE Unit SET Contents=? WHERE UnitID=?",
+    (built_blob[0], golden_row[0]))
+gg.commit()
+```
+
+```bash
+mx check /tmp/golden.mpr | grep CE0463
+# 出现 → 该 widget 必含 CE 根因
+# 不出现 → 问题在页面/布局/多 widget 交互
+```
+
+**方法 B：BSON 子树替换（Go codec）**
+
+更精细的替换——只替换 Type 骨架（PropertyTypes）或只替换 Object（WidgetValues）：
+
+```go
+// 解码两个版本
+builtCW := decodeWidget(builtStore, "dgTickets")
+goldenCW := decodeWidget(goldenStore, "dgTickets")
+
+// 方案 1: 只替换 Type
+raw := goldenCW.Raw()
+goldenTypeBytes, _ := bson.Marshal(builtCW.Type().(bson.Marshaler))
+newRaw := replaceBSONSubDoc(raw, "Type", goldenTypeBytes)
+goldenStore.SaveUnit(goldenCW.ID(), newRaw)
+// mx check → CE0463 出现？→ 根因在 Type，不出现→根因在 Object
+
+// 方案 2: 只替换 Object
+builtObjectBytes, _ := bson.Marshal(builtCW.Object().(bson.Marshaler))
+newRaw := replaceBSONSubDoc(raw, "Object", builtObjectBytes)
+goldenStore.SaveUnit(goldenCW.ID(), newRaw)
+// mx check → CE0463 出现？→ 根因在 Object
+```
+
+**方法 C：局部值替换（BSON 手术）**
+
+当已知可疑字段路径时，直接修改 golden 的 BSON 为该值，确认该值是否触发 CE：
+
+```go
+// 路径: Object.Properties[17].Value.TextTemplate
+// 假设: golden 是 null，built 是 ClientTemplate
+// 验证: 把 TextTemplate 设为 null 是否消除 CE0463？
+
+// 或反过来：把 golden 的某个字段从 null 改为 ClientTemplate
+// 看 CE0463 是否出现——确认该字段就是根因
+```
+
+#### 3. 二分搜索策略
+
+```
+built_widget → 替换 golden_widget → mx check
+├── ❌ fail → 该 widget 含问题
+│   ├── 替换 Type → mx check
+│   │   ├── ❌ fail → Type 有问题
+│   │   │   ├── 替换 PropertyType 前 20 个 → mx check
+│   │   │   └── 替换 PropertyType 后 20 个 → mx check
+│   │   └── ✅ pass → Type 没问题
+│   └── 替换 Object → mx check
+│       ├── ❌ fail → Object 有问题
+│       │   ├── 替换 Properties[0-9] → mx check
+│       │   ├── 替换 Properties[10-19] → mx check
+│       │   └── ...
+│       └── ✅ pass → Object 没问题
+└── ✅ pass → 问题不在单 widget
+```
+
+每次二分只需 1 次 mx check，O(log N) 次即可定位根因字段。
+
+### 工具辅助
+
+#### 零依赖 SQLite BSON 检查（Python）
+
+```python
+def extract_bson_value(blob, path):
+    """从 BSON 二进制中递归提取指定路径的值。
+    path: ["Object", "Properties", 10, "Value", "TextTemplate"]
+    """
+    pos = 0
+    for key in path:
+        pos = find_field(blob, pos, key)
+        if pos < 0:
+            return None
+    return read_value(blob, pos)
+```
+
+#### 现成的对比工具
+
+项目已有：
+- `cmd/ce0463-compare/` — 解码后对比元素树（跳过 BSON 顺序噪声）
+- `cmd/ce0463-compare/dumper.go` — `dumpElement()` 输出 flat path→value map
+
+### 片段合成：用 codec 生成精确 BSON 片段验证假设
+
+前文的移植法依赖一个前提：已经有一个 built MPR 产出了包含可疑字段的 BSON。但更强大的方式是**直接用 codec 合成出特定 BSON 片段**，绕过整个 MDL→executor→backend 管道，直接验证某个字段值是否导致 CE。
+
+#### 工作流
+
+```
+假设 → 合成 fragment → 植入 golden → mx check → 确认/排除
+  ↑                                                    |
+  └──────────── 调整 fragment ──────────────────────────┘
+```
+
+三步法：
+
+**第一步：建立假设**
+
+猜测某个字段的值是否导致 CE0463。例如：
+```
+"Property[17].Value.TextTemplate 从 ClientTemplate 改为 null 会消除 CE0463"
+```
+
+**第二步：合成预期片段**
+
+用 codec 生成该字段的预期值 BSON：
+
+```go
+// Step 2a: 从 golden 解码目标 widget
+store, _ := codec.Open("/tmp/golden.mpr")
+goldenCW := decodeWidget(store, "dgTickets") // *genCw.CustomWidget
+
+// Step 2b: 操作 element tree 验证假设
+// 方案 A：直接修改 element 的 property
+obj := goldenCW.Object()
+for _, prop := range obj.Properties() {
+    if prop.Name() == "Properties" { // PartList → WidgetProperties
+        props := prop.(element.ChildListProperty).ChildElements()
+        widgetProp := props[17].(*genCw.WidgetProperty)
+        val := widgetProp.Value().(*genCw.WidgetValue)
+        val.SetTextTemplate(nil) // 假设验证：设为 null
+    }
+}
+
+// 方案 B：用 Encoder 重新编码 → 替换 golden 中的 Object
+newObjectBytes, _ := codec.NewEncoder(codec.DefaultRegistry).Encode(obj)
+newRaw := replaceBSONSubDoc(goldenCW.Raw(), "Object", newObjectBytes)
+store.SaveUnit(goldenCW.ID(), newRaw)
+
+// mx check /tmp/golden.mpr → CE0463 消失？→ 假设成立
+```
+
+**第三步：验证修复方案**
+
+一旦确认字段是根因，用 codec 生成修复后的完整 widget 验证：
+
+```go
+// 用 codec 构造预期的正确 BSON
+builder := genCw.NewCustomWidget()
+builder.SetName("dgTickets")
+// ... 设置所有字段为预期值
+
+// 编码成 BSON
+correctBSON, _ := codec.NewEncoder(codec.DefaultRegistry).Encode(builder)
+
+// 替换 golden
+store.SaveUnit(goldenCW.ID(), correctBSON)
+// mx check → CE0463 消失 → 修复方向正确
+```
+
+#### 片段来源对照
+
+| 来源 | 精度 | 周期 | 适合场景 |
+|------|------|------|----------|
+| **从 built MPR 提取** | 真实但不精确 | 秒级 | 初步定位哪个 widget / 哪个字段组出问题 |
+| **手动构造 BSON 片段** | 精确控制每个字段 | 分钟级 | 验证单个字段假设（TextTemplate=null vs absent vs empty string） |
+| **codec.Encode 合成** | 精确且可重复 | 毫秒级 | 大批量验证修复方案；回归测试 |
+| **MDL→Executor→Backend 管道输出** | 端到端真实 | 30s+ | 最终验证完整管道 |
+
+合成法的威力在于：**你可以在毫秒级生成一个"修复后的"Object BSON，移植到 golden 看 CE0463 是否消失**。如果消失，说明修复方向正确——你不需要等 30 秒跑完整 helpdesk 脚本才能知道。
+
+#### 例：最小测试中的实操
+
+我们在这次 CE0463 修复中多次陷入的循环：
+```
+修复 augment.go → build → exec MDL → mx check（30s）→ 还不行 → 再改
+```
+
+用合成法：
+```
+从 golden 提取 Object → Decode → 把 Properties[17].Value.TextTemplate 设 nil
+→ Encode → 移植回 golden → mx check（2s）
+→ CE0463 消失 ✓ → 确认 Properties[17] 是根因
+→ 再生成修复后的 Object（TextTemplate=null for non-translation types）
+→ 移植 → mx check ✓ → 修复方案已验证
+→ 最后才去改 augment.go → 跑完整测试做回归
+```
+
+关键收益：**每个假设验证从 30 秒缩短到 2 秒**。
+
+### 与现有 golden 测试的关系
+
+| 方法 | 验证目标 | 手段 |
+|------|---------|------|
+| `TestGoldenBSON` | Encoder 输出 = golden | byte-by-byte 对比 |
+| BSON 移植法 | 某 BSON 片段是否导致 CE 错误 | 移植到 golden MPR → mx check |
+| 普通 golden | BSON 结构正确性（回归） | 字节级比较 |
+| BSON 移植法 | CE 根因定位（诊断） | 因果验证 |
+
+BSON 移植法不是替代 golden 测试，而是**诊断阶段的锋利工具**——在知道有 CE 错误但不知道哪个字段导致时使用。一旦定位根因，修复后再用 golden 测试做回归验证。
+
+### 局限
+
+- 只适用于 MPR v2（SQLite）。v1 单文件 `.mpr` 需要在内存中重新序列化
+- 需要人工判断二分边界（哪些字段属于同一个 logical group）
+- 部分 CE 错误可能由 **Type 与 Object 不匹配** 共同导致，需要替换整个 widget 才能复现
