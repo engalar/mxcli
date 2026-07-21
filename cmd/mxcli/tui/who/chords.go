@@ -30,6 +30,20 @@ func LeaderLabel(path []ChordNode) string {
 	return path[len(path)-1].Label
 }
 
+func BuildFlatIndex(root ChordNode, prefix string) map[string]ChordNode {
+	flat := make(map[string]ChordNode)
+	var walk func(nodes []ChordNode, pre string)
+	walk = func(nodes []ChordNode, pre string) {
+		for _, n := range nodes {
+			key := pre + n.Key
+			flat[key] = n
+			walk(n.Children, key)
+		}
+	}
+	walk(root.Children, prefix)
+	return flat
+}
+
 func NextKeys(node *ChordNode) []string {
 	if node == nil || len(node.Children) == 0 {
 		return nil

@@ -27,7 +27,7 @@ func (a *App) handleBrowserAppKeys(msg tea.KeyMsg) tea.Cmd {
 
 	case " ":
 		root := a.chordTree()
-		wov := who.NewOverlay(&root)
+		wov := who.NewOverlay(root)
 		ov := NewWhoOverlayView(wov)
 		a.views.Push(ov)
 		return handledCmd

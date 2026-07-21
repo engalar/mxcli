@@ -423,9 +423,12 @@ func (a *App) chordTree() who.ChordNode {
 // --- Chord action methods ---
 
 func (a *App) actionBuild() tea.Cmd {
-	bt := task.NewBuildTask(task.BuildOptions{ProjectPath: a.activeTabProjectPath()})
+	projectPath := a.activeTabProjectPath()
+	Trace("actionBuild: project=%q", projectPath)
+	bt := task.NewBuildTask(task.BuildOptions{ProjectPath: projectPath})
 	bv := NewBuildView(bt)
 	a.views.Push(bv)
+	Trace("actionBuild: BuildView pushed, starting task")
 	return bt.Start()
 }
 
@@ -699,20 +702,14 @@ func isNavigationKey(key string) bool {
 
 func (a *App) executeChord(chord string) tea.Cmd {
 	root := a.chordTree()
-	node := &root
-	path := []who.ChordNode{}
-	for _, ch := range chord {
-		child := node.FindChild(string(ch))
-		if child == nil {
-			return nil
-		}
-		path = append(path, *child)
-		node = child
+	flat := who.BuildFlatIndex(root, "")
+	node, ok := flat[chord]
+	if !ok || node.Action == nil {
+		Trace("executeChord: chord=%q not found or no action", chord)
+		return nil
 	}
-	if node.Action != nil {
-		return node.Action()
-	}
-	return nil
+	Trace("executeChord: chord=%q action=%s", chord, node.Label)
+	return node.Action()
 }
 
 

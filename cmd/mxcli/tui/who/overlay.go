@@ -31,10 +31,12 @@ type Overlay struct {
 	path     []ChordNode
 }
 
-func NewOverlay(root *ChordNode) Overlay {
+func NewOverlay(root ChordNode) Overlay {
+	r := new(ChordNode)
+	*r = root
 	return Overlay{
-		rootNode: root,
-		node:     root,
+		rootNode: r,
+		node:     r,
 	}
 }
 
