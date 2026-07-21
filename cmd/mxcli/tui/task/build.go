@@ -90,15 +90,12 @@ func (t *BuildTask) run() {
 	// LineWriter captures raw mxbuild output
 	lw := NewLineWriter(os.Stdout)
 	go func() {
-		lineCount := 0
+		n := 0
 		for line := range lw.Lines {
-			lineCount++
-			if lineCount <= 5 || lineCount%100 == 0 {
-				taskDebug("LineWriter: line #%d: %.100s", lineCount, line)
-			}
 			t.emit(Event{Type: EventLogLine, Phase: "raw", Line: line})
+			n++
 		}
-		taskDebug("LineWriter: goroutine done, %d lines total", lineCount)
+		taskDebug("LineWriter: %d lines processed", n)
 	}()
 	taskDebug("BuildTask: calling docker.Build(project=%q)", t.opts.ProjectPath)
 

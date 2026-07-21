@@ -13,24 +13,24 @@ import (
 )
 
 type BuildView struct {
-	task      *task.BuildTask
-	events    []task.Event
-	phases    []phaseState
-	logLines  []string
-	scroll    int
-	width     int
-	height    int
-	running   bool
-	started   time.Time
+	task       *task.BuildTask
+	events     []task.Event
+	phases     []phaseState
+	logLines   []string
+	scroll     int
+	width      int
+	height     int
+	running    bool
+	started    time.Time
 	autoScroll bool
-	showRaw   bool
-	phaseIdx  int
+	showRaw    bool
+	phaseIdx   int
 }
 
 type phaseState struct {
 	Name    string
 	Label   string
-	Status  string // "pending" "running" "completed" "failed" "cancelled"
+	Status  string
 	Pct     float64
 	Message string
 }
@@ -50,7 +50,6 @@ var phaseMeta = map[string]struct {
 }
 
 func NewBuildView(t *task.BuildTask) BuildView {
-	// Pre-populate phases in order
 	phases := make([]phaseState, 0, len(phaseMeta))
 	for i := 0; i < len(phaseMeta); i++ {
 		for name, meta := range phaseMeta {
@@ -66,7 +65,6 @@ func NewBuildView(t *task.BuildTask) BuildView {
 		started:    time.Now(),
 		phases:     phases,
 		autoScroll: true,
-		showRaw:    false,
 	}
 }
 
@@ -75,7 +73,8 @@ func (bv BuildView) Mode() ViewMode { return ModeExec }
 func (bv BuildView) Hints() []Hint {
 	hints := []kernel.Hint{
 		{Key: "q", Label: "close"},
-		{Key: "j/k", Label: "scroll"},
+		{Key: "j/k/↑↓", Label: "scroll"},
+		{Key: "g/G", Label: "top/bot"},
 		{Key: "Tab", Label: "toggle raw"},
 	}
 	if bv.running {
@@ -94,9 +93,14 @@ func (bv BuildView) StatusInfo() StatusInfo {
 	if bv.showRaw {
 		mode = "raw"
 	}
+	pos := fmt.Sprintf("%s (%d log)", elapsed, len(bv.logLines))
+	if len(bv.logLines) > 0 {
+		pct := bv.scroll * 100 / max(1, len(bv.logLines)-1)
+		pos = fmt.Sprintf("%d%% (%d/%d)", pct, bv.scroll+1, len(bv.logLines))
+	}
 	return StatusInfo{
 		Breadcrumb: []string{"Build"},
-		Position:   fmt.Sprintf("%s (%d log lines)", elapsed, len(bv.logLines)),
+		Position:   pos,
 		Mode:       mode,
 	}
 }
@@ -128,12 +132,12 @@ func (bv BuildView) Update(msg tea.Msg) (View, tea.Cmd) {
 				bv.task.Cancel()
 				bv.running = false
 			}
-		case "j":
+		case "j", "down":
 			if bv.scroll < len(bv.logLines)-1 {
 				bv.scroll++
-				bv.autoScroll = false
+				bv.autoScroll = bv.scroll >= len(bv.logLines)-1
 			}
-		case "k":
+		case "k", "up":
 			if bv.scroll > 0 {
 				bv.scroll--
 				bv.autoScroll = false
@@ -142,6 +146,7 @@ func (bv BuildView) Update(msg tea.Msg) (View, tea.Cmd) {
 			bv.showRaw = !bv.showRaw
 		case "g":
 			bv.scroll = 0
+			bv.autoScroll = false
 		case "G":
 			bv.scroll = max(0, len(bv.logLines)-1)
 			bv.autoScroll = true
@@ -150,13 +155,18 @@ func (bv BuildView) Update(msg tea.Msg) (View, tea.Cmd) {
 	case task.Event:
 		bv.events = append(bv.events, msg)
 		if msg.Type == task.EventPhaseChange {
-			bv.updatePhase(msg.Phase, msg.State.String(), msg.Pct, msg.Message)
-			if msg.State == task.StateRunning {
+			status := msg.State.String()
+			bv.updatePhase(msg.Phase, status, msg.Pct, msg.Message)
+			switch msg.State {
+			case task.StateRunning:
+				bv.logLines = append(bv.logLines, "")
 				bv.logLines = append(bv.logLines, fmt.Sprintf("── %s ──", msg.Message))
-			} else if msg.State == task.StateCompleted {
+			case task.StateCompleted:
 				bv.logLines = append(bv.logLines, fmt.Sprintf("✓ %s", msg.Message))
-			} else if msg.State == task.StateFailed {
+			case task.StateFailed:
 				bv.logLines = append(bv.logLines, fmt.Sprintf("✗ %s", msg.Message))
+			case task.StateCancelled:
+				bv.logLines = append(bv.logLines, "⊘ Cancelled")
 			}
 		} else if msg.Type == task.EventLogLine {
 			bv.logLines = append(bv.logLines, msg.Line)
@@ -180,61 +190,92 @@ func (bv BuildView) Update(msg tea.Msg) (View, tea.Cmd) {
 	return bv, nil
 }
 
+func truncate(s string, maxLen int) string {
+	if len(s) <= maxLen {
+		return s
+	}
+	return s[:maxLen] + "..."
+}
+
 func (bv BuildView) Render(width, height int) string {
-	// Title bar
 	elapsed := time.Since(bv.started).Round(time.Second)
-	title := fmt.Sprintf("Build: %s", bv.taskName())
-	titleBar := lipgloss.NewStyle().Bold(true).Foreground(kernel.AccentColor).Render(title)
+	title := lipgloss.NewStyle().Bold(true).Foreground(kernel.AccentColor).Render("Build")
 	timeStr := kernel.MutedStyle.Render(elapsed.String())
+	lineW := width - 4
+	if lineW < 10 {
+		lineW = 10
+	}
 
 	var sb strings.Builder
-	sb.WriteString(titleBar)
+	sb.WriteString(title)
 	sb.WriteString("  ")
 	sb.WriteString(timeStr)
 	sb.WriteByte('\n')
 	sb.WriteByte('\n')
 
-	// Phase panel (top)
-	phaseH := len(bv.phases) + 1
+	// Phase panel
 	for _, p := range bv.phases {
-		sb.WriteString(renderPhase(&p, width-4))
+		sb.WriteString(renderPhase(&p, lineW))
 		sb.WriteByte('\n')
 	}
 
 	sb.WriteByte('\n')
 
-	// Raw log panel (bottom)
-	rawH := height - phaseH - 6
-	if rawH < 3 {
-		rawH = 3
+	// Raw log panel
+	phaseH := len(bv.phases) + 2
+	rawH := height - phaseH - 4
+	if rawH < 4 {
+		rawH = 4
 	}
-	visibleStart := max(0, bv.scroll-rawH+1)
-	visibleEnd := min(len(bv.logLines), visibleStart+rawH)
+	visibleStart := max(0, bv.scroll-rawH+2)
+	visibleEnd := min(len(bv.logLines), visibleStart+rawH-2)
+
+	totalLines := len(bv.logLines)
 
 	if bv.showRaw || bv.running {
-		sb.WriteString(kernel.MutedStyle.Render("── Raw output ──"))
+		header := "── Log ──"
+		if totalLines > 0 {
+			header = fmt.Sprintf("── Log (%d lines) ──", totalLines)
+		}
+		sb.WriteString(kernel.MutedStyle.Render(header))
 		sb.WriteByte('\n')
 
+		if totalLines == 0 {
+			sb.WriteString(kernel.LoadingStyle.Render("  Waiting for output..."))
+			sb.WriteByte('\n')
+		}
+
 		if visibleStart > 0 {
-			sb.WriteString(kernel.MutedStyle.Render(fmt.Sprintf("  ↑ %d more lines", visibleStart)))
+			sb.WriteString(kernel.MutedStyle.Render(fmt.Sprintf("  ↑ %d more", visibleStart)))
 			sb.WriteByte('\n')
 		}
 		for _, line := range bv.logLines[visibleStart:visibleEnd] {
-			sb.WriteString(kernel.MutedStyle.Render(line))
+			sb.WriteString(truncate(line, lineW))
 			sb.WriteByte('\n')
 		}
-		if visibleEnd < len(bv.logLines) {
-			sb.WriteString(kernel.MutedStyle.Render(fmt.Sprintf("  ↓ %d more lines", len(bv.logLines)-visibleEnd)))
+		if visibleEnd < totalLines {
+			sb.WriteString(kernel.MutedStyle.Render(fmt.Sprintf("  ↓ %d more", totalLines-visibleEnd)))
+			sb.WriteByte('\n')
+		}
+
+		// Scroll indicator bar
+		if totalLines > rawH && bv.autoScroll {
+			sb.WriteString(kernel.AccentStyle.Render("  [ autoscroll ]"))
+			sb.WriteByte('\n')
+		} else if !bv.autoScroll && totalLines > 0 {
+			pct := bv.scroll * 100 / (totalLines - 1)
+			sb.WriteString(kernel.MutedStyle.Render(fmt.Sprintf("  [ at %d%% ]", pct)))
 			sb.WriteByte('\n')
 		}
 	}
 
-	if bv.running && !bv.showRaw {
-		sb.WriteString(kernel.LoadingStyle.Render("  ⟳ Building... (Tab=raw, c=cancel, q=close)"))
-	} else if !bv.running {
-		sb.WriteByte('\n')
+	// Status line at bottom
+	if bv.running {
+		sb.WriteString(kernel.LoadingStyle.Render("  ⟳ Building... Tab=raw c=cancel q=close"))
+	} else {
 		last := bv.lastPhase()
 		if last != nil {
+			sb.WriteByte('\n')
 			switch last.Status {
 			case "completed":
 				sb.WriteString(kernel.CheckPassStyle.Render("✓ " + last.Message))
@@ -267,8 +308,9 @@ func (bv BuildView) lastPhase() *phaseState {
 
 func renderPhase(p *phaseState, width int) string {
 	statusChar := "○"
-	statusStyle := lipgloss.NewStyle().Foreground(kernel.MutedColor)
-	labelStyle := kernel.MutedStyle
+	var statusStyle, labelStyle lipgloss.Style
+	statusStyle = lipgloss.NewStyle().Foreground(kernel.MutedColor)
+	labelStyle = kernel.MutedStyle
 
 	switch p.Status {
 	case "running":
@@ -289,12 +331,14 @@ func renderPhase(p *phaseState, width int) string {
 	label := p.Label
 	if p.Message != "" && p.Status == "running" {
 		label = p.Message
+	} else if p.Message != "" && p.Status == "completed" {
+		label = p.Message
 	}
 
 	line := fmt.Sprintf(" %s %s", statusStyle.Render(statusChar), labelStyle.Render(label))
 
 	if p.Status == "running" && p.Pct > 0 {
-		barWidth := width - lipgloss.Width(line) - 10
+		barWidth := width - lipgloss.Width(line) - 8
 		if barWidth < 5 {
 			barWidth = 5
 		}
