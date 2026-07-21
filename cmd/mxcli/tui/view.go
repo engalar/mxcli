@@ -1,60 +1,27 @@
 package tui
 
-import tea "github.com/charmbracelet/bubbletea"
-
-// ViewMode identifies the type of view currently active.
-type ViewMode int
-
-const (
-	ModeBrowser ViewMode = iota
-	ModeOverlay
-	ModeCompare
-	ModeDiff
-	ModePicker
-	ModeJumper
-	ModeExec
-	ModeCommandPalette
-	ModeInput
-	ModeConfirm
+import (
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/mendixlabs/mxcli/cmd/mxcli/tui/kernel"
 )
 
-// String returns a human-readable label for the view mode.
-func (m ViewMode) String() string {
-	switch m {
-	case ModeBrowser:
-		return "Browse"
-	case ModeOverlay:
-		return "Overlay"
-	case ModeCompare:
-		return "Compare"
-	case ModeDiff:
-		return "Diff"
-	case ModePicker:
-		return "Picker"
-	case ModeJumper:
-		return "Jump"
-	case ModeExec:
-		return "Exec"
-	case ModeCommandPalette:
-		return "Palette"
-	case ModeInput:
-		return "Input"
-	case ModeConfirm:
-		return "Confirm"
-	default:
-		return "Unknown"
-	}
-}
+type ViewMode = kernel.ViewMode
 
-// StatusInfo carries display data for the status bar.
-type StatusInfo struct {
-	Breadcrumb []string
-	Position   string
-	Mode       string
-	Extra      string
-}
+const (
+	ModeBrowser        = kernel.ModeBrowser
+	ModeOverlay        = kernel.ModeOverlay
+	ModeCompare        = kernel.ModeCompare
+	ModeDiff           = kernel.ModeDiff
+	ModePicker         = kernel.ModePicker
+	ModeJumper         = kernel.ModeJumper
+	ModeExec           = kernel.ModeExec
+	ModeCommandPalette = kernel.ModeCommandPalette
+	ModeInput          = kernel.ModeInput
+	ModeConfirm        = kernel.ModeConfirm
+)
 
-// View is the interface that all TUI views must implement.
+type StatusInfo = kernel.StatusInfo
+
 type View interface {
 	Update(tea.Msg) (View, tea.Cmd)
 	Render(width, height int) string
@@ -63,8 +30,5 @@ type View interface {
 	Mode() ViewMode
 }
 
-// PushViewMsg requests that App push a new view onto the ViewStack.
 type PushViewMsg struct{ View View }
-
-// PopViewMsg requests that App pop the current view from the ViewStack.
 type PopViewMsg struct{}

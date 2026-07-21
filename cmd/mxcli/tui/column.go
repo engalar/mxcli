@@ -13,13 +13,7 @@ import (
 
 const mouseScrollStep = 3
 
-// TreeNode mirrors cmd/mxcli.TreeNode for JSON parsing.
-type TreeNode struct {
-	Label         string      `json:"label"`
-	Type          string      `json:"type"`
-	QualifiedName string      `json:"qualifiedName,omitempty"`
-	Children      []*TreeNode `json:"children,omitempty"`
-}
+type TreeNode = kernel.TreeNode
 
 // ColumnItem represents a single row in a Column.
 type ColumnItem struct {

@@ -53,3 +53,10 @@ type Hint struct {
 	Key   string
 	Label string
 }
+
+type TreeNode struct {
+	Label         string      `json:"label"`
+	Type          string      `json:"type"`
+	QualifiedName string      `json:"qualifiedName,omitempty"`
+	Children      []*TreeNode `json:"children,omitempty"`
+}

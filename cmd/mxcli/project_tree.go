@@ -30,16 +30,11 @@ import (
 	gensecurity "github.com/mendixlabs/mxcli/modelsdk/gen/security"
 	mmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
 	"github.com/mendixlabs/mxcli/modelsdk/mprread"
+	"github.com/mendixlabs/mxcli/cmd/mxcli/tui/kernel"
 	"github.com/spf13/cobra"
 )
 
-// TreeNode represents a node in the project tree JSON output.
-type TreeNode struct {
-	Label         string      `json:"label"`
-	Type          string      `json:"type"`
-	QualifiedName string      `json:"qualifiedName,omitempty"`
-	Children      []*TreeNode `json:"children,omitempty"`
-}
+type TreeNode = kernel.TreeNode
 
 // treeElement holds a name, type, and container ID for building the tree hierarchy.
 type treeElement struct {
