@@ -3,10 +3,32 @@ package task
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/mendixlabs/mxcli/cmd/mxcli/docker"
 )
+
+var taskLog = func() *os.File {
+	if os.Getenv("MXCLI_TUI_DEBUG") != "1" {
+		return nil
+	}
+	home, _ := os.UserHomeDir()
+	f, err := os.OpenFile(filepath.Join(home, ".mxcli", "task-debug.log"),
+		os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+	if err != nil {
+		return nil
+	}
+	fmt.Fprintf(f, "=== task debug started ===\n")
+	return f
+}()
+
+func taskDebug(format string, args ...interface{}) {
+	if taskLog == nil {
+		return
+	}
+	fmt.Fprintf(taskLog, format+"\n", args...)
+}
 
 type BuildOptions struct {
 	ProjectPath string
@@ -68,42 +90,51 @@ func (t *BuildTask) run() {
 	// LineWriter captures raw mxbuild output
 	lw := NewLineWriter(os.Stdout)
 	go func() {
+		lineCount := 0
 		for line := range lw.Lines {
+			lineCount++
+			if lineCount <= 5 || lineCount%100 == 0 {
+				taskDebug("LineWriter: line #%d: %.100s", lineCount, line)
+			}
 			t.emit(Event{Type: EventLogLine, Phase: "raw", Line: line})
 		}
+		taskDebug("LineWriter: goroutine done, %d lines total", lineCount)
 	}()
+	taskDebug("BuildTask: calling docker.Build(project=%q)", t.opts.ProjectPath)
 
+	taskDebug("BuildTask: starting docker.Build...")
 	err := docker.Build(docker.BuildOptions{
 		ProjectPath: t.opts.ProjectPath,
 		SkipCheck:   t.opts.SkipCheck,
 		Stdout:      lw,
 		OnPhase: func(name, status string, pct int, msg string) {
-			st := StateRunning
-			if status == "completed" {
-				st = StateCompleted
-			}
+			taskDebug("OnPhase: name=%s status=%s pct=%d msg=%q", name, status, pct, msg)
 			t.emit(Event{
 				Type:    EventPhaseChange,
-				State:   st,
+				State:   StateRunning,
 				Phase:   name,
 				Message: msg,
 				Pct:     float64(pct),
 			})
 		},
 	})
+	taskDebug("BuildTask: docker.Build returned err=%v", err)
 
 	lw.Close()
 
 	if t.cancelled {
+		taskDebug("BuildTask: cancelled after build")
 		t.emit(Event{Type: EventPhaseChange, State: StateCancelled, Phase: "cancelled", Message: "Build cancelled"})
 		return
 	}
 
 	if err != nil {
+		taskDebug("BuildTask: build failed: %v", err)
 		t.emit(Event{Type: EventPhaseChange, State: StateFailed, Phase: "error", Message: fmt.Sprintf("Build failed: %v", err), Err: err})
 		return
 	}
 
+	taskDebug("BuildTask: build complete")
 	t.emit(Event{Type: EventPhaseChange, State: StateCompleted, Phase: "done", Message: "Build complete", Pct: 100})
 }
 
