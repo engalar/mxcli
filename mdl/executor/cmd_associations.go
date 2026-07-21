@@ -554,6 +554,7 @@ func newAssociationDeleteBehaviorGen(db ast.DeleteBehavior) *genDm.AssociationDe
 	default:
 		out.SetChildDeleteBehavior(genDm.DeletingBehaviorDeleteMeButKeepReferences)
 	}
+	applyPreventDeleteErrorMessages(out)
 	return out
 }
 
@@ -813,21 +814,16 @@ func ExecCreateAssociationDeps(ctx context.Context, s *ast.CreateAssociationStmt
 	return execCreateAssociationDepsImpl(ctx, s, deps)
 }
 
-
 func listAssociationsDeps(ctx context.Context, deps *HandlerDeps, moduleName string) error {
 	return listAssociationsFuture(ctx, deps.Output, deps.Format, deps.ModuleLister, deps.DomainModels, moduleName)
 }
 
-
 func listAssociationDeps(ctx context.Context, deps *HandlerDeps, name *ast.QualifiedName) error {
 	return listAssociationFuture(ctx, deps.Output, deps.ModuleLister, deps.DomainModelReader, name)
 }
-
 
 func describeAssociationDeps(ctx context.Context, deps *HandlerDeps, name ast.QualifiedName) error {
 	return describeAssociationFuture(ctx, deps.Output, deps.ModuleLister, deps.DomainModelReader, name)
 }
 
 // ── Microflows / Nanoflows ──
-
-

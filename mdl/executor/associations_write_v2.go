@@ -156,7 +156,25 @@ func astAssociationDeleteBehaviorGen(s *ast.CreateAssociationStmt) element.Eleme
 	default:
 		dbe.SetChildDeleteBehavior("DeleteMeButKeepReferences")
 	}
+	applyPreventDeleteErrorMessages(dbe)
 	return dbe
+}
+
+// applyPreventDeleteErrorMessages sets a default error message on any side whose
+// delete behavior is "DeleteMeIfNoReferences" (PREVENT). The Mendix runtime's
+// SchemeFactory.setDeleteBehavior does an Option.get on the error message when a
+// side prevents deletion; a null message crashes startup with None.get. Studio
+// Pro always populates a default message for prevent-delete, so we mirror that.
+// Non-preventing sides (Keep/Cascade) must keep a null message to match Studio
+// Pro output exactly.
+func applyPreventDeleteErrorMessages(dbe *genDm.AssociationDeleteBehavior) {
+	const preventMsg = "This object cannot be deleted because it is still associated with other objects."
+	if dbe.ParentDeleteBehavior() == "DeleteMeIfNoReferences" && dbe.ParentErrorMessage() == nil {
+		dbe.SetParentErrorMessage(singleENUSTextGen(preventMsg))
+	}
+	if dbe.ChildDeleteBehavior() == "DeleteMeIfNoReferences" && dbe.ChildErrorMessage() == nil {
+		dbe.SetChildErrorMessage(singleENUSTextGen(preventMsg))
+	}
 }
 
 // defaultDeleteBehaviorGen returns a new AssociationDeleteBehavior with both

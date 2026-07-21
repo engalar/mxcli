@@ -46,6 +46,7 @@ func execAlterAssociationGenDeps(ctx context.Context, s *ast.AlterAssociationStm
 			default:
 				dbe.SetChildDeleteBehavior("DeleteMeButKeepReferences")
 			}
+			applyPreventDeleteErrorMessages(dbe)
 			deleteSetter(dbe)
 		case ast.AlterAssociationSetOwner:
 			if s.Owner == ast.OwnerBoth {
@@ -101,9 +102,6 @@ func execAlterAssociationGenDeps(ctx context.Context, s *ast.AlterAssociationStm
 	return mdlerrors.NewNotFound("association", s.Name.String())
 }
 
-
 func ExecAlterAssociationGenDeps(ctx context.Context, s *ast.AlterAssociationStmt, deps *HandlerDeps) error {
 	return execAlterAssociationGenDeps(ctx, s, deps)
 }
-
-

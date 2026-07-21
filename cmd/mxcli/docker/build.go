@@ -96,6 +96,13 @@ func Build(opts BuildOptions) error {
 	fmt.Fprintf(w, "  JAVA_HOME: %s\n", javaHome)
 	fmt.Fprintf(w, "  Java: %s\n", javaVersionString(javaHome))
 
+	// Step 3b: Resolve declared Maven JAR dependencies into userlib/ so the
+	// mxbuild Java compile can see them (mxbuild only compiles against local
+	// jars; it does not resolve Maven coordinates itself).
+	if err := resolveJarDependencies(opts.ProjectPath, mxbuildPath, javaHome, w); err != nil {
+		return fmt.Errorf("resolving jar dependencies: %w", err)
+	}
+
 	// Step 4: Pre-build check
 	if !opts.SkipCheck {
 		fmt.Fprintln(w, "Checking project for errors...")
