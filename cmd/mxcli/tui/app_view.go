@@ -9,7 +9,6 @@ import (
 	"github.com/charmbracelet/lipgloss"
 
 	"github.com/mendixlabs/mxcli/cmd/mxcli/tui/kernel"
-	"github.com/mendixlabs/mxcli/cmd/mxcli/tui/who"
 )
 
 // --- View ---
@@ -72,57 +71,32 @@ func (a App) View() string {
 	}
 	content := active.Render(a.width, contentH)
 
-	// Hint bar — leader overrides when active
-	if a.leaderState != nil {
-		a.hintBar.SetHints(a.leaderHints())
-	} else {
-		a.hintBar.SetHints(active.Hints())
-	}
+	// Hint bar — from active view
+	a.hintBar.SetHints(active.Hints())
 	hintLine := a.hintBar.View(a.width)
 
-	// Status bar — declarative from active view, but leader overrides
-	var statusLine string
-	if a.leaderState != nil {
-		prefix := "SPC"
-		for _, n := range a.leaderState.path {
-			prefix += " " + n.Key
-		}
-		pathStr := who.LeaderLabel(a.leaderState.path)
-		nextKeys := who.NextKeys(a.leaderState.currentNode)
-		right := ""
-		if len(nextKeys) > 0 {
-			right = "  " + strings.Join(nextKeys, " ")
-		}
-		a.statusBar.SetBreadcrumb([]string{"SPC " + prefix, pathStr})
-		a.statusBar.SetPosition("")
-		a.statusBar.SetMode("LEADER")
-		a.statusBar.SetCheckBadge("")
-		a.statusBar.SetAgentBadge("")
-		a.statusBar.SetViewDepth(0, nil)
-		statusLine = kernel.StatusBarStyle.Width(a.width).Render(a.statusBar.View(a.width) + "  Esc=cancel" + right)
+	// Status bar
+	info := active.StatusInfo()
+	a.statusBar.SetBreadcrumb(info.Breadcrumb)
+	a.statusBar.SetPosition(info.Position)
+	a.statusBar.SetMode(info.Mode)
+	if a.checkNavActive && len(a.checkNavLocations) > 0 {
+		loc := a.checkNavLocations[a.checkNavIndex]
+		navInfo := fmt.Sprintf("[%d/%d] %s: %s",
+			a.checkNavIndex+1, len(a.checkNavLocations),
+			loc.Code, docNameToQualifiedName(loc.ModuleName, loc.DocumentName))
+		a.statusBar.SetCheckBadge(kernel.CheckWarnStyle.Render(navInfo))
 	} else {
-		info := active.StatusInfo()
-		a.statusBar.SetBreadcrumb(info.Breadcrumb)
-		a.statusBar.SetPosition(info.Position)
-		a.statusBar.SetMode(info.Mode)
-		if a.checkNavActive && len(a.checkNavLocations) > 0 {
-			loc := a.checkNavLocations[a.checkNavIndex]
-			navInfo := fmt.Sprintf("[%d/%d] %s: %s",
-				a.checkNavIndex+1, len(a.checkNavLocations),
-				loc.Code, docNameToQualifiedName(loc.ModuleName, loc.DocumentName))
-			a.statusBar.SetCheckBadge(kernel.CheckWarnStyle.Render(navInfo))
-		} else {
-			a.statusBar.SetCheckBadge(formatCheckBadge(a.checkErrors, a.checkRunning))
-		}
-		if a.agentExecCtx != nil {
-			a.statusBar.SetAgentBadge(kernel.AgentBadgeStyle.Render("⚡agent"))
-		} else {
-			a.statusBar.SetAgentBadge("")
-		}
-		viewModeNames := a.collectViewModeNames()
-		a.statusBar.SetViewDepth(a.views.Depth(), viewModeNames)
-		statusLine = kernel.StatusBarStyle.Width(a.width).Render(a.statusBar.View(a.width))
+		a.statusBar.SetCheckBadge(formatCheckBadge(a.checkErrors, a.checkRunning))
 	}
+	if a.agentExecCtx != nil {
+		a.statusBar.SetAgentBadge(kernel.AgentBadgeStyle.Render("⚡agent"))
+	} else {
+		a.statusBar.SetAgentBadge("")
+	}
+	viewModeNames := a.collectViewModeNames()
+	a.statusBar.SetViewDepth(a.views.Depth(), viewModeNames)
+	statusLine := kernel.StatusBarStyle.Width(a.width).Render(a.statusBar.View(a.width))
 
 	// LLM anchor: machine-readable command list (Faint, not visible to users in practice)
 	anchorStyle := lipgloss.NewStyle().Foreground(kernel.MutedColor).Faint(true)

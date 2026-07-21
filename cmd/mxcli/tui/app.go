@@ -6,7 +6,6 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/mendixlabs/mxcli/cmd/mxcli/tui/chrome"
-	"github.com/mendixlabs/mxcli/cmd/mxcli/tui/kernel"
 	"github.com/mendixlabs/mxcli/cmd/mxcli/tui/task"
 	"github.com/mendixlabs/mxcli/cmd/mxcli/tui/who"
 )
@@ -62,8 +61,6 @@ type App struct {
 	agentCheckCh     chan<- AgentResponse // non-nil when agent check is in-flight
 	agentCheckReqID  int                  // request ID for pending agent check
 	agentExecCtx     *agentExecContext    // non-nil when agent-initiated exec/delete/create is in progress
-
-	leaderState *leaderState
 }
 
 // agentPendingOp tracks an in-flight agent operation awaiting user confirmation.
@@ -81,12 +78,6 @@ type agentPendingOp struct {
 type agentExecContext struct {
 	RequestID  int
 	ResponseCh chan<- AgentResponse
-}
-
-type leaderState struct {
-	path       []who.ChordNode
-	currentNode *who.ChordNode
-	chord      string
 }
 
 // NewApp creates the root App model.
@@ -706,21 +697,6 @@ func isNavigationKey(key string) bool {
 	return false
 }
 
-func (a *App) activateLeader() tea.Cmd {
-	root := a.chordTree()
-	a.leaderState = &leaderState{
-		path:        nil,
-		currentNode: &root,
-		chord:       "",
-	}
-	return nil
-}
-
-func (a *App) deactivateLeader() tea.Cmd {
-	a.leaderState = nil
-	return nil
-}
-
 func (a *App) executeChord(chord string) tea.Cmd {
 	root := a.chordTree()
 	node := &root
@@ -739,49 +715,4 @@ func (a *App) executeChord(chord string) tea.Cmd {
 	return nil
 }
 
-func (a *App) routeLeaderKey(key string) tea.Cmd {
-	if a.leaderState == nil {
-		return nil
-	}
-	if key == "esc" {
-		if len(a.leaderState.path) > 0 {
-			// Go back one level
-			a.leaderState.path = a.leaderState.path[:len(a.leaderState.path)-1]
-			a.leaderState.chord = a.leaderState.chord[:len(a.leaderState.chord)-1]
-			if len(a.leaderState.path) > 0 {
-				a.leaderState.currentNode = &a.leaderState.path[len(a.leaderState.path)-1]
-			} else {
-				root := a.chordTree()
-				a.leaderState.currentNode = &root
-			}
-		} else {
-			a.leaderState = nil
-		}
-		return nil
-	}
-	child := a.leaderState.currentNode.FindChild(key)
-	if child == nil {
-		return nil // unknown key, stay in leader
-	}
-	a.leaderState.path = append(a.leaderState.path, *child)
-	a.leaderState.currentNode = child
-	a.leaderState.chord += key
 
-	if child.Action != nil {
-		cmd := child.Action()
-		a.leaderState = nil
-		return cmd
-	}
-	return nil
-}
-
-func (a *App) leaderHints() []kernel.Hint {
-	if a.leaderState == nil {
-		return nil
-	}
-	var hints []kernel.Hint
-	for _, child := range a.leaderState.currentNode.Children {
-		hints = append(hints, kernel.Hint{Key: child.Key, Label: child.Label})
-	}
-	return hints
-}

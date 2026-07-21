@@ -4,63 +4,140 @@ import (
 	"fmt"
 	"strings"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+
+	"github.com/mendixlabs/mxcli/cmd/mxcli/tui/kernel"
 )
 
+type ExecuteMsg struct {
+	Chord string
+}
+
+type PopMsg struct{}
+
 var (
-	titleStyle  = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.AdaptiveColor{Light: "214", Dark: "214"})
-	keyStyle    = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.AdaptiveColor{Light: "62", Dark: "63"})
-	labelStyle  = lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{Light: "245", Dark: "243"})
-	dimStyle    = lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{Light: "241", Dark: "241"})
+	titleStyle     = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.AdaptiveColor{Light: "214", Dark: "214"})
+	categoryStyle  = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.AdaptiveColor{Light: "62", Dark: "63"})
+	actionStyle    = lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{Light: "255", Dark: "255"})
+	dimStyle       = lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{Light: "241", Dark: "243"})
+	hintKeyStyle   = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.AdaptiveColor{Light: "214", Dark: "214"})
+	hintDescStyle  = lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{Light: "245", Dark: "243"})
 )
 
 type Overlay struct {
-	path   []ChordNode
-	node   *ChordNode
-	width  int
-	height int
+	rootNode *ChordNode
+	node     *ChordNode
+	path     []ChordNode
 }
 
-func NewOverlay(path []ChordNode, node *ChordNode) Overlay {
-	return Overlay{path: path, node: node}
+func NewOverlay(root *ChordNode) Overlay {
+	return Overlay{
+		rootNode: root,
+		node:     root,
+	}
 }
 
-func (o Overlay) SetSize(w, h int) {
-	o.width = w
-	o.height = h
+func (o Overlay) Mode() kernel.ViewMode  { return kernel.ModeCommandPalette }
+func (o Overlay) Hints() []kernel.Hint   { return nil }
+
+func (o Overlay) StatusInfo() kernel.StatusInfo {
+	label := "Menu"
+	if len(o.path) > 0 {
+		label = o.path[len(o.path)-1].Label
+	}
+	return kernel.StatusInfo{
+		Breadcrumb: []string{"SPC", label},
+		Mode:       "LEADER",
+	}
+}
+
+func (o Overlay) Update(msg tea.Msg) (interface{}, tea.Cmd) {
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		switch msg.String() {
+		case "esc":
+			if len(o.path) > 0 {
+				o.path = o.path[:len(o.path)-1]
+				if len(o.path) > 0 {
+					o.node = &o.path[len(o.path)-1]
+				} else {
+					o.node = o.rootNode
+				}
+				return o, nil
+			}
+			return o, func() tea.Msg { return PopMsg{} }
+
+		case "q":
+			return o, func() tea.Msg { return PopMsg{} }
+
+		default:
+			child := o.node.FindChild(msg.String())
+			if child == nil {
+				return o, nil
+			}
+			o.path = append(o.path, *child)
+			o.node = child
+			if child.Action != nil {
+				return o, func() tea.Msg { return ExecuteMsg{Chord: o.chordString()} }
+			}
+			return o, nil
+		}
+	}
+	return o, nil
+}
+
+func (o Overlay) chordString() string {
+	var parts []string
+	for _, n := range o.path {
+		parts = append(parts, n.Key)
+	}
+	return strings.Join(parts, "")
 }
 
 func (o Overlay) Render(width, height int) string {
+	boxW := min(width-8, 80)
+	innerW := boxW - 4
+
+	var sb strings.Builder
+
 	prefix := "SPC"
 	for _, n := range o.path {
 		prefix += " " + n.Key
 	}
-
-	var sb strings.Builder
-	sb.WriteString(titleStyle.Render(prefix+" ▸ "+LeaderLabel(o.path)) + "\n\n")
-
-	node := o.node
-	if node == nil {
-		node = &ChordNode{Children: nil}
+	label := "Menu"
+	if len(o.path) > 0 {
+		label = o.path[len(o.path)-1].Label
 	}
 
-	for _, child := range node.Children {
-		hasSub := len(child.Children) > 0
+	sb.WriteString(titleStyle.Render(fmt.Sprintf(" %s ▸ %s", prefix, label)) + "\n\n")
+
+	for _, child := range o.node.Children {
+		isCat := len(child.Children) > 0
 		suffix := ""
-		if hasSub {
-			suffix = dimStyle.Render(" ▸")
+		if isCat {
+			suffix = dimStyle.Render("  ▸")
 		}
-		line := fmt.Sprintf("  %s  %s%s", keyStyle.Render(child.Key), labelStyle.Render(child.Label), suffix)
-		sb.WriteString(line + "\n")
+		pad := innerW - len(child.Key) - len(child.Label) - 2
+		if pad < 1 {
+			pad = 1
+		}
+		keyStr := categoryStyle.Render(" " + child.Key)
+		nameStr := actionStyle.Render(" " + child.Label)
+		line := keyStr + nameStr + strings.Repeat(" ", pad) + suffix
+		sb.WriteString("  " + line + "\n")
 	}
 
-	sb.WriteString("\n" + dimStyle.Render(fmt.Sprintf("  %d items", len(node.Children))))
+	sb.WriteString("\n")
+	navHint := hintKeyStyle.Render("Esc") + hintDescStyle.Render("=cancel ") + hintKeyStyle.Render("q") + hintDescStyle.Render("=quit")
+	sb.WriteString("  " + navHint)
 
-	box := lipgloss.NewStyle().
+	content := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
 		BorderForeground(lipgloss.AdaptiveColor{Light: "214", Dark: "214"}).
 		Padding(1, 2).
+		Width(boxW).
 		Render(sb.String())
 
-	return lipgloss.Place(width, height, lipgloss.Center, lipgloss.Center, box)
+	return lipgloss.Place(width, height, lipgloss.Center, lipgloss.Center, content)
 }

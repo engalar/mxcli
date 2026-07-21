@@ -10,6 +10,7 @@ import (
 
 	"github.com/mendixlabs/mxcli/cmd/mxcli/tui/chrome"
 	"github.com/mendixlabs/mxcli/cmd/mxcli/tui/kernel"
+	"github.com/mendixlabs/mxcli/cmd/mxcli/tui/who"
 )
 
 // --- Update ---
@@ -22,7 +23,6 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return a, nil
 	case PopViewMsg:
 		a.views.Pop()
-		// If human cancelled a view while an agent operation was pending, reject it
 		if ctx := a.agentExecCtx; ctx != nil {
 			ctx.ResponseCh <- AgentResponse{
 				ID: ctx.RequestID, OK: false,
@@ -30,6 +30,14 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			a.agentExecCtx = nil
 		}
+		return a, nil
+
+	case who.ExecuteMsg:
+		a.views.Pop()
+		return a, a.executeChord(msg.Chord)
+
+	case who.PopMsg:
+		a.views.Pop()
 		return a, nil
 
 	case PaletteExecMsg:
