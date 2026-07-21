@@ -845,6 +845,7 @@ func createPrimitiveCollectionNPEs(
 				assoc.SetOwner(string(genDm.AssociationOwnerDefault))
 				assoc.SetStorageFormat(string(genDm.AssociationStorageColumn))
 				assoc.SetSource(genRest.NewODataPrimitiveCollectionAssociationSource())
+				assoc.SetDeleteBehavior(defaultDeleteBehaviorGen())
 				if err := ctx.DomainModelWriter.CreateAssociationGen(model.ID(dm.ID()), assoc); err != nil {
 					fmt.Fprintf(ctx.Output, "  NPE ASSOC FAILED: %s — %v\n", assocName, err)
 				}
@@ -1073,6 +1074,7 @@ func createNavigationAssociations(
 				src.SetCreatableFromParent(creatable)
 				src.SetUpdatableFromParent(updatable)
 				assoc.SetSource(src)
+				assoc.SetDeleteBehavior(defaultDeleteBehaviorGen())
 
 				if err := ctx.DomainModelWriter.CreateAssociationGen(model.ID(dm.ID()), assoc); err != nil {
 					fmt.Fprintf(ctx.Output, "  ASSOC FAILED: %s.%s — %v\n", parentEnt.Name(), assocName, err)

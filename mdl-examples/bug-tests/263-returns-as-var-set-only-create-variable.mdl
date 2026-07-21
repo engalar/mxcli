@@ -1,0 +1,43 @@
+-- ============================================================================
+-- Bug #263: `returns T as $X` with a set-only body must emit CreateVariable
+-- ============================================================================
+--
+-- Symptom (before fix):
+--   A microflow declared `returns String as $X` whose body's only reference to
+--   $X is a bare assignment `$X = expr` was serialized with a ChangeVariable
+--   activity but NO CreateVariable — so $X was never declared. mx check raised:
+--     [error] [CE0109] "Undefined variable 'X'." at Change variable activity
+--     [error] [CE0109] "Undefined variable 'X'." at End event
+--   Reproduced in helpdesk-app.mdl on KB.SUB_Article_TruncateContent.
+--
+-- Root cause:
+--   retVarUsedInStmts (flowbuilder_graph_v2.go) gained a spurious *ast.MfSetStmt
+--   case. A bare `$X = expr` serializes to ChangeVariableAction — it CHANGES an
+--   existing variable, it does NOT declare one. Counting it as a declaration
+--   suppressed the synthetic CreateVariable for the return variable.
+--
+-- After fix:
+--   MfSetStmt no longer suppresses the synthetic declaration. The builder emits
+--   CreateVariable($X) followed by ChangeVariable($X) — matching Studio Pro.
+--
+-- Usage:
+--   mxcli exec mdl-examples/bug-tests/263-returns-as-var-set-only-create-variable.mdl -p app.mpr
+--   mx check app.mpr   → 0 CE0109 errors on MFTest.SUB_TruncateContent
+-- ============================================================================
+
+create module MFTest;
+
+create or modify persistent entity MFTest.Article (
+  Content: string
+);
+
+-- returns-as return variable whose only body reference is a bare `set`.
+-- Before the fix this produced two CE0109 "Undefined variable" errors.
+create or modify microflow MFTest.SUB_TruncateContent
+  ($Article: MFTest.Article)
+  returns string as $TruncatedContent
+{
+  $TruncatedContent = $Article/Content;
+  return $TruncatedContent;
+}
+/

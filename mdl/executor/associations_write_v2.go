@@ -158,3 +158,15 @@ func astAssociationDeleteBehaviorGen(s *ast.CreateAssociationStmt) element.Eleme
 	}
 	return dbe
 }
+
+// defaultDeleteBehaviorGen returns a new AssociationDeleteBehavior with both
+// parent and child set to "DeleteMeButKeepReferences" — the Mendix default.
+// Used by OData/REST association creation paths that have no AST to derive
+// behavior from. Always setting DeleteBehavior prevents Runtime
+// SchemeFactory.setDeleteBehavior → None.get crashes.
+func defaultDeleteBehaviorGen() *genDm.AssociationDeleteBehavior {
+	dbe := genDm.NewAssociationDeleteBehavior()
+	dbe.SetParentDeleteBehavior("DeleteMeButKeepReferences")
+	dbe.SetChildDeleteBehavior("DeleteMeButKeepReferences")
+	return dbe
+}

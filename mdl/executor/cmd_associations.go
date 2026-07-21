@@ -545,6 +545,7 @@ func associationDeleteBehaviorGen(elem interface{}) elementLikeDeleteBehavior {
 
 func newAssociationDeleteBehaviorGen(db ast.DeleteBehavior) *genDm.AssociationDeleteBehavior {
 	out := genDm.NewAssociationDeleteBehavior()
+	out.SetParentDeleteBehavior(genDm.DeletingBehaviorDeleteMeButKeepReferences)
 	switch db {
 	case ast.DeleteCascade:
 		out.SetChildDeleteBehavior(genDm.DeletingBehaviorDeleteMeAndReferences)

@@ -75,9 +75,11 @@ func (fb *flowBuilderGen) buildFlowGraphGen(stmts []ast.MicroflowStatement, retu
 	// ReturnVariableName metadata field on the microflow.
 	// List-typed variables require CreateListAction; all other types
 	// use CreateVariableAction (see flowbuilder_actions_v2.go:76-95).
-	// CE0111 guard: skip synthetic declaration when the body's first
-	// activity (retrieve/aggregate/cast/set) already declares the same
+	// CE0111 guard: skip synthetic declaration when a body activity that
+	// actually PRODUCES the variable (retrieve/aggregate/cast/call-java/
+	// call-mf/call-nano/call-js/create-object) already declares the same
 	// variable — having both creates "Duplicate variable name" errors.
+	// A bare `set $X = expr` does NOT count: it changes, not declares.
 	if returns != nil && returns.Variable != "" && !fb.isNanoflow && !bodyHasDeclareFor(stmts, returns.Variable) {
 		if !retVarUsedInStmts(stmts, returns.Variable) {
 			var declAction element.Element
@@ -259,6 +261,33 @@ func retVarUsedInStmts(stmts []ast.MicroflowStatement, varName string) bool {
 			}
 		case *ast.CastObjectStmt:
 			if s.OutputVariable == varName {
+				return true
+			}
+		// NOTE: *ast.MfSetStmt (`$X = expr`) is deliberately NOT handled here.
+		// A bare assignment serialises to a ChangeVariableAction, which CHANGES
+		// an existing variable — it does NOT declare one. Treating it as a
+		// declaration suppresses the synthetic CreateVariable for a `returns T
+		// as $X` return variable whose only reference is `$X = expr`, leaving
+		// the ChangeVariable pointing at an undefined variable (CE0109). See
+		// TestBuildFlowGraphGenReturnVarSetOnlyEmitsCreateVariable.
+		case *ast.CallJavaActionStmt:
+			if s.OutputVariable == varName {
+				return true
+			}
+		case *ast.CallMicroflowStmt:
+			if s.OutputVariable == varName {
+				return true
+			}
+		case *ast.CallNanoflowStmt:
+			if s.OutputVariable == varName {
+				return true
+			}
+		case *ast.CallJavaScriptActionStmt:
+			if s.OutputVariable == varName {
+				return true
+			}
+		case *ast.CreateObjectStmt:
+			if s.Variable == varName {
 				return true
 			}
 		case *ast.IfStmt:

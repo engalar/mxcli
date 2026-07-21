@@ -1602,11 +1602,41 @@ create or modify microflow HD.DS_GetMyProfile
 /
 
 -- R2: HD.JA_HashPassword — Java Action definition
--- New pattern: create java action (declares interface; Java implementation loaded at runtime)
--- No source block needed — the definition alone demonstrates the MDL syntax.
+-- Uses BouncyCastle (bcprov-jdk18on) for BCrypt password hashing.
+-- JAR dependencies are declared below in the ALTER MODULE statements.
 create or modify java action HD.JA_HashPassword (
   PlainText: string
-) returns string;
+) returns string
+imports $$
+  import java.security.SecureRandom;
+  import org.bouncycastle.crypto.generators.OpenBSDBCrypt;
+$$
+code $$
+  SecureRandom random = new SecureRandom();
+  byte[] salt = new byte[16];
+  random.nextBytes(salt);
+  return OpenBSDBCrypt.generate(
+    PlainText.toCharArray(),
+    salt,
+    12
+  );
+$$;
+
+-- JAR dependencies required by JA_HashPassword (BouncyCastle + JCIFS)
+alter module HD
+  add jar dependency (
+    group    = 'org.bouncycastle',
+    artifact = 'bcprov-jdk18on',
+    version  = '1.78.1',
+    included = true,
+  );
+alter module HD
+  add jar dependency (
+    group    = 'eu.agno3.jcifs',
+    artifact = 'jcifs-ng',
+    version  = '2.1.10',
+    included = true,
+  );
 
 -- R2: HD.ACT_ChangePassword
 -- New activities:

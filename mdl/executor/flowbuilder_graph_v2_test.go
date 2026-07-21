@@ -146,6 +146,47 @@ func TestBuildFlowGraphGenReturnValueCarriedOnSynthesisedEndEvent(t *testing.T) 
 	}
 }
 
+// TestBuildFlowGraphGenReturnVarSetOnlyEmitsCreateVariable is a regression guard
+// for CE0109 ("Undefined variable"). When a microflow declares `returns T as $X`
+// and the body's only reference to $X is a bare assignment `$X = expr` — an
+// MfSetStmt, which serialises to a ChangeVariableAction and does NOT declare the
+// variable — the graph builder MUST still emit a synthetic CreateVariableAction
+// for $X. Otherwise the ChangeVariable points at an undefined variable.
+//
+// Regression: a spurious `*ast.MfSetStmt` case in retVarUsedInStmts made the
+// builder treat the assignment as a declaration and suppress the synthetic
+// CreateVariable, producing CE0109 on KB.SUB_Article_TruncateContent in the
+// helpdesk app.
+func TestBuildFlowGraphGenReturnVarSetOnlyEmitsCreateVariable(t *testing.T) {
+	fb := newGraphTestFb()
+	body := []ast.MicroflowStatement{
+		&ast.MfSetStmt{
+			Target: "TruncatedContent",
+			Value:  &ast.LiteralExpr{Kind: ast.LiteralString, Value: "x"},
+		},
+	}
+	returns := &ast.MicroflowReturnType{
+		Type:     ast.DataType{Kind: ast.TypeString},
+		Variable: "TruncatedContent",
+	}
+	oc := fb.buildFlowGraphGen(body, returns)
+
+	var createVar *genMf.CreateVariableAction
+	for _, obj := range oc.ObjectsItems() {
+		aa, ok := obj.(*genMf.ActionActivity)
+		if !ok {
+			continue
+		}
+		if cv, ok := aa.Action().(*genMf.CreateVariableAction); ok && cv.VariableName() == "TruncatedContent" {
+			createVar = cv
+		}
+	}
+	if createVar == nil {
+		t.Fatal("expected a synthetic CreateVariableAction for return variable $TruncatedContent " +
+			"(a bare `$X = expr` is a ChangeVariable and does not declare it) — got none; CE0109 regression")
+	}
+}
+
 func TestBuildFlowGraphGenMultiStatementChain(t *testing.T) {
 	fb := newGraphTestFb()
 	body := []ast.MicroflowStatement{

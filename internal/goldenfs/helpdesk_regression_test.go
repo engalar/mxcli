@@ -334,7 +334,16 @@ func TestHelpdeskGolden_Regression_BSON(t *testing.T) {
 		// CE0720 — placeholder index > parameter count (TextTemplate.Parameters key fix)
 		// CE0091 — no member selected on validation feedback (object-only target)
 		// CE0639 — no variable selected on validation feedback attribute
-		for _, code := range []string{"CE0720", "CE0091", "CE0639"} {
+		// CE0227/CE5015/CE6099 — mapping element DataType must match the entity
+		//   attribute / JSON schema element type. Guards against a regression where
+		//   an import/export mapping value element for a DateTime attribute
+		//   (FT.WorkOrderImport.ScheduledAt, FT.DispatchOrder.DispatchedAt) is
+		//   serialized as DataTypes$StringType instead of DataTypes$DateTimeType.
+		// CE0109 — "Undefined variable": a `returns T as $X` microflow whose only
+		//   reference to $X is a bare `$X = expr` (ChangeVariable) must still get a
+		//   synthetic CreateVariable. See TestBuildFlowGraphGenReturnVarSetOnly...
+		//   and mdl-examples/bug-tests/263-*.
+		for _, code := range []string{"CE0720", "CE0091", "CE0639", "CE0227", "CE5015", "CE6099", "CE0109"} {
 			if strings.Contains(filtered, code) {
 				t.Errorf("forbidden error %s in mx check output — BSON regression:\n%s", code, output)
 			}

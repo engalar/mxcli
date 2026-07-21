@@ -354,6 +354,7 @@ func execCreateJavaActionGenFn(ctx context.Context, s *ast.CreateJavaActionStmt,
 		bpt.SetType(innerType)
 		jaParam.SetParameterType(bpt)
 		ja.AddParameters(jaParam)
+		ja.AddActionParameters(jaParam)
 	}
 
 	if isTypeParamRef(s.ReturnType, typeParamNames) {
@@ -363,8 +364,11 @@ func execCreateJavaActionGenFn(ctx context.Context, s *ast.CreateJavaActionStmt,
 			pet.SetTypeParameterID(id)
 		}
 		ja.SetJavaReturnType(pet)
+		ja.SetActionReturnType(pet)
 	} else {
-		ja.SetJavaReturnType(astDataTypeToJavaActionReturnTypeGen(s.ReturnType, typeParamIDs))
+		rt := astDataTypeToJavaActionReturnTypeGen(s.ReturnType, typeParamIDs)
+		ja.SetJavaReturnType(rt)
+		ja.SetActionReturnType(rt)
 	}
 
 	if s.ExposedCaption != "" {
