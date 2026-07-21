@@ -329,7 +329,7 @@ func restoreMillerPath(a *App, tab *Tab, millerPath []string) {
 	Trace("app: session restored via miller path %v", millerPath)
 }
 
-func (a App) startRun() tea.Cmd {
+func (a *App) startRun() tea.Cmd {
 	projectPath := a.activeTabProjectPath()
 	if projectPath == "" {
 		return nil
