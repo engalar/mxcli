@@ -1,6 +1,9 @@
 package tui
 
-import tea "github.com/charmbracelet/bubbletea"
+import (
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/mendixlabs/mxcli/cmd/mxcli/tui/task"
+)
 
 // handleBrowserAppKeys handles keys that App intercepts when in Browser mode.
 // Returns a non-nil tea.Cmd if the key was handled, nil if the key should
@@ -172,6 +175,14 @@ func (a *App) handleBrowserAppKeys(msg tea.KeyMsg) tea.Cmd {
 		ev := NewExecView(a.mxcliPath, a.activeTabProjectPath(), a.width, a.height)
 		a.views.Push(ev)
 		return handledCmd
+
+	case "b":
+		bt := task.NewBuildTask(task.BuildOptions{
+			ProjectPath: a.activeTabProjectPath(),
+		})
+		bv := NewBuildView(bt)
+		a.views.Push(bv)
+		return bt.Start()
 
 	case "C":
 		mxcliPath := a.mxcliPath

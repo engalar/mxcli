@@ -9,6 +9,8 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+
+	"github.com/mendixlabs/mxcli/cmd/mxcli/tui/kernel"
 )
 
 // discardDoneMsg carries the result of git checkout for MPR discard.
@@ -68,7 +70,7 @@ func (v *DiscardConfirmView) Update(msg tea.Msg) (View, tea.Cmd) {
 }
 
 func (v *DiscardConfirmView) Render(width, height int) string {
-	titleStyle := lipgloss.NewStyle().Bold(true).Foreground(CheckErrorStyle.GetForeground())
+	titleStyle := lipgloss.NewStyle().Bold(true).Foreground(kernel.CheckErrorStyle.GetForeground())
 	warnStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("214"))
 
 	var b strings.Builder
@@ -78,11 +80,11 @@ func (v *DiscardConfirmView) Render(width, height int) string {
 	b.WriteString(warnStyle.Render("  git checkout HEAD -- mprcontents/ *.mpr"))
 	b.WriteString("\n\n")
 	b.WriteString("  This will discard all uncommitted modifications.\n\n")
-	b.WriteString(HintLabelStyle.Render("Press y to confirm, any other key to cancel"))
+	b.WriteString(kernel.HintLabelStyle.Render("Press y to confirm, any other key to cancel"))
 
 	boxStyle := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
-		BorderForeground(CheckErrorStyle.GetForeground()).
+		BorderForeground(kernel.CheckErrorStyle.GetForeground()).
 		Padding(1, 2).
 		Width(min(70, width-4))
 

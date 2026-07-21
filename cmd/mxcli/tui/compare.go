@@ -8,6 +8,8 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+
+	"github.com/mendixlabs/mxcli/cmd/mxcli/tui/kernel"
 )
 
 // CompareKind determines the comparison layout.
@@ -542,7 +544,7 @@ func (c CompareView) Render(width, height int) string {
 		rightTitle = "—"
 	}
 	anchor := fmt.Sprintf("[mxcli:compare] Left: %s  Right: %s  %s", leftTitle, rightTitle, info.Mode)
-	anchorSt := lipgloss.NewStyle().Foreground(MutedColor).Faint(true)
+	anchorSt := lipgloss.NewStyle().Foreground(kernel.MutedColor).Faint(true)
 	anchorStr := anchorSt.Render(anchor)
 
 	if idx := strings.IndexByte(rendered, '\n'); idx >= 0 {

@@ -11,6 +11,8 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/mendixlabs/mxcli/mdl/formatter"
+
+	"github.com/mendixlabs/mxcli/cmd/mxcli/tui/kernel"
 )
 
 // ExecDoneMsg carries the result of MDL execution.
@@ -187,14 +189,14 @@ func (ev ExecView) Render(width, height int) string {
 	ev.textarea.SetWidth(width - 4)
 	ev.textarea.SetHeight(height - 6)
 
-	titleStyle := lipgloss.NewStyle().Bold(true).Foreground(AccentColor).Padding(0, 1)
+	titleStyle := lipgloss.NewStyle().Bold(true).Foreground(kernel.AccentColor).Padding(0, 1)
 	title := titleStyle.Render("Execute MDL")
 
 	statusLine := ""
 	if ev.executing {
-		statusLine = lipgloss.NewStyle().Foreground(AccentColor).Render("  Executing...")
+		statusLine = lipgloss.NewStyle().Foreground(kernel.AccentColor).Render("  Executing...")
 	} else if ev.flash != "" {
-		statusLine = lipgloss.NewStyle().Foreground(MutedColor).Render("  " + ev.flash)
+		statusLine = lipgloss.NewStyle().Foreground(kernel.MutedColor).Render("  " + ev.flash)
 	}
 
 	content := lipgloss.JoinVertical(lipgloss.Left,
@@ -207,8 +209,8 @@ func (ev ExecView) Render(width, height int) string {
 }
 
 func (ev ExecView) renderPreview(width, height int) string {
-	titleStyle := lipgloss.NewStyle().Bold(true).Foreground(AccentColor).Padding(0, 1)
-	modeStyle := lipgloss.NewStyle().Foreground(MutedColor).Italic(true)
+	titleStyle := lipgloss.NewStyle().Bold(true).Foreground(kernel.AccentColor).Padding(0, 1)
+	modeStyle := lipgloss.NewStyle().Foreground(kernel.MutedColor).Italic(true)
 
 	titleLine := lipgloss.JoinHorizontal(lipgloss.Top,
 		titleStyle.Render("Execute MDL"),
@@ -227,11 +229,11 @@ func (ev ExecView) renderPreview(width, height int) string {
 }
 
 func (ev ExecView) renderPicker(width, height int) string {
-	dimStyle := lipgloss.NewStyle().Foreground(MutedColor)
+	dimStyle := lipgloss.NewStyle().Foreground(kernel.MutedColor)
 	selectedStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("255")).Bold(true)
 	normalStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("245"))
 	mdlStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("214")).Bold(true)
-	titleStyle := lipgloss.NewStyle().Bold(true).Foreground(AccentColor)
+	titleStyle := lipgloss.NewStyle().Bold(true).Foreground(kernel.AccentColor)
 
 	var sb strings.Builder
 	sb.WriteString(titleStyle.Render("Open MDL File") + "\n\n")
@@ -273,7 +275,7 @@ func (ev ExecView) renderPicker(width, height int) string {
 
 	boxStyle := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
-		BorderForeground(AccentColor).
+		BorderForeground(kernel.AccentColor).
 		Padding(1, 2).
 		Width(min(70, width-4))
 

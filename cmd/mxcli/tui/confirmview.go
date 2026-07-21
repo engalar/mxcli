@@ -8,6 +8,8 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+
+	"github.com/mendixlabs/mxcli/cmd/mxcli/tui/kernel"
 )
 
 // ConfirmView is a lightweight yes/no confirmation dialog.
@@ -51,18 +53,18 @@ func (v *ConfirmView) Update(msg tea.Msg) (View, tea.Cmd) {
 }
 
 func (v *ConfirmView) Render(width, height int) string {
-	titleStyle := lipgloss.NewStyle().Bold(true).Foreground(CheckErrorStyle.GetForeground())
+	titleStyle := lipgloss.NewStyle().Bold(true).Foreground(kernel.CheckErrorStyle.GetForeground())
 
 	var b strings.Builder
 	b.WriteString(titleStyle.Render(v.title))
 	b.WriteString("\n\n")
 	b.WriteString(v.message)
 	b.WriteString("\n\n")
-	b.WriteString(HintLabelStyle.Render("Press y to confirm, any other key to cancel"))
+	b.WriteString(kernel.HintLabelStyle.Render("Press y to confirm, any other key to cancel"))
 
 	boxStyle := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
-		BorderForeground(CheckErrorStyle.GetForeground()).
+		BorderForeground(kernel.CheckErrorStyle.GetForeground()).
 		Padding(1, 2).
 		Width(min(70, width-4))
 

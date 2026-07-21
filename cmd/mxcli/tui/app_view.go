@@ -7,6 +7,8 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+
+	"github.com/mendixlabs/mxcli/cmd/mxcli/tui/kernel"
 )
 
 // --- View ---
@@ -42,11 +44,11 @@ func (a App) View() string {
 	tabLine := a.tabBar.View(a.width)
 	tab := a.activeTabPtr()
 	if tab != nil {
-		modeBadge := AccentStyle.Render(active.Mode().String())
+		modeBadge := kernel.AccentStyle.Render(active.Mode().String())
 		summary := renderContextSummary(tab.AllNodes)
 		rightSide := modeBadge
 		if summary != "" {
-			rightSide += BreadcrumbDimStyle.Render(" │ ") + BreadcrumbDimStyle.Render(summary)
+			rightSide += kernel.BreadcrumbDimStyle.Render(" │ ") + kernel.BreadcrumbDimStyle.Render(summary)
 		}
 		rightWidth := lipgloss.Width(rightSide) + 1 // 1 char right padding
 		tabWidth := lipgloss.Width(tabLine)
@@ -83,22 +85,22 @@ func (a App) View() string {
 		navInfo := fmt.Sprintf("[%d/%d] %s: %s  ]e next  [e prev",
 			a.checkNavIndex+1, len(a.checkNavLocations),
 			loc.Code, docNameToQualifiedName(loc.ModuleName, loc.DocumentName))
-		a.statusBar.SetCheckBadge(CheckWarnStyle.Render(navInfo))
+		a.statusBar.SetCheckBadge(kernel.CheckWarnStyle.Render(navInfo))
 	} else {
 		a.statusBar.SetCheckBadge(formatCheckBadge(a.checkErrors, a.checkRunning))
 	}
 	// Agent activity badge
 	if a.agentExecCtx != nil {
-		a.statusBar.SetAgentBadge(AgentBadgeStyle.Render("⚡agent"))
+		a.statusBar.SetAgentBadge(kernel.AgentBadgeStyle.Render("⚡agent"))
 	} else {
 		a.statusBar.SetAgentBadge("")
 	}
 	viewModeNames := a.collectViewModeNames()
 	a.statusBar.SetViewDepth(a.views.Depth(), viewModeNames)
-	statusLine := StatusBarStyle.Width(a.width).Render(a.statusBar.View(a.width))
+	statusLine := kernel.StatusBarStyle.Width(a.width).Render(a.statusBar.View(a.width))
 
 	// LLM anchor: machine-readable command list (Faint, not visible to users in practice)
-	anchorStyle := lipgloss.NewStyle().Foreground(MutedColor).Faint(true)
+	anchorStyle := lipgloss.NewStyle().Foreground(kernel.MutedColor).Faint(true)
 	anchorLine := anchorStyle.Render("[mxcli:commands] h:back l:open Space:jump /:filter b:bson c:compare d:diagram z:zen Tab:toggle x:exec r:refresh y:copy !:check ]e:next-error [e:prev-error t:tab T:new-tab W:close-tab 1-9:switch ?:help ::palette")
 
 	rendered := anchorLine + "\n" + tabLine + "\n" + content + "\n" + hintLine + "\n" + statusLine

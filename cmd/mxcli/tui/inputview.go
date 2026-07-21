@@ -8,6 +8,8 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+
+	"github.com/mendixlabs/mxcli/cmd/mxcli/tui/kernel"
 )
 
 // InputView is a lightweight single-line text input overlay.
@@ -54,8 +56,8 @@ func (v *InputView) Update(msg tea.Msg) (View, tea.Cmd) {
 }
 
 func (v *InputView) Render(width, height int) string {
-	titleStyle := lipgloss.NewStyle().Bold(true).Foreground(AccentColor)
-	flashStyle := lipgloss.NewStyle().Foreground(CheckErrorStyle.GetForeground())
+	titleStyle := lipgloss.NewStyle().Bold(true).Foreground(kernel.AccentColor)
+	flashStyle := lipgloss.NewStyle().Foreground(kernel.CheckErrorStyle.GetForeground())
 
 	var b strings.Builder
 	b.WriteString(titleStyle.Render(v.title))
@@ -66,11 +68,11 @@ func (v *InputView) Render(width, height int) string {
 		b.WriteString(flashStyle.Render(v.flash))
 	}
 	b.WriteString("\n\n")
-	b.WriteString(HintLabelStyle.Render("Enter to confirm, Esc to cancel"))
+	b.WriteString(kernel.HintLabelStyle.Render("Enter to confirm, Esc to cancel"))
 
 	boxStyle := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
-		BorderForeground(AccentColor).
+		BorderForeground(kernel.AccentColor).
 		Padding(1, 2).
 		Width(min(60, width-4))
 

@@ -7,6 +7,8 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/mattn/go-runewidth"
+
+	"github.com/mendixlabs/mxcli/cmd/mxcli/tui/kernel"
 )
 
 const mouseScrollStep = 3
@@ -253,9 +255,9 @@ func (c Column) View() string {
 	var sb strings.Builder
 
 	// Title — use accent style when focused
-	titleStyle := ColumnTitleStyle
+	titleStyle := kernel.ColumnTitleStyle
 	if c.focused {
-		titleStyle = FocusedTitleStyle
+		titleStyle = kernel.FocusedTitleStyle
 	}
 	sb.WriteString(titleStyle.Render(c.title))
 	sb.WriteString("\n")
@@ -304,7 +306,7 @@ func (c Column) View() string {
 
 	scrollThumbStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("63"))
 	scrollTrackStyle := lipgloss.NewStyle().Faint(true)
-	edgeChar := FocusedEdgeStyle.Render(FocusedEdgeChar)
+	edgeChar := kernel.FocusedEdgeStyle.Render(kernel.FocusedEdgeChar)
 
 	for vi := range maxVis {
 		idx := c.scrollOffset + vi
@@ -315,7 +317,7 @@ func (c Column) View() string {
 
 			icon := item.Icon
 			if icon == "" {
-				icon = IconFor(item.Type)
+				icon = kernel.IconFor(item.Type)
 			}
 			label := icon + "  " + item.Label
 
@@ -330,11 +332,11 @@ func (c Column) View() string {
 			}
 
 			if idx == c.cursor {
-				line = SelectedItemStyle.Render(label)
+				line = kernel.SelectedItemStyle.Render(label)
 			} else if item.HasChildren {
-				line = DirectoryStyle.Render(label)
+				line = kernel.DirectoryStyle.Render(label)
 			} else {
-				line = LeafStyle.Render(label)
+				line = kernel.LeafStyle.Render(label)
 			}
 		}
 
@@ -414,7 +416,7 @@ func (c Column) IdealWidth() int {
 	for _, item := range c.items {
 		icon := item.Icon
 		if icon == "" {
-			icon = IconFor(item.Type)
+			icon = kernel.IconFor(item.Type)
 		}
 		label := icon + "  " + item.Label
 		if item.HasChildren {

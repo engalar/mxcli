@@ -8,6 +8,8 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+
+	"github.com/mendixlabs/mxcli/cmd/mxcli/tui/kernel"
 )
 
 // BrowserView wraps MillerView and absorbs action keys from the normal browsing mode.
@@ -74,7 +76,7 @@ func (bv BrowserView) Render(width, height int) string {
 	info := bv.StatusInfo()
 	anchor := fmt.Sprintf("[mxcli:browse] %s  %s  %s",
 		strings.Join(info.Breadcrumb, " > "), info.Position, info.Mode)
-	anchorStr := lipgloss.NewStyle().Foreground(MutedColor).Faint(true).Render(anchor)
+	anchorStr := lipgloss.NewStyle().Foreground(kernel.MutedColor).Faint(true).Render(anchor)
 
 	if idx := strings.IndexByte(rendered, '\n'); idx >= 0 {
 		rendered = anchorStr + rendered[idx:]
@@ -115,7 +117,7 @@ func (bv BrowserView) handleKey(msg tea.KeyMsg) (View, tea.Cmd) {
 	}
 
 	switch msg.String() {
-	case "b":
+	case "B":
 		node := bv.miller.SelectedNode()
 		if node != nil && node.QualifiedName != "" {
 			if bsonType := inferBsonType(node.Type); bsonType != "" {

@@ -7,6 +7,8 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/mendixlabs/mxcli/mdl/formatter"
+
+	"github.com/mendixlabs/mxcli/cmd/mxcli/tui/kernel"
 )
 
 // overlayContentMsg carries reloaded content for an OverlayView after Tab switch.
@@ -228,7 +230,7 @@ func (ov OverlayView) Render(width, height int) string {
 		info := ov.StatusInfo()
 		anchor = fmt.Sprintf("[mxcli:overlay] %s  %s", ov.overlay.title, info.Mode)
 	}
-	anchorStyle := lipgloss.NewStyle().Foreground(MutedColor).Faint(true)
+	anchorStyle := lipgloss.NewStyle().Foreground(kernel.MutedColor).Faint(true)
 	anchorStr := anchorStyle.Render(anchor)
 
 	if idx := strings.IndexByte(rendered, '\n'); idx >= 0 {

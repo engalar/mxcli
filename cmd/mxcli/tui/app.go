@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/mendixlabs/mxcli/cmd/mxcli/tui/chrome"
+	"github.com/mendixlabs/mxcli/cmd/mxcli/tui/task"
 )
 
 // chromeHeight is the vertical space consumed by tab bar (1) + hint bar (1) + status bar (1).
@@ -41,9 +43,9 @@ type App struct {
 	checkNavLocations []CheckNavLocation
 	pendingKey        rune // ']' or '[' waiting for 'e', 0 if none
 
-	tabBar        TabBar
-	hintBar       HintBar
-	statusBar     StatusBar
+	tabBar        chrome.TabBar
+	hintBar       chrome.HintBar
+	statusBar     chrome.StatusBar
 	previewEngine *PreviewEngine
 
 	watcher      *Watcher
@@ -91,9 +93,9 @@ func NewApp(mxcliPath, projectPath string) App {
 		mxcliPath:     mxcliPath,
 		nextTabID:     2,
 		views:         NewViewStack(browserView),
-		tabBar:        NewTabBar(nil),
-		statusBar:     NewStatusBar(),
-		hintBar:       NewHintBar(ListBrowsingHints),
+		tabBar:        chrome.NewTabBar(nil),
+		statusBar:     chrome.NewStatusBar(),
+		hintBar:       chrome.NewHintBar(ListBrowsingHints),
 		previewEngine: engine,
 	}
 	app.tabs = []Tab{tab}
@@ -165,9 +167,9 @@ func (a *App) activeTabProjectPath() string {
 }
 
 func (a *App) syncTabBar() {
-	infos := make([]TabInfo, len(a.tabs))
+	infos := make([]chrome.TabInfo, len(a.tabs))
 	for i, t := range a.tabs {
-		infos[i] = TabInfo{ID: t.ID, Label: t.Label, Active: i == a.activeTab}
+		infos[i] = chrome.TabInfo{ID: t.ID, Label: t.Label, Active: i == a.activeTab}
 	}
 	a.tabBar.SetTabs(infos)
 }
@@ -324,4 +326,18 @@ func restoreMillerPath(a *App, tab *Tab, millerPath []string) {
 	a.views.SetBase(bv)
 	a.syncTabBar()
 	Trace("app: session restored via miller path %v", millerPath)
+}
+
+func (a App) startRun() tea.Cmd {
+	projectPath := a.activeTabProjectPath()
+	if projectPath == "" {
+		return nil
+	}
+	rt := task.NewRunTask(task.RunOptions{
+		PadDir:  filepath.Join(filepath.Dir(projectPath), ".docker", "build"),
+		CmdHint: "-p " + projectPath,
+	})
+	rv := NewRunView(rt)
+	a.views.Push(rv)
+	return rt.Start()
 }

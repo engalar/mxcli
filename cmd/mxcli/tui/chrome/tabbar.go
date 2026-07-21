@@ -1,4 +1,4 @@
-package tui
+package chrome
 
 import (
 	"fmt"
@@ -6,25 +6,22 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/mendixlabs/mxcli/cmd/mxcli/tui/kernel"
 )
 
-// TabClickMsg is sent when a tab is clicked.
 type TabClickMsg struct {
 	ID int
 }
 
-// TabInfo describes a single tab.
 type TabInfo struct {
 	ID     int
 	Label  string
 	Active bool
 }
 
-// TabBar renders a horizontal tab bar.
 type TabBar struct {
 	tabs  []TabInfo
 	width int
-	// zones tracks click regions: [startCol, endCol) per tab index.
 	zones []tabZone
 }
 
@@ -33,22 +30,18 @@ type tabZone struct {
 	id         int
 }
 
-// NewTabBar creates a tab bar with the given tabs.
 func NewTabBar(tabs []TabInfo) TabBar {
 	return TabBar{tabs: tabs}
 }
 
-// SetTabs replaces the tab list and recalculates click zones.
 func (t *TabBar) SetTabs(tabs []TabInfo) {
 	t.tabs = tabs
 }
 
-// SetWidth sets the available rendering width.
 func (t *TabBar) SetWidth(w int) {
 	t.width = w
 }
 
-// HandleClick checks if a mouse click at column x hits a tab zone.
 func (t *TabBar) HandleClick(x int) tea.Msg {
 	for _, z := range t.zones {
 		if x >= z.start && x < z.end {
@@ -58,7 +51,6 @@ func (t *TabBar) HandleClick(x int) tea.Msg {
 	return nil
 }
 
-// View renders the tab bar to fit within the given width.
 func (t *TabBar) View(width int) string {
 	if width <= 0 {
 		width = t.width
@@ -69,7 +61,7 @@ func (t *TabBar) View(width int) string {
 
 	t.zones = t.zones[:0]
 	var sb strings.Builder
-	col := 1 // start with 1 char left padding
+	col := 1
 	sb.WriteString(" ")
 
 	for i, tab := range t.tabs {
@@ -84,9 +76,9 @@ func (t *TabBar) View(width int) string {
 		start := col
 		var rendered string
 		if tab.Active {
-			rendered = ActiveTabStyle.Render(label)
+			rendered = kernel.ActiveTabStyle.Render(label)
 		} else {
-			rendered = InactiveTabStyle.Render(label)
+			rendered = kernel.InactiveTabStyle.Render(label)
 		}
 		sb.WriteString(rendered)
 		col += labelWidth
@@ -95,7 +87,6 @@ func (t *TabBar) View(width int) string {
 	}
 
 	line := sb.String()
-	// Pad or truncate to width
 	lineWidth := lipgloss.Width(line)
 	if lineWidth < width {
 		line += strings.Repeat(" ", width-lineWidth)

@@ -7,6 +7,8 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+
+	"github.com/mendixlabs/mxcli/cmd/mxcli/tui/kernel"
 )
 
 const paletteMaxVisible = 16
@@ -45,12 +47,7 @@ type paletteEntry struct {
 // BrowserPaletteCommands returns the default command list for browser mode.
 func BrowserPaletteCommands() []PaletteCommand {
 	return []PaletteCommand{
-		{Name: "Back", Key: "h", Category: "Navigation"},
-		{Name: "Open / Drill In", Key: "l", Category: "Navigation"},
-		{Name: "Fuzzy Jump", Key: " ", Category: "Navigation"},
-		{Name: "Filter", Key: "/", Category: "Navigation"},
-
-		{Name: "BSON Dump", Key: "b", Category: "View"},
+		{Name: "BSON Dump", Key: "B", Category: "View"},
 		{Name: "Compare View", Key: "c", Category: "View"},
 		{Name: "Diagram in Browser", Key: "d", Category: "View"},
 		{Name: "Zen Mode", Key: "z", Category: "View"},
@@ -67,10 +64,12 @@ func BrowserPaletteCommands() []PaletteCommand {
 		{Name: "Next Error Document", Key: "]e", Category: "Check"},
 		{Name: "Prev Error Document", Key: "[e", Category: "Check"},
 
+		{Name: "Build Project", Key: "b", Category: "Build"},
+		{Name: "Run Project", Key: ":run", Category: "Build"},
+
 		{Name: "New Tab (same project)", Key: "t", Category: "Tab"},
 		{Name: "New Tab (pick project)", Key: "T", Category: "Tab"},
 		{Name: "Close Tab", Key: "W", Category: "Tab"},
-		{Name: "Switch Tab", Key: "1-9", Category: "Tab"},
 
 		{Name: "Help", Key: "?", Category: "Other"},
 	}
@@ -159,12 +158,12 @@ func (cp CommandPaletteView) Update(msg tea.Msg) (View, tea.Cmd) {
 
 // Render draws the palette as a centered modal box.
 func (cp CommandPaletteView) Render(width, height int) string {
-	dimStyle := lipgloss.NewStyle().Foreground(MutedColor)
-	catStyle := lipgloss.NewStyle().Foreground(MutedColor).Bold(true)
-	selStyle := lipgloss.NewStyle().Bold(true).Foreground(AccentColor)
+	dimStyle := lipgloss.NewStyle().Foreground(kernel.MutedColor)
+	catStyle := lipgloss.NewStyle().Foreground(kernel.MutedColor).Bold(true)
+	selStyle := lipgloss.NewStyle().Bold(true).Foreground(kernel.AccentColor)
 	normStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("245"))
-	keyStyle := lipgloss.NewStyle().Foreground(MutedColor)
-	titleStyle := lipgloss.NewStyle().Bold(true).Foreground(AccentColor)
+	keyStyle := lipgloss.NewStyle().Foreground(kernel.MutedColor)
+	titleStyle := lipgloss.NewStyle().Bold(true).Foreground(kernel.AccentColor)
 
 	contentWidth := max(30, min(56, width-14)) // inner content width (box adds border+padding)
 
@@ -227,7 +226,7 @@ func (cp CommandPaletteView) Render(width, height int) string {
 
 	box := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
-		BorderForeground(AccentColor).
+		BorderForeground(kernel.AccentColor).
 		Padding(1, 2).
 		Render(sb.String())
 

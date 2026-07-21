@@ -6,6 +6,8 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/mattn/go-runewidth"
+
+	"github.com/mendixlabs/mxcli/cmd/mxcli/tui/kernel"
 )
 
 // RenderPlainUnifiedDiff generates a standard unified diff string (no ANSI colors).
@@ -144,20 +146,20 @@ func RenderUnifiedDiff(result *DiffResult, lang string) []DiffRenderedLine {
 
 		switch dl.Type {
 		case DiffEqual:
-			gutter = gutterCharSt.Foreground(DiffEqualGutter).Render("│")
+			gutter = gutterCharSt.Foreground(kernel.DiffEqualGutter).Render("│")
 			oldNo = lineNoSt.Render(fmt.Sprintf("%*d", lineNoW, dl.OldLineNo))
 			newNo = lineNoSt.Render(fmt.Sprintf("%*d", lineNoW, dl.NewLineNo))
 			content = highlightLine(dl.Content, lang)
 
 		case DiffInsert:
-			gutter = gutterCharSt.Foreground(DiffGutterAddedFg).Render("+")
+			gutter = gutterCharSt.Foreground(kernel.DiffGutterAddedFg).Render("+")
 			oldNo = lineNoSt.Render(strings.Repeat(" ", lineNoW))
-			newNo = lipgloss.NewStyle().Foreground(DiffGutterAddedFg).Render(fmt.Sprintf("%*d", lineNoW, dl.NewLineNo))
+			newNo = lipgloss.NewStyle().Foreground(kernel.DiffGutterAddedFg).Render(fmt.Sprintf("%*d", lineNoW, dl.NewLineNo))
 			content = renderSegments(dl.Segments, DiffInsert)
 
 		case DiffDelete:
-			gutter = gutterCharSt.Foreground(DiffGutterRemovedFg).Render("-")
-			oldNo = lipgloss.NewStyle().Foreground(DiffGutterRemovedFg).Render(fmt.Sprintf("%*d", lineNoW, dl.OldLineNo))
+			gutter = gutterCharSt.Foreground(kernel.DiffGutterRemovedFg).Render("-")
+			oldNo = lipgloss.NewStyle().Foreground(kernel.DiffGutterRemovedFg).Render(fmt.Sprintf("%*d", lineNoW, dl.OldLineNo))
 			newNo = lineNoSt.Render(strings.Repeat(" ", lineNoW))
 			content = renderSegments(dl.Segments, DiffDelete)
 		}
@@ -206,13 +208,13 @@ func RenderSideBySideDiff(result *DiffResult, lang string) (left, right []SideBy
 
 		case DiffDelete:
 			content := renderSegments(dl.Segments, DiffDelete)
-			oldNo := lipgloss.NewStyle().Foreground(DiffGutterRemovedFg).Render(fmt.Sprintf("%*d", lineNoW, dl.OldLineNo)) + " "
+			oldNo := lipgloss.NewStyle().Foreground(kernel.DiffGutterRemovedFg).Render(fmt.Sprintf("%*d", lineNoW, dl.OldLineNo)) + " "
 			left = append(left, SideBySideRenderedLine{Prefix: oldNo, Content: content})
 			right = append(right, SideBySideRenderedLine{Prefix: blankPrefix, Blank: true})
 
 		case DiffInsert:
 			content := renderSegments(dl.Segments, DiffInsert)
-			newNo := lipgloss.NewStyle().Foreground(DiffGutterAddedFg).Render(fmt.Sprintf("%*d", lineNoW, dl.NewLineNo)) + " "
+			newNo := lipgloss.NewStyle().Foreground(kernel.DiffGutterAddedFg).Render(fmt.Sprintf("%*d", lineNoW, dl.NewLineNo)) + " "
 			left = append(left, SideBySideRenderedLine{Prefix: blankPrefix, Blank: true})
 			right = append(right, SideBySideRenderedLine{Prefix: newNo, Content: content})
 		}
@@ -229,13 +231,13 @@ func renderSegments(segments []DiffSegment, lineType DiffLineType) string {
 	var normalFg, changedFg, changedBg lipgloss.TerminalColor
 	switch lineType {
 	case DiffInsert:
-		normalFg = DiffAddedFg
-		changedFg = DiffAddedChangedFg
-		changedBg = DiffAddedChangedBg
+		normalFg = kernel.DiffAddedFg
+		changedFg = kernel.DiffAddedChangedFg
+		changedBg = kernel.DiffAddedChangedBg
 	case DiffDelete:
-		normalFg = DiffRemovedFg
-		changedFg = DiffRemovedChangedFg
-		changedBg = DiffRemovedChangedBg
+		normalFg = kernel.DiffRemovedFg
+		changedFg = kernel.DiffRemovedChangedFg
+		changedBg = kernel.DiffRemovedChangedBg
 	default:
 		var sb strings.Builder
 		for _, seg := range segments {

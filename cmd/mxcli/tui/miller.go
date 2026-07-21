@@ -7,6 +7,8 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+
+	"github.com/mendixlabs/mxcli/cmd/mxcli/tui/kernel"
 )
 
 // Layout constants for column width calculations.
@@ -394,7 +396,7 @@ func (m *MillerView) View() string {
 
 	// Build separator: exactly m.height lines of │
 	sepLines := make([]string, m.height)
-	sepChar := SeparatorStyle.Render(SeparatorChar)
+	sepChar := kernel.SeparatorStyle.Render(kernel.SeparatorChar)
 	for i := range sepLines {
 		sepLines[i] = sepChar
 	}
@@ -429,7 +431,7 @@ func (m *MillerView) View() string {
 func (m *MillerView) viewZen() string {
 	// Build separator
 	sepLines := make([]string, m.height)
-	sepChar := SeparatorStyle.Render(SeparatorChar)
+	sepChar := kernel.SeparatorStyle.Render(kernel.SeparatorChar)
 	for i := range sepLines {
 		sepLines[i] = sepChar
 	}
@@ -463,7 +465,7 @@ func (m *MillerView) viewZen() string {
 
 func (m MillerView) renderPreview(previewWidth int) string {
 	if m.preview.loading {
-		return LoadingStyle.
+		return kernel.LoadingStyle.
 			Width(previewWidth).
 			Height(m.height).
 			Render("Loading…")
@@ -535,16 +537,16 @@ func (m MillerView) renderPreview(previewWidth int) string {
 			if pct > 100 {
 				pct = 100
 			}
-			modeLabel += " " + PositionStyle.Render(fmt.Sprintf("%d%%", pct))
+			modeLabel += " " + kernel.PositionStyle.Render(fmt.Sprintf("%d%%", pct))
 		}
 
 		// Build output
 		var out strings.Builder
-		out.WriteString(AccentStyle.Render(modeLabel))
+		out.WriteString(kernel.AccentStyle.Render(modeLabel))
 		for _, vl := range visible {
 			out.WriteByte('\n')
 			if vl.lineNo > 0 {
-				out.WriteString(PositionStyle.Render(fmt.Sprintf("%*d ", gutterW, vl.lineNo)))
+				out.WriteString(kernel.PositionStyle.Render(fmt.Sprintf("%*d ", gutterW, vl.lineNo)))
 			} else {
 				out.WriteString(strings.Repeat(" ", gutterTotal)) // continuation indent
 			}
@@ -564,7 +566,7 @@ func (m MillerView) renderPreview(previewWidth int) string {
 	return lipgloss.NewStyle().
 		Width(previewWidth).
 		Height(m.height).
-		Render(LoadingStyle.Render("No preview"))
+		Render(kernel.LoadingStyle.Render("No preview"))
 }
 
 // --- Layout helpers ---
@@ -888,7 +890,7 @@ func treeNodesToItems(nodes []*TreeNode) []ColumnItem {
 	for i, n := range nodes {
 		items[i] = ColumnItem{
 			Label:         n.Label,
-			Icon:          IconFor(n.Type),
+			Icon:          kernel.IconFor(n.Type),
 			Type:          n.Type,
 			QualifiedName: n.QualifiedName,
 			HasChildren:   len(n.Children) > 0,

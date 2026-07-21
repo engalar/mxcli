@@ -7,6 +7,8 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+
+	"github.com/mendixlabs/mxcli/cmd/mxcli/tui/kernel"
 )
 
 // DiffViewMode determines the diff display layout.
@@ -408,8 +410,8 @@ func (dv DiffView) View() string {
 	dimSt := lipgloss.NewStyle().Foreground(lipgloss.Color("240"))
 	keySt := lipgloss.NewStyle().Foreground(lipgloss.Color("63")).Bold(true)
 	activeSt := lipgloss.NewStyle().Foreground(lipgloss.Color("214")).Bold(true)
-	addSt := lipgloss.NewStyle().Foreground(DiffAddedFg).Bold(true)
-	delSt := lipgloss.NewStyle().Foreground(DiffRemovedFg).Bold(true)
+	addSt := lipgloss.NewStyle().Foreground(kernel.DiffAddedFg).Bold(true)
+	delSt := lipgloss.NewStyle().Foreground(kernel.DiffRemovedFg).Bold(true)
 
 	// Title bar
 	var modeLabel string
@@ -650,7 +652,7 @@ func (dv DiffView) Render(width, height int) string {
 	// Embed LLM anchor as muted prefix on the first line
 	info := dv.StatusInfo()
 	anchor := fmt.Sprintf("[mxcli:diff] %s  %s", info.Mode, info.Extra)
-	anchorStr := lipgloss.NewStyle().Foreground(MutedColor).Faint(true).Render(anchor)
+	anchorStr := lipgloss.NewStyle().Foreground(kernel.MutedColor).Faint(true).Render(anchor)
 
 	if idx := strings.IndexByte(rendered, '\n'); idx >= 0 {
 		rendered = anchorStr + rendered[idx:]

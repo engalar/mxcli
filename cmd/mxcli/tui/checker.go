@@ -10,6 +10,8 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/mendixlabs/mxcli/cmd/mxcli/docker"
+
+	"github.com/mendixlabs/mxcli/cmd/mxcli/tui/kernel"
 )
 
 // CheckError represents a single mx check diagnostic.
@@ -370,24 +372,24 @@ func renderCheckResults(errors []CheckError, filter string) string {
 		return "No check has been run yet. Changes to the project will trigger an automatic check."
 	}
 	if len(errors) == 0 {
-		return CheckPassStyle.Render("✓ Project check passed — no errors or warnings")
+		return kernel.CheckPassStyle.Render("✓ Project check passed — no errors or warnings")
 	}
 
 	var sb strings.Builder
 	ec, wc, dc := countBySeverity(errors)
 
 	// Summary header
-	sb.WriteString(CheckHeaderStyle.Render("mx check Results"))
+	sb.WriteString(kernel.CheckHeaderStyle.Render("mx check Results"))
 	sb.WriteString("\n")
 	var summaryParts []string
 	if ec > 0 {
-		summaryParts = append(summaryParts, CheckErrorStyle.Render("● "+itoa(ec)+" errors"))
+		summaryParts = append(summaryParts, kernel.CheckErrorStyle.Render("● "+itoa(ec)+" errors"))
 	}
 	if wc > 0 {
-		summaryParts = append(summaryParts, CheckWarnStyle.Render("● "+itoa(wc)+" warnings"))
+		summaryParts = append(summaryParts, kernel.CheckWarnStyle.Render("● "+itoa(wc)+" warnings"))
 	}
 	if dc > 0 {
-		summaryParts = append(summaryParts, CheckDeprecStyle.Render("● "+itoa(dc)+" deprecations"))
+		summaryParts = append(summaryParts, kernel.CheckDeprecStyle.Render("● "+itoa(dc)+" deprecations"))
 	}
 	sb.WriteString(strings.Join(summaryParts, "  "))
 	sb.WriteString("\n\n")
@@ -403,11 +405,11 @@ func renderCheckResults(errors []CheckError, filter string) string {
 		var label string
 		switch g.Severity {
 		case "ERROR":
-			label = CheckErrorStyle.Render(g.Code)
+			label = kernel.CheckErrorStyle.Render(g.Code)
 		case "WARNING":
-			label = CheckWarnStyle.Render(g.Code)
+			label = kernel.CheckWarnStyle.Render(g.Code)
 		case "DEPRECATION":
-			label = CheckDeprecStyle.Render(g.Code)
+			label = kernel.CheckDeprecStyle.Render(g.Code)
 		default:
 			label = g.Code
 		}
@@ -420,7 +422,7 @@ func renderCheckResults(errors []CheckError, filter string) string {
 			}
 			sb.WriteString("  " + item.DocLocation + countSuffix + "\n")
 			if item.ElementName != "" {
-				sb.WriteString("    > " + CheckLocStyle.Render(item.ElementName) + "\n")
+				sb.WriteString("    > " + kernel.CheckLocStyle.Render(item.ElementName) + "\n")
 			}
 		}
 		sb.WriteString("\n")
@@ -474,24 +476,24 @@ func formatDocLocation(moduleName, documentName string) string {
 // formatCheckBadge returns a compact badge string for the status bar.
 func formatCheckBadge(errors []CheckError, running bool) string {
 	if running {
-		return CheckRunningStyle.Render("⟳ checking")
+		return kernel.CheckRunningStyle.Render("⟳ checking")
 	}
 	if errors == nil {
 		return "" // no check has run yet
 	}
 	if len(errors) == 0 {
-		return CheckPassStyle.Render("✓")
+		return kernel.CheckPassStyle.Render("✓")
 	}
 	ec, wc, dc := countBySeverity(errors)
 	var parts []string
 	if ec > 0 {
-		parts = append(parts, CheckErrorStyle.Render("✗ "+itoa(ec)+"E"))
+		parts = append(parts, kernel.CheckErrorStyle.Render("✗ "+itoa(ec)+"E"))
 	}
 	if wc > 0 {
-		parts = append(parts, CheckWarnStyle.Render(itoa(wc)+"W"))
+		parts = append(parts, kernel.CheckWarnStyle.Render(itoa(wc)+"W"))
 	}
 	if dc > 0 {
-		parts = append(parts, CheckDeprecStyle.Render(itoa(dc)+"D"))
+		parts = append(parts, kernel.CheckDeprecStyle.Render(itoa(dc)+"D"))
 	}
 	return strings.Join(parts, " ")
 }

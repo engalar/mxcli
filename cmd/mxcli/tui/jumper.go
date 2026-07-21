@@ -7,6 +7,8 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+
+	"github.com/mendixlabs/mxcli/cmd/mxcli/tui/kernel"
 )
 
 const jumperMaxShow = 12
@@ -116,7 +118,7 @@ func (jv JumperView) Update(msg tea.Msg) (View, tea.Cmd) {
 
 // Render draws the jumper as a centered modal box with an LLM anchor prefix.
 func (jv JumperView) Render(width, height int) string {
-	selSt := SelectedItemStyle
+	selSt := kernel.SelectedItemStyle
 	normSt := lipgloss.NewStyle().Foreground(lipgloss.Color("245"))
 	dimSt := lipgloss.NewStyle().Foreground(lipgloss.Color("240"))
 	typeSt := lipgloss.NewStyle().Foreground(lipgloss.Color("63"))
@@ -128,7 +130,7 @@ func (jv JumperView) Render(width, height int) string {
 	// LLM anchor embedded at the top of the box content
 	query := strings.TrimSpace(jv.input.Value())
 	anchor := fmt.Sprintf("[mxcli:jump] > %s  %d matches", query, len(fl.Matches))
-	anchorStr := lipgloss.NewStyle().Foreground(MutedColor).Faint(true).Render(anchor)
+	anchorStr := lipgloss.NewStyle().Foreground(kernel.MutedColor).Faint(true).Render(anchor)
 
 	var sb strings.Builder
 	sb.WriteString(anchorStr + "\n")
@@ -140,7 +142,7 @@ func (jv JumperView) Render(width, height int) string {
 	}
 	for i := fl.Offset; i < end; i++ {
 		it := fl.Matches[i].item
-		icon := IconFor(it.NodeType)
+		icon := kernel.IconFor(it.NodeType)
 		label := icon + " " + it.QName
 		typeLabel := it.NodeType
 		if i == fl.Cursor {

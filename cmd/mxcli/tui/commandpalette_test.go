@@ -102,8 +102,8 @@ func TestCommandPalette_SelectedCommand(t *testing.T) {
 	if cmd == nil {
 		t.Fatal("selectedCommand() returned nil for idx 0")
 	}
-	if cmd.Name != "Back" {
-		t.Errorf("first command = %q, want %q", cmd.Name, "Back")
+	if cmd.Name != "BSON Dump" {
+		t.Errorf("first command = %q, want %q", cmd.Name, "BSON Dump")
 	}
 
 	// Move to second command
@@ -112,8 +112,8 @@ func TestCommandPalette_SelectedCommand(t *testing.T) {
 	if cmd == nil {
 		t.Fatal("selectedCommand() returned nil for idx 1")
 	}
-	if cmd.Name != "Open / Drill In" {
-		t.Errorf("second command = %q, want %q", cmd.Name, "Open / Drill In")
+	if cmd.Name != "Compare View" {
+		t.Errorf("second command = %q, want %q", cmd.Name, "Compare View")
 	}
 }
 
@@ -132,8 +132,8 @@ func TestCommandPalette_EnterSendsExecMsg(t *testing.T) {
 	if !ok {
 		t.Fatalf("expected PaletteExecMsg, got %T", msg)
 	}
-	if execMsg.Key != "h" {
-		t.Errorf("PaletteExecMsg.Key = %q, want %q", execMsg.Key, "h")
+	if execMsg.Key != "B" {
+		t.Errorf("PaletteExecMsg.Key = %q, want %q", execMsg.Key, "B")
 	}
 }
 
@@ -166,7 +166,7 @@ func TestCommandPalette_CategoryHeaders(t *testing.T) {
 	}
 
 	// Should have headers for each category
-	expectedCategories := []string{"Navigation", "View", "Action", "Check", "Tab", "Other"}
+	expectedCategories := []string{"View", "Action", "Check", "Build", "Tab", "Other"}
 	for _, cat := range expectedCategories {
 		if !categories[cat] {
 			t.Errorf("missing category header: %q", cat)

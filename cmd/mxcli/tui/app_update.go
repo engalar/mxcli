@@ -7,6 +7,9 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+
+	"github.com/mendixlabs/mxcli/cmd/mxcli/tui/chrome"
+	"github.com/mendixlabs/mxcli/cmd/mxcli/tui/kernel"
 )
 
 // --- Update ---
@@ -31,6 +34,9 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case PaletteExecMsg:
 		a.views.Pop()
+		if msg.Key == ":run" {
+			return a, a.startRun()
+		}
 		if msg.Key != "" {
 			return a, a.dispatchPaletteKey(msg.Key)
 		}
@@ -453,7 +459,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.Y == 1 && a.views.Active().Mode() == ModeBrowser &&
 			msg.Action == tea.MouseActionPress && msg.Button == tea.MouseButtonLeft {
 			if clickMsg := a.tabBar.HandleClick(msg.X); clickMsg != nil {
-				if tc, ok := clickMsg.(TabClickMsg); ok {
+				if tc, ok := clickMsg.(chrome.TabClickMsg); ok {
 					a.switchToTabByID(tc.ID)
 					return a, nil
 				}
@@ -554,7 +560,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.checkRunning = true
 		// Update check overlay content if it's currently visible
 		if ov, ok := a.views.Active().(OverlayView); ok && ov.refreshable {
-			ov.overlay.Show("mx check", CheckRunningStyle.Render("⟳ Running mx check..."), ov.overlay.width, ov.overlay.height)
+			ov.overlay.Show("mx check", kernel.CheckRunningStyle.Render("⟳ Running mx check..."), ov.overlay.width, ov.overlay.height)
 			a.views.SetActive(ov)
 		}
 		return a, nil
