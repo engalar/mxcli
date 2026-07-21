@@ -409,6 +409,7 @@ func init() {
 	rootCmd.AddCommand(evalCmd)
 	rootCmd.AddCommand(tuiCmd)
 	rootCmd.AddCommand(fmtCmd)
+	rootCmd.AddCommand(mdlCmd)
 	rootCmd.AddCommand(mprPackCmd)
 	rootCmd.AddCommand(exportCmd)
 	rootCmd.AddCommand(importCmd)
