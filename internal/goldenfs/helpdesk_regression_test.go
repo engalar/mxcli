@@ -36,12 +36,12 @@ var updateGolden = flag.Bool("update-golden", false,
 	"overwrite testdata/helpdesk-golden-<HELPDESK_VERSION>/ with the current MDL execution result")
 
 // helpdeskVersion returns the Mendix version to use for golden tests.
-// Controlled by the HELPDESK_VERSION env var; defaults to "11.6.6".
+// Controlled by the HELPDESK_VERSION env var; defaults to "11.12.1".
 func helpdeskVersion() string {
 	if v := os.Getenv("HELPDESK_VERSION"); v != "" {
 		return v
 	}
-	return "11.6.6"
+	return "11.12.1"
 }
 
 // helpdeskBlankDir returns the directory containing the blank base MPR (A).

@@ -515,7 +515,7 @@ func describeModuleFuture(
 	if entities, err := listEntitiesForModuleGenFuture(dmr, ml, moduleName); err == nil {
 		sortedEntities := sortEntitiesByGeneralizationGen(entities, moduleName)
 		for _, entity := range sortedEntities {
-			_ = describeEntityGenFuture(ctx, output, ml, dmr, sec, ast.QualifiedName{Module: moduleName, Name: entity.Name()})
+			_ = describeEntityGenFuture(ctx, output, ml, dmr, sec, nil, ast.QualifiedName{Module: moduleName, Name: entity.Name()})
 			fmt.Fprintln(output)
 		}
 	}
@@ -613,7 +613,7 @@ func describeModuleFuture(
 // describeEntityGenFuture — DESCRIBE ENTITY Module.Name;
 // ────────────────────────────────────────────────────────────
 
-func describeEntityGenFuture(ctx context.Context, output io.Writer, ml backend.ModuleLister, dmr repos.DomainModelRepository, sec repos.SecurityRepository, name ast.QualifiedName) error {
+func describeEntityGenFuture(ctx context.Context, output io.Writer, ml backend.ModuleLister, dmr repos.DomainModelRepository, sec repos.SecurityRepository, ur backend.UnitReader, name ast.QualifiedName) error {
 	entity, modName, err := findEntityGenFromRepos(ml, dmr, name)
 	if err != nil {
 		return mdlerrors.NewBackend("get entity", err)
@@ -623,6 +623,9 @@ func describeEntityGenFuture(ctx context.Context, output io.Writer, ml backend.M
 	}
 
 	spec := entitySpecFromGen(modName, entity)
+	if spec.kind == "view" && spec.oql == "" {
+		spec.oql = resolveViewEntityOqlFromDoc(entity, ur)
+	}
 	fmt.Fprint(output, renderEntityMDL(spec, true))
 	fmt.Fprintln(output, ";")
 
@@ -667,13 +670,13 @@ func describeAssociationFuture(ctx context.Context, output io.Writer, ml backend
 		return mdlerrors.NewNotFound("association", name.String())
 	}
 
-	entityNames := make(map[model.ID]string)
+	entityNames := make(map[string]string)
 	for _, e := range dm.EntitiesItems() {
 		entity, ok := e.(*genDm.Entity)
 		if !ok {
 			continue
 		}
-		entityNames[model.ID(entity.ID())] = module.Name + "." + entity.Name()
+		entityNames[string(entity.ID())] = module.Name + "." + entity.Name()
 	}
 
 	for _, assocElem := range dm.AssociationsItems() {
@@ -681,15 +684,10 @@ func describeAssociationFuture(ctx context.Context, output io.Writer, ml backend
 		if !ok || assoc.Name() != name.Name {
 			continue
 		}
-		parent := entityNames[model.ID(assoc.ParentRefID())]
-		child := entityNames[model.ID(assoc.ChildRefID())]
-		fmt.Fprintf(output, "Association: %s.%s\n", module.Name, assoc.Name())
-		fmt.Fprintf(output, "  Multiplicity: %s\n", associationMultiplicity(assoc.Type(), assoc.Owner()))
-		fmt.Fprintf(output, "  FROM (owner): %s\n", parent)
-		fmt.Fprintf(output, "  TO (referenced): %s\n", child)
-		fmt.Fprintf(output, "  Type: %s\n", assoc.Type())
-		fmt.Fprintf(output, "  Owner: %s\n", assoc.Owner())
-		fmt.Fprintf(output, "  Storage: %s\n", assoc.StorageFormat())
+		spec := assocSpecFromGen(module.Name, assoc, entityNames)
+		comment := describeAssociationComment(assoc.Type(), assoc.Owner(), spec.fromQN, spec.toQN)
+		fmt.Fprintf(output, "%s\n", comment)
+		fmt.Fprintf(output, "%s;\n/\n", renderAssocMDL(spec))
 		return nil
 	}
 	for _, crossElem := range dm.CrossAssociationsItems() {
@@ -697,14 +695,36 @@ func describeAssociationFuture(ctx context.Context, output io.Writer, ml backend
 		if !ok || ca.Name() != name.Name {
 			continue
 		}
-		parent := entityNames[model.ID(ca.ParentRefID())]
-		fmt.Fprintf(output, "Association: %s.%s (cross-module)\n", module.Name, ca.Name())
-		fmt.Fprintf(output, "  Multiplicity: %s\n", associationMultiplicity(ca.Type(), ca.Owner()))
-		fmt.Fprintf(output, "  FROM (owner): %s\n", parent)
-		fmt.Fprintf(output, "  TO (referenced): %s\n", ca.ChildQualifiedName())
-		fmt.Fprintf(output, "  Type: %s\n", ca.Type())
-		fmt.Fprintf(output, "  Owner: %s\n", ca.Owner())
-		fmt.Fprintf(output, "  Storage: %s\n", ca.StorageFormat())
+		fromQN := entityNames[string(ca.ParentRefID())]
+		if fromQN == "" {
+			fromQN = string(ca.ParentRefID())
+		}
+		toQN := ca.ChildQualifiedName()
+		deleteBehavior := "DELETE_BUT_KEEP_REFERENCES"
+		if dbe, ok := ca.DeleteBehavior().(*genDm.AssociationDeleteBehavior); ok && dbe != nil {
+			deleteBehavior = genAssocDeleteBehaviorToMDL(dbe.ChildDeleteBehavior())
+		}
+		assocType := "Reference"
+		if ca.Type() == "ReferenceSet" {
+			assocType = "ReferenceSet"
+		}
+		owner := "Default"
+		if ca.Owner() == "Both" {
+			owner = "Both"
+		}
+		spec := assocMDLSpec{
+			module:         module.Name,
+			name:           ca.Name(),
+			fromQN:         fromQN,
+			toQN:           toQN,
+			documentation:  ca.Documentation(),
+			assocType:      assocType,
+			owner:          owner,
+			deleteBehavior: deleteBehavior,
+		}
+		comment := describeAssociationComment(ca.Type(), ca.Owner(), spec.fromQN, spec.toQN)
+		fmt.Fprintf(output, "%s\n", comment)
+		fmt.Fprintf(output, "%s;\n/\n", renderAssocMDL(spec))
 		return nil
 	}
 
@@ -722,6 +742,11 @@ func describeMicroflowGenFuture(ctx context.Context, output io.Writer, mfRepo re
 	}
 	fmt.Fprintln(output, rendered)
 	return nil
+}
+
+// describeMicroflowGenFutureDeps wraps describeMicroflowGenFuture with HandlerDeps.
+func describeMicroflowGenFutureDeps(ctx context.Context, output io.Writer, deps *HandlerDeps, name ast.QualifiedName) error {
+	return describeMicroflowGenFuture(ctx, output, deps.MicroflowRepo, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, name)
 }
 
 func describeMicroflowGenToStringFuture(mfRepo repos.MicroflowRepository, ml backend.ModuleLister, mr backend.MetadataReader, fm backend.FolderManager, name ast.QualifiedName) (string, error) {
@@ -754,7 +779,7 @@ func describeMicroflowGenToStringFuture(mfRepo repos.MicroflowRepository, ml bac
 		return "", mdlerrors.NewNotFound("microflow", name.String())
 	}
 
-	return describeMicroflowGenToStringFutureInner(target, mfRepo, h), nil
+	return describeMicroflowGenToStringFutureInner(target, mfRepo, h, ml, mr), nil
 }
 
 func genMicroflowQualifiedNameFuture(mfRepo repos.MicroflowRepository, h *ContainerHierarchy, id model.ID, name string) string {
@@ -771,7 +796,7 @@ func genMicroflowQualifiedNameFuture(mfRepo repos.MicroflowRepository, h *Contai
 	return ""
 }
 
-func describeMicroflowGenToStringFutureInner(target *genMf.Microflow, mfRepo repos.MicroflowRepository, h *ContainerHierarchy) string {
+func describeMicroflowGenToStringFutureInner(target *genMf.Microflow, mfRepo repos.MicroflowRepository, h *ContainerHierarchy, ml backend.ModuleLister, mr backend.MetadataReader) string {
 	if target == nil {
 		return ""
 	}
@@ -808,13 +833,32 @@ func describeMicroflowGenToStringFutureInner(target *genMf.Microflow, mfRepo rep
 		lines = append(lines, fmt.Sprintf("create or modify microflow %s ()", qualifiedName))
 	}
 
-	returnType := target.ReturnType()
-	if returnType != "" && returnType != "Nothing" {
-		lines = append(lines, fmt.Sprintf("returns %s", returnType))
+	hasReturn := false
+	rvDisplay := genFlowReturnDisplay(target.ReturnType(), target.MicroflowReturnType())
+	if rvDisplay != "" {
+		returnLine := "returns " + rvDisplay
+		if rv := target.ReturnVariableName(); rv != "" && rv != "Variable" {
+			returnLine += " as $" + rv
+		}
+		lines = append(lines, returnLine)
+		hasReturn = true
 	}
 
+	ec := &ExecContext{
+		Context:                           context.Background(),
+		ModuleLister:                      ml,
+		MetadataReader:                    mr,
+		DescribingMicroflowHasReturnValue: hasReturn,
+	}
+	bodyLines := renderGenMicroflowBody(ec, target)
 	lines = append(lines, "{")
-	lines = append(lines, "  -- TODO: microflow body")
+	if len(bodyLines) == 0 {
+		lines = append(lines, "  -- No activities")
+	} else {
+		for _, l := range bodyLines {
+			lines = append(lines, "  "+l)
+		}
+	}
 	lines = append(lines, "}")
 	lines = append(lines, "/")
 
@@ -864,7 +908,7 @@ func describeNanoflowGenToStringFuture(nfRepo repos.NanoflowRepository, ml backe
 		return "", mdlerrors.NewNotFound("nanoflow", name.String())
 	}
 
-	return describeNanoflowGenToStringFutureInner(target, nfRepo, h), nil
+	return describeNanoflowGenToStringFutureInner(target, nfRepo, h, ml, mr), nil
 }
 
 func genNanoflowQualifiedNameFuture(nfRepo repos.NanoflowRepository, h *ContainerHierarchy, id model.ID) string {
@@ -881,7 +925,7 @@ func genNanoflowQualifiedNameFuture(nfRepo repos.NanoflowRepository, h *Containe
 	return ""
 }
 
-func describeNanoflowGenToStringFutureInner(target *genMf.Nanoflow, nfRepo repos.NanoflowRepository, h *ContainerHierarchy) string {
+func describeNanoflowGenToStringFutureInner(target *genMf.Nanoflow, nfRepo repos.NanoflowRepository, h *ContainerHierarchy, ml backend.ModuleLister, mr backend.MetadataReader) string {
 	if target == nil {
 		return ""
 	}
@@ -923,8 +967,20 @@ func describeNanoflowGenToStringFutureInner(target *genMf.Nanoflow, nfRepo repos
 		lines = append(lines, fmt.Sprintf("returns %s", returnType))
 	}
 
+	ec := &ExecContext{
+		Context:        context.Background(),
+		ModuleLister:   ml,
+		MetadataReader: mr,
+	}
+	bodyLines := renderGenNanoflowBody(ec, target)
 	lines = append(lines, "{")
-	lines = append(lines, "  -- TODO: nanoflow body")
+	if len(bodyLines) == 0 {
+		lines = append(lines, "  -- No activities")
+	} else {
+		for _, l := range bodyLines {
+			lines = append(lines, "  "+l)
+		}
+	}
 	lines = append(lines, "}")
 	lines = append(lines, "/")
 
@@ -987,6 +1043,9 @@ func describePageFuture(ctx context.Context, output io.Writer, pgRepo repos.Page
 	if title != "" {
 		props = append(props, fmt.Sprintf("title: %s", mdlQuote(title)))
 	}
+	if u := foundPage.Url(); u != "" {
+		props = append(props, fmt.Sprintf("url: %s", mdlQuote(u)))
+	}
 	if folderPath := h.BuildFolderPath(foundContainerID); folderPath != "" {
 		props = append(props, fmt.Sprintf("folder: %s", mdlQuote(folderPath)))
 	}
@@ -997,6 +1056,12 @@ func describePageFuture(ctx context.Context, output io.Writer, pgRepo repos.Page
 		}
 		props = append(props, fmt.Sprintf("params: { %s }", strings.Join(parts, ", ")))
 	}
+
+	fmt.Fprintf(output, "create or modify page %s.%s", modName, foundPage.Name())
+	if len(props) > 0 {
+		fmt.Fprintf(output, " (\n  %s\n)", strings.Join(props, ",\n  "))
+	}
+	fmt.Fprint(output, "\n{\n  -- TODO: page body\n}\n/")
 
 	pageRoles := foundPage.AllowedRolesQualifiedNames()
 	if allowed := filterAutoDocumentRoles(pageRoles); len(allowed) > 0 {
@@ -1208,12 +1273,15 @@ func describeWorkflowGenFuture(ctx context.Context, output io.Writer, wfRepo rep
 		return mdlerrors.NewNotFound("workflow", name.String())
 	}
 
-	paramEntity := workflowParameterEntityGen(target)
+	paramEntity, paramName := workflowParameterInfo(target)
 	acts, uts, decs := countWorkflowActivitiesGen(target)
 
 	rendered := fmt.Sprintf("create or modify workflow %s.%s", name.Module, target.Name())
 	if paramEntity != "" {
-		rendered += fmt.Sprintf(" (entity: %s)", paramEntity)
+		if paramName == "" {
+			paramName = "WorkflowContext"
+		}
+		rendered += fmt.Sprintf("\n  parameter $%s: %s", paramName, paramEntity)
 	}
 	rendered += "\n{"
 	if acts > 0 {

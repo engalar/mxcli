@@ -315,7 +315,7 @@ func formatDatabaseRetrieveSourceGen(ctx *ExecContext, source *genMf.DatabaseRet
 				}
 				constraint = strings.Join(wrapped, "\n    ")
 			} else {
-				constraint = parts[0]
+				constraint = "[" + parts[0] + "]"
 			}
 		}
 		stmt += fmt.Sprintf("\n    where %s", constraint)

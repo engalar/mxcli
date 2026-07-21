@@ -7,10 +7,13 @@ import (
 	"strings"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
+	"github.com/mendixlabs/mxcli/mdl/backend"
 	"github.com/mendixlabs/mxcli/mdl/canonical"
+	"github.com/mendixlabs/mxcli/modelsdk/codec"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
 	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 	genTexts "github.com/mendixlabs/mxcli/modelsdk/gen/texts"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 // entityMDLSpec is the flat intermediate used to render entity MDL text. It is
@@ -145,7 +148,8 @@ func renderEntityMDL(spec entityMDLSpec, createOrModify bool) string {
 	if spec.kind == "view" && spec.oql != "" {
 		sb.WriteString(" as (\n")
 		for _, line := range strings.Split(spec.oql, "\n") {
-			fmt.Fprintf(&sb, "  %s\n", line)
+			trimmed := strings.TrimLeft(line, " \t")
+			fmt.Fprintf(&sb, "  %s\n", trimmed)
 		}
 		sb.WriteString(")")
 	}
@@ -477,6 +481,67 @@ func entitySpecFromGen(moduleName string, e *genDm.Entity) entityMDLSpec {
 		}
 	}
 	return spec
+}
+
+// resolveViewEntityOqlFromDoc resolves the OQL from a ViewEntitySourceDocument
+// when the inline Oql field on the entity's Source is empty (OQL migrated to
+// separate document in Mendix >= 10.21).
+func resolveViewEntityOqlFromDoc(e *genDm.Entity, ur backend.UnitReader) string {
+	if e == nil || ur == nil {
+		return ""
+	}
+	src := e.Source()
+	if src == nil {
+		return ""
+	}
+	type sdSrc interface{ SourceDocumentQualifiedName() string }
+	sd, ok := src.(sdSrc)
+	if !ok {
+		return ""
+	}
+	docQN := sd.SourceDocumentQualifiedName()
+	if docQN == "" {
+		return ""
+	}
+	rawUnits, err := ur.ListRawUnitsByType("DomainModels$ViewEntitySourceDocument")
+	if err != nil {
+		return ""
+	}
+	var docBytes []byte
+	for _, ru := range rawUnits {
+		if ru == nil {
+			continue
+		}
+		rawData, err := ur.GetRawUnit(ru.ID)
+		if err != nil {
+			continue
+		}
+		// Match the document by checking if docQN ends with the document's short Name
+		nameVal, _ := rawData["Name"].(string)
+		if nameVal == "" {
+			continue
+		}
+		candidate := nameVal
+		// docQN is "FT.DispatchSummary", document Name is "DispatchSummary"
+		if strings.HasSuffix(docQN, candidate) || candidate == docQN {
+			docBytes, err = ur.GetRawUnitBytes(ru.ID)
+			if err == nil {
+				break
+			}
+		}
+	}
+	if docBytes == nil {
+		return ""
+	}
+	docElem, err := codec.NewDecoder(codec.DefaultRegistry).Decode(bson.Raw(docBytes))
+	if err != nil {
+		return ""
+	}
+	doc, ok := docElem.(*genDm.ViewEntitySourceDocument)
+	if !ok || doc == nil {
+		return ""
+	}
+	return doc.Oql()
 }
 
 // entityKindFromGen derives the MDL kind keyword from a gen entity's source /

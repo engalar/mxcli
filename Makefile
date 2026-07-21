@@ -18,7 +18,7 @@
 #   make mine-exprgrammar MINE_MPR=path/to/app.mpr - Re-mine generated/exprgrammar/mined.go from an MPR
 #   make clean     - Remove build artifacts
 
-HELPDESK_VERSIONS := 11.6.6 11.10.0
+HELPDESK_VERSIONS := 11.6.6 11.10.0 11.12.1
 
 BINARY_NAME = mxcli
 BUILD_DIR = bin
@@ -332,7 +332,7 @@ test-profile-record: build
 	@echo "Profiles recorded in coverage/test-profiles/"
 	@echo "Profiles recorded in coverage/test-profiles/"
 
-# Regenerate testdata/helpdesk-golden-11.6.6/ from helpdesk-app.mdl.
+# Regenerate testdata/helpdesk-golden-*/ from helpdesk-app.mdl (all HELPDESK_VERSIONS).
 # Run after intentional changes to helpdesk-app.mdl; then commit the result.
 update-helpdesk-golden:
 	@for v in $(HELPDESK_VERSIONS); do \
@@ -386,8 +386,8 @@ validate-snapshots: build
 validate-academy-capstone:
 	@./scripts/validate-academy-capstone.sh
 
-# Run both helpdesk regression layers (BSON + describe MDL).
-# Requires testdata/helpdesk-golden-11.6.6/ to exist (run update-helpdesk-golden first).
+# Run both helpdesk regression layers (BSON + describe MDL) for all versions.
+# Requires testdata/helpdesk-golden-*/ to exist (run update-helpdesk-golden first).
 test-helpdesk-regression:
 	CGO_ENABLED=0 go test ./internal/goldenfs/ \
 		-tags linux,integration \

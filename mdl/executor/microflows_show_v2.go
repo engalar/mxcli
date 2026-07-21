@@ -970,7 +970,7 @@ func emitLoopedActivityGen(
 // any non-structural activity node. The Go type name lets 3.2.2
 // formatters be added one-by-one against a stable test surface.
 func placeholderForGen(obj element.Element) string {
-	return fmt.Sprintf("// TODO Stage 3.2.2: format %T", obj)
+	return fmt.Sprintf("-- TODO Stage 3.2.2: format %T", obj)
 }
 
 // exclusiveSplitExpressionGen pulls the expression text from the split's

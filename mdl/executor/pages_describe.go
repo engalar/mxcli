@@ -850,7 +850,19 @@ func resolvePageParams(_ *ExecContext, page *genPg.Page) []types.PageParam {
 }
 
 func describePageDeps(ctx context.Context, deps *HandlerDeps, name ast.QualifiedName) error {
-	return describePageFuture(ctx, deps.Output, deps.PageRepo, deps.ImageBackend, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, name)
+	ec := &ExecContext{
+		Context:         ctx,
+		Output:          deps.Output,
+		ModuleLister:    deps.ModuleLister,
+		MetadataReader:  deps.MetadataReader,
+		FolderManager:   deps.FolderManager,
+		UnitReader:      deps.UnitReader,
+		ConnectionManager: deps.ConnectionManager,
+		Pages:           deps.PageRepo,
+		ImageCollectionWriter: deps.ImageCollectionWriter,
+		PageModelAccess: deps.PageModelAccess,
+	}
+	return describePage(ec, name)
 }
 
 func describeSnippetDeps(ctx context.Context, deps *HandlerDeps, name ast.QualifiedName) error {

@@ -66,8 +66,8 @@ go test -tags integration ./mdl/backend/mpr/ -run TestXxx -v
 
 **需要 mx check 时：**
 ```bash
-# 1. 重建 helpdesk golden
-HELPDESK_VERSION=11.6.6 \
+# 1. 重建 helpdesk golden（默认版本 11.12.1，可设 HELPDESK_VERSION 覆盖）
+HELPDESK_VERSION=11.12.1 \
 CGO_ENABLED=0 go test ./internal/goldenfs/ \
   -tags linux,integration \
   -run '^TestHelpdeskGolden_Update$' \
@@ -75,11 +75,11 @@ CGO_ENABLED=0 go test ./internal/goldenfs/ \
   -v -timeout 10m
 
 # 2. mx check 验证
-~/.mxcli/mxbuild/11.6.6/modeler/mx check \
-  testdata/helpdesk-golden-11.6.6/minimal.mpr 2>&1 | grep "\[error\]"
+~/.mxcli/mxbuild/11.12.1/modeler/mx check \
+  testdata/helpdesk-golden-11.12.1/minimal.mpr 2>&1 | grep "\[error\]"
 
 # 3. 还原 testdata
-git restore testdata/helpdesk-golden-11.6.6/ testdata/helpdesk-golden-11.10.0/
+git restore testdata/helpdesk-golden-11.12.1/ testdata/helpdesk-golden-11.6.6/ testdata/helpdesk-golden-11.10.0/
 git clean -fd testdata/
 ```
 
@@ -111,8 +111,8 @@ CGO_ENABLED=0 go test ./internal/goldenfs/ \
   -update-golden \
   -timeout 10m
 
-# 可并行两个版本：
-for v in 11.6.6 11.10.0; do
+# 可并行多个版本：
+for v in 11.12.1 11.6.6 11.10.0; do
   HELPDESK_VERSION=$v CGO_ENABLED=0 go test ./internal/goldenfs/ \
     -tags linux,integration -run '^TestHelpdeskGolden_Update$' \
     -update-golden -timeout 10m &
@@ -120,14 +120,14 @@ done
 wait
 
 # 2. mx check
-for v in 11.6.6 11.10.0; do
+for v in 11.12.1 11.6.6 11.10.0; do
   echo "=== $v ==="
   ~/.mxcli/mxbuild/$v/modeler/mx check testdata/helpdesk-golden-$v/minimal.mpr 2>&1 | \
     grep "\[error\]" | wc -l
 done
 
 # 3. 还原
-git restore testdata/helpdesk-golden-11.6.6/ testdata/helpdesk-golden-11.10.0/
+git restore testdata/helpdesk-golden-11.12.1/ testdata/helpdesk-golden-11.6.6/ testdata/helpdesk-golden-11.10.0/
 git clean -fd testdata/
 ```
 

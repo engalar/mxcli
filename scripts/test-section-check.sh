@@ -16,8 +16,8 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 . "$SCRIPT_DIR/lib/mx-check.sh"
 
-CLEAN="${1:-testdata/helpdesk-clean-11.6.6}"
-BASELINE="${2:-testdata/helpdesk-golden-11.6.6/.mx-check-baseline}"
+CLEAN="${1:-testdata/helpdesk-clean-11.12.1}"
+BASELINE="${2:-testdata/helpdesk-golden-11.12.1/.mx-check-baseline}"
 MDL="${3:-mdl-examples/use-cases/helpdesk/helpdesk-app.mdl}"
 MXCLI="${MXCLI:-./bin/mxcli}"
 

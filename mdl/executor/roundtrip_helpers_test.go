@@ -169,17 +169,19 @@ func TestMain(m *testing.M) {
 		}
 	}
 
-	// 2. Fallback: use testdata/helpdesk-clean-11.10.0 (fast, no mx create-project).
-	//    This is a blank 11.10.0 project with Atlas Core pre-installed.
+	// 2. Fallback: use testdata/helpdesk-clean-11.12.1 (fast, no mx create-project).
+	//    This is a blank 11.12.1 project with Atlas Core pre-installed.
 	pkgDir, err := os.Getwd()
 	if err == nil {
-		candidate := filepath.Join(pkgDir, "..", "..", "testdata", "helpdesk-clean-11.10.0")
-		if _, err := os.Stat(filepath.Join(candidate, "minimal.mpr")); err == nil {
-			sharedSourceProject = candidate
-			sharedSourceMPR = "minimal.mpr"
-			fmt.Fprintf(os.Stderr, "Info: using helpdesk-clean-11.10.0 as shared source project\n")
-			sharedProjectGraph = buildSharedGraph(filepath.Join(sharedSourceProject, sharedSourceMPR))
-			os.Exit(m.Run())
+		for _, ver := range []string{"11.12.1", "11.10.0"} {
+			candidate := filepath.Join(pkgDir, "..", "..", "testdata", "helpdesk-clean-"+ver)
+			if _, err := os.Stat(filepath.Join(candidate, "minimal.mpr")); err == nil {
+				sharedSourceProject = candidate
+				sharedSourceMPR = "minimal.mpr"
+				fmt.Fprintf(os.Stderr, "Info: using helpdesk-clean-%s as shared source project\n", ver)
+				sharedProjectGraph = buildSharedGraph(filepath.Join(sharedSourceProject, sharedSourceMPR))
+				os.Exit(m.Run())
+			}
 		}
 	}
 

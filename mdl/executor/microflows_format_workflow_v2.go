@@ -353,3 +353,23 @@ func workflowSelectionGen(sel element.Element, topLevelQN string) (string, strin
 	// even when no Selection sub-document is present.
 	return topLevelQN, ""
 }
+
+// formatSynchronizeActionGen renders SYNCHRONIZE (All mode) or
+// SYNCHRONIZE $var (SelectedObjects mode).
+func formatSynchronizeActionGen(a *genMf.SynchronizeAction) string {
+	if a == nil {
+		return ""
+	}
+	stmt := "synchronize"
+	if a.Type() == "SelectedObjects" {
+		vars := strings.TrimSpace(a.VariableNames())
+		if vars != "" {
+			parts := strings.Split(vars, ",")
+			for i, v := range parts {
+				parts[i] = "$" + strings.TrimSpace(v)
+			}
+			stmt += " " + strings.Join(parts, ", ")
+		}
+	}
+	return stmt + ";"
+}

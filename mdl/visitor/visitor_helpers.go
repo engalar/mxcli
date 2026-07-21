@@ -414,12 +414,12 @@ func buildDeleteBehavior(ctx parser.IDeleteBehaviorContext) ast.DeleteBehavior {
 	}
 	db := ctx.(*parser.DeleteBehaviorContext)
 
-	if db.CASCADE() != nil {
+	if db.CASCADE() != nil || db.DELETE_AND_REFERENCES() != nil {
 		return ast.DeleteCascade
 	}
-	// The new grammar may use different tokens for delete behaviors
-	// Add more cases as needed based on the actual grammar
-
+	if db.DELETE_IF_NO_REFERENCES() != nil || db.PREVENT() != nil {
+		return ast.DeleteIfNoReferences
+	}
 	return ast.DeleteKeepReferences
 }
 

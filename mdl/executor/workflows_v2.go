@@ -95,19 +95,27 @@ func listWorkflowsGen(ctx *ExecContext, moduleName string) error {
 // workflowParameterEntityGen returns the entity qualified name carried
 // by Workflow.Parameter (a *genWf.Parameter Part), or "" if absent.
 func workflowParameterEntityGen(wf *genWf.Workflow) string {
+	entity, _ := workflowParameterInfo(wf)
+	return entity
+}
+
+// workflowParameterInfo returns the parameter entity qualified name and
+// the parameter variable name (without '$' prefix) for a workflow.
+func workflowParameterInfo(wf *genWf.Workflow) (entity, name string) {
 	if wf == nil {
-		return ""
+		return "", ""
 	}
 	param := wf.Parameter()
 	if param == nil {
-		return ""
+		return "", ""
 	}
 	if p, ok := param.(*genWf.Parameter); ok {
-		return p.EntityQualifiedName()
+		return p.EntityQualifiedName(), p.Name()
 	}
 	// Defensive fallback: read raw BSON field if the Part decoded to a
 	// non-narrow type.
-	return genWf.RawFieldString(param.Raw(), "Entity")
+	entity = genWf.RawFieldString(param.Raw(), "Entity")
+	return entity, ""
 }
 
 // countWorkflowActivitiesGen counts total activities, user tasks, and
@@ -1144,7 +1152,16 @@ func listWorkflowsGenDeps(ctx context.Context, deps *HandlerDeps, moduleName str
 
 
 func describeWorkflowGenDeps(ctx context.Context, deps *HandlerDeps, name ast.QualifiedName) error {
-	return describeWorkflowGenFuture(ctx, deps.Output, deps.WorkflowRepo, deps.ModuleLister, deps.MetadataReader, deps.FolderManager, name)
+	ec := &ExecContext{
+		Context:         ctx,
+		Output:          deps.Output,
+		ModuleLister:    deps.ModuleLister,
+		MetadataReader:  deps.MetadataReader,
+		FolderManager:   deps.FolderManager,
+		Workflows:       deps.WorkflowRepo,
+		ConnectionManager: deps.ConnectionManager,
+	}
+	return describeWorkflowGen(ec, name)
 }
 
 // ── Java / JavaScript Actions ──

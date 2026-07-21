@@ -9,7 +9,7 @@ Pre-commit blocks with: "COMMIT BLOCKED: mx check found N new error(s)"
 - `{MX_VERSION}` — Mendix version of the golden MPR
 
 ## Steps
-1. Run: `~/.mxcli/mxbuild/{MX_VERSION}/modeler/mx check testdata/helpdesk-golden-11.6.6/minimal.mpr 2>&1 | grep '^\[error\]'`
+1. Run: `~/.mxcli/mxbuild/{MX_VERSION}/modeler/mx check testdata/helpdesk-golden-*/minimal.mpr 2>&1 | grep '^\[error\]'`
 2. Compare output with baseline ({BASELINE} errors expected). The excess lines are the new errors.
 3. For each new `[error]` line, identify the domain:
    - `CE0463` → widget definition mismatch (see `.claude/skills/debug-bson.md`)
@@ -18,5 +18,5 @@ Pre-commit blocks with: "COMMIT BLOCKED: mx check found N new error(s)"
    - Other → search error code in `docs/` and `.claude/skills/`
 4. Fix the relevant executor/backend/gen code
 5. Run: `make update-helpdesk-golden`
-6. Run: `git add testdata/helpdesk-golden-11.6.6/ mdl-examples/use-cases/helpdesk/helpdesk-app.mdl`
+6. Run: `git add testdata/helpdesk-golden-*/ mdl-examples/use-cases/helpdesk/helpdesk-app.mdl`
 7. Re-attempt commit (if still blocked, repeat from step 1)

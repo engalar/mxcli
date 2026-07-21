@@ -3,6 +3,7 @@
 package mprbackend
 
 import (
+	"path/filepath"
 	"testing"
 
 	"github.com/mendixlabs/mxcli/mdl/backend"
@@ -33,7 +34,7 @@ func init() {
 // For DataGrid2 the only default-hidden TextTemplate property is
 // loadMoreButtonCaption (editorConfig hides it unless pagination == "loadMore").
 func TestBuildDataGrid2_TextTemplate(t *testing.T) {
-	projectPath := "/mnt/data_sdb/mxcli/app-golden/minimal.mpr"
+	projectPath := filepath.Join("..", "..", "..", "testdata", "helpdesk-golden-11.12.1", "minimal.mpr")
 	b := &MprBackend{}
 
 	widgets.ResetGeneratedCache()

@@ -386,7 +386,7 @@ func listEntitiesGenDeps(ctx context.Context, deps *HandlerDeps, moduleName stri
 }
 
 func describeEntityGenDeps(ctx context.Context, deps *HandlerDeps, name ast.QualifiedName) error {
-	return describeEntityGenFuture(ctx, deps.Output, deps.ModuleLister, deps.DomainModels, deps.Security, name)
+	return describeEntityGenFuture(ctx, deps.Output, deps.ModuleLister, deps.DomainModels, deps.Security, deps.UnitReader, name)
 }
 
 // ── Associations ──

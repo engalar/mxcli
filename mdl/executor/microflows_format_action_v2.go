@@ -235,6 +235,8 @@ func formatActionGen(ctx *ExecContext, action element.Element) string {
 		return formatGenerateJumpToOptionsActionGen(a)
 	case *genMf.ApplyJumpToOptionAction:
 		return formatApplyJumpToOptionActionGen(a)
+	case *genMf.SynchronizeAction:
+		return formatSynchronizeActionGen(a)
 	default:
 		return ""
 	}

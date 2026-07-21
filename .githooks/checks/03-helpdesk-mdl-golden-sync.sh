@@ -26,7 +26,7 @@ staged_trigger=$(git diff --cached --name-only | grep -E \
   | head -1)
 
 staged_golden=$(git diff --cached --name-only | \
-  grep -E '^testdata/helpdesk-golden-11.6.6/(minimal\.mpr|mprcontents/)' | head -1)
+  grep -E '^testdata/helpdesk-golden-[^/]+/(minimal\.mpr|mprcontents/)' | head -1)
 
 staged_mdl=$(git diff --cached --name-only | \
   grep "^${MDL_PATH}\$" | head -1)
@@ -34,13 +34,13 @@ staged_mdl=$(git diff --cached --name-only | \
 # Rule A: BSON-affecting file staged but golden not staged.
 if [ -n "$staged_trigger" ] && [ -z "$staged_golden" ]; then
     echo "" >&2
-    echo "COMMIT BLOCKED: BSON-affecting file staged without rebuilding testdata/helpdesk-golden-11.6.6/." >&2
+    echo "COMMIT BLOCKED: BSON-affecting file staged without rebuilding testdata/helpdesk-golden-*/." >&2
     echo "" >&2
     echo "  Trigger: $staged_trigger" >&2
     echo "" >&2
     echo "  1. Update helpdesk-app.mdl to reflect / demonstrate the change." >&2
     echo "  2. make update-helpdesk-golden" >&2
-    echo "  3. git add ${MDL_PATH} testdata/helpdesk-golden-11.6.6/ testdata/helpdesk-clean-11.6.6/describe-snapshot.mdl" >&2
+    echo "  3. git add ${MDL_PATH} testdata/helpdesk-golden-*/ testdata/helpdesk-clean-*/describe-snapshot.mdl" >&2
     echo "" >&2
     echo "SOP: .githooks/sop/03-helpdesk-mdl-golden-sync.md" >&2
     echo "CONTEXT: TRIGGER_FILE=${staged_trigger}" >&2
@@ -50,14 +50,14 @@ fi
 # Rule B: golden staged but MDL not staged.
 if [ -n "$staged_golden" ] && [ -z "$staged_mdl" ]; then
     echo "" >&2
-    echo "COMMIT BLOCKED: testdata/helpdesk-golden-11.6.6/ staged without ${MDL_PATH}." >&2
+    echo "COMMIT BLOCKED: testdata/helpdesk-golden-*/ staged without ${MDL_PATH}." >&2
     echo "" >&2
     echo "  Every golden rebuild must be accompanied by an MDL change or update" >&2
     echo "  (add an example, fix a comment, or document the verified behaviour)." >&2
     echo "" >&2
     echo "  1. Update ${MDL_PATH}" >&2
     echo "  2. make update-helpdesk-golden" >&2
-    echo "  3. git add ${MDL_PATH} testdata/helpdesk-golden-11.6.6/ testdata/helpdesk-clean-11.6.6/describe-snapshot.mdl" >&2
+    echo "  3. git add ${MDL_PATH} testdata/helpdesk-golden-*/ testdata/helpdesk-clean-*/describe-snapshot.mdl" >&2
     echo "" >&2
     echo "SOP: .githooks/sop/03-helpdesk-mdl-golden-sync.md" >&2
     echo "CONTEXT: TRIGGER_FILE=${staged_golden}" >&2

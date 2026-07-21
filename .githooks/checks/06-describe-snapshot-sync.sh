@@ -5,7 +5,7 @@
 # Rule A — MPR mprcontents/ staged without describe-snapshot.mdl → block.
 # Rule B — describe-snapshot.mdl staged → run mxcli check --references.
 #
-# Versions checked: 11.6.6 11.10.0
+# Versions checked: 11.6.6 11.10.0 11.12.1
 # mxcli binary: bin/mxcli (skipped if not built)
 
 REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)"
@@ -15,7 +15,7 @@ if [ ! -x "$MXCLI" ]; then
     exit 0  # mxcli not built — skip (normal for non-describe changes)
 fi
 
-for version in 11.6.6 11.10.0; do
+for version in 11.6.6 11.10.0 11.12.1; do
     golden_dir="testdata/helpdesk-golden-${version}"
     snapshot="${golden_dir}/describe-snapshot.mdl"
     mpr="${golden_dir}/minimal.mpr"
