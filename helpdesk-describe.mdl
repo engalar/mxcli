@@ -1,0 +1,149 @@
+-- ============================================================================
+-- HelpDesk + KnowledgeBase — Describe Script
+-- ============================================================================
+--
+-- Purpose : Describe every artifact created by helpdesk-app.mdl.
+--           Output is parseable MDL (no tabular SHOW commands) that can be
+--           fed back into an executor to regenerate describe-snapshot.mdl.
+--
+-- Usage (standalone):
+--   mxcli -p path/to/app.mpr exec helpdesk-describe.mdl
+--
+-- Usage (in tests): the test prepends "connect local '<mprPath>';" before
+--   executing this file so a temporary MPR copy is targeted.
+--
+-- Pair file: helpdesk-app.mdl  — rebuilds the full application from scratch
+-- ============================================================================
+
+-- Module roles first: entity grants reference these roles by name
+describe module role KB.User;
+describe module role KB.Reader;
+describe module role KB.Contributor;
+describe module role KB.Admin;
+describe module role HD.User;
+describe module role HD.CustomerRole;
+describe module role HD.AgentRole;
+describe module role HD.ManagerRole;
+-- Enumerations: entities may reference these types as attribute types
+describe enumeration KB.ArticleStatus;
+describe enumeration HD.TicketStatus;
+describe enumeration HD.TicketPriority;
+-- KB entities
+describe entity KB.Category;
+describe entity KB.Tag;
+describe entity KB.Article;
+describe entity KB.ArticleTag;
+describe entity KB.ArticleRating;
+-- HD entities
+describe entity HD.Customer;
+describe entity HD.Agent;
+describe entity HD.Ticket;
+describe entity HD.TicketComment;
+describe entity HD.EscalationRequest;
+describe entity HD.TicketSearch;
+-- Account Management entities
+describe entity HD.UserProfile;
+describe entity HD.PasswordForm;
+-- KB associations
+describe association KB.Category_Parent;
+describe association KB.Article_Category;
+describe association KB.ArticleTag_Article;
+describe association KB.ArticleTag_Tag;
+describe association KB.ArticleRating_Article;
+-- HD associations
+describe association HD.Ticket_Customer;
+describe association HD.Ticket_Agent;
+describe association HD.TicketComment_Ticket;
+describe association HD.EscalationRequest_Ticket;
+describe association HD.Ticket_KBArticle;
+-- KB microflows
+describe microflow KB.ACT_Article_Publish;
+describe microflow KB.ACT_Article_Archive;
+describe microflow KB.SUB_Article_TruncateContent;
+-- KB nanoflows
+describe nanoflow KB.NF_Article_FormatPreview;
+-- HD ticket microflows
+describe microflow HD.ACT_Ticket_Submit;
+describe microflow HD.ACT_Ticket_Assign;
+describe microflow HD.ACT_Ticket_Resolve;
+describe microflow HD.ACT_Ticket_Reopen;
+describe microflow HD.ACT_Ticket_Close;
+describe microflow HD.ACT_Ticket_SafeCommit;
+describe microflow HD.ACT_Ticket_MarkCommentsRead;
+describe microflow HD.ACT_EscalationRequest_Cleanup;
+describe microflow HD.DS_OverdueTicketCount;
+describe microflow HD.DS_TicketsByCompany;
+describe microflow HD.DS_MyTickets;
+describe microflow HD.DS_OpenHighTickets;
+describe microflow HD.DS_TicketPage;
+describe microflow HD.DS_RecentCriticalTickets;
+-- HD nanoflows
+describe nanoflow HD.NF_Ticket_QuickCreate;
+describe nanoflow HD.NF_TicketSearch_Apply;
+describe nanoflow HD.NF_Priority_GetLabel;
+-- HD escalation microflows
+describe microflow HD.WFA_GetManagerAssignees;
+describe microflow HD.WFS_SendReminder;
+describe microflow HD.WFS_Approve;
+describe microflow HD.WFS_Reject;
+describe microflow HD.WFS_Escalation_Initialize;
+describe microflow HD.WFS_AutoReject;
+describe microflow HD.WFS_UpdateTicketPriority;
+describe microflow HD.WFS_NotifyAgent;
+describe microflow HD.WFC_EscalationRequest_OnCreate;
+describe microflow HD.ACT_StartEscalation;
+-- HD workflow admin microflows (all 13 activities)
+describe microflow HD.ACT_Workflow_ChangeState;
+describe microflow HD.ACT_Workflow_CompleteTask;
+describe microflow HD.ACT_Workflow_GenerateJumpTo;
+describe microflow HD.ACT_Workflow_ApplyJumpTo;
+describe microflow HD.ACT_Workflow_GetHistory;
+describe microflow HD.ACT_Workflow_GetContext;
+describe microflow HD.DS_WorkflowInstances;
+describe microflow HD.ACT_Workflow_ShowTaskPage;
+describe microflow HD.ACT_Workflow_ShowAdminPage;
+describe microflow HD.ACT_Workflow_Lock;
+describe microflow HD.ACT_Workflow_Unlock;
+describe microflow HD.ACT_Workflow_Notify;
+-- Account Management — all constructs now round-trip cleanly (Stage 3.2.2 fixed).
+describe microflow HD.DS_GetMyProfile;
+describe java action HD.JA_HashPassword;
+describe microflow HD.ACT_ChangePassword;
+describe microflow HD.ACT_Agent_Deactivate;
+describe microflow HD.ACT_Agent_Reactivate;
+-- Workflows
+describe workflow HD.WF_SUB_ManagerReview;
+describe workflow HD.WF_TicketEscalation;
+-- Constants
+describe constant HD.SLA_HIGH_HOURS;
+describe constant HD.SLA_CRITICAL_HOURS;
+-- User roles
+describe user role 'Customer';
+describe user role 'Agent';
+describe user role 'Manager';
+-- Navigation
+describe navigation Responsive;
+-- KB pages
+describe page KB.Article_Overview;
+describe page KB.Article_Detail;
+describe page KB.Article_NewEdit;
+-- HD pages
+describe page HD.Ticket_Overview;
+describe page HD.Agent_Select;
+describe page HD.Ticket_Detail;
+describe page HD.Ticket_NewEdit;
+describe page HD.TicketSearch_Form;
+describe page HD.MyTickets_Overview;
+describe page HD.TicketSearch_Results;
+describe page HD.EscalationReview_Form;
+describe page HD.EscalationWorkflow_Overview;
+describe page HD.EscalationStart_Form;
+-- HD Account Management pages
+describe page HD.ManageMyAccount;
+describe page HD.ChangeMyPassword;
+describe page HD.ShowMyPasswordForm;
+describe page HD.Account_Overview;
+describe page HD.Customer_New;
+describe page HD.Agent_Edit;
+describe page HD.Customer_Edit;
+describe settings;

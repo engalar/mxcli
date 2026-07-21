@@ -305,6 +305,67 @@ describe 出来的 MDL 可能引用跨模块的实体/关联。`SetupMDL` 描述
 
 ## BSON 片段移植诊断法
 
+> ⚠️ **先读这一节:诊断工具的可信度前提。**
+> 移植法的结论**只在测量工具字节忠实、检测环境有工程上下文时才成立**。
+> 下面本节示例中出现的两个"顺手"做法都会**静默产出错误结论**,曾导致一份交接
+> 文档得出"控件 BSON 本身正确"的错误判断(实际是控件里多了一个筛选项)。
+> 在相信任何移植结果之前,先确认你没有踩这两个坑:
+
+### 致命陷阱 1:py-bson (`import bson` / `bson.loads`/`dumps`) 是有损的
+
+纯 Python 的 `bson` 包会把 BSON 类型**折叠**掉,让真实差异从你眼前消失:
+
+- `int32(2)` 与 `int64(2)` 解码成同一个 Python `int`,再编码时统一成一种宽度;
+- `null` 与字段缺失(absent)难以区分。
+
+而 CE0463 恰恰对这些敏感(空列表 marker、`TabIndex` 的 int32/int64)。判据:对一个
+已知正确的单元做 `bson.dumps(bson.loads(blob))` 纯 roundtrip,如果**字节数变了**
+(实测 golden 页面 104484 → 104396),说明 py-bson 正在改写编码,你基于它做的一切
+diff / 移植都不可信。
+
+**正确工具:mongo-driver 的 `bson.D`**(Go,项目已依赖)。它字节忠实——同一单元
+`bson.Marshal(unmarshal(raw))` 回到**完全相同的字节数**。需要人眼比对时,用
+`bson.MarshalExtJSON(v, true /*canonical*/, false)`,它会把 `int32` 写成
+`{"$numberInt":"2"}`、`int64` 写成 `{"$numberLong":"2"}`,类型差异一目了然。
+
+### 致命陷阱 2:在 `/tmp` 里 `mx check` 独立副本
+
+把 `.mpr` 拷到 `/tmp` 再 `mx check`,会丢失工程目录上下文(`widgets/`、`themesource/`、
+`modules/` 等),产生上千条无关错误,而**目标 CE 可能根本不触发**(实测 built 与 golden
+在 `/tmp` 下 CE0463 都是 0——包括那个确实有问题的 built)。所以"移植到 /tmp 后 CE=0"
+往往是假阴性。
+
+**正确做法:在真实工程目录内原地检查。** 用备份/`git restore` 兜底:
+
+```bash
+cp app-golden/minimal.mpr /tmp/backup.mpr   # 兜底
+# ...原地改写 app-golden/minimal.mpr...
+rm -rf app-golden/.mendix-cache             # 见陷阱 3
+~/.mxcli/mxbuild/<ver>/modeler/mx check app-golden/minimal.mpr 2>&1 | grep -c CE0463
+cp /tmp/backup.mpr app-golden/minimal.mpr   # 还原
+```
+
+### 致命陷阱 3:绕过写入层直接改 SQLite,不更新 ContentsHash
+
+用 Python `UPDATE Unit SET Contents=?` 直写 blob 时**不会更新 `ContentsHash`**,
+`mx check` 可能读到陈旧缓存,结果时对时错。**正确做法:走 `codec.OpenForWriting` +
+`store.SaveUnit(id, data)`**(与 mxcli 真实写路径一致,会正确处理 ContentsHash);
+每次检查前顺手 `rm -rf <project>/.mendix-cache` 排除缓存干扰。
+
+### 推荐的忠实诊断工具链(一次性 Go 小程序)
+
+```
+codec.Open(built) / codec.Open(golden)            // 读:字节忠实
+  → bson.Unmarshal 到 bson.D                       // 保留 int32/int64/null
+  → 递归定位目标控件子文档
+  → bson.MarshalExtJSON(canonical) 落盘,人眼 diff  // 类型可见
+codec.OpenForWriting(goldenCopy) + SaveUnit(...)   // 写:更新 ContentsHash
+  → 在工程目录内 mx check(先清 .mendix-cache)       // 因果验证
+```
+
+单变量因果实验优先在 golden 自己的 `$ID`/TypePointer 图上原地改值(保持指针一致),
+避免跨单元移植破坏 TypePointer→$ID 关系而引入*另一种*错误、干扰判断。
+
 ### 动机
 
 传统 golden 测试是**回归验证**——比较两段 BSON 是否一致。但面对 CE0463 这类错误时，先有 diff 再有修复的顺序是：
@@ -403,7 +464,9 @@ gg.commit()
 ```
 
 ```bash
-mx check /tmp/golden.mpr | grep CE0463
+# ⚠️ 不要在 /tmp 里 check——丢工程上下文,目标 CE 可能根本不触发(假阴性,见"致命陷阱 2")。
+# 应在真实工程目录内原地改写 + check,并先 rm -rf <project>/.mendix-cache。
+mx check <project>/app.mpr | grep CE0463
 # 出现 → 该 widget 必含 CE 根因
 # 不出现 → 问题在页面/布局/多 widget 交互
 ```
@@ -468,6 +531,10 @@ built_widget → 替换 golden_widget → mx check
 ### 工具辅助
 
 #### 零依赖 SQLite BSON 检查（Python）
+
+> ⚠️ 仅适合"字段存在性/字符串值"这类粗筛。**不要**用 py-bson 判断 int32/int64、
+> null vs absent、空列表 marker——它会折叠这些类型(见本节开头"致命陷阱 1")。
+> 需要类型级判断时改用 mongo-driver `bson.D` + canonical ExtJSON。
 
 ```python
 def extract_bson_value(blob, path):
@@ -599,6 +666,35 @@ BSON 移植法不是替代 golden 测试，而是**诊断阶段的锋利工具**
 
 ### 局限
 
-- 只适用于 MPR v2（SQLite）。v1 单文件 `.mpr` 需要在内存中重新序列化
 - 需要人工判断二分边界（哪些字段属于同一个 logical group）
 - 部分 CE 错误可能由 **Type 与 Object 不匹配** 共同导致，需要替换整个 widget 才能复现
+- 直接操作 SQLite `Unit` 表适用于 v1 与 v2（两者都用 SQLite）；但直写务必走
+  `codec.SaveUnit` 更新 ContentsHash，别用裸 `UPDATE`(见"致命陷阱 3")
+
+### 实战案例:fStatus 下拉筛选器的假阴性(2026-07)
+
+一次真实的 CE0463 排查完整踩中了上面三个陷阱,记录在此作为反面教材:
+
+**错误路径(交接文档)**:用 py-bson 把 built 的 `fStatus` 控件移植进 `/tmp` 的 golden
+副本,`mx check` 得 CE0463=0,于是结论"fStatus 的 BSON 本身正确,问题在别处"。
+
+**为什么错**:(1) `/tmp` 副本无工程上下文,CE0463 对 built 和 golden **都是 0**——
+移植根本没验证到任何东西;(2) py-bson 把 `TabIndex` 的 int32/int64 差异吃掉了。这个
+结论自洽但完全错误,后续按它去别的单元里找,方向全偏。
+
+**翻案路径(忠实工具链)**:
+1. 判据先行——py-bson 对 golden 页面纯 roundtrip 字节数从 104484→104396,**证明工具有损**,弃用。
+2. 改用 mongo-driver `bson.D` + canonical ExtJSON,`TabIndex` int32/int64 差异立刻浮现。
+3. 在**真实工程目录**里 `mx update-widgets` 得 golden(CE=0),原地因果移植:
+   - 整只 built `fStatus` 控件 → CE0463=**1** ⟹ 就是这个控件(直接推翻交接结论);
+   - 从 built 出发逐项还原为 golden 值,**唯有清空 `filterOptions.Value.Objects`
+     能把 1 变 0** ⟹ 根因是多出来的一个筛选项。
+4. 反查生成代码:`ensureRequiredObjectLists` 向**可选**对象列表也植入了默认项。
+
+**根因与修复**:`mdl/backend/mpr/widget_builder.go` 的 `ensureRequiredObjectLists`
+应"名副其实"——只为 `Required` 的对象列表植入默认项。可选列表(如 `DatagridDropdownFilter`
+的 `filterOptions`)在 MDL 未声明选项时必须保持空;植入 `caption=" "`/`value=""` 会让实例
+偏离平台控件定义,触发 CE0463。回归守卫:`TestEnsureRequiredObjectLists_OptionalListNotSeeded`
+/ `_RequiredListSeeded`。
+
+**一句话教训**:出现"改动等价却结果不同"的矛盾时,**先怀疑测量工具,再怀疑代码**。
