@@ -73,10 +73,6 @@ func normalizeTextTemplateStates(tmpl *WidgetTemplate) {
 	if tmpl == nil {
 		return
 	}
-	hidden := defaultHiddenTextTemplates[tmpl.WidgetID]
-	if len(hidden) == 0 {
-		return
-	}
 	objType, ok := getMapField(tmpl.Type, "ObjectType")
 	if !ok {
 		return
@@ -90,9 +86,9 @@ func normalizeTextTemplateStates(tmpl *WidgetTemplate) {
 		return
 	}
 
-	// Build $ID -> PropertyKey so we can match Object properties (which reference
-	// their type only via TypePointer) against the hidden-key set.
+	// Build $ID -> PropertyKey and $ID -> is TextTemplate-type
 	idToKey := make(map[string]string, len(propTypes))
+	typeIsTextTemplate := make(map[string]bool, len(propTypes))
 	for _, pt := range propTypes {
 		ptMap, ok := pt.(map[string]any)
 		if !ok {
@@ -103,7 +99,14 @@ func normalizeTextTemplateStates(tmpl *WidgetTemplate) {
 		if id != "" && key != "" {
 			idToKey[id] = key
 		}
+		if vt, ok := getMapField(ptMap, "ValueType"); ok {
+			if vtType, _ := vt["Type"].(string); vtType == "TextTemplate" {
+				typeIsTextTemplate[id] = true
+			}
+		}
 	}
+
+	hidden := defaultHiddenTextTemplates[tmpl.WidgetID]
 
 	for _, op := range objProps {
 		opMap, ok := op.(map[string]any)
@@ -111,11 +114,22 @@ func normalizeTextTemplateStates(tmpl *WidgetTemplate) {
 			continue
 		}
 		tp, _ := opMap["TypePointer"].(string)
-		if !hidden[idToKey[tp]] {
-			continue
+		key := idToKey[tp]
+
+		wantNull := false
+		if !typeIsTextTemplate[tp] {
+			// Rule 1: non-TextTemplate-type property -- TextTemplate must be null.
+			wantNull = true
+		} else if hidden[key] {
+			// Rule 2: TextTemplate-type, hidden in default -- TextTemplate must be null.
+			wantNull = true
 		}
-		if val, ok := getMapField(opMap, "Value"); ok {
-			val["TextTemplate"] = nil
+		// Rule 3 (else): TextTemplate-type, visible -- keep the ClientTemplate as-is.
+
+		if wantNull {
+			if val, ok := getMapField(opMap, "Value"); ok {
+				val["TextTemplate"] = nil
+			}
 		}
 	}
 }

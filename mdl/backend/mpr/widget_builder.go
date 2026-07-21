@@ -742,17 +742,18 @@ func ensureRequiredObjectLists(obj bson.D, propertyTypeIDs map[string]types.Prop
 		if entry.ObjectTypeID == "" || len(entry.NestedPropertyIDs) == 0 {
 			continue
 		}
+		// Only seed a default entry for REQUIRED object lists (as the function
+		// name states). Optional object lists — e.g. DatagridDropdownFilter's
+		// `filterOptions` — must default to empty when the MDL specifies no
+		// items. Seeding a default entry (caption=" ", value="") into an optional
+		// list produces a widget instance that no longer matches the platform
+		// widget definition, which Studio Pro rejects with CE0463 ("The
+		// definition of this widget has changed"). `mx update-widgets` "fixes"
+		// such widgets precisely by emptying the list, confirming empty is
+		// correct. This supersedes the earlier nested-DataSource carve-out, which
+		// only skipped the subset of optional lists that had a nested datasource.
 		if !entry.Required {
-			hasNestedDS := false
-			for _, nested := range entry.NestedPropertyIDs {
-				if nested.ValueType == "DataSource" {
-					hasNestedDS = true
-					break
-				}
-			}
-			if hasNestedDS {
-				continue
-			}
+			continue
 		}
 		hasRequiredAttr := false
 		for _, nested := range entry.NestedPropertyIDs {

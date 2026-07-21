@@ -39,6 +39,9 @@ type PropertyDef struct {
 	RequiredExplicit  bool   // true if required attribute was explicitly set in XML
 	DefaultValue      string // for enumeration/boolean/integer types
 	IsList            bool
+	IsLinked          bool   // true if isLinked="true" (datasource property linked to attribute)
+	IsMetaData        bool   // true if isMetaData="true" (synced from another property)
+	SelectableObjects string // selectableObjects attribute (association datasource)
 	IsSystem          bool                  // true for <systemProperty> elements
 	DataSource        string                // dataSource attribute reference
 	OnChange          string                // onChange attribute referencing another property key
@@ -157,6 +160,9 @@ type xmlProperty struct {
 	DefaultValue      string                `xml:"defaultValue,attr"`
 	Required          string                `xml:"required,attr"`
 	IsList            string                `xml:"isList,attr"`
+	IsLinked          string                `xml:"isLinked,attr"`
+	IsMetaData        string                `xml:"isMetaData,attr"`
+	SelectableObjects string                `xml:"selectableObjects,attr"`
 	DataSource        string                `xml:"dataSource,attr"`
 	OnChange          string                `xml:"onChange,attr"`
 	Caption           string                `xml:"caption"`
@@ -169,6 +175,7 @@ type xmlProperty struct {
 	Translations      []xmlTranslation      `xml:"translations>translation"`
 	// Nested properties for object type
 	NestedProps []xmlPropGroup `xml:"properties>propertyGroup"`
+	NestedDirectProps []xmlProperty `xml:"properties>property"`
 }
 
 // xmlSystemProp represents <systemProperty key="..."/> element.
@@ -304,18 +311,21 @@ func walkPropertyGroup(pg xmlPropGroup, parentCategory string, def *WidgetDefini
 			}
 		}
 		prop := PropertyDef{
-			Key:              p.Key,
-			Type:             p.Type,
-			Caption:          p.Caption,
-			Description:      p.Description,
-			Category:         category,
-			Required:         p.Required == "true",
-			RequiredExplicit: p.Required != "",
-			DefaultValue:     p.DefaultValue,
-			IsList:           p.IsList == "true",
-			DataSource:       p.DataSource,
-			OnChange:         p.OnChange,
-			AllowedTypes:     allowedTypes,
+			Key:               p.Key,
+			Type:              p.Type,
+			Caption:           p.Caption,
+			Description:       p.Description,
+			Category:          category,
+			Required:          p.Required == "true",
+			RequiredExplicit:  p.Required != "",
+			DefaultValue:      p.DefaultValue,
+			IsList:            p.IsList == "true",
+			IsLinked:          p.IsLinked == "true",
+			IsMetaData:        p.IsMetaData == "true",
+			SelectableObjects: p.SelectableObjects,
+			DataSource:        p.DataSource,
+			OnChange:          p.OnChange,
+			AllowedTypes:      allowedTypes,
 		}
 		for _, at := range p.AssociationTypes {
 			if at.Name != "" {
@@ -347,6 +357,9 @@ func walkPropertyGroup(pg xmlPropGroup, parentCategory string, def *WidgetDefini
 			for _, npg := range p.NestedProps {
 				collectNestedProperties(npg, &prop)
 			}
+		} else if p.Type == "object" && len(p.NestedDirectProps) > 0 {
+			fakePG := xmlPropGroup{Properties: p.NestedDirectProps}
+			collectNestedProperties(fakePG, &prop)
 		}
 
 		def.Properties = append(def.Properties, prop)
@@ -379,18 +392,21 @@ func collectNestedProperties(pg xmlPropGroup, parent *PropertyDef) {
 			}
 		}
 		child := PropertyDef{
-			Key:              p.Key,
-			Type:             p.Type,
-			Caption:          p.Caption,
-			Category:         category,
-			Description:      p.Description,
-			Required:         p.Required == "true",
-			RequiredExplicit: p.Required != "",
-			DefaultValue:     p.DefaultValue,
-			IsList:           p.IsList == "true",
-			DataSource:       p.DataSource,
-			OnChange:         p.OnChange,
-			AllowedTypes:     allowedTypes,
+			Key:               p.Key,
+			Type:              p.Type,
+			Caption:           p.Caption,
+			Category:          category,
+			Description:       p.Description,
+			Required:          p.Required == "true",
+			RequiredExplicit:  p.Required != "",
+			DefaultValue:      p.DefaultValue,
+			IsList:            p.IsList == "true",
+			IsLinked:          p.IsLinked == "true",
+			IsMetaData:        p.IsMetaData == "true",
+			SelectableObjects: p.SelectableObjects,
+			DataSource:        p.DataSource,
+			OnChange:          p.OnChange,
+			AllowedTypes:      allowedTypes,
 		}
 		for _, at := range p.AssociationTypes {
 			if at.Name != "" {
@@ -417,6 +433,17 @@ func collectNestedProperties(pg xmlPropGroup, parent *PropertyDef) {
 			child.SelectionTypes = append(child.SelectionTypes, st.Name)
 		}
 		parent.Children = append(parent.Children, child)
+	}
+
+	for _, p := range pg.Properties {
+		if p.Type == "object" && len(p.NestedDirectProps) > 0 {
+			fakePG := xmlPropGroup{Properties: p.NestedDirectProps}
+			collectNestedProperties(fakePG, parent)
+		} else if p.Type == "object" && len(p.NestedProps) > 0 {
+			for _, npg := range p.NestedProps {
+				collectNestedProperties(npg, parent)
+			}
+		}
 	}
 
 	for _, sub := range pg.SubGroups {

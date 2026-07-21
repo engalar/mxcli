@@ -343,8 +343,8 @@ func createDefaultValueType(vtID string, bsonType string, p mpk.PropertyDef) map
 		"EntityProperty":             "",
 		"EnumerationValues":          []any{int32(2)},
 		"IsList":                     p.IsList,
-		"IsLinked":                   false,
-		"IsMetaData":                 false,
+		"IsLinked":                   p.IsLinked,
+		"IsMetaData":                 p.IsMetaData,
 		"IsPath":                     "No",
 		"Multiline":                  false,
 		"ObjectType":                 nil,
@@ -353,7 +353,7 @@ func createDefaultValueType(vtID string, bsonType string, p mpk.PropertyDef) map
 		"PathType":                   "None",
 		"Required":                   !p.RequiredExplicit || p.Required,
 		"ReturnType":                 nil,
-		"SelectableObjectsProperty":  "",
+		"SelectableObjectsProperty":  p.SelectableObjects,
 		"SelectionTypes":             []any{int32(1)},
 		"SetLabel":                   false,
 		"Translations":               []any{int32(2)},
@@ -374,7 +374,15 @@ func createDefaultValueType(vtID string, bsonType string, p mpk.PropertyDef) map
 			vt["AssociationTypes"] = assocTypes
 		}
 	case "Association":
-		vt["AssociationTypes"] = []any{float64(1)}
+		if len(p.AssociationTypes) > 0 {
+			assocTypes := []any{int32(len(p.AssociationTypes) + 1)}
+			for _, at := range p.AssociationTypes {
+				assocTypes = append(assocTypes, at)
+			}
+			vt["AssociationTypes"] = assocTypes
+		} else {
+			vt["AssociationTypes"] = []any{float64(1)}
+		}
 		vt["DataSourceProperty"] = p.DataSource
 		vt["IsPath"] = "No"
 		vt["PathType"] = "None"
