@@ -42,6 +42,12 @@ type BuildOptions struct {
 
 	// Stdout for output messages.
 	Stdout io.Writer
+
+	// OnPhase is called at each phase boundary. nil = no callback (CLI mode).
+	OnPhase func(name, status string, pct int, msg string)
+
+	// OnOutput is called for each line written to stdout. nil = no callback.
+	OnOutput func(line string)
 }
 
 // Build runs MxBuild to create a Portable App Distribution package and applies patches.
@@ -51,6 +57,9 @@ func Build(opts BuildOptions) error {
 		w = os.Stdout
 	}
 
+	if opts.OnPhase != nil {
+		opts.OnPhase("detect", "running", 2, "Detecting project version...")
+	}
 	// Step 1: Detect version
 	fmt.Fprintln(w, "Detecting project version...")
 	be, err := mprbackend.NewFromPath(opts.ProjectPath)
@@ -67,6 +76,10 @@ func Build(opts BuildOptions) error {
 	}
 
 	// Step 2: Resolve MxBuild
+	if opts.OnPhase != nil {
+		opts.OnPhase("detect", "completed", 5, "")
+		opts.OnPhase("mxbuild", "running", 10, "Resolving MxBuild...")
+	}
 	fmt.Fprintln(w, "Resolving MxBuild...")
 	mxbuildPath, err := resolveMxBuild(opts.MxBuildPath, pv.ProductVersion)
 	if err != nil {
@@ -88,6 +101,10 @@ func Build(opts BuildOptions) error {
 	}
 
 	// Step 3: Resolve JDK 21
+	if opts.OnPhase != nil {
+		opts.OnPhase("mxbuild", "completed", 15, "")
+		opts.OnPhase("jdk", "running", 18, "Resolving JDK 21...")
+	}
 	fmt.Fprintln(w, "Resolving JDK 21...")
 	javaHome, err := resolveJDK21()
 	if err != nil {
@@ -99,11 +116,19 @@ func Build(opts BuildOptions) error {
 	// Step 3b: Resolve declared Maven JAR dependencies into userlib/ so the
 	// mxbuild Java compile can see them (mxbuild only compiles against local
 	// jars; it does not resolve Maven coordinates itself).
+	if opts.OnPhase != nil {
+		opts.OnPhase("jdk", "completed", 20, "")
+		opts.OnPhase("jars", "running", 22, "Resolving JAR dependencies...")
+	}
 	if err := resolveJarDependencies(opts.ProjectPath, mxbuildPath, javaHome, w); err != nil {
 		return fmt.Errorf("resolving jar dependencies: %w", err)
 	}
 
 	// Step 4: Pre-build check
+	if opts.OnPhase != nil {
+		opts.OnPhase("jars", "completed", 25, "")
+		opts.OnPhase("check", "running", 28, "Checking project for errors...")
+	}
 	if !opts.SkipCheck {
 		fmt.Fprintln(w, "Checking project for errors...")
 		mxPath, err := ResolveMxForVersion(opts.MxBuildPath, pv.ProductVersion)
@@ -148,6 +173,10 @@ func Build(opts BuildOptions) error {
 	}
 
 	// Step 5: Run MxBuild.
+	if opts.OnPhase != nil {
+		opts.OnPhase("check", "completed", 30, "")
+		opts.OnPhase("build", "running", 40, "Running MxBuild...")
+	}
 	// When Studio Pro is installed, use --target=deploy which writes directly to
 	// {project_dir}/deployment/ without creating a ZIP — faster and simpler than
 	// portable-app-package (ZIP creation + extraction).
@@ -189,6 +218,9 @@ func Build(opts BuildOptions) error {
 			}
 		}
 
+		if opts.OnPhase != nil {
+			opts.OnPhase("done", "completed", 100, "Build complete")
+		}
 		fmt.Fprintln(w, "Build complete.")
 		return nil
 	}
@@ -222,6 +254,11 @@ func Build(opts BuildOptions) error {
 	// Step 5b: Extract PAD ZIP if MxBuild produced one
 	if err := extractPADZip(outputDir, w); err != nil {
 		return fmt.Errorf("extracting PAD zip: %w", err)
+	}
+
+	if opts.OnPhase != nil {
+		opts.OnPhase("build", "completed", 85, "")
+		opts.OnPhase("extract", "running", 88, "Extracting and patching...")
 	}
 
 	// Step 6: Locate PAD output directory
@@ -267,6 +304,9 @@ func Build(opts BuildOptions) error {
 	}
 
 	fmt.Fprintln(w, "")
+	if opts.OnPhase != nil {
+		opts.OnPhase("done", "completed", 100, "Build complete")
+	}
 	fmt.Fprintln(w, "Build complete.")
 	return nil
 }

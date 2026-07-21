@@ -29,10 +29,19 @@ func (s State) String() string {
 	}
 }
 
+type EventType int
+
+const (
+	EventPhaseChange EventType = iota
+	EventLogLine
+)
+
 type Event struct {
+	Type    EventType
 	State   State
 	Phase   string
 	Message string
+	Line    string
 	Pct     float64
 	Err     error
 }
