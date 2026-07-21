@@ -135,15 +135,23 @@ func (r *Reader) listUnitsByTypeV1(typePrefix string) ([]rawUnit, error) {
 	}
 
 	// Merge buffered script inserts so reads within EXECUTE SCRIPT see new units.
+	// Check scriptOverlay for each insert: a unit may have been created (AddInsert)
+	// and then updated (AddUpdate → SetScriptOverlay) within the same script block.
+	// Without this check, the insert's original content is returned, which can cause
+	// consecutive ALTER MODULE ADD JAR DEPENDENCY statements to overwrite each other.
 	for _, e := range r.scriptInserts {
-		typeName := getTypeFromContents(e.Contents)
+		contents := e.Contents
+		if overlay, ok := r.scriptOverlay[e.ID]; ok {
+			contents = overlay
+		}
+		typeName := getTypeFromContents(contents)
 		if typePrefix == "" || strings.HasPrefix(typeName, typePrefix) {
 			units = append(units, rawUnit{
 				ID:              e.ID,
 				ContainerID:     e.ContainerID,
 				ContainmentName: e.ContainmentName,
 				Type:            typeName,
-				Contents:        e.Contents,
+				Contents:        contents,
 			})
 		}
 	}
@@ -183,6 +191,27 @@ func (r *Reader) listUnitsByTypeV2(typePrefix string) ([]rawUnit, error) {
 			})
 		}
 	}
+
+	// Merge buffered script inserts so reads within EXECUTE SCRIPT see new units.
+	// Same pattern as listUnitsByTypeV1 — check scriptOverlay for each insert in
+	// case the unit was updated after creation (AddInsert → AddUpdate).
+	for _, e := range r.scriptInserts {
+		contents := e.Contents
+		if overlay, ok := r.scriptOverlay[e.ID]; ok {
+			contents = overlay
+		}
+		typeName := getTypeFromContents(contents)
+		if typePrefix == "" || strings.HasPrefix(typeName, typePrefix) {
+			units = append(units, rawUnit{
+				ID:              e.ID,
+				ContainerID:     e.ContainerID,
+				ContainmentName: e.ContainmentName,
+				Type:            typeName,
+				Contents:        contents,
+			})
+		}
+	}
+
 	return units, nil
 }
 
