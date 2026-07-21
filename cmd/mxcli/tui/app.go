@@ -424,8 +424,21 @@ func (a *App) chordTree() who.ChordNode {
 
 func (a *App) actionBuild() tea.Cmd {
 	projectPath := a.activeTabProjectPath()
-	Trace("actionBuild: project=%q", projectPath)
-	bt := task.NewBuildTask(task.BuildOptions{ProjectPath: projectPath})
+	pv := ""
+	tab := a.activeTabPtr()
+	if tab != nil && len(tab.AllNodes) > 0 {
+		for _, n := range tab.AllNodes {
+			if n.Type == "Project" {
+				pv = n.Label
+				break
+			}
+		}
+	}
+	Trace("actionBuild: project=%q version=%q useDeployLayout=true", projectPath, pv)
+	bt := task.NewBuildTask(task.BuildOptions{
+		ProjectPath:     projectPath,
+		UseDeployLayout: true,
+	})
 	bv := NewBuildView(bt)
 	a.views.Push(bv)
 	Trace("actionBuild: BuildView pushed, starting task")

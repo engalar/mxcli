@@ -31,9 +31,10 @@ func taskDebug(format string, args ...interface{}) {
 }
 
 type BuildOptions struct {
-	ProjectPath string
-	SkipCheck   bool
-	DryRun      bool
+	ProjectPath     string
+	SkipCheck       bool
+	DryRun          bool
+	UseDeployLayout bool
 }
 
 type BuildTask struct {
@@ -76,6 +77,12 @@ func (t *BuildTask) Start() tea.Cmd {
 func (t *BuildTask) run() {
 	defer close(t.events)
 	defer func() { t.done = true }()
+	defer func() {
+		if r := recover(); r != nil {
+			taskDebug("BuildTask.run: PANIC: %v", r)
+		}
+	}()
+	taskDebug("BuildTask.run: started")
 
 	if t.cancelled {
 		t.emit(Event{Type: EventPhaseChange, State: StateCancelled, Phase: "cancelled", Message: "Build cancelled"})
@@ -90,6 +97,11 @@ func (t *BuildTask) run() {
 	// LineWriter captures raw mxbuild output
 	lw := NewLineWriter(os.Stdout)
 	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				taskDebug("LineWriter: PANIC: %v", r)
+			}
+		}()
 		n := 0
 		for line := range lw.Lines {
 			t.emit(Event{Type: EventLogLine, Phase: "raw", Line: line})
@@ -101,9 +113,10 @@ func (t *BuildTask) run() {
 
 	taskDebug("BuildTask: starting docker.Build...")
 	err := docker.Build(docker.BuildOptions{
-		ProjectPath: t.opts.ProjectPath,
-		SkipCheck:   t.opts.SkipCheck,
-		Stdout:      lw,
+		ProjectPath:     t.opts.ProjectPath,
+		SkipCheck:       t.opts.SkipCheck,
+		UseDeployLayout: t.opts.UseDeployLayout,
+		Stdout:          lw,
 		OnPhase: func(name, status string, pct int, msg string) {
 			taskDebug("OnPhase: name=%s status=%s pct=%d msg=%q", name, status, pct, msg)
 			t.emit(Event{
