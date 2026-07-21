@@ -55,6 +55,27 @@ func TestBuildTaskDryRun(t *testing.T) {
 	}
 }
 
+func TestBuildTaskCancel(t *testing.T) {
+	task := NewBuildTask(BuildOptions{
+		ProjectPath: "/fake/path.mpr",
+		DryRun:      true,
+	})
+	task.Cancel()
+	if task.State() != StateCancelled {
+		t.Fatalf("expected StateCancelled after Cancel(), got %v", task.State())
+	}
+
+	cmd := task.Start()
+	msg := cmd()
+	ev, ok := msg.(Event)
+	if !ok {
+		t.Fatalf("expected Event, got %T", msg)
+	}
+	if ev.State != StateCancelled {
+		t.Fatalf("expected StateCancelled after cancel+start, got %v", ev.State)
+	}
+}
+
 func TestRunTaskDryRun(t *testing.T) {
 	task := NewRunTask(RunOptions{
 		CmdHint: "test-run",

@@ -14,10 +14,11 @@ type BuildOptions struct {
 }
 
 type BuildTask struct {
-	opts   BuildOptions
-	state  State
-	events chan Event
-	done   bool
+	opts      BuildOptions
+	state     State
+	events    chan Event
+	done      bool
+	cancelled bool
 }
 
 func NewBuildTask(opts BuildOptions) *BuildTask {
@@ -39,6 +40,11 @@ func (t *BuildTask) emit(ev Event) {
 	}
 }
 
+func (t *BuildTask) Cancel() {
+	t.cancelled = true
+	t.state = StateCancelled
+}
+
 func (t *BuildTask) Start() tea.Cmd {
 	go t.run()
 	return StreamCmd(t.events)
@@ -47,6 +53,11 @@ func (t *BuildTask) Start() tea.Cmd {
 func (t *BuildTask) run() {
 	defer close(t.events)
 	defer func() { t.done = true }()
+
+	if t.cancelled {
+		t.emit(Event{State: StateCancelled, Phase: "cancelled", Message: "Build cancelled"})
+		return
+	}
 
 	if t.opts.DryRun {
 		t.emit(Event{State: StateFailed, Phase: "dry-run", Message: "Dry run — not executing build"})
@@ -59,6 +70,11 @@ func (t *BuildTask) run() {
 		ProjectPath: t.opts.ProjectPath,
 		SkipCheck:   t.opts.SkipCheck,
 	})
+
+	if t.cancelled {
+		t.emit(Event{State: StateCancelled, Phase: "cancelled", Message: "Build cancelled"})
+		return
+	}
 
 	if err != nil {
 		t.emit(Event{State: StateFailed, Phase: "error", Message: fmt.Sprintf("Build failed: %v", err), Err: err})

@@ -18,10 +18,11 @@ type RunOptions struct {
 }
 
 type RunTask struct {
-	opts   RunOptions
-	state  State
-	events chan Event
-	done   bool
+	opts      RunOptions
+	state     State
+	events    chan Event
+	done      bool
+	cancelled bool
 }
 
 func NewRunTask(opts RunOptions) *RunTask {
@@ -43,6 +44,11 @@ func (t *RunTask) emit(ev Event) {
 	}
 }
 
+func (t *RunTask) Cancel() {
+	t.cancelled = true
+	t.state = StateCancelled
+}
+
 func (t *RunTask) Start() tea.Cmd {
 	go t.run()
 	return StreamCmd(t.events)
@@ -51,6 +57,11 @@ func (t *RunTask) Start() tea.Cmd {
 func (t *RunTask) run() {
 	defer close(t.events)
 	defer func() { t.done = true }()
+
+	if t.cancelled {
+		t.emit(Event{State: StateCancelled, Phase: "cancelled", Message: "Run cancelled"})
+		return
+	}
 
 	if t.opts.DryRun {
 		t.emit(Event{State: StateFailed, Phase: "dry-run", Message: "Dry run — not executing run"})
@@ -67,6 +78,11 @@ func (t *RunTask) run() {
 		AdminPort:     t.opts.AdminPort,
 		CmdHint:       t.opts.CmdHint,
 	})
+
+	if t.cancelled {
+		t.emit(Event{State: StateCancelled, Phase: "cancelled", Message: "Run cancelled"})
+		return
+	}
 
 	if err != nil {
 		t.emit(Event{State: StateFailed, Phase: "error", Message: fmt.Sprintf("Runtime error: %v", err), Err: err})

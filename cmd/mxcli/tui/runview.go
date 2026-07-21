@@ -34,16 +34,14 @@ func NewRunView(t *task.RunTask) RunView {
 func (rv RunView) Mode() ViewMode { return ModeExec }
 
 func (rv RunView) Hints() []Hint {
-	if rv.running {
-		return []kernel.Hint{
-			{Key: "c", Label: "stop"},
-			{Key: "j/k", Label: "scroll"},
-		}
-	}
-	return []kernel.Hint{
+	hints := []kernel.Hint{
 		{Key: "q", Label: "close"},
 		{Key: "j/k", Label: "scroll"},
 	}
+	if rv.running {
+		hints = append([]kernel.Hint{{Key: "c", Label: "stop"}}, hints...)
+	}
+	return hints
 }
 
 func (rv RunView) StatusInfo() StatusInfo {
@@ -64,11 +62,10 @@ func (rv RunView) Update(msg tea.Msg) (View, tea.Cmd) {
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "q":
-			if !rv.running {
-				return rv, func() tea.Msg { return PopViewMsg{} }
-			}
+			return rv, func() tea.Msg { return PopViewMsg{} }
 		case "c":
 			if rv.running {
+				rv.task.Cancel()
 				rv.running = false
 			}
 		case "j":

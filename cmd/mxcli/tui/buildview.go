@@ -33,16 +33,14 @@ func NewBuildView(t *task.BuildTask) BuildView {
 func (bv BuildView) Mode() ViewMode { return ModeExec }
 
 func (bv BuildView) Hints() []Hint {
-	if bv.running {
-		return []kernel.Hint{
-			{Key: "c", Label: "cancel"},
-			{Key: "j/k", Label: "scroll"},
-		}
-	}
-	return []kernel.Hint{
+	hints := []kernel.Hint{
 		{Key: "q", Label: "close"},
 		{Key: "j/k", Label: "scroll"},
 	}
+	if bv.running {
+		hints = append([]kernel.Hint{{Key: "c", Label: "cancel"}}, hints...)
+	}
+	return hints
 }
 
 func (bv BuildView) StatusInfo() StatusInfo {
@@ -63,11 +61,10 @@ func (bv BuildView) Update(msg tea.Msg) (View, tea.Cmd) {
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "q":
-			if !bv.running {
-				return bv, func() tea.Msg { return PopViewMsg{} }
-			}
+			return bv, func() tea.Msg { return PopViewMsg{} }
 		case "c":
 			if bv.running {
+				bv.task.Cancel()
 				bv.running = false
 			}
 		case "j":
@@ -103,9 +100,14 @@ func (bv BuildView) Render(width, height int) string {
 	title := lipgloss.NewStyle().Bold(true).Foreground(kernel.AccentColor).Render("Build")
 
 	var sb strings.Builder
-	sb.WriteString(title + "\n\n")
+	sb.WriteString(title)
+	sb.WriteByte('\n')
+	sb.WriteByte('\n')
 
 	visibleH := height - 4
+	if visibleH < 1 {
+		visibleH = 1
+	}
 	start := max(0, bv.scroll-visibleH+1)
 	end := min(len(bv.events), start+visibleH)
 
@@ -122,20 +124,22 @@ func (bv BuildView) Render(width, height int) string {
 			phase := kernel.MutedStyle.Render(ev.Phase + ":")
 			line = phase + " " + ev.Message
 		}
-		sb.WriteString(line + "\n")
+		sb.WriteString(line)
+		sb.WriteByte('\n')
 	}
 
 	if bv.running {
-		sb.WriteString(kernel.LoadingStyle.Render("\n⟳ Building... (press c to cancel)"))
+		sb.WriteString(kernel.LoadingStyle.Render("⟳ Building... (c to cancel)"))
 	} else if len(bv.events) > 0 {
 		last := bv.events[len(bv.events)-1]
+		sb.WriteByte('\n')
 		switch last.State {
 		case task.StateCompleted:
-			sb.WriteString(kernel.CheckPassStyle.Render("\n✓ Build complete"))
+			sb.WriteString(kernel.CheckPassStyle.Render("✓ Build complete"))
 		case task.StateFailed:
-			sb.WriteString(kernel.CheckErrorStyle.Render("\n✗ Build failed"))
+			sb.WriteString(kernel.CheckErrorStyle.Render("✗ Build failed"))
 		case task.StateCancelled:
-			sb.WriteString(kernel.CheckWarnStyle.Render("\n⊘ Build cancelled"))
+			sb.WriteString(kernel.CheckWarnStyle.Render("⊘ Build cancelled"))
 		}
 	}
 
