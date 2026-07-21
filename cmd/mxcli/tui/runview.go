@@ -13,21 +13,27 @@ import (
 )
 
 type RunView struct {
-	task     *task.RunTask
-	events   []task.Event
-	logLines []string
-	scroll   int
-	width    int
-	height   int
-	running  bool
-	started  time.Time
+	task       *task.RunTask
+	events     []task.Event
+	logLines   []string
+	scroll     int
+	width      int
+	height     int
+	running    bool
+	started    time.Time
+	appPort    int
+	adminPort  int
 }
 
 func NewRunView(t *task.RunTask) RunView {
+	appPort := 8080
+	adminPort := 8090
 	return RunView{
-		task:    t,
-		running: true,
-		started: time.Now(),
+		task:      t,
+		running:   true,
+		started:   time.Now(),
+		appPort:   appPort,
+		adminPort: adminPort,
 	}
 }
 
@@ -100,33 +106,69 @@ func (rv RunView) Update(msg tea.Msg) (View, tea.Cmd) {
 
 func (rv RunView) Render(width, height int) string {
 	title := lipgloss.NewStyle().Bold(true).Foreground(kernel.AccentColor).Render("Run")
+	elapsed := time.Since(rv.started).Round(time.Second)
 
 	var sb strings.Builder
-	sb.WriteString(title + "\n\n")
-
-	visibleH := height - 4
-	start := max(0, rv.scroll-visibleH+1)
-	end := min(len(rv.logLines), start+visibleH)
-
-	for i := start; i < end; i++ {
-		line := rv.logLines[i]
-		if strings.Contains(line, "error") || strings.Contains(line, "Error") {
-			line = kernel.CheckErrorStyle.Render(line)
-		}
-		sb.WriteString(line + "\n")
-	}
+	sb.WriteString(title)
+	sb.WriteString("  ")
+	sb.WriteString(kernel.MutedStyle.Render(elapsed.String()))
+	sb.WriteByte('\n')
+	sb.WriteByte('\n')
 
 	if rv.running {
-		sb.WriteString(kernel.LoadingStyle.Render("\n⟳ Runtime running... (press c to stop)"))
-	} else if len(rv.events) > 0 {
-		last := rv.events[len(rv.events)-1]
-		switch last.State {
-		case task.StateCompleted:
-			sb.WriteString(kernel.CheckPassStyle.Render("\n⏹ Runtime stopped"))
-		case task.StateFailed:
-			sb.WriteString(kernel.CheckErrorStyle.Render("\n✗ " + last.Message))
-		case task.StateCancelled:
-			sb.WriteString(kernel.CheckWarnStyle.Render("\n⊘ Cancelled"))
+		// Show runtime info panel
+		infoStyle := lipgloss.NewStyle().
+			Border(lipgloss.RoundedBorder()).
+			BorderForeground(kernel.AccentColor).
+			Padding(1, 2)
+
+		var infoSb strings.Builder
+		infoSb.WriteString(kernel.CheckPassStyle.Render("●  Runtime is running"))
+		infoSb.WriteString("\n\n")
+		infoSb.WriteString(fmt.Sprintf("  App:   http://localhost:%d\n", rv.appPort))
+		infoSb.WriteString(fmt.Sprintf("  Admin: http://localhost:%d\n", rv.adminPort))
+		infoSb.WriteString(fmt.Sprintf("  Login: MxAdmin / <password set in --admin-password>"))
+		infoSb.WriteString("\n\n")
+		infoSb.WriteString(fmt.Sprintf("  Uptime: %s", elapsed))
+		infoSb.WriteString("\n")
+		infoSb.WriteString(kernel.HintLabelStyle.Render("  c=stop  q=close"))
+
+		sb.WriteString(infoStyle.Render(infoSb.String()))
+
+		// Show log lines too
+		if len(rv.logLines) > 0 {
+			sb.WriteByte('\n')
+			visibleH := height - 12
+			if visibleH > 3 {
+				start := max(0, len(rv.logLines)-visibleH)
+				for _, line := range rv.logLines[start:] {
+					sb.WriteString(kernel.MutedStyle.Render(line))
+					sb.WriteByte('\n')
+				}
+			}
+		}
+	} else {
+		// Show completion/error
+		sb.WriteString("Runtime stopped\n")
+		if len(rv.events) > 0 {
+			last := rv.events[len(rv.events)-1]
+			switch last.State {
+			case task.StateCompleted:
+				sb.WriteString(kernel.CheckPassStyle.Render("✓ " + last.Message))
+			case task.StateFailed:
+				sb.WriteString(kernel.CheckErrorStyle.Render("✗ " + last.Message))
+			case task.StateCancelled:
+				sb.WriteString(kernel.CheckWarnStyle.Render("⊘ Stopped"))
+			}
+		}
+		// Show last few log lines
+		if len(rv.logLines) > 0 {
+			sb.WriteByte('\n')
+			start := max(0, len(rv.logLines)-5)
+			for _, line := range rv.logLines[start:] {
+				sb.WriteString(kernel.MutedStyle.Render(line))
+				sb.WriteByte('\n')
+			}
 		}
 	}
 

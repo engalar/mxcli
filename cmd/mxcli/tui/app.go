@@ -334,9 +334,20 @@ func (a *App) startRun() tea.Cmd {
 	if projectPath == "" {
 		return nil
 	}
+
+	// Check for existing runtime lock
+	projectDir := filepath.Dir(projectPath)
+	if lock, err := task.ReadLock(projectDir); err == nil && lock.Alive() {
+		Trace("startRun: killing existing runtime PID=%d", lock.PID)
+		_ = task.KillByProject(projectDir)
+	} else if err == nil {
+		_ = task.RemoveLock(projectDir)
+	}
+
 	rt := task.NewRunTask(task.RunOptions{
-		PadDir:  filepath.Join(filepath.Dir(projectPath), ".docker", "build"),
-		CmdHint: "-p " + projectPath,
+		PadDir:    filepath.Join(projectDir, ".docker", "build"),
+		CmdHint:   "-p " + projectPath,
+		ProjectDir: projectDir,
 	})
 	rv := NewRunView(rt)
 	a.views.Push(rv)
