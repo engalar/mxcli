@@ -31,12 +31,12 @@ func TestCommandPalette_FuzzyFilter(t *testing.T) {
 
 	tests := []struct {
 		query    string
-		wantMin  int    // minimum expected matches
-		wantName string // at least one match should contain this
+		wantMin  int
+		wantName string
 	}{
-		{"bson", 1, "BSON Dump"},
-		{"tab", 1, "New Tab (same project)"},
-		{"COMPARE", 1, "Compare View"},
+		{"build", 1, "Build"},
+		{"tab", 1, "New Tab"},
+		{"CHECK", 1, "Check Results"},
 		{"zzzznotfound", 0, ""},
 		{"", len(cp.commands), ""},
 	}
@@ -102,18 +102,17 @@ func TestCommandPalette_SelectedCommand(t *testing.T) {
 	if cmd == nil {
 		t.Fatal("selectedCommand() returned nil for idx 0")
 	}
-	if cmd.Name != "BSON Dump" {
-		t.Errorf("first command = %q, want %q", cmd.Name, "BSON Dump")
+	if cmd.Name != "Build" {
+		t.Errorf("first command = %q, want %q", cmd.Name, "Build")
 	}
 
-	// Move to second command
 	cp.moveDown()
 	cmd = cp.selectedCommand()
 	if cmd == nil {
 		t.Fatal("selectedCommand() returned nil for idx 1")
 	}
-	if cmd.Name != "Compare View" {
-		t.Errorf("second command = %q, want %q", cmd.Name, "Compare View")
+	if cmd.Name != "Run" {
+		t.Errorf("second command = %q, want %q", cmd.Name, "Run")
 	}
 }
 
@@ -132,8 +131,8 @@ func TestCommandPalette_EnterSendsExecMsg(t *testing.T) {
 	if !ok {
 		t.Fatalf("expected PaletteExecMsg, got %T", msg)
 	}
-	if execMsg.Key != "B" {
-		t.Errorf("PaletteExecMsg.Key = %q, want %q", execMsg.Key, "B")
+	if execMsg.Key != ":b" {
+		t.Errorf("PaletteExecMsg.Key = %q, want %q", execMsg.Key, ":b")
 	}
 }
 
@@ -166,7 +165,7 @@ func TestCommandPalette_CategoryHeaders(t *testing.T) {
 	}
 
 	// Should have headers for each category
-	expectedCategories := []string{"View", "Action", "Check", "Build", "Tab", "Other"}
+	expectedCategories := []string{"Build", "Check", "Execute", "View", "Navigate", "Project", "Tab", "Other"}
 	for _, cat := range expectedCategories {
 		if !categories[cat] {
 			t.Errorf("missing category header: %q", cat)

@@ -45,31 +45,38 @@ type paletteEntry struct {
 }
 
 // BrowserPaletteCommands returns the default command list for browser mode.
+// Derived from the chord tree — single source of truth for all actions.
 func BrowserPaletteCommands() []PaletteCommand {
 	return []PaletteCommand{
-		{Name: "BSON Dump", Key: "B", Category: "View"},
-		{Name: "Compare View", Key: "c", Category: "View"},
-		{Name: "Diagram in Browser", Key: "d", Category: "View"},
-		{Name: "Zen Mode", Key: "z", Category: "View"},
-		{Name: "Toggle MDL/NDSL", Key: "Tab", Category: "View"},
+		{Name: "Build", Key: ":b", Category: "Build"},
+		{Name: "Run", Key: ":r", Category: "Build"},
+		{Name: "Build & Run", Key: ":bra", Category: "Build"},
 
-		{Name: "Create Module", Key: "C", Category: "Action"},
-		{Name: "Execute MDL Script", Key: "x", Category: "Action"},
-		{Name: "Edit in Exec", Key: "e", Category: "Action"},
-		{Name: "Refresh Tree", Key: "r", Category: "Action"},
-		{Name: "Hard Reload (clear cache)", Key: "R", Category: "Action"},
-		{Name: "Copy to Clipboard", Key: "y", Category: "Action"},
+		{Name: "Check Results", Key: ":c", Category: "Check"},
+		{Name: "Next Error", Key: ":cn", Category: "Check"},
+		{Name: "Prev Error", Key: ":cp", Category: "Check"},
 
-		{Name: "Show Check Results", Key: "!", Category: "Check"},
-		{Name: "Next Error Document", Key: "]e", Category: "Check"},
-		{Name: "Prev Error Document", Key: "[e", Category: "Check"},
+		{Name: "Execute MDL", Key: ":ee", Category: "Execute"},
+		{Name: "Describe MDL", Key: ":em", Category: "Execute"},
 
-		{Name: "Build Project", Key: "b", Category: "Build"},
-		{Name: "Run Project", Key: ":run", Category: "Build"},
+		{Name: "Create Module", Key: ":x", Category: "Execute"},
+		{Name: "Delete Selected", Key: ":D", Category: "Execute"},
 
-		{Name: "New Tab (same project)", Key: "t", Category: "Tab"},
-		{Name: "New Tab (pick project)", Key: "T", Category: "Tab"},
-		{Name: "Close Tab", Key: "W", Category: "Tab"},
+		{Name: "Open Diagram", Key: ":dd", Category: "View"},
+		{Name: "BSON Dump", Key: ":db", Category: "View"},
+		{Name: "Compare View", Key: ":vc", Category: "View"},
+		{Name: "Zen Mode", Key: ":vz", Category: "View"},
+		{Name: "Copy", Key: ":vy", Category: "View"},
+
+		{Name: "Fuzzy Jump", Key: ":ff", Category: "Navigate"},
+		{Name: "Filter", Key: "/", Category: "Navigate"},
+
+		{Name: "Refresh Tree", Key: ":rr", Category: "Project"},
+		{Name: "Hard Reload", Key: ":rR", Category: "Project"},
+
+		{Name: "New Tab", Key: ":tn", Category: "Tab"},
+		{Name: "New Tab (pick)", Key: ":tN", Category: "Tab"},
+		{Name: "Close Tab", Key: ":tw", Category: "Tab"},
 
 		{Name: "Help", Key: "?", Category: "Other"},
 	}

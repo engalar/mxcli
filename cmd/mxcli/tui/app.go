@@ -6,7 +6,9 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/mendixlabs/mxcli/cmd/mxcli/tui/chrome"
+	"github.com/mendixlabs/mxcli/cmd/mxcli/tui/kernel"
 	"github.com/mendixlabs/mxcli/cmd/mxcli/tui/task"
+	"github.com/mendixlabs/mxcli/cmd/mxcli/tui/who"
 )
 
 // chromeHeight is the vertical space consumed by tab bar (1) + hint bar (1) + status bar (1).
@@ -60,6 +62,8 @@ type App struct {
 	agentCheckCh     chan<- AgentResponse // non-nil when agent check is in-flight
 	agentCheckReqID  int                  // request ID for pending agent check
 	agentExecCtx     *agentExecContext    // non-nil when agent-initiated exec/delete/create is in progress
+
+	leaderState *leaderState
 }
 
 // agentPendingOp tracks an in-flight agent operation awaiting user confirmation.
@@ -79,6 +83,12 @@ type agentExecContext struct {
 	ResponseCh chan<- AgentResponse
 }
 
+type leaderState struct {
+	path       []who.ChordNode
+	currentNode *who.ChordNode
+	chord      string
+}
+
 // NewApp creates the root App model.
 func NewApp(mxcliPath, projectPath string) App {
 	initTrace()
@@ -95,7 +105,7 @@ func NewApp(mxcliPath, projectPath string) App {
 		views:         NewViewStack(browserView),
 		tabBar:        chrome.NewTabBar(nil),
 		statusBar:     chrome.NewStatusBar(),
-		hintBar:       chrome.NewHintBar(ListBrowsingHints),
+		hintBar:       chrome.NewHintBar(BrowserHints),
 		previewEngine: engine,
 	}
 	app.tabs = []Tab{tab}
@@ -340,4 +350,438 @@ func (a App) startRun() tea.Cmd {
 	rv := NewRunView(rt)
 	a.views.Push(rv)
 	return rt.Start()
+}
+
+// chordTree returns the chord tree root for the leader key menu.
+// Actions are methods on *App, captured as closures.
+func (a *App) chordTree() who.ChordNode {
+	p := func(fn func() tea.Cmd) func() tea.Cmd { return fn }
+	return who.ChordNode{
+		Label: "Menu",
+		Children: []who.ChordNode{
+			{
+				Key: "b", Label: "Build & Run",
+				Children: []who.ChordNode{
+					{Key: "b", Label: "Build",    Action: p(a.actionBuild)},
+					{Key: "r", Label: "Run",      Action: p(a.actionRun)},
+					{Key: "a", Label: "All",      Action: p(a.actionBuildRun)},
+				},
+			},
+			{
+				Key: "c", Label: "Check",
+				Children: []who.ChordNode{
+					{Key: "c", Label: "Check results", Action: p(a.actionCheck)},
+					{Key: "n", Label: "Next error",    Action: p(a.actionCheckNext)},
+					{Key: "p", Label: "Prev error",    Action: p(a.actionCheckPrev)},
+				},
+			},
+			{
+				Key: "d", Label: "Diagram & Debug",
+				Children: []who.ChordNode{
+					{Key: "d", Label: "Open diagram", Action: p(a.actionDiagram)},
+					{Key: "b", Label: "BSON dump",   Action: p(a.actionBSON)},
+				},
+			},
+			{
+				Key: "e", Label: "Execute",
+				Children: []who.ChordNode{
+					{Key: "e", Label: "Execute MDL",   Action: p(a.actionExec)},
+					{Key: "m", Label: "Describe MDL",  Action: p(a.actionDescribe)},
+				},
+			},
+			{
+				Key: "f", Label: "Find",
+				Children: []who.ChordNode{
+					{Key: "f", Label: "Fuzzy jump",    Action: p(a.actionFuzzyJump)},
+					{Key: "/", Label: "Filter",        Action: p(a.actionFilter)},
+				},
+			},
+			{
+				Key: "t", Label: "Tabs",
+				Children: []who.ChordNode{
+					{Key: "n", Label: "New tab",         Action: p(a.actionNewTab)},
+					{Key: "N", Label: "New tab (pick)",  Action: p(a.actionNewTabPick)},
+					{Key: "w", Label: "Close tab",       Action: p(a.actionCloseTab)},
+				},
+			},
+			{
+				Key: "v", Label: "View",
+				Children: []who.ChordNode{
+					{Key: "c", Label: "Compare",     Action: p(a.actionCompare)},
+					{Key: "z", Label: "Zen mode",    Action: p(a.actionZen)},
+					{Key: "y", Label: "Copy",        Action: p(a.actionCopy)},
+				},
+			},
+			{
+				Key: "r", Label: "Refresh",
+				Children: []who.ChordNode{
+					{Key: "r", Label: "Refresh tree",    Action: p(a.actionRefresh)},
+					{Key: "R", Label: "Hard reload",     Action: p(a.actionHardReload)},
+				},
+			},
+			{
+				Key: "x", Label: "Create module", Action: p(a.actionCreateModule),
+			},
+			{
+				Key: "D", Label: "Delete", Action: p(a.actionDelete),
+			},
+		},
+	}
+}
+
+// --- Chord action methods ---
+
+func (a *App) actionBuild() tea.Cmd {
+	bt := task.NewBuildTask(task.BuildOptions{ProjectPath: a.activeTabProjectPath()})
+	bv := NewBuildView(bt)
+	a.views.Push(bv)
+	return bt.Start()
+}
+
+func (a *App) actionRun() tea.Cmd {
+	return a.startRun()
+}
+
+func (a *App) actionBuildRun() tea.Cmd {
+	bt := task.NewBuildTask(task.BuildOptions{ProjectPath: a.activeTabProjectPath()})
+	bv := NewBuildView(bt)
+	a.views.Push(bv)
+	return bt.Start()
+}
+
+func (a *App) actionCheck() tea.Cmd {
+	filter := "all"
+	title := renderCheckFilterTitle(a.checkErrors, filter)
+	content := renderCheckResults(a.checkErrors, filter)
+	navLocs := extractCheckNavLocations(a.checkErrors)
+	ov := NewOverlayView(title, content, a.width, a.height, OverlayViewOpts{
+		HideLineNumbers: true,
+		Refreshable:     true,
+		RefreshMsg:      MxCheckRerunMsg{},
+		CheckFilter:     filter,
+		CheckErrors:     a.checkErrors,
+		CheckNavLocs:    navLocs,
+	})
+	a.views.Push(ov)
+	return nil
+}
+
+func (a *App) actionCheckNext() tea.Cmd {
+	return a.navigateCheckError(1)
+}
+
+func (a *App) actionCheckPrev() tea.Cmd {
+	return a.navigateCheckError(-1)
+}
+
+func (a *App) navigateCheckError(dir int) tea.Cmd {
+	if len(a.checkErrors) == 0 {
+		return nil
+	}
+	if !a.checkNavActive {
+		a.checkNavActive = true
+		a.checkNavLocations = extractCheckNavLocations(filterCheckErrors(a.checkErrors, "all"))
+		a.checkNavIndex = -1
+	}
+	a.checkNavIndex += dir
+	if a.checkNavIndex >= len(a.checkNavLocations) {
+		a.checkNavIndex = 0
+	} else if a.checkNavIndex < 0 {
+		a.checkNavIndex = len(a.checkNavLocations) - 1
+	}
+	loc := a.checkNavLocations[a.checkNavIndex]
+	qname := docNameToQualifiedName(loc.ModuleName, loc.DocumentName)
+	if bv, ok := a.views.Base().(BrowserView); ok {
+		cmd := bv.navigateToNode(qname)
+		a.views.SetBase(bv)
+		if tab := a.activeTabPtr(); tab != nil {
+			tab.Miller = bv.miller
+			tab.UpdateLabel()
+			a.syncTabBar()
+		}
+		return cmd
+	}
+	return nil
+}
+
+func (a *App) actionDiagram() tea.Cmd {
+	if bv, ok := a.views.Base().(BrowserView); ok {
+		if node := bv.miller.SelectedNode(); node != nil && node.QualifiedName != "" {
+			return bv.openDiagram(node.Type, node.QualifiedName)
+		}
+	}
+	return nil
+}
+
+func (a *App) actionBSON() tea.Cmd {
+	if bv, ok := a.views.Base().(BrowserView); ok {
+		if node := bv.miller.SelectedNode(); node != nil && node.QualifiedName != "" {
+			if bsonType := inferBsonType(node.Type); bsonType != "" {
+				return bv.runBsonOverlay(bsonType, node.QualifiedName, node.Type)
+			}
+		}
+	}
+	return nil
+}
+
+func (a *App) actionExec() tea.Cmd {
+	ev := NewExecView(a.mxcliPath, a.activeTabProjectPath(), a.width, a.height)
+	a.views.Push(ev)
+	return nil
+}
+
+func (a *App) actionDescribe() tea.Cmd {
+	if bv, ok := a.views.Base().(BrowserView); ok {
+		if node := bv.miller.SelectedNode(); node != nil && node.QualifiedName != "" {
+			if bv.miller.preview.content != "" {
+				raw := stripAnsi(bv.miller.preview.content)
+				return func() tea.Msg { return OpenExecWithContentMsg{Content: raw} }
+			}
+			mdlCmd := buildDescribeCmd(node.Type, node.QualifiedName)
+			if mdlCmd == "" {
+				return nil
+			}
+			return func() tea.Msg {
+				out, _ := runMxcli(a.mxcliPath, "-p", a.activeTabProjectPath(), "-c", mdlCmd)
+				out = StripBanner(out)
+				return OpenExecWithContentMsg{Content: out}
+			}
+		}
+	}
+	return nil
+}
+
+func (a *App) actionFuzzyJump() tea.Cmd {
+	tab := a.activeTabPtr()
+	if tab == nil {
+		return nil
+	}
+	items := flattenQualifiedNames(tab.AllNodes)
+	jumper := NewJumperView(items, a.width, a.height)
+	a.views.Push(jumper)
+	return nil
+}
+
+func (a *App) actionFilter() tea.Cmd {
+	return nil // forwarded to miller as /
+}
+
+func (a *App) actionNewTab() tea.Cmd {
+	tab := a.activeTabPtr()
+	if tab == nil {
+		return nil
+	}
+	newTab := tab.CloneTab(a.nextTabID, a.previewEngine)
+	a.nextTabID++
+	a.tabs = append(a.tabs, newTab)
+	a.activeTab = len(a.tabs) - 1
+	a.syncBrowserView()
+	a.syncTabBar()
+	return nil
+}
+
+func (a *App) actionNewTabPick() tea.Cmd {
+	p := NewEmbeddedPicker()
+	p.width = a.width
+	p.height = a.height
+	a.picker = &p
+	return nil
+}
+
+func (a *App) actionCloseTab() tea.Cmd {
+	if len(a.tabs) > 1 {
+		a.tabs[a.activeTab].Miller.previewEngine.Cancel()
+		a.tabs = append(a.tabs[:a.activeTab], a.tabs[a.activeTab+1:]...)
+		if a.activeTab >= len(a.tabs) {
+			a.activeTab = len(a.tabs) - 1
+		}
+		a.syncBrowserView()
+		a.syncTabBar()
+	}
+	return nil
+}
+
+func (a *App) actionCompare() tea.Cmd {
+	cv := NewCompareView()
+	cv.mxcliPath = a.mxcliPath
+	cv.projectPath = a.activeTabProjectPath()
+	cv.Show(CompareNDSLMDL, a.width, a.height)
+	tab := a.activeTabPtr()
+	if tab != nil {
+		cv.SetItems(flattenQualifiedNames(tab.AllNodes))
+		if node := tab.Miller.SelectedNode(); node != nil && node.QualifiedName != "" {
+			cv.SetLoading(CompareFocusLeft)
+			cv.SetLoading(CompareFocusRight)
+			a.views.Push(cv)
+			return tea.Batch(
+				cv.loadBsonNDSL(node.QualifiedName, node.Type, CompareFocusLeft),
+				cv.loadMDL(node.QualifiedName, node.Type, CompareFocusRight),
+			)
+		}
+	}
+	a.views.Push(cv)
+	return nil
+}
+
+func (a *App) actionZen() tea.Cmd {
+	if bv, ok := a.views.Base().(BrowserView); ok {
+		bv.miller.zenMode = !bv.miller.zenMode
+		bv.miller.relayout()
+		a.views.SetBase(bv)
+	}
+	return nil
+}
+
+func (a *App) actionCopy() tea.Cmd {
+	if bv, ok := a.views.Base().(BrowserView); ok {
+		if bv.miller.preview.content != "" {
+			raw := stripAnsi(bv.miller.preview.content)
+			_ = writeClipboard(raw)
+		}
+	}
+	return nil
+}
+
+func (a *App) actionRefresh() tea.Cmd {
+	return a.Init()
+}
+
+func (a *App) actionHardReload() tea.Cmd {
+	projectPath := a.activeTabProjectPath()
+	if projectPath == "" {
+		return nil
+	}
+	cv := NewDiscardConfirmView(projectPath, a.mxcliPath)
+	a.views.Push(cv)
+	return nil
+}
+
+func (a *App) actionCreateModule() tea.Cmd {
+	mxcliPath := a.mxcliPath
+	projectPath := a.activeTabProjectPath()
+	iv := NewInputView("Create Module", "Module name: ", func(name string) tea.Cmd {
+		return func() tea.Msg {
+			out, err := runMxcli(mxcliPath, "-p", projectPath, "-c", "CREATE MODULE "+name)
+			return execShowResultMsg{Content: out, Success: err == nil}
+		}
+	})
+	a.views.Push(iv)
+	return nil
+}
+
+func (a *App) actionDelete() tea.Cmd {
+	if bv, ok := a.views.Base().(BrowserView); ok {
+		if node := bv.miller.SelectedNode(); node != nil && node.QualifiedName != "" {
+			dropCmd := buildDropCmd(node.Type, node.QualifiedName)
+			if dropCmd == "" {
+				return nil
+			}
+			msg := buildDeleteMessage(node.Type, node.QualifiedName)
+			cv := NewConfirmView("Delete", msg, dropCmd, bv.mxcliPath, bv.projectPath)
+			return func() tea.Msg { return PushViewMsg{View: cv} }
+		}
+	}
+	return nil
+}
+
+func (a App) dispatchPaletteKey(key string) tea.Cmd {
+	var keyMsg tea.KeyMsg
+	switch key {
+	case " ":
+		keyMsg = tea.KeyMsg{Type: tea.KeySpace}
+	case "Tab":
+		keyMsg = tea.KeyMsg{Type: tea.KeyTab}
+	default:
+		keyMsg = tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(key)}
+	}
+	return func() tea.Msg { return keyMsg }
+}
+
+func isNavigationKey(key string) bool {
+	switch key {
+	case "j", "k", "g", "G", "h", "l", "left", "right", "up", "down",
+		"enter", "tab", "/", "n", "N":
+		return true
+	}
+	return false
+}
+
+func (a *App) activateLeader() tea.Cmd {
+	root := a.chordTree()
+	a.leaderState = &leaderState{
+		path:        nil,
+		currentNode: &root,
+		chord:       "",
+	}
+	return nil
+}
+
+func (a *App) deactivateLeader() tea.Cmd {
+	a.leaderState = nil
+	return nil
+}
+
+func (a *App) executeChord(chord string) tea.Cmd {
+	root := a.chordTree()
+	node := &root
+	path := []who.ChordNode{}
+	for _, ch := range chord {
+		child := node.FindChild(string(ch))
+		if child == nil {
+			return nil
+		}
+		path = append(path, *child)
+		node = child
+	}
+	if node.Action != nil {
+		return node.Action()
+	}
+	return nil
+}
+
+func (a *App) routeLeaderKey(key string) tea.Cmd {
+	if a.leaderState == nil {
+		return nil
+	}
+	if key == "esc" {
+		if len(a.leaderState.path) > 0 {
+			// Go back one level
+			a.leaderState.path = a.leaderState.path[:len(a.leaderState.path)-1]
+			a.leaderState.chord = a.leaderState.chord[:len(a.leaderState.chord)-1]
+			if len(a.leaderState.path) > 0 {
+				a.leaderState.currentNode = &a.leaderState.path[len(a.leaderState.path)-1]
+			} else {
+				root := a.chordTree()
+				a.leaderState.currentNode = &root
+			}
+		} else {
+			a.leaderState = nil
+		}
+		return nil
+	}
+	child := a.leaderState.currentNode.FindChild(key)
+	if child == nil {
+		return nil // unknown key, stay in leader
+	}
+	a.leaderState.path = append(a.leaderState.path, *child)
+	a.leaderState.currentNode = child
+	a.leaderState.chord += key
+
+	if child.Action != nil {
+		cmd := child.Action()
+		a.leaderState = nil
+		return cmd
+	}
+	return nil
+}
+
+func (a *App) leaderHints() []kernel.Hint {
+	if a.leaderState == nil {
+		return nil
+	}
+	var hints []kernel.Hint
+	for _, child := range a.leaderState.currentNode.Children {
+		hints = append(hints, kernel.Hint{Key: child.Key, Label: child.Label})
+	}
+	return hints
 }

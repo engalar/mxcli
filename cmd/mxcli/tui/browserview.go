@@ -45,7 +45,7 @@ func (bv BrowserView) Hints() []Hint {
 	if bv.miller.focusedColumn().IsFilterActive() {
 		return FilterActiveHints
 	}
-	return ListBrowsingHints
+	return BrowserHints
 }
 
 // StatusInfo builds status bar data from the Miller view state.
@@ -116,78 +116,6 @@ func (bv BrowserView) handleKey(msg tea.KeyMsg) (View, tea.Cmd) {
 		return bv, cmd
 	}
 
-	switch msg.String() {
-	case "B":
-		node := bv.miller.SelectedNode()
-		if node != nil && node.QualifiedName != "" {
-			if bsonType := inferBsonType(node.Type); bsonType != "" {
-				return bv, bv.runBsonOverlay(bsonType, node.QualifiedName, node.Type)
-			}
-		}
-		return bv, nil
-
-	case "m":
-		node := bv.miller.SelectedNode()
-		if node != nil && node.QualifiedName != "" {
-			return bv, bv.runMDLOverlay(node.Type, node.QualifiedName)
-		}
-		return bv, nil
-
-	case "d":
-		node := bv.miller.SelectedNode()
-		if node != nil && node.QualifiedName != "" {
-			return bv, bv.openDiagram(node.Type, node.QualifiedName)
-		}
-		return bv, nil
-
-	case "y":
-		if bv.miller.preview.content != "" {
-			raw := stripAnsi(bv.miller.preview.content)
-			_ = writeClipboard(raw)
-		}
-		return bv, nil
-
-	case "z":
-		bv.miller.zenMode = !bv.miller.zenMode
-		bv.miller.relayout()
-		return bv, nil
-
-	case "D":
-		node := bv.miller.SelectedNode()
-		if node != nil && node.QualifiedName != "" {
-			dropCmd := buildDropCmd(node.Type, node.QualifiedName)
-			if dropCmd == "" {
-				return bv, nil
-			}
-			msg := buildDeleteMessage(node.Type, node.QualifiedName)
-			cv := NewConfirmView("Delete", msg, dropCmd, bv.mxcliPath, bv.projectPath)
-			return bv, func() tea.Msg { return PushViewMsg{View: cv} }
-		}
-		return bv, nil
-
-	case "e":
-		node := bv.miller.SelectedNode()
-		if node == nil || node.QualifiedName == "" {
-			return bv, nil
-		}
-		if bv.miller.preview.content != "" {
-			raw := stripAnsi(bv.miller.preview.content)
-			return bv, func() tea.Msg { return OpenExecWithContentMsg{Content: raw} }
-		}
-		// No cached preview — fetch MDL describe on-the-fly and open exec
-		mdlCmd := buildDescribeCmd(node.Type, node.QualifiedName)
-		if mdlCmd == "" {
-			return bv, nil
-		}
-		mxcliPath := bv.mxcliPath
-		projectPath := bv.projectPath
-		return bv, func() tea.Msg {
-			out, _ := runMxcli(mxcliPath, "-p", projectPath, "-c", mdlCmd)
-			out = StripBanner(out)
-			return OpenExecWithContentMsg{Content: out}
-		}
-	}
-
 	// Navigation keys: forward to miller
 	switch msg.String() {
 	case "j", "k", "g", "G", "h", "l", "left", "right", "up", "down",
@@ -197,7 +125,8 @@ func (bv BrowserView) handleKey(msg tea.KeyMsg) (View, tea.Cmd) {
 		return bv, cmd
 	}
 
-	// Keys not handled: q, ?, t, T, W, 1-9, [, ], ctrl+c — let App handle
+	// Action keys no longer handled here — all go through Space leader menu.
+	// Keys not handled: let App handle (q, ?, :, Space, etc.)
 	return bv, nil
 }
 

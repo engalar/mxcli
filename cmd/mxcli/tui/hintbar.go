@@ -5,15 +5,11 @@ import "github.com/mendixlabs/mxcli/cmd/mxcli/tui/kernel"
 type Hint = kernel.Hint
 
 var (
-	ListBrowsingHints = []kernel.Hint{
+	BrowserHints = []kernel.Hint{
+		{Key: "SPC", Label: "menu"},
 		{Key: "h", Label: "back"},
 		{Key: "l", Label: "open"},
 		{Key: "/", Label: "filter"},
-		{Key: "C", Label: "create module"},
-		{Key: "D", Label: "delete"},
-		{Key: "e", Label: "edit mdl"},
-		{Key: "R", Label: "discard"},
-		{Key: "!", Label: "check"},
 		{Key: ":", Label: "commands"},
 		{Key: "?", Label: "help"},
 	}

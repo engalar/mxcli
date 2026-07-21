@@ -34,8 +34,9 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case PaletteExecMsg:
 		a.views.Pop()
-		if msg.Key == ":run" {
-			return a, a.startRun()
+		if strings.HasPrefix(msg.Key, ":") {
+			chord := msg.Key[1:]
+			return a, a.executeChord(chord)
 		}
 		if msg.Key != "" {
 			return a, a.dispatchPaletteKey(msg.Key)
