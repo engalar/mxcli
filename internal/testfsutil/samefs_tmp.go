@@ -9,19 +9,14 @@ import (
 	"testing"
 )
 
-var (
-	sameFSTmpOnce sync.Once
-	sameFSTmpDir  string
-)
+var findRootOnce sync.Once
+var repoRoot string
 
-// SameFSTempDir creates a temp subdirectory on the same filesystem as the
-// repo root (where testdata lives). Hard links from testdata/ into this
-// directory succeed (no EXDEV), avoiding the byte-copy fallback.
-//
-// The subdirectory is automatically removed when the test finishes.
-func SameFSTempDir(t *testing.T) string {
+// findRepoRoot walks up from the current working directory to find go.mod.
+// Results are cached after the first call.
+func findRepoRoot(t *testing.T) string {
 	t.Helper()
-	sameFSTmpOnce.Do(func() {
+	findRootOnce.Do(func() {
 		pkgDir, err := os.Getwd()
 		if err != nil {
 			t.Fatalf("getwd: %v", err)
@@ -37,16 +32,23 @@ func SameFSTempDir(t *testing.T) string {
 			}
 			root = parent
 		}
-		d, err := os.MkdirTemp(root, ".mxcli-tmp-*")
-		if err != nil {
-			t.Fatalf("create same-fs tmp dir: %v", err)
-		}
-		sameFSTmpDir = d
+		repoRoot = root
 	})
-	sub, err := os.MkdirTemp(sameFSTmpDir, "t-*")
+	return repoRoot
+}
+
+// SameFSTempDir creates a temp subdirectory on the same filesystem as the
+// repo root (where testdata lives). Hard links from testdata/ into this
+// directory succeed (no EXDEV), avoiding the byte-copy fallback.
+//
+// The subdirectory is automatically removed when the test finishes.
+func SameFSTempDir(t *testing.T) string {
+	t.Helper()
+	root := findRepoRoot(t)
+	d, err := os.MkdirTemp(root, ".mxcli-tmp-*")
 	if err != nil {
-		t.Fatalf("create test subdir: %v", err)
+		t.Fatalf("create same-fs tmp dir: %v", err)
 	}
-	t.Cleanup(func() { os.RemoveAll(sub) })
-	return sub
+	t.Cleanup(func() { os.RemoveAll(d) })
+	return d
 }
