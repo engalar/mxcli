@@ -266,7 +266,7 @@ func ExecCreateMicroflowGenFn(ctx context.Context, s *ast.CreateMicroflowStmt, d
 			if ref.Module != "" {
 				returnEntityName = ref.Module + "." + ref.Name
 			} else if ref.Name != "" {
-				returnEntityName = resolveBareEntityQN(ectx.DomainModels, deps.ModuleLister, ref.Name)
+				returnEntityName = resolveBareEntityQN(ectx.DomainModels, deps.ModuleLister, ref.Name, s.Name.Module)
 			}
 		}
 	}

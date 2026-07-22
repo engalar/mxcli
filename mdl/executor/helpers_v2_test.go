@@ -5,8 +5,11 @@ package executor
 import (
 	"testing"
 
+	"github.com/mendixlabs/mxcli/mdl/backend/mock"
+	"github.com/mendixlabs/mxcli/mdl/repos"
 	repostesting "github.com/mendixlabs/mxcli/mdl/repos/testing"
 	"github.com/mendixlabs/mxcli/model"
+	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 )
 
@@ -131,5 +134,95 @@ func TestListNanoflowsWithContainerGen_CachesAcrossCalls(t *testing.T) {
 	}
 	if len(mfRepo.GetContainerIDs) != containerCalls1 {
 		t.Errorf("GetContainerUUID re-invoked on cache hit: was %d, now %d", containerCalls1, len(mfRepo.GetContainerIDs))
+	}
+}
+
+// ─────────────────────────────────────────────────────────────
+// resolveBareEntityQN — module disambiguation
+// ─────────────────────────────────────────────────────────────
+
+func TestResolveBareEntityQN_CallerModulePreferred(t *testing.T) {
+	// Two modules, each with an entity of the same bare name "ImportContext".
+	// The caller is "ss_integration" — must resolve to ss_integration.ImportContext.
+	modA := &model.Module{BaseElement: model.BaseElement{ID: model.ID("mod-ss")}, Name: "ss_integration"}
+	modB := &model.Module{BaseElement: model.BaseElement{ID: model.ID("mod-smart")}, Name: "smart_select"}
+
+	ent := genDm.NewEntity()
+	ent.SetName("ImportContext")
+	dmA := genDm.NewDomainModel()
+	dmA.AddEntities(ent)
+	dmB := genDm.NewDomainModel()
+	dmB.AddEntities(ent)
+
+	mb := &mock.MockBackend{
+		ListModulesFunc: func() ([]*model.Module, error) { return []*model.Module{modA, modB}, nil },
+	}
+	dmRepo := &repostesting.RecordingDomainModelRepository{
+		ListAllWithContainerIDFunc: func() ([]repos.DomainModelWithContainer, error) {
+			return []repos.DomainModelWithContainer{
+				{DM: dmA, ContainerID: modA.ID},
+				{DM: dmB, ContainerID: modB.ID},
+			}, nil
+		},
+	}
+
+	got := resolveBareEntityQN(dmRepo, mb, "ImportContext", "ss_integration")
+	want := "ss_integration.ImportContext"
+	if got != want {
+		t.Fatalf("resolveBareEntityQN(ss_integration): got %q, want %q", got, want)
+	}
+}
+
+func TestResolveBareEntityQN_GlobalUnique(t *testing.T) {
+	mod := &model.Module{BaseElement: model.BaseElement{ID: model.ID("mod-orders")}, Name: "Orders"}
+	ent := genDm.NewEntity()
+	ent.SetName("OrderData")
+	dm := genDm.NewDomainModel()
+	dm.AddEntities(ent)
+
+	mb := &mock.MockBackend{
+		ListModulesFunc: func() ([]*model.Module, error) { return []*model.Module{mod}, nil },
+	}
+	dmRepo := &repostesting.RecordingDomainModelRepository{
+		ListAllWithContainerIDFunc: func() ([]repos.DomainModelWithContainer, error) {
+			return []repos.DomainModelWithContainer{
+				{DM: dm, ContainerID: mod.ID},
+			}, nil
+		},
+	}
+
+	got := resolveBareEntityQN(dmRepo, mb, "OrderData", "SomeOtherModule")
+	want := "Orders.OrderData"
+	if got != want {
+		t.Fatalf("resolveBareEntityQN(global unique): got %q, want %q", got, want)
+	}
+}
+
+func TestResolveBareEntityQN_AmbiguousReturnsEmpty(t *testing.T) {
+	modA := &model.Module{BaseElement: model.BaseElement{ID: model.ID("mod-a")}, Name: "ModuleA"}
+	modB := &model.Module{BaseElement: model.BaseElement{ID: model.ID("mod-b")}, Name: "ModuleB"}
+
+	ent := genDm.NewEntity()
+	ent.SetName("SharedEntity")
+	dmA := genDm.NewDomainModel()
+	dmA.AddEntities(ent)
+	dmB := genDm.NewDomainModel()
+	dmB.AddEntities(ent)
+
+	mb := &mock.MockBackend{
+		ListModulesFunc: func() ([]*model.Module, error) { return []*model.Module{modA, modB}, nil },
+	}
+	dmRepo := &repostesting.RecordingDomainModelRepository{
+		ListAllWithContainerIDFunc: func() ([]repos.DomainModelWithContainer, error) {
+			return []repos.DomainModelWithContainer{
+				{DM: dmA, ContainerID: modA.ID},
+				{DM: dmB, ContainerID: modB.ID},
+			}, nil
+		},
+	}
+
+	got := resolveBareEntityQN(dmRepo, mb, "SharedEntity", "ThirdModule")
+	if got != "" {
+		t.Fatalf("resolveBareEntityQN(ambiguous): got %q, want empty string", got)
 	}
 }

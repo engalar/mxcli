@@ -266,7 +266,7 @@ func ExecCreateNanoflowGenFn(ctx context.Context, s *ast.CreateNanoflowStmt, dep
 			if ref.Module != "" {
 				returnEntityName = ref.Module + "." + ref.Name
 			} else if ref.Name != "" {
-				returnEntityName = resolveBareEntityQN(ectx.DomainModels, deps.ModuleLister, ref.Name)
+				returnEntityName = resolveBareEntityQN(ectx.DomainModels, deps.ModuleLister, ref.Name, s.Name.Module)
 			}
 		}
 	}

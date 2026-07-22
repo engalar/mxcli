@@ -116,7 +116,7 @@ func crossAssocDoc(name, parentID string) bson.D {
 // untouched.  After the fix it passes.
 func TestPatchReconcile_EmptyMemberAccesses_AddsAssociation(t *testing.T) {
 	t.Parallel()
-		const moduleName = "TestModule"
+	const moduleName = "TestModule"
 	const entityName = "MySetting"
 	const entityID = "entity-mysetting"
 	const assocName = "MySetting_Account"
@@ -176,7 +176,7 @@ func TestPatchReconcile_EmptyMemberAccesses_AddsAssociation(t *testing.T) {
 // the missing association and reports it in the changes list.
 func TestPatchReconcile_ExistingAttrs_AddsNewAssociation(t *testing.T) {
 	t.Parallel()
-		const moduleName = "TestModule"
+	const moduleName = "TestModule"
 	const entityName = "Attachment"
 	const entityID = "entity-attachment"
 	const attrName = "FileType"
@@ -346,7 +346,7 @@ func patchedBSONContainsMemberAccess(t *testing.T, patched []byte, entityName, r
 // security stamp that mxcli cannot replicate).
 func TestPatchReconcile_CrossAssoc_AddedToMemberAccesses(t *testing.T) {
 	t.Parallel()
-		const moduleName = "Common_Utils"
+	const moduleName = "Common_Utils"
 	const entityName = "MySetting"
 	const entityID = "entity-mysetting"
 	const crossAssocName = "MySetting_Account" // cross-module: FROM MySetting TO Administration.Account

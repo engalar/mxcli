@@ -266,7 +266,14 @@ func buildNanoflowQualifiedNamesGen(ctx *ExecContext) map[string]bool {
 // resolveBareEntityQN looks up a bare entity name (no module prefix) across
 // all domain models and returns the fully qualified name Module.Entity, or ""
 // if the entity cannot be uniquely identified.
-func resolveBareEntityQN(dmRepo repos.DomainModelRepository, modLister backend.ModuleLister, bareName string) string {
+//
+// callerModule is the module of the calling microflow/nanoflow — used as a
+// disambiguation hint when the same entity name exists in multiple modules.
+// The caller's own module is checked first; only if absent there does the
+// function fall back to a global search. A global match is only returned when
+// exactly one module defines the entity (unique) or the caller module matches;
+// ambiguous matches across multiple foreign modules return "".
+func resolveBareEntityQN(dmRepo repos.DomainModelRepository, modLister backend.ModuleLister, bareName, callerModule string) string {
 	if bareName == "" {
 		return ""
 	}
@@ -285,8 +292,36 @@ func resolveBareEntityQN(dmRepo repos.DomainModelRepository, modLister backend.M
 		return ""
 	}
 
+	// Phase 1: check caller's own module only
+	if callerModule != "" {
+		for _, pair := range pairs {
+			if pair.DM == nil {
+				continue
+			}
+			modName := modNameByID[pair.ContainerID]
+			if modName != callerModule {
+				continue
+			}
+			for _, elem := range pair.DM.EntitiesItems() {
+				ent, ok := elem.(*genDm.Entity)
+				if !ok || ent == nil {
+					continue
+				}
+				if ent.Name() == bareName {
+					return modName + "." + bareName
+				}
+			}
+		}
+	}
+
+	// Phase 2: global search — collect all candidate QNs
+	var candidates []string
 	for _, pair := range pairs {
 		if pair.DM == nil {
+			continue
+		}
+		modName := modNameByID[pair.ContainerID]
+		if modName == "" {
 			continue
 		}
 		for _, elem := range pair.DM.EntitiesItems() {
@@ -295,12 +330,20 @@ func resolveBareEntityQN(dmRepo repos.DomainModelRepository, modLister backend.M
 				continue
 			}
 			if ent.Name() == bareName {
-				modName := modNameByID[pair.ContainerID]
-				if modName != "" {
-					return modName + "." + bareName
-				}
+				candidates = append(candidates, modName+"."+bareName)
 			}
 		}
 	}
-	return ""
+
+	switch len(candidates) {
+	case 0:
+		return ""
+	case 1:
+		return candidates[0]
+	default:
+		// Multiple matches — caller's own module was already checked in
+		// phase 1. If callerModule is empty and there are multiple matches,
+		// we cannot disambiguate.
+		return ""
+	}
 }
