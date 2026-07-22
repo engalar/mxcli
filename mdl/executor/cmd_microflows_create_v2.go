@@ -262,8 +262,12 @@ func ExecCreateMicroflowGenFn(ctx context.Context, s *ast.CreateMicroflowStmt, d
 
 	returnEntityName := ""
 	if s.ReturnType != nil {
-		if ref := paramEntityRef(s.ReturnType.Type); ref != nil && ref.Module != "" {
-			returnEntityName = ref.Module + "." + ref.Name
+		if ref := paramEntityRef(s.ReturnType.Type); ref != nil {
+			if ref.Module != "" {
+				returnEntityName = ref.Module + "." + ref.Name
+			} else if ref.Name != "" {
+				returnEntityName = resolveBareEntityQN(ectx.DomainModels, deps.ModuleLister, ref.Name)
+			}
 		}
 	}
 	ectx.trackCreatedMicroflow(s.Name.Module, s.Name.Name, model.ID(mf.ID()), containerID, returnEntityName)

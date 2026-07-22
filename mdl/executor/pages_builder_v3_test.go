@@ -9,10 +9,13 @@ import (
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	"github.com/mendixlabs/mxcli/mdl/backend"
 	"github.com/mendixlabs/mxcli/mdl/backend/mock"
+	repostesting "github.com/mendixlabs/mxcli/mdl/repos/testing"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/modelsdk/codec"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
+	genDT "github.com/mendixlabs/mxcli/modelsdk/gen/datatypes"
 	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
+	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 	genPg "github.com/mendixlabs/mxcli/modelsdk/gen/pages"
 	genTexts "github.com/mendixlabs/mxcli/modelsdk/gen/texts"
 	"go.mongodb.org/mongo-driver/v2/bson"
@@ -429,6 +432,117 @@ func TestBuildTabPageV3_CaptionIsTextsText(t *testing.T) {
 	// Must be *genTexts.Text (Texts$Text), NOT *genPg.ClientTemplate (Forms$ClientTemplate).
 	if _, isText := cap.(*genTexts.Text); !isText {
 		t.Errorf("TabPage Caption is %T — must be *genTexts.Text, not ClientTemplate", cap)
+	}
+}
+
+// ─────────────────────────────────────────────────────────────
+// Bug B: resolveAttributePath with empty entityContext
+// ─────────────────────────────────────────────────────────────
+
+func TestResolveAttributePath_EmptyContextReturnsEmpty(t *testing.T) {
+	pb := &pageBuilder{}
+	got := pb.resolveAttributePath("DataAttr")
+	if got != "" {
+		t.Fatalf("resolveAttributePath with empty entityContext: got %q, want empty string", got)
+	}
+}
+
+func TestResolveAttributePath_WithContextQualifies(t *testing.T) {
+	pb := &pageBuilder{entityContext: "Module.Entity"}
+	got := pb.resolveAttributePath("DataAttr")
+	want := "Module.Entity.DataAttr"
+	if got != want {
+		t.Fatalf("resolveAttributePath: got %q, want %q", got, want)
+	}
+}
+
+func TestResolveAttributePath_AlreadyQualifiedPassthrough(t *testing.T) {
+	pb := &pageBuilder{}
+	got := pb.resolveAttributePath("Module.Entity.DataAttr")
+	want := "Module.Entity.DataAttr"
+	if got != want {
+		t.Fatalf("resolveAttributePath: got %q, want %q", got, want)
+	}
+}
+
+// ─────────────────────────────────────────────────────────────
+// Bug C: getMicroflowReturnEntityName — two scenarios:
+//   a) Cache hit with empty ReturnEntityName (session-created microflow
+//      with bare return entity) — must fall through to MicroflowReturnType
+//   b) No cache, repo path only — also must use MicroflowReturnType
+// ─────────────────────────────────────────────────────────────
+
+func TestGetMicroflowReturnEntityName_CacheEmptyFallsThrough(t *testing.T) {
+	// Reproduces the real bug: cache has entry with ReturnEntityName==""
+	// (because bare return entity wasn't resolved at creation time).
+	// The function must fall through to MicroflowReturnType() and return
+	// the qualified entity name, NOT return "" immediately.
+	mf := genMf.NewMicroflow()
+	mf.SetID(element.ID("mf-001"))
+	mf.SetName("ACT_GetOrders")
+
+	objType := genDT.NewObjectType()
+	objType.SetEntityQualifiedName("MyModule.Order")
+	mf.SetMicroflowReturnType(objType)
+
+	mod := mkModule("MyModule")
+	h := mkHierarchy(mod)
+	withContainer(h, mod.ID, mod.ID)
+
+	mfRepo := &repostesting.RecordingMicroflowRepository{
+		ListAllFunc:          func() ([]*genMf.Microflow, error) { return []*genMf.Microflow{mf}, nil },
+		GetContainerUUIDFunc: func(_ model.ID) (model.ID, error) { return mod.ID, nil },
+	}
+
+	pb := &pageBuilder{
+		microflowsRepo: mfRepo,
+		execCache: &executorCache{
+			sessionTracker: sessionTracker{
+				createdMicroflows: map[string]*createdMicroflowInfo{
+					"MyModule.ACT_GetOrders": {
+						ReturnEntityName: "", // ← bare return, not resolved
+					},
+				},
+			},
+		},
+	}
+	pb.execCache.hierarchy = h
+
+	got := pb.getMicroflowReturnEntityName("MyModule.ACT_GetOrders")
+	want := "MyModule.Order"
+	if got != want {
+		t.Fatalf("getMicroflowReturnEntityName with empty cache ReturnEntityName: got %q, want %q", got, want)
+	}
+}
+
+func TestGetMicroflowReturnEntityName_MicroflowReturnTypeFallback(t *testing.T) {
+	mf := genMf.NewMicroflow()
+	mf.SetID(element.ID("mf-001"))
+	mf.SetName("ACT_GetOrders")
+
+	objType := genDT.NewObjectType()
+	objType.SetEntityQualifiedName("MyModule.Order")
+	mf.SetMicroflowReturnType(objType)
+
+	mod := mkModule("MyModule")
+	h := mkHierarchy(mod)
+	withContainer(h, mod.ID, mod.ID)
+
+	mfRepo := &repostesting.RecordingMicroflowRepository{
+		ListAllFunc:          func() ([]*genMf.Microflow, error) { return []*genMf.Microflow{mf}, nil },
+		GetContainerUUIDFunc: func(_ model.ID) (model.ID, error) { return mod.ID, nil },
+	}
+
+	pb := &pageBuilder{
+		microflowsRepo: mfRepo,
+		execCache:      &executorCache{},
+	}
+	pb.execCache.hierarchy = h
+
+	got := pb.getMicroflowReturnEntityName("MyModule.ACT_GetOrders")
+	want := "MyModule.Order"
+	if got != want {
+		t.Fatalf("getMicroflowReturnEntityName: got %q, want %q", got, want)
 	}
 }
 

@@ -279,7 +279,7 @@ func (pb *pageBuilder) moduleNameByID(moduleID model.ID) string {
 // getMicroflowReturnEntityName looks up a microflow and returns its return type entity name.
 func (pb *pageBuilder) getMicroflowReturnEntityName(qualifiedName string) string {
 	if pb.execCache != nil && pb.execCache.createdMicroflows != nil {
-		if info, ok := pb.execCache.createdMicroflows[qualifiedName]; ok {
+		if info, ok := pb.execCache.createdMicroflows[qualifiedName]; ok && info.ReturnEntityName != "" {
 			return info.ReturnEntityName
 		}
 	}
@@ -308,7 +308,22 @@ func (pb *pageBuilder) getMicroflowReturnEntityName(qualifiedName string) string
 		containerID, _ := pb.microflowsRepo.GetContainerUUID(model.ID(mf.ID()))
 		modName := h.GetModuleName(h.FindModuleID(containerID))
 		if modName == moduleName && mf.Name() == mfName {
-			return extractEntityFromGenReturnType(mf.ReturnType())
+			if qn := extractEntityFromGenReturnType(mf.ReturnType()); qn != "" {
+				return qn
+			}
+			if rt := mf.MicroflowReturnType(); rt != nil {
+				switch t := rt.(type) {
+				case *genDt.ObjectType:
+					if qn := t.EntityQualifiedName(); qn != "" {
+						return qn
+					}
+				case *genDt.ListType:
+					if qn := t.EntityQualifiedName(); qn != "" {
+						return qn
+					}
+				}
+			}
+			return ""
 		}
 	}
 
@@ -319,7 +334,7 @@ func (pb *pageBuilder) getMicroflowReturnEntityName(qualifiedName string) string
 func (pb *pageBuilder) getNanoflowReturnEntityName(qualifiedName string) string {
 	// Check session-local cache first (mirrors getMicroflowReturnEntityName).
 	if pb.execCache != nil && pb.execCache.createdNanoflows != nil {
-		if info, ok := pb.execCache.createdNanoflows[qualifiedName]; ok {
+		if info, ok := pb.execCache.createdNanoflows[qualifiedName]; ok && info.ReturnEntityName != "" {
 			return info.ReturnEntityName
 		}
 	}
@@ -354,7 +369,22 @@ func (pb *pageBuilder) getNanoflowReturnEntityName(qualifiedName string) string 
 		containerID, _ := pb.microflowsRepo.GetContainerUUID(model.ID(nf.ID()))
 		modName := h.GetModuleName(h.FindModuleID(containerID))
 		if modName == moduleName && nf.Name() == name {
-			return extractEntityFromGenReturnType(nf.ReturnType())
+			if qn := extractEntityFromGenReturnType(nf.ReturnType()); qn != "" {
+				return qn
+			}
+			if rt := nf.MicroflowReturnType(); rt != nil {
+				switch t := rt.(type) {
+				case *genDt.ObjectType:
+					if qn := t.EntityQualifiedName(); qn != "" {
+						return qn
+					}
+				case *genDt.ListType:
+					if qn := t.EntityQualifiedName(); qn != "" {
+						return qn
+					}
+				}
+			}
+			return ""
 		}
 	}
 

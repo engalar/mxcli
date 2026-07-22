@@ -151,7 +151,11 @@ func (pb *pageBuilder) resolveAttributePath(attr string) string {
 	if pb.entityContext != "" {
 		return pb.entityContext + "." + attr
 	}
-	return attr
+	// No entity context available. Return empty string — this will be
+	// caught by post-build validation (validatePageWidgetAttrs) before
+	// the page is persisted, producing an actionable import error with
+	// page/widget/attribute names.
+	return ""
 }
 
 // resolveAssociationPath resolves a short association name to a fully qualified name.

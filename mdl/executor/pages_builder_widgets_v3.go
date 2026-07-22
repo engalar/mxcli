@@ -583,6 +583,25 @@ func (pb *pageBuilder) buildControlBarV3(w *ast.WidgetV3) (element.Element, erro
 	return controlBar, nil
 }
 
+// collectChildAttrRefs recursively collects non-empty attribute references
+// from child widgets (column attr, textbox dataAttr, etc.) into strings
+// like "widgetName.attrName". Returns nil when no refs are found.
+func collectChildAttrRefs(widgets []*ast.WidgetV3) []string {
+	var refs []string
+	for _, w := range widgets {
+		if attr := w.GetAttribute(); attr != "" && !strings.Contains(attr, ".") {
+			refs = append(refs, w.Name+"."+attr)
+		}
+		for _, a := range w.GetAttributes() {
+			if a != "" && !strings.Contains(a, ".") {
+				refs = append(refs, w.Name+"."+a)
+			}
+		}
+		refs = append(refs, collectChildAttrRefs(w.Children)...)
+	}
+	return refs
+}
+
 func (pb *pageBuilder) buildDataViewV3(w *ast.WidgetV3) (element.Element, error) {
 	dv := genPg.NewDataView()
 	assignFreshID(dv)
@@ -594,6 +613,19 @@ func (pb *pageBuilder) buildDataViewV3(w *ast.WidgetV3) (element.Element, error)
 			return nil, mdlerrors.NewBackend("build datasource", err)
 		}
 		dv.SetDataSource(dataSource)
+
+		// Validate: if entityName is empty but child widgets have attribute
+		// references, these would produce blank Attribute fields in BSON, which
+		// causes Studio Pro to crash. Error early with actionable names.
+		if entityName == "" {
+			if refs := collectChildAttrRefs(w.Children); len(refs) > 0 {
+				return nil, mdlerrors.NewValidationf(
+					"DataView %q: entity context is empty (datasource %q type %q), "+
+						"but child widgets reference attributes: %s. "+
+						"Use fully qualified attribute names (Module.Entity.Attr) or ensure the datasource resolves an entity",
+					w.Name, ds.Reference, ds.Type, strings.Join(refs, ", "))
+			}
+		}
 
 		oldContext := pb.entityContext
 		pb.entityContext = entityName

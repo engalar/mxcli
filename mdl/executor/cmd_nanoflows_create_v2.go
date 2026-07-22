@@ -262,8 +262,12 @@ func ExecCreateNanoflowGenFn(ctx context.Context, s *ast.CreateNanoflowStmt, dep
 
 	returnEntityName := ""
 	if s.ReturnType != nil {
-		if ref := paramEntityRef(s.ReturnType.Type); ref != nil && ref.Module != "" {
-			returnEntityName = ref.Module + "." + ref.Name
+		if ref := paramEntityRef(s.ReturnType.Type); ref != nil {
+			if ref.Module != "" {
+				returnEntityName = ref.Module + "." + ref.Name
+			} else if ref.Name != "" {
+				returnEntityName = resolveBareEntityQN(ectx.DomainModels, deps.ModuleLister, ref.Name)
+			}
 		}
 	}
 	ectx.trackCreatedNanoflow(s.Name.Module, s.Name.Name, model.ID(nf.ID()), containerID, returnEntityName)

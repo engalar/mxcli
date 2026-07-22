@@ -17,7 +17,10 @@ package executor
 
 import (
 	"github.com/mendixlabs/mxcli/mdl/ast"
+	"github.com/mendixlabs/mxcli/mdl/backend"
+	"github.com/mendixlabs/mxcli/mdl/repos"
 	"github.com/mendixlabs/mxcli/model"
+	genDm "github.com/mendixlabs/mxcli/modelsdk/gen/domainmodels"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 )
 
@@ -258,4 +261,46 @@ func buildNanoflowQualifiedNamesGen(ctx *ExecContext) map[string]bool {
 		result[modName+"."+nf.Name()] = true
 	}
 	return result
+}
+
+// resolveBareEntityQN looks up a bare entity name (no module prefix) across
+// all domain models and returns the fully qualified name Module.Entity, or ""
+// if the entity cannot be uniquely identified.
+func resolveBareEntityQN(dmRepo repos.DomainModelRepository, modLister backend.ModuleLister, bareName string) string {
+	if bareName == "" {
+		return ""
+	}
+
+	modules, err := modLister.ListModules()
+	if err != nil {
+		return ""
+	}
+	modNameByID := make(map[model.ID]string, len(modules))
+	for _, m := range modules {
+		modNameByID[m.ID] = m.Name
+	}
+
+	pairs, err := dmRepo.ListAllWithContainerID()
+	if err != nil {
+		return ""
+	}
+
+	for _, pair := range pairs {
+		if pair.DM == nil {
+			continue
+		}
+		for _, elem := range pair.DM.EntitiesItems() {
+			ent, ok := elem.(*genDm.Entity)
+			if !ok || ent == nil {
+				continue
+			}
+			if ent.Name() == bareName {
+				modName := modNameByID[pair.ContainerID]
+				if modName != "" {
+					return modName + "." + bareName
+				}
+			}
+		}
+	}
+	return ""
 }
