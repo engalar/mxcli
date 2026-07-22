@@ -330,8 +330,8 @@ func secPatchReconcileMemberAccessesDoc(doc bson.D, moduleName string) (bson.D, 
 								rights = "ReadOnly"
 							}
 							newMA := bson.D{
-								{Key: "$Type", Value: "DomainModels$MemberAccess"},
 								{Key: "$ID", Value: idToBsonBinary(generateUUID())},
+								{Key: "$Type", Value: "DomainModels$MemberAccess"},
 								{Key: "AccessRights", Value: rights},
 								{Key: "Attribute", Value: moduleName + "." + entityName + "." + attrName},
 							}
@@ -344,8 +344,8 @@ func secPatchReconcileMemberAccessesDoc(doc bson.D, moduleName string) (bson.D, 
 					for aName := range entityAssocNames {
 						if !coveredAssocs[aName] {
 							newMA := bson.D{
-								{Key: "$Type", Value: "DomainModels$MemberAccess"},
 								{Key: "$ID", Value: idToBsonBinary(generateUUID())},
+								{Key: "$Type", Value: "DomainModels$MemberAccess"},
 								{Key: "AccessRights", Value: defaultRights},
 								{Key: "Association", Value: moduleName + "." + aName},
 							}
@@ -358,8 +358,8 @@ func secPatchReconcileMemberAccessesDoc(doc bson.D, moduleName string) (bson.D, 
 					for sysRef := range systemAssocRefs {
 						if !coveredSystemAssocs[sysRef] {
 							newMA := bson.D{
-								{Key: "$Type", Value: "DomainModels$MemberAccess"},
 								{Key: "$ID", Value: idToBsonBinary(generateUUID())},
+								{Key: "$Type", Value: "DomainModels$MemberAccess"},
 								{Key: "AccessRights", Value: defaultRights},
 								{Key: "Association", Value: sysRef},
 							}
