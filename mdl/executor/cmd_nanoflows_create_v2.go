@@ -35,6 +35,7 @@ import (
 	mdlerrors "github.com/mendixlabs/mxcli/mdl/errors"
 	"github.com/mendixlabs/mxcli/model"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
+	genDt "github.com/mendixlabs/mxcli/modelsdk/gen/datatypes"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 	"github.com/mendixlabs/mxcli/modelsdk/version"
 )
@@ -241,6 +242,20 @@ func ExecCreateNanoflowGenFn(ctx context.Context, s *ast.CreateNanoflowStmt, dep
 
 	if s.ReturnType != nil {
 		if dt := convertASTToGenDataType(s.ReturnType.Type); dt != nil {
+			if obj, ok := dt.(*genDt.ObjectType); ok {
+				if qn := obj.EntityQualifiedName(); strings.HasPrefix(qn, ".") {
+					if resolved := resolveBareEntityQN(ectx.DomainModels, deps.ModuleLister, strings.TrimPrefix(qn, "."), s.Name.Module); resolved != "" {
+						obj.SetEntityQualifiedName(resolved)
+					}
+				}
+			}
+			if lst, ok := dt.(*genDt.ListType); ok {
+				if qn := lst.EntityQualifiedName(); strings.HasPrefix(qn, ".") {
+					if resolved := resolveBareEntityQN(ectx.DomainModels, deps.ModuleLister, strings.TrimPrefix(qn, "."), s.Name.Module); resolved != "" {
+						lst.SetEntityQualifiedName(resolved)
+					}
+				}
+			}
 			nf.SetMicroflowReturnType(dt)
 		}
 		if s.ReturnType.Variable != "" {

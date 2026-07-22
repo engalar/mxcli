@@ -149,6 +149,22 @@ func ExecCreateMicroflowGenFn(ctx context.Context, s *ast.CreateMicroflowStmt, d
 
 	if s.ReturnType != nil {
 		if dt := convertASTToGenDataType(s.ReturnType.Type); dt != nil {
+			// Qualify bare entity QN in the return type (e.g. ".ImportContext" → "ss_integration.ImportContext").
+			// convertASTToGenDataType produces unqualified QNs when the AST type has no module prefix.
+			if obj, ok := dt.(*genDt.ObjectType); ok {
+				if qn := obj.EntityQualifiedName(); strings.HasPrefix(qn, ".") {
+					if resolved := resolveBareEntityQN(ectx.DomainModels, deps.ModuleLister, strings.TrimPrefix(qn, "."), s.Name.Module); resolved != "" {
+						obj.SetEntityQualifiedName(resolved)
+					}
+				}
+			}
+			if lst, ok := dt.(*genDt.ListType); ok {
+				if qn := lst.EntityQualifiedName(); strings.HasPrefix(qn, ".") {
+					if resolved := resolveBareEntityQN(ectx.DomainModels, deps.ModuleLister, strings.TrimPrefix(qn, "."), s.Name.Module); resolved != "" {
+						lst.SetEntityQualifiedName(resolved)
+					}
+				}
+			}
 			mf.SetMicroflowReturnType(dt)
 		}
 		if s.ReturnType.Variable != "" {
