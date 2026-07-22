@@ -428,3 +428,94 @@ func TestPatchReconcile_CrossAssoc_AddedToMemberAccesses(t *testing.T) {
 		}
 	})
 }
+
+// TestPatchReconcile_MemberAccessIDFirstOrder verifies that every MemberAccess
+// storage object emitted by PatchReconcileMemberAccesses has $ID as its first
+// property. Mendix 11.12 enforces "$ID must be the first property of a storage
+// object"; violating it causes Expected '$ID' as the first property ... but got
+// '$Type'. Regression guard for 5e29696cf / c4e16fdae.
+func TestPatchReconcile_MemberAccessIDFirstOrder(t *testing.T) {
+	const moduleName = "TestModule"
+	entityName := "Order"
+	entityID := "ent-order-1"
+	attrName := "Total"
+
+	// Build a domain model with one entity, one attribute, one association.
+	assocName := "Order_Customer"
+	assocs := []bson.D{{
+		{Key: "$ID", Value: entityID + "-assoc-1"},
+		{Key: "Name", Value: assocName},
+		{Key: "ParentPointer", Value: entityID},
+	}}
+
+	raw := buildTestDomainModel(entityName, entityID, []string{attrName}, nil, assocs, nil)
+
+	patched, _, err := PatchReconcileMemberAccesses(raw, moduleName)
+	if err != nil {
+		t.Fatalf("PatchReconcileMemberAccesses: %v", err)
+	}
+
+	var doc bson.D
+	if err := bson.Unmarshal(patched, &doc); err != nil {
+		t.Fatalf("unmarshal patched: %v", err)
+	}
+
+	// Traverse every MemberAccess and verify $ID is first key.
+	var violations []string
+	for _, top := range doc {
+		if top.Key != "Entities" || top.Value == nil {
+			continue
+		}
+		entities, ok := top.Value.(bson.A)
+		if !ok {
+			continue
+		}
+		for _, entItem := range entities {
+			entDoc, ok := entItem.(bson.D)
+			if !ok {
+				continue
+			}
+			for _, f := range entDoc {
+				if f.Key != "AccessRules" || f.Value == nil {
+					continue
+				}
+				rules, ok := f.Value.(bson.A)
+				if !ok {
+					continue
+				}
+				for _, ruleItem := range rules {
+					ruleDoc, ok := ruleItem.(bson.D)
+					if !ok {
+						continue
+					}
+					for _, rf := range ruleDoc {
+						if rf.Key != "MemberAccesses" || rf.Value == nil {
+							continue
+						}
+						mas, ok := rf.Value.(bson.A)
+						if !ok {
+							continue
+						}
+						for i, maItem := range mas {
+							maDoc, ok := maItem.(bson.D)
+							if !ok || len(maDoc) == 0 {
+								continue
+							}
+							if maDoc[0].Key != "$ID" {
+								violations = append(violations,
+									fmt.Sprintf("MemberAccess[%d] first key = %q (want $ID), doc = %v", i, maDoc[0].Key, maDoc))
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	if len(violations) > 0 {
+		for _, v := range violations {
+			t.Error(v)
+		}
+		t.Fatalf("%d MemberAccess storage objects have wrong field order", len(violations))
+	}
+}
