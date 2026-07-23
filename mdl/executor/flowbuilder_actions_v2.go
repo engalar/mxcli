@@ -113,7 +113,16 @@ func (fb *flowBuilderGen) addCreateVariableActionGen(s *ast.DeclareStmt) element
 	if dt := convertASTToGenDataType(declType); dt != nil {
 		action.SetVariableType(dt)
 	}
-	action.SetInitialValue(mendixExprValue(fb.exprToString(s.InitialValue)))
+	if s.InitialValue != nil {
+		iv := mendixExprValue(fb.exprToString(s.InitialValue))
+		if iv != "" {
+			action.SetInitialValue(iv)
+		} else {
+			action.SetInitialValue("''")
+		}
+	} else {
+		action.SetInitialValue("''")
+	}
 
 	return fb.genActivityWrap(action, nil, "")
 }

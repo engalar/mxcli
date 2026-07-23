@@ -190,7 +190,7 @@ func (fb *flowBuilderGen) buildRestRequestHandlingGen(body *ast.RestBody) (eleme
 	case ast.RestBodyMapping:
 		mh := genMf.NewMappingRequestHandling()
 		assignFreshID(mh)
-		mh.SetMappingQualifiedName(body.MappingName.Module + "." + body.MappingName.Name)
+		mh.SetMappingID(fb.exportMappingID(body.MappingName.Module, body.MappingName.Name))
 		mh.SetMappingArgumentVariableName(body.SourceVariable)
 		return mh, "Mapping"
 	}
@@ -220,18 +220,21 @@ func (fb *flowBuilderGen) buildRestResultHandlingGen(s *ast.RestCallStmt) (eleme
 	case ast.RestResultString:
 		if s.OutputVariable != "" {
 			rh.SetOutputVariableName(s.OutputVariable)
+			rh.SetStoreInVariable(true)
 		}
 		return rh, "String"
 
 	case ast.RestResultResponse:
 		rh.SetOutputVariableName(s.OutputVariable)
+		rh.SetStoreInVariable(true)
 		return rh, "HttpResponse"
 
 	case ast.RestResultMapping:
 		rh.SetOutputVariableName(s.OutputVariable)
+		rh.SetStoreInVariable(true)
 		call := genMf.NewImportMappingCall()
 		assignFreshID(call)
-		call.SetMappingQualifiedName(s.Result.MappingName.Module + "." + s.Result.MappingName.Name)
+		call.SetMappingID(fb.mappingID(s.Result.MappingName.Module, s.Result.MappingName.Name))
 		// IsList drives ForceSingleOccurrence: list → false, single → true.
 		call.SetForceSingleOccurrence(!s.Result.IsList)
 		rh.SetImportMappingCall(call)

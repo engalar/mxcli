@@ -7,6 +7,11 @@
   "binary_properties": [
     "Image.imageData"
   ],
+  "id_ref_overrides": [
+    "ImportMappingCall.mapping",
+    "ExportXmlAction.mapping",
+    "MappingRequestHandling.mapping"
+  ],
   "storage_aliases": {
     "_doc": "SDK structureTypeName → BSON storage $Type. Codegen generates dual registration for each.",
     "DomainModels$Entity": "DomainModels$EntityImpl",

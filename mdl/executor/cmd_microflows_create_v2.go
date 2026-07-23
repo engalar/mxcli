@@ -193,6 +193,7 @@ func ExecCreateMicroflowGenFn(ctx context.Context, s *ast.CreateMicroflowStmt, d
 		measurer:          &layoutMeasurer{varTypes: map[string]string{}},
 		moduleLister:      deps.ModuleLister,
 		domainModelReader: deps.DomainModelReader,
+		mappingReader:     deps.MapperReader,
 		microflowsRepo:    deps.MicroflowRepo,
 		nanoflowsRepo:     deps.NanoflowRepo,
 		hierarchy:         hierarchy,

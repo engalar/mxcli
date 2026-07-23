@@ -281,9 +281,9 @@ func formatRestCallActionGen(a *genMf.RestCallAction) string {
 			}
 		}
 	case *genMf.MappingRequestHandling:
-		if mq := req.MappingQualifiedName(); mq != "" {
+		if mq := req.MappingRefID(); mq != "" {
 			sb.WriteString("\n    body mapping ")
-			sb.WriteString(mq)
+			sb.WriteString(string(mq))
 			if pv := req.MappingArgumentVariableName(); pv != "" {
 				sb.WriteString(" from $")
 				sb.WriteString(pv)
@@ -352,7 +352,7 @@ func readMappingResultHandlingGen(rh *genMf.ResultHandling) (string, string, boo
 	}
 	mappingID := ""
 	if call, ok := rh.ImportMappingCall().(*genMf.ImportMappingCall); ok && call != nil {
-		mappingID = call.MappingQualifiedName()
+		mappingID = string(call.MappingRefID())
 		if mappingID == "" {
 			mappingID = genMf.ImportMappingCallReturnValueMapping(call)
 		}
@@ -545,7 +545,7 @@ func formatImportXmlActionGen(a *genMf.ImportXmlAction) string {
 	if rh, ok := a.ResultHandling().(*genMf.ResultHandling); ok && rh != nil {
 		resultVar = readRestCallOutputVarGen(rh)
 		if call, ok := rh.ImportMappingCall().(*genMf.ImportMappingCall); ok && call != nil {
-			mappingName = call.MappingQualifiedName()
+			mappingName = string(call.MappingRefID())
 			if mappingName == "" {
 				mappingName = genMf.ImportMappingCallReturnValueMapping(call)
 			}
@@ -604,7 +604,7 @@ func formatExportXmlActionGen(a *genMf.ExportXmlAction) string {
 			mappingName = genMf.RawFieldStringFromBase(base, "MappingId")
 			paramVar = genMf.RawFieldStringFromBase(base, "MappingVariableName")
 		} else if mr, ok := rh.(*genMf.MappingRequestHandling); ok && mr != nil {
-			mappingName = mr.MappingQualifiedName()
+			mappingName = string(mr.MappingRefID())
 			paramVar = mr.MappingArgumentVariableName()
 		}
 	}
@@ -731,7 +731,7 @@ func readWebServiceMappingsGen(a *genMf.WebServiceCallAction, rh *genMf.ResultHa
 	receive := ""
 	if rh != nil {
 		if call, ok := rh.ImportMappingCall().(*genMf.ImportMappingCall); ok && call != nil {
-			receive = call.MappingQualifiedName()
+			receive = string(call.MappingRefID())
 			if receive == "" {
 				receive = genMf.ImportMappingCallReturnValueMapping(call)
 			}

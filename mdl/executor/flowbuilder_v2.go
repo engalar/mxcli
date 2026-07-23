@@ -115,6 +115,7 @@ type flowBuilderGen struct {
 
 	moduleLister       backend.ModuleLister
 	domainModelReader  backend.DomainModelReader
+	mappingReader      backend.MappingReader
 	microflowsRepo     repos.MicroflowRepository
 	nanoflowsRepo      repos.NanoflowRepository
 	hierarchy          *ContainerHierarchy

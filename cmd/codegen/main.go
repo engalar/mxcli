@@ -179,6 +179,7 @@ func main() {
 		meta.IdRefScope = suppl.IdRefScope
 		meta.BinaryUUIDProps = suppl.binaryUUIDProps
 		meta.BinaryProps = suppl.binaryProps
+		meta.IdRefOverrides = suppl.idRefOverrides
 		meta.CrossDomainProps = crossDomainProps
 
 		outDir := filepath.Join(*outBase, domain)
@@ -207,6 +208,7 @@ type supplements struct {
 	TypeRenames            map[string]string          `json:"type_renames"`           // old_bson → new_bson
 	BinaryUUIDPropsList    []string                   `json:"binary_uuid_properties"` // "ClassName.propName" or "*.propName"
 	BinaryPropsList        []string                   `json:"binary_properties"`      // "ClassName.propName" or "*.propName"
+	IdRefOverridesList     []string                   `json:"id_ref_overrides"`       // "ClassName.propName" — ByNameRef→ByIdRef
 
 	// Derived after loading.
 	forceConcreteSet       map[string]bool // built from ForceConcreteTypes slice
@@ -214,6 +216,7 @@ type supplements struct {
 	partListVersion2Fields map[string]bool // built from PartListVersion2List
 	binaryUUIDProps        map[string]bool // built from BinaryUUIDPropsList
 	binaryProps            map[string]bool // built from BinaryPropsList
+	idRefOverrides         map[string]bool // built from IdRefOverridesList
 	parsedExtraProps       map[string][]supplementProp
 	parsedExtraTypes       map[string][]supplementTypeDef
 }
@@ -278,6 +281,12 @@ func loadSupplements() supplements {
 	s.binaryProps = map[string]bool{}
 	for _, f := range s.BinaryPropsList {
 		s.binaryProps[f] = true
+	}
+
+	// Build id_ref_overrides lookup set from slice.
+	s.idRefOverrides = map[string]bool{}
+	for _, f := range s.IdRefOverridesList {
+		s.idRefOverrides[f] = true
 	}
 
 	// Parse extra_properties, skipping _doc string entries.

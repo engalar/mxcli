@@ -54,8 +54,8 @@ func TestAddImportFromMappingActionGenSetsAllFields(t *testing.T) {
 	if !ok {
 		t.Fatalf("ImportMappingCall = %T, want *ImportMappingCall", rh.ImportMappingCall())
 	}
-	if call.MappingQualifiedName() != "Sales.OrderImport" {
-		t.Fatalf("mapping QN = %q", call.MappingQualifiedName())
+	if call.MappingRefID() != "00000000-0000-0000-0000-000000000000" {
+		t.Fatalf("mapping ID = %q", call.MappingRefID())
 	}
 }
 
@@ -98,8 +98,8 @@ func TestAddExportToMappingActionGenSetsFields(t *testing.T) {
 	}
 	fb.addExportToMappingActionGen(stmt)
 	act := actionFromObjects(t, fb).(*genMf.ExportXmlAction)
-	if act.MappingQualifiedName() != "Sales.OrderExport" {
-		t.Fatalf("mapping QN = %q", act.MappingQualifiedName())
+	if act.MappingRefID() != "00000000-0000-0000-0000-000000000000" {
+		t.Fatalf("mapping ID = %q", act.MappingRefID())
 	}
 	if act.MappingArgumentVariableName() != "Order" {
 		t.Fatalf("mapping arg var = %q", act.MappingArgumentVariableName())

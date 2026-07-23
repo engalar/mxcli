@@ -573,7 +573,7 @@ func init() {
 		TypeName: "Microflows$ExportXmlAction",
 		Properties: []codec.PropDesc{
 			{Name: "errorHandlingType", BSONKey: "ErrorHandlingType", Kind: codec.PropKindEnum, RefType: ""},
-			{Name: "mapping", BSONKey: "Mapping", Kind: codec.PropKindByNameRef, RefType: "ExportMappings$ExportMapping"},
+			{Name: "mapping", BSONKey: "Mapping", Kind: codec.PropKindByIdRef, RefType: ""},
 			{Name: "mappingArgumentVariableName", BSONKey: "MappingArgumentVariableName", Kind: codec.PropKindString, RefType: ""},
 			{Name: "resultHandling", BSONKey: "ResultHandling", Kind: codec.PropKindPart, RefType: ""},
 			{Name: "outputMethod", BSONKey: "OutputMethod", Kind: codec.PropKindPart, RefType: ""},
@@ -782,7 +782,7 @@ func init() {
 	codec.DefaultDescRegistry.Register("Microflows$ImportMappingCall", &codec.TypeDesc{
 		TypeName: "Microflows$ImportMappingCall",
 		Properties: []codec.PropDesc{
-			{Name: "mapping", BSONKey: "Mapping", Kind: codec.PropKindByNameRef, RefType: "ImportMappings$ImportMapping"},
+			{Name: "mapping", BSONKey: "Mapping", Kind: codec.PropKindByIdRef, RefType: ""},
 			{Name: "objectHandlingBackup", BSONKey: "ObjectHandlingBackup", Kind: codec.PropKindEnum, RefType: ""},
 			{Name: "commit", BSONKey: "Commit", Kind: codec.PropKindEnum, RefType: ""},
 			{Name: "mappingArgumentVariableName", BSONKey: "MappingArgumentVariableName", Kind: codec.PropKindString, RefType: ""},
@@ -990,7 +990,7 @@ func init() {
 	codec.DefaultDescRegistry.Register("Microflows$MappingRequestHandling", &codec.TypeDesc{
 		TypeName: "Microflows$MappingRequestHandling",
 		Properties: []codec.PropDesc{
-			{Name: "mapping", BSONKey: "Mapping", Kind: codec.PropKindByNameRef, RefType: "ExportMappings$ExportMapping"},
+			{Name: "mapping", BSONKey: "Mapping", Kind: codec.PropKindByIdRef, RefType: ""},
 			{Name: "mappingArgumentVariableName", BSONKey: "MappingArgumentVariableName", Kind: codec.PropKindString, RefType: ""},
 			{Name: "contentType", BSONKey: "ContentType", Kind: codec.PropKindEnum, RefType: ""},
 		},

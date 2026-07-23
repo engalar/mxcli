@@ -13,7 +13,7 @@
 //
 //   addExportToMappingActionGen
 //     → genMf.ExportXmlAction
-//        ├── MappingQualifiedName        = mapping reference
+//        ├── MappingID                   = mapping reference (UUID)
 //        └── MappingArgumentVariableName = source entity variable
 //
 // gen-vs-legacy schema notes:
@@ -27,7 +27,7 @@
 //     is implicit (the gen describer uses presence of ImportMappingCall
 //     to recognise the mapping shape).
 //
-//   - gen ExportXmlAction has flat `MappingQualifiedName` +
+//   - gen ExportXmlAction has flat `MappingID` +
 //     `MappingArgumentVariableName` setters — no nested
 //     RequestHandling element wrapper like the legacy SDK uses.
 //
@@ -47,15 +47,37 @@ import (
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 )
 
+// mappingID resolves a qualified name to a mapping UUID via the
+// backend, falling back to a deterministic nil UUID when the backend
+// is unavailable (test mode or offline build).
+func (fb *flowBuilderGen) mappingID(module, name string) element.ID {
+	if fb.mappingReader != nil {
+		if im, err := fb.mappingReader.GetImportMappingByQualifiedName(module, name); err == nil && im != nil {
+			return element.ID(im.BaseElement.ID)
+		}
+	}
+	return "00000000-0000-0000-0000-000000000000"
+}
+
+// exportMappingID resolves an export mapping qualified name to UUID.
+func (fb *flowBuilderGen) exportMappingID(module, name string) element.ID {
+	if fb.mappingReader != nil {
+		if em, err := fb.mappingReader.GetExportMappingByQualifiedName(module, name); err == nil && em != nil {
+			return element.ID(em.BaseElement.ID)
+		}
+	}
+	return "00000000-0000-0000-0000-000000000000"
+}
+
 // addImportFromMappingActionGen emits a `[$Y = ]import from mapping
 // Mod.Map($SourceVar);` activity. Builds the nested ResultHandling →
 // ImportMappingCall structure that gen requires.
 func (fb *flowBuilderGen) addImportFromMappingActionGen(s *ast.ImportFromMappingStmt) element.ID {
-	mappingQN := s.Mapping.Module + "." + s.Mapping.Name
+	mappingID := fb.mappingID(s.Mapping.Module, s.Mapping.Name)
 
 	call := genMf.NewImportMappingCall()
 	assignFreshID(call)
-	call.SetMappingQualifiedName(mappingQN)
+	call.SetMappingID(mappingID)
 	// Default to single-object until backend metadata says otherwise.
 	// Backend-driven cardinality inference is wired in commit j; the
 	// describer's `formatImportXmlActionGen` emits a single-object
@@ -81,10 +103,11 @@ func (fb *flowBuilderGen) addImportFromMappingActionGen(s *ast.ImportFromMapping
 // flat setters for the mapping reference + source variable, so no
 // nested wrapper element is needed.
 func (fb *flowBuilderGen) addExportToMappingActionGen(s *ast.ExportToMappingStmt) element.ID {
+	mid := fb.exportMappingID(s.Mapping.Module, s.Mapping.Name)
 	action := genMf.NewExportXmlAction()
 	assignFreshID(action)
 	action.SetErrorHandlingType(fb.ehTypeGen(s.ErrorHandling))
-	action.SetMappingQualifiedName(s.Mapping.Module + "." + s.Mapping.Name)
+	action.SetMappingID(mid)
 	action.SetMappingArgumentVariableName(s.SourceVariable)
 	return fb.genActivityWrap(action, s.ErrorHandling, "")
 }

@@ -73,7 +73,7 @@ func init() {
 		{Prop: "ExportMapping", Kind: codec.RefByName, Target: "ExportMappings$ExportMapping"},
 	})
 	codec.DefaultRefRegistry.RegisterRefs("Microflows$ExportXmlAction", []codec.RefMeta{
-		{Prop: "Mapping", Kind: codec.RefByName, Target: "ExportMappings$ExportMapping"},
+		{Prop: "Mapping", Kind: codec.RefById, Target: ""},
 	})
 	codec.DefaultRefRegistry.RegisterRefs("Microflows$InspectAttribute", []codec.RefMeta{
 		{Prop: "Attribute", Kind: codec.RefByName, Target: "DomainModels$Attribute"},
@@ -97,7 +97,7 @@ func init() {
 		{Prop: "Workflow", Kind: codec.RefByName, Target: "Workflows$Workflow"},
 	})
 	codec.DefaultRefRegistry.RegisterRefs("Microflows$ImportMappingCall", []codec.RefMeta{
-		{Prop: "Mapping", Kind: codec.RefByName, Target: "ImportMappings$ImportMapping"},
+		{Prop: "Mapping", Kind: codec.RefById, Target: ""},
 	})
 	codec.DefaultRefRegistry.RegisterRefs("Microflows$ImportMappingJavaActionParameterValue", []codec.RefMeta{
 		{Prop: "ImportMapping", Kind: codec.RefByName, Target: "ImportMappings$ImportMapping"},
@@ -134,7 +134,7 @@ func init() {
 		{Prop: "MlMappingDocument", Kind: codec.RefByName, Target: "MLMappings$MLMappingDocument"},
 	})
 	codec.DefaultRefRegistry.RegisterRefs("Microflows$MappingRequestHandling", []codec.RefMeta{
-		{Prop: "Mapping", Kind: codec.RefByName, Target: "ExportMappings$ExportMapping"},
+		{Prop: "Mapping", Kind: codec.RefById, Target: ""},
 	})
 	codec.DefaultRefRegistry.RegisterRefs("Microflows$MemberChange", []codec.RefMeta{
 		{Prop: "Attribute", Kind: codec.RefByName, Target: "DomainModels$Attribute"},

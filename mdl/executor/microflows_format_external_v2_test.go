@@ -174,10 +174,10 @@ func TestFormatActionGen_RestCallAction(t *testing.T) {
 		a := build(t, genMf.HttpMethodGet, "https://api.example.com/users", "Users", genMf.ResultHandlingTypeMapping)
 		rh, _ := a.ResultHandling().(*genMf.ResultHandling)
 		call := genMf.NewImportMappingCall()
-		call.SetMappingQualifiedName("Sales.UserMapping")
+		call.SetMappingID("a1b2c3d4-e5f6-7890-abcd-ef1234567890")
 		rh.SetImportMappingCall(call)
 		got := formatActionGen(nil, a)
-		want := "$Users = rest call get 'https://api.example.com/users'\n    returns mapping Sales.UserMapping;"
+		want := "$Users = rest call get 'https://api.example.com/users'\n    returns mapping a1b2c3d4-e5f6-7890-abcd-ef1234567890;"
 		if got != want {
 			t.Errorf("got %q, want %q", got, want)
 		}
@@ -372,12 +372,12 @@ func TestFormatActionGen_ImportXmlAction(t *testing.T) {
 		rh := genMf.NewResultHandling()
 		rh.SetOutputVariableName("Imported")
 		call := genMf.NewImportMappingCall()
-		call.SetMappingQualifiedName("Sales.ImportOrders")
+		call.SetMappingID("a1b2c3d4-e5f6-7890-abcd-ef1234567890")
 		rh.SetImportMappingCall(call)
 		a.SetResultHandling(rh)
 
 		got := formatActionGen(nil, a)
-		want := "$Imported = import from mapping Sales.ImportOrders($XmlDoc);"
+		want := "$Imported = import from mapping a1b2c3d4-e5f6-7890-abcd-ef1234567890($XmlDoc);"
 		if got != want {
 			t.Errorf("got %q, want %q", got, want)
 		}
@@ -389,12 +389,12 @@ func TestFormatActionGen_ImportXmlAction(t *testing.T) {
 
 		rh := genMf.NewResultHandling()
 		call := genMf.NewImportMappingCall()
-		call.SetMappingQualifiedName("Sales.ImportOrders")
+		call.SetMappingID("a1b2c3d4-e5f6-7890-abcd-ef1234567890")
 		rh.SetImportMappingCall(call)
 		a.SetResultHandling(rh)
 
 		got := formatActionGen(nil, a)
-		want := "import from mapping Sales.ImportOrders($XmlDoc);"
+		want := "import from mapping a1b2c3d4-e5f6-7890-abcd-ef1234567890($XmlDoc);"
 		if got != want {
 			t.Errorf("got %q, want %q", got, want)
 		}
@@ -454,12 +454,12 @@ func TestFormatActionGen_ExportXmlAction(t *testing.T) {
 		a.SetOutputMethod(om)
 
 		req := genMf.NewMappingRequestHandling()
-		req.SetMappingQualifiedName("Sales.ExportOrders")
+		req.SetMappingID("a1b2c3d4-e5f6-7890-abcd-ef1234567890")
 		req.SetMappingArgumentVariableName("Order")
 		a.SetResultHandling(req)
 
 		got := formatActionGen(nil, a)
-		want := "$Xml = export to mapping Sales.ExportOrders($Order);"
+		want := "$Xml = export to mapping a1b2c3d4-e5f6-7890-abcd-ef1234567890($Order);"
 		if got != want {
 			t.Errorf("got %q, want %q", got, want)
 		}
@@ -469,11 +469,11 @@ func TestFormatActionGen_ExportXmlAction(t *testing.T) {
 		a := genMf.NewExportXmlAction()
 
 		req := genMf.NewMappingRequestHandling()
-		req.SetMappingQualifiedName("Sales.ExportOrders")
+		req.SetMappingID("a1b2c3d4-e5f6-7890-abcd-ef1234567890")
 		a.SetResultHandling(req)
 
 		got := formatActionGen(nil, a)
-		want := "export to mapping Sales.ExportOrders;"
+		want := "export to mapping a1b2c3d4-e5f6-7890-abcd-ef1234567890;"
 		if got != want {
 			t.Errorf("got %q, want %q", got, want)
 		}
@@ -593,12 +593,12 @@ func TestFormatActionGen_WebServiceCallAction(t *testing.T) {
 		rh := genMf.NewResultHandling()
 		rh.SetOutputVariableName("Order")
 		call := genMf.NewImportMappingCall()
-		call.SetMappingQualifiedName("Integration.ReceiveOrder")
+		call.SetMappingID("a1b2c3d4-e5f6-7890-abcd-ef1234567890")
 		rh.SetImportMappingCall(call)
 		a.SetResultHandling(rh)
 
 		got := formatActionGen(nil, a)
-		want := "$Order = call web service Integration.MyService\noperation GetOrder\nsend mapping Integration.SendOrder\nreceive mapping Integration.ReceiveOrder\ntimeout 60;"
+		want := "$Order = call web service Integration.MyService\noperation GetOrder\nsend mapping Integration.SendOrder\nreceive mapping a1b2c3d4-e5f6-7890-abcd-ef1234567890\ntimeout 60;"
 		if got != want {
 			t.Errorf("got %q, want %q", got, want)
 		}

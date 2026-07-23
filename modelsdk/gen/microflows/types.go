@@ -3841,7 +3841,7 @@ func (o *ExportMappingParameterValue) InitFromRaw(raw bson.Raw) {
 type ExportXmlAction struct {
 	element.Base
 	errorHandlingType           *property.Enum[string]
-	mapping                     *property.ByNameRef[element.Element]
+	mapping                     *property.ByIdRef[element.Element]
 	mappingArgumentVariableName *property.Primitive[string]
 	resultHandling              *property.Part[element.Element]
 	outputMethod                *property.Part[element.Element]
@@ -3858,14 +3858,14 @@ func (o *ExportXmlAction) SetErrorHandlingType(v string) {
 	o.errorHandlingType.Set(v)
 }
 
-// MappingQualifiedName returns the value of the mapping property.
-func (o *ExportXmlAction) MappingQualifiedName() string {
-	return o.mapping.QualifiedName()
+// MappingRefID returns the value of the mapping property.
+func (o *ExportXmlAction) MappingRefID() element.ID {
+	return o.mapping.RefID()
 }
 
-// SetMappingQualifiedName sets the value of the mapping property.
-func (o *ExportXmlAction) SetMappingQualifiedName(v string) {
-	o.mapping.SetQualifiedName(v)
+// SetMappingID sets the value of the mapping property.
+func (o *ExportXmlAction) SetMappingID(v element.ID) {
+	o.mapping.SetID(v)
 }
 
 // MappingArgumentVariableName returns the value of the mappingArgumentVariableName property.
@@ -3918,7 +3918,9 @@ func (o *ExportXmlAction) InitFromRaw(raw bson.Raw) {
 	}
 	if val, err := raw.LookupErr("Mapping"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
-			o.mapping.SetFromDecode(s)
+			o.mapping.SetFromDecode(element.ID(s))
+		} else if _, bdata, bok := val.BinaryOK(); bok {
+			o.mapping.SetFromDecode(element.ID(codec.BinaryToUUID(bdata)))
 		}
 	}
 	o.mappingArgumentVariableName.Init(raw)
@@ -5514,7 +5516,7 @@ func (o *HttpHeaderEntry) InitFromRaw(raw bson.Raw) {
 
 type ImportMappingCall struct {
 	element.Base
-	mapping                     *property.ByNameRef[element.Element]
+	mapping                     *property.ByIdRef[element.Element]
 	objectHandlingBackup        *property.Enum[string]
 	commit                      *property.Enum[string]
 	mappingArgumentVariableName *property.Primitive[string]
@@ -5523,14 +5525,14 @@ type ImportMappingCall struct {
 	forceSingleOccurrence       *property.Primitive[bool]
 }
 
-// MappingQualifiedName returns the value of the mapping property.
-func (o *ImportMappingCall) MappingQualifiedName() string {
-	return o.mapping.QualifiedName()
+// MappingRefID returns the value of the mapping property.
+func (o *ImportMappingCall) MappingRefID() element.ID {
+	return o.mapping.RefID()
 }
 
-// SetMappingQualifiedName sets the value of the mapping property.
-func (o *ImportMappingCall) SetMappingQualifiedName(v string) {
-	o.mapping.SetQualifiedName(v)
+// SetMappingID sets the value of the mapping property.
+func (o *ImportMappingCall) SetMappingID(v element.ID) {
+	o.mapping.SetID(v)
 }
 
 // ObjectHandlingBackup returns the value of the objectHandlingBackup property.
@@ -5598,7 +5600,9 @@ func (o *ImportMappingCall) SetForceSingleOccurrence(v bool) {
 func (o *ImportMappingCall) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Mapping"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
-			o.mapping.SetFromDecode(s)
+			o.mapping.SetFromDecode(element.ID(s))
+		} else if _, bdata, bok := val.BinaryOK(); bok {
+			o.mapping.SetFromDecode(element.ID(codec.BinaryToUUID(bdata)))
 		}
 	}
 	if val, err := raw.LookupErr("ObjectHandlingBackup"); err == nil {
@@ -7025,19 +7029,19 @@ func (o *MLModelCallParameterMapping) InitFromRaw(raw bson.Raw) {
 
 type MappingRequestHandling struct {
 	element.Base
-	mapping                     *property.ByNameRef[element.Element]
+	mapping                     *property.ByIdRef[element.Element]
 	mappingArgumentVariableName *property.Primitive[string]
 	contentType                 *property.Enum[string]
 }
 
-// MappingQualifiedName returns the value of the mapping property.
-func (o *MappingRequestHandling) MappingQualifiedName() string {
-	return o.mapping.QualifiedName()
+// MappingRefID returns the value of the mapping property.
+func (o *MappingRequestHandling) MappingRefID() element.ID {
+	return o.mapping.RefID()
 }
 
-// SetMappingQualifiedName sets the value of the mapping property.
-func (o *MappingRequestHandling) SetMappingQualifiedName(v string) {
-	o.mapping.SetQualifiedName(v)
+// SetMappingID sets the value of the mapping property.
+func (o *MappingRequestHandling) SetMappingID(v element.ID) {
+	o.mapping.SetID(v)
 }
 
 // MappingArgumentVariableName returns the value of the mappingArgumentVariableName property.
@@ -7065,7 +7069,9 @@ func (o *MappingRequestHandling) SetContentType(v string) {
 func (o *MappingRequestHandling) InitFromRaw(raw bson.Raw) {
 	if val, err := raw.LookupErr("Mapping"); err == nil {
 		if s, ok := val.StringValueOK(); ok {
-			o.mapping.SetFromDecode(s)
+			o.mapping.SetFromDecode(element.ID(s))
+		} else if _, bdata, bok := val.BinaryOK(); bok {
+			o.mapping.SetFromDecode(element.ID(codec.BinaryToUUID(bdata)))
 		}
 	}
 	o.mappingArgumentVariableName.Init(raw)
@@ -13950,7 +13956,7 @@ func initExportXmlAction() *ExportXmlAction {
 	o.SetTypeName("Microflows$ExportXmlAction")
 	o.errorHandlingType = property.NewEnum[string]("ErrorHandlingType")
 	o.errorHandlingType.Bind(&o.Base, 0)
-	o.mapping = property.NewByNameRef[element.Element]("Mapping", "ExportMappings$ExportMapping")
+	o.mapping = property.NewByIdRef[element.Element]("Mapping")
 	o.mapping.Bind(&o.Base, 1)
 	o.mappingArgumentVariableName = property.NewPrimitive[string]("MappingArgumentVariableName", property.DecodeString)
 	o.mappingArgumentVariableName.Bind(&o.Base, 2)
@@ -14491,7 +14497,7 @@ func NewHttpHeaderEntry() *HttpHeaderEntry {
 func initImportMappingCall() *ImportMappingCall {
 	o := &ImportMappingCall{}
 	o.SetTypeName("Microflows$ImportMappingCall")
-	o.mapping = property.NewByNameRef[element.Element]("Mapping", "ImportMappings$ImportMapping")
+	o.mapping = property.NewByIdRef[element.Element]("Mapping")
 	o.mapping.Bind(&o.Base, 0)
 	o.objectHandlingBackup = property.NewEnum[string]("ObjectHandlingBackup")
 	o.objectHandlingBackup.Bind(&o.Base, 1)
@@ -15098,7 +15104,7 @@ func NewMLModelCallParameterMapping() *MLModelCallParameterMapping {
 func initMappingRequestHandling() *MappingRequestHandling {
 	o := &MappingRequestHandling{}
 	o.SetTypeName("Microflows$MappingRequestHandling")
-	o.mapping = property.NewByNameRef[element.Element]("Mapping", "ExportMappings$ExportMapping")
+	o.mapping = property.NewByIdRef[element.Element]("Mapping")
 	o.mapping.Bind(&o.Base, 0)
 	o.mappingArgumentVariableName = property.NewPrimitive[string]("MappingArgumentVariableName", property.DecodeString)
 	o.mappingArgumentVariableName.Bind(&o.Base, 1)

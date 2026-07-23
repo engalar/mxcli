@@ -141,8 +141,8 @@ func TestAddRestCallActionGenMappingBodyRequestHandling(t *testing.T) {
 	if !ok {
 		t.Fatalf("RequestHandling = %T, want *MappingRequestHandling", act.RequestHandling())
 	}
-	if rh.MappingQualifiedName() != "Sales.OrderExport" {
-		t.Fatalf("mapping QN = %q", rh.MappingQualifiedName())
+	if rh.MappingRefID() != "00000000-0000-0000-0000-000000000000" {
+		t.Fatalf("mapping ID = %q", rh.MappingRefID())
 	}
 	if rh.MappingArgumentVariableName() != "Order" {
 		t.Fatalf("mapping arg = %q", rh.MappingArgumentVariableName())
@@ -202,8 +202,8 @@ func TestAddRestCallActionGenResultMappingDiscriminator(t *testing.T) {
 	if !ok {
 		t.Fatalf("ImportMappingCall = %T, want *ImportMappingCall", rh.ImportMappingCall())
 	}
-	if call.MappingQualifiedName() != "Sales.OrderImport" {
-		t.Fatalf("mapping QN = %q", call.MappingQualifiedName())
+	if call.MappingRefID() != "00000000-0000-0000-0000-000000000000" {
+		t.Fatalf("mapping ID = %q", call.MappingRefID())
 	}
 	if !call.ForceSingleOccurrence() {
 		t.Fatal("single object → ForceSingleOccurrence should be true")
@@ -257,6 +257,29 @@ func TestAddRestCallActionGenTimeoutExpression(t *testing.T) {
 	act := actionFromObjects(t, fb).(*genMf.RestCallAction)
 	if act.TimeOutExpression() != "60" {
 		t.Fatalf("timeout = %q, want 60", act.TimeOutExpression())
+	}
+}
+
+func TestAddRestCallActionGenResultStringSetsStoreInVariable(t *testing.T) {
+	fb := newActionTestFb()
+	stmt := newRestStmtBase()
+	stmt.OutputVariable = "Resp"
+	fb.addRestCallActionGen(stmt)
+	act := actionFromObjects(t, fb).(*genMf.RestCallAction)
+	rh := act.ResultHandling().(*genMf.ResultHandling)
+	if !rh.StoreInVariable() {
+		t.Fatal("StoreInVariable should be true when output variable is set on String result")
+	}
+}
+
+func TestAddRestCallActionGenResultStringNoOutputOmitsStoreInVariable(t *testing.T) {
+	fb := newActionTestFb()
+	stmt := newRestStmtBase()
+	fb.addRestCallActionGen(stmt)
+	act := actionFromObjects(t, fb).(*genMf.RestCallAction)
+	rh := act.ResultHandling().(*genMf.ResultHandling)
+	if rh.StoreInVariable() {
+		t.Fatal("StoreInVariable should be false when no output variable on String result")
 	}
 }
 

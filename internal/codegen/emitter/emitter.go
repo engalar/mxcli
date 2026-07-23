@@ -282,6 +282,32 @@ func Generate(meta *dtsparser.DomainMeta, outDir string) error {
 					td.Fields[fi].Constructor = "property.NewBinaryPrimitive(\"" + bsonKey + "\")"
 				}
 			}
+
+			// Apply IdRef override: switch ByNameRef → ByIdRef for fields that
+			// the TypeScript SDK declares as ByNameReferenceProperty but the
+			// BSON layer requires a UUID (ByIdRef) reference. mx check needs
+			// UUID references for ImportMappingCall.mapping, ExportXmlAction.mapping, etc.
+			if meta.IdRefOverrides != nil && td.Fields[fi].IsRef {
+				propKey := cls.Name + "." + td.Fields[fi].PropName
+				if meta.IdRefOverrides[propKey] {
+					bsonKey := td.Fields[fi].BSONKey
+					getterBase := td.Fields[fi].GetterName
+					if strings.HasSuffix(getterBase, "QualifiedName") {
+						getterBase = getterBase[:len(getterBase)-len("QualifiedName")]
+					}
+					td.Fields[fi].FieldType = "*property.ByIdRef[element.Element]"
+					td.Fields[fi].GetterName = getterBase + "RefID"
+					td.Fields[fi].GetterCall = "RefID"
+					td.Fields[fi].GetterReturn = "element.ID"
+					td.Fields[fi].SetterName = "Set" + getterBase + "ID"
+					td.Fields[fi].SetterArg = "element.ID"
+					td.Fields[fi].SetterCall = "SetID"
+					td.Fields[fi].IsRef = false
+					td.Fields[fi].IsIdRef = true
+					td.Fields[fi].TargetType = ""
+					td.Fields[fi].Constructor = "property.NewByIdRef[element.Element](\"" + bsonKey + "\")"
+				}
+			}
 		}
 		// Apply property order overrides — reorder fields to match Mendix's
 		// BSON serialization order (which may differ from the SDK definition order).

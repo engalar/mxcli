@@ -177,6 +177,12 @@ type DomainMeta struct {
 	// as BSON Binary blobs.
 	BinaryProps map[string]bool
 
+	// IdRefOverrides is a set of "ClassName.propertyName" pairs where the
+	// TypeScript SDK declares a ByNameReferenceProperty but the BSON layer
+	// requires a ByIdRef (UUID) reference instead. Mx check needs UUID
+	// references for ImportMappingCall.mapping and ExportXmlAction.mapping.
+	IdRefOverrides map[string]bool
+
 	// CrossDomainProps maps class names from OTHER domains (e.g. "Document",
 	// "ModuleDocument") to their properties. Used by the emitter to resolve
 	// cross-domain inheritance (e.g. Workflow extends projects.Document).
