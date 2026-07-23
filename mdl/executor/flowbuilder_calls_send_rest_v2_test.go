@@ -81,8 +81,8 @@ func TestAddSendRestRequestActionGenBodyVariable(t *testing.T) {
 }
 
 func TestAddSendRestRequestActionGenParameters(t *testing.T) {
-	// Offline (no fb.restServices) — all parameters route to query
-	// mappings (legacy fallback).
+	// All parameters route to ParameterMappings as RestParameterMapping,
+	// matching the `Parameters:` field in REST client operations.
 	fb := newActionTestFb()
 	stmt := &ast.SendRestRequestStmt{
 		Operation: ast.QualifiedName{Module: "Mod", Name: "Svc.Op"},
@@ -93,16 +93,16 @@ func TestAddSendRestRequestActionGenParameters(t *testing.T) {
 	}
 	fb.addSendRestRequestActionGen(stmt)
 	act := actionFromObjects(t, fb).(*genMf.RestOperationCallAction)
-	queryParams := act.QueryParameterMappingsItems()
-	if len(queryParams) != 2 {
-		t.Fatalf("query params = %d, want 2", len(queryParams))
+	pathParams := act.ParameterMappingsItems()
+	if len(pathParams) != 2 {
+		t.Fatalf("path params = %d, want 2", len(pathParams))
 	}
-	q1 := queryParams[0].(*genMf.RestOperationParameterMapping)
-	if q1.ParameterQualifiedName() != "Mod.Svc.Op.p1" {
-		t.Fatalf("query param 1 QN = %q", q1.ParameterQualifiedName())
+	p1 := pathParams[0].(*genMf.RestParameterMapping)
+	if p1.ParameterQualifiedName() != "Mod.Svc.Op.p1" {
+		t.Fatalf("param 1 QN = %q", p1.ParameterQualifiedName())
 	}
-	if q1.Value() != "$X" {
-		t.Fatalf("query param 1 value = %q", q1.Value())
+	if p1.Value() != "$X" {
+		t.Fatalf("param 1 value = %q", p1.Value())
 	}
 }
 

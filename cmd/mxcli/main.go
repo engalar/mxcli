@@ -362,6 +362,7 @@ func init() {
 	lintCmd.Flags().BoolP("color", "", false, "Use colored output")
 	lintCmd.Flags().BoolP("list-rules", "l", false, "List available lint rules")
 	lintCmd.Flags().StringSliceP("exclude", "e", nil, "Modules to exclude from linting")
+	lintCmd.Flags().Bool("fix", false, "Auto-fix fixable violations (currently MPR016 missing page params)")
 
 	// Report command flags
 	reportCmd.Flags().StringP("format", "f", "markdown", "Output format: markdown, json, html")

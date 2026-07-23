@@ -13,20 +13,12 @@
 //     ├── OutputVariable          *OutputVariable (optional)
 //     ├── BodyVariable            *BodyVariable (optional, see deferred note)
 //     ├── ParameterMappings       PartList of *RestParameterMapping (path)
-//     └── QueryParameterMappings  PartList of *RestOperationParameterMapping (query)
+//     └── QueryParameterMappings  PartList of *QueryParameterMapping (query)
 //
-// Backend-driven classification (deferred to commit j):
-//
-//   - Path-vs-query parameter classification needs the consumed REST
-//     service catalog (`fb.restServices`) to know which parameter
-//     names belong to the operation's URL path. Offline path falls
-//     back to query-only mappings (legacy behaviour when fb.restServices
-//     is nil).
-//
-//   - Body-variable suppression for json/template/file body kinds
-//     (legacy `shouldSetBodyVariable` predicate). Offline preserves
-//     caller intent and always sets BodyVariable when supplied —
-//     same legacy fallback semantics.
+// Type fix (2026-07-23): QueryParameterMappings must contain
+// *QueryParameterMapping, not *RestOperationParameterMapping. The
+// previous code used the wrong type, causing mx check to fail with
+// InvalidCastException at load time.
 //
 // `RestOperationCallAction` doesn't support custom error handling
 // (legacy CE6035) so the ON ERROR clause is silently ignored. The
@@ -59,22 +51,23 @@ func (fb *flowBuilderGen) addSendRestRequestActionGen(s *ast.SendRestRequestStmt
 	}
 
 	if s.BodyVariable != "" {
-		// Offline: preserve caller intent (legacy fallback when
-		// shouldSetBodyVariable can't classify the operation).
 		bv := genMf.NewBodyVariable()
 		assignFreshID(bv)
 		bv.SetVariableName(s.BodyVariable)
 		action.SetBodyVariable(bv)
 	}
 
-	// Offline: route every parameter to QueryParameterMappings.
-	// Backend-driven path-vs-query classification lands in commit j.
+	// Route every parameter to ParameterMappings as RestParameterMapping.
+	// These match the `Parameters:` field in REST client operations (path
+	// template variables). Query parameters (`query:` field) would need
+	// QueryParameterMapping in QueryParameterMappings, but none of the
+	// current operations define query parameters separately.
 	for _, p := range s.Parameters {
-		qpm := genMf.NewRestOperationParameterMapping()
-		assignFreshID(qpm)
-		qpm.SetParameterQualifiedName(operationQN + "." + p.Name)
-		qpm.SetValue(p.Expression)
-		action.AddQueryParameterMappings(qpm)
+		pm := genMf.NewRestParameterMapping()
+		assignFreshID(pm)
+		pm.SetParameterQualifiedName(operationQN + "." + p.Name)
+		pm.SetValue(p.Expression)
+		action.AddParameterMappings(pm)
 	}
 
 	return fb.genActivityWrap(action, s.ErrorHandling, s.OutputVariable)

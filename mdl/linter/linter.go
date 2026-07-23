@@ -56,6 +56,7 @@ type Violation struct {
 	Message    string
 	Location   Location
 	Suggestion string
+	Extra      any // Extra data for auto-fix (set by rule, used by fixer)
 }
 
 // Location identifies where a violation occurred.

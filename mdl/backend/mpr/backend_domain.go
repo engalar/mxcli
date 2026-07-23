@@ -508,6 +508,32 @@ func (b *MprBackend) GetRawUnit(id model.ID) (map[string]any, error) {
 	b.initSubBackends()
 	return b.rawUnits.GetRawUnit(id)
 }
+
+// SetPageParameterRequired sets the IsRequired field of a page parameter.
+// Uses the gen-typed page API to ensure BSON field order is preserved.
+func (b *MprBackend) SetPageParameterRequired(pageID model.ID, paramName string, required bool) error {
+	b.initSubBackends()
+	repo := mprrepos.NewPageRepository(b.writer)
+	page, err := repo.Get(pageID)
+	if err != nil {
+		return fmt.Errorf("SetPageParameterRequired: load page: %w", err)
+	}
+	if page == nil {
+		return fmt.Errorf("SetPageParameterRequired: page not found: %s", pageID)
+	}
+	for _, elem := range page.ParametersItems() {
+		pp, ok := elem.(*genPg.PageParameter)
+		if !ok || pp == nil {
+			continue
+		}
+		if pp.Name() != paramName {
+			continue
+		}
+		pp.SetIsRequired(required)
+		return repo.Update(page)
+	}
+	return fmt.Errorf("SetPageParameterRequired: parameter %q not found in page %s", paramName, pageID)
+}
 func (b *MprBackend) GetRawUnitBytes(id model.ID) ([]byte, error) {
 	b.initSubBackends()
 	return b.rawUnits.GetRawUnitBytes(id)

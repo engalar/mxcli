@@ -83,6 +83,7 @@ Examples:
 		useColor, _ := cmd.Flags().GetBool("color")
 		listRules, _ := cmd.Flags().GetBool("list-rules")
 		excludeModules, _ := cmd.Flags().GetStringSlice("exclude")
+		autoFix, _ := cmd.Flags().GetBool("fix")
 
 		if projectPath == "" {
 			return fmt.Errorf("--project (-p) is required")
@@ -129,6 +130,9 @@ Examples:
 		// MPR015 - detect broken MicroflowCallParameterMapping refs (CE1613 prevention)
 		lint.AddRule(rules.NewBrokenMFParamRefRule())
 
+		// MPR016 - detect missing required page parameter mappings (CE1571 prevention)
+		lint.AddRule(rules.NewMissingPageParamRule())
+
 		// Convention rules (CONV011-CONV014) - require BSON inspection
 		lint.AddRule(rules.NewNoCommitInLoopRule())
 		lint.AddRule(rules.NewExclusiveSplitCaptionRule())
@@ -167,6 +171,23 @@ Examples:
 		formatter := linter.GetFormatter(outputFormat, useColor)
 		if err := formatter.Format(violations, os.Stdout); err != nil {
 			return fmt.Errorf("formatting output: %w", err)
+		}
+
+		// Auto-fix MPR016 violations when --fix is set.
+		if autoFix {
+			fixCount := 0
+			for _, v := range violations {
+				if v.RuleID == "MPR016" {
+					if fw, ok := exec.LintReader().(rules.MPR016Fixer); ok {
+						if err := rules.FixMPR016(v, fw); err == nil {
+							fixCount++
+						}
+					}
+				}
+			}
+			if fixCount > 0 {
+				fmt.Fprintf(cmd.OutOrStdout(), "\n✓ Fixed %d MPR016 violations (set IsRequired=false on target page parameters)\n", fixCount)
+			}
 		}
 
 		// Exit with error if there are errors
