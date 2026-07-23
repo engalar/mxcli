@@ -148,7 +148,7 @@ func formatCreateVariableActionGen(a *genMf.CreateVariableAction) string {
 	}
 	initialValue := strings.TrimSuffix(a.InitialValue(), "\n")
 	if initialValue == "" {
-		initialValue = "empty"
+		return fmt.Sprintf("declare $%s %s;", a.VariableName(), varType)
 	}
 	return fmt.Sprintf("declare $%s %s = %s;", a.VariableName(), varType, initialValue)
 }

@@ -290,6 +290,26 @@ func retVarUsedInStmts(stmts []ast.MicroflowStatement, varName string) bool {
 			if s.Variable == varName {
 				return true
 			}
+		case *ast.ImportFromMappingStmt:
+			if s.OutputVariable == varName {
+				return true
+			}
+		case *ast.ExportToMappingStmt:
+			if s.OutputVariable == varName {
+				return true
+			}
+		case *ast.RestCallStmt:
+			if s.OutputVariable == varName {
+				return true
+			}
+		case *ast.SendRestRequestStmt:
+			if s.OutputVariable == varName {
+				return true
+			}
+		case *ast.TransformJsonStmt:
+			if s.OutputVariable == varName {
+				return true
+			}
 		case *ast.IfStmt:
 			if retVarUsedInStmts(s.ThenBody, varName) {
 				return true

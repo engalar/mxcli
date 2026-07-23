@@ -218,6 +218,9 @@ func (fb *flowBuilderGen) buildRestResultHandlingGen(s *ast.RestCallStmt) (eleme
 
 	switch s.Result.Type {
 	case ast.RestResultString:
+		if s.OutputVariable != "" {
+			rh.SetOutputVariableName(s.OutputVariable)
+		}
 		return rh, "String"
 
 	case ast.RestResultResponse:

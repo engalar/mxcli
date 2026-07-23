@@ -20,6 +20,18 @@ func newMappingBackend(reader *modelsdkmpr.Reader) *mappingBackend {
 	return &mappingBackend{reader: reader}
 }
 
+func (b *mappingBackend) buildModuleMap() (map[model.ID]string, error) {
+	modules, err := b.reader.ListModules()
+	if err != nil {
+		return nil, err
+	}
+	moduleMap := make(map[model.ID]string, len(modules))
+	for _, m := range modules {
+		moduleMap[model.ID(m.ID)] = m.Name
+	}
+	return moduleMap, nil
+}
+
 func (b *mappingBackend) ListImportMappings() ([]*model.ImportMapping, error) {
 	units, err := mprread.ListUnitsWithContainer[*genImpMap.ImportMapping](b.reader)
 	if err != nil {
@@ -33,8 +45,12 @@ func (b *mappingBackend) GetImportMappingByQualifiedName(moduleName, name string
 	if err != nil {
 		return nil, err
 	}
+	moduleMap, err := b.buildModuleMap()
+	if err != nil {
+		return nil, err
+	}
 	for _, u := range units {
-		if u.Element.Name() == name {
+		if u.Element.Name() == name && moduleMap[u.ContainerID] == moduleName {
 			return importMappingToModel(u), nil
 		}
 	}
