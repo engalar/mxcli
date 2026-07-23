@@ -1,14 +1,14 @@
 # BUG: describe-snapshot.mdl 幂等性剩余差异
 
 **日期**：2026-06-02  
-**发现场景**：`make validate-snapshots` → `TestHelpdeskGolden_DescribeSnapshot_Idempotent`  
+**发现场景**：`mxcli check describe-snapshot.mdl --references` 反复输出差异  
 **严重程度**：Medium（describe 输出不能无损往返，影响 snapshot 可靠性）
 
 ---
 
 ## 背景
 
-`TestHelpdeskGolden_DescribeSnapshot_Idempotent` 验证：
+手动验证步骤（历史 CI 测试 `TestHelpdeskGolden_DescribeSnapshot_Idempotent` 已移除）：
 
 ```
 describe-snapshot.mdl ≡ describe(execute(clean_mpr, describe-snapshot.mdl))
@@ -47,7 +47,7 @@ describe-snapshot.mdl ≡ describe(execute(clean_mpr, describe-snapshot.mdl))
 
 **相关文件**：
 - `mdl/executor/cmd_microflows_describe*.go`（WHERE 子句序列化）
-- `internal/goldenfs/helpdesk_regression_test.go`（幂等性测试）
+- （幂等性测试与此报告一同归档，FUSE 基础架构已移除）
 
 ---
 
@@ -124,18 +124,12 @@ describe-snapshot.mdl ≡ describe(execute(clean_mpr, describe-snapshot.mdl))
 
 ---
 
-## 复现步骤
+## 复现步骤（历史方法，FUSE 基础架构已移除）
 
 ```bash
-# 更新快照（确保最新状态）
-make update-snapshots
-
-# 运行幂等性测试（期望 FAIL，输出 diff）
-HELPDESK_VERSION=11.6.6 \
-CGO_ENABLED=0 go test ./internal/goldenfs/ \
-  -tags linux,integration \
-  -run '^TestHelpdeskGolden_DescribeSnapshot_Idempotent$' \
-  -v -timeout 5m 2>&1 | grep "not idempotent" -A 200
+# 手动对比 describe-snapshot.mdl 与 mxcli describe 输出
+./bin/mxcli describe -p testdata/helpdesk-golden-11.6.6/minimal.mpr > /tmp/current-describe.mdl
+diff testdata/helpdesk-golden-11.6.6/describe-snapshot.mdl /tmp/current-describe.mdl
 ```
 
 ---

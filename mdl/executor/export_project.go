@@ -15,6 +15,7 @@ import (
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	"github.com/mendixlabs/mxcli/mdl/types"
+	"github.com/mendixlabs/mxcli/mdl/visitor"
 	"github.com/mendixlabs/mxcli/model"
 )
 
@@ -158,6 +159,10 @@ func classifyModules(mods []*model.Module) (regular, marketplace []*model.Module
 // runs and returns the captured text. ctx.Output is restored before returning,
 // even when fn returns an error.
 //
+// After capture the output is validated against the grammar via visitor.Build.
+// Any describe output that doesn't parse is caught here — preventing invalid
+// MDL from being written to disk and breaking future imports.
+//
 // Distinct from captureDescribe (cmd_catalog.go), which is a string-dispatch
 // helper for SHOW CATALOG paths.
 func captureDescribeFunc(ctx *ExecContext, fn func(*ExecContext) error) (string, error) {
@@ -166,7 +171,16 @@ func captureDescribeFunc(ctx *ExecContext, fn func(*ExecContext) error) (string,
 	ctx.Output = &buf
 	err := fn(ctx)
 	ctx.Output = saved
-	return buf.String(), err
+	content := buf.String()
+	if err != nil {
+		return content, err
+	}
+	if trimmed := strings.TrimSpace(content); trimmed != "" {
+		if _, errs := visitor.Build(trimmed); len(errs) > 0 {
+			return content, fmt.Errorf("describe output is not parseable MDL: %v", errs[0])
+		}
+	}
+	return content, nil
 }
 
 func marketplaceFileContent(mods []*model.Module) string {

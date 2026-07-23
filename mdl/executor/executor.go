@@ -477,6 +477,11 @@ func (e *Executor) Execute(stmt ast.Statement) error {
 	var err error
 	done := make(chan struct{}, 1)
 	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				err = fmt.Errorf("panic executing %s: %v", stmt.TypeName(), r)
+			}
+		}()
 		err = e.executeInner(ctx, stmt)
 		done <- struct{}{}
 	}()

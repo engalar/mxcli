@@ -316,9 +316,8 @@ func TestFormatActionGen_WorkflowOperationAction_OtherOps_Direct(t *testing.T) {
 func TestFormatActionGen_WorkflowOperationAction_NilOperation(t *testing.T) {
 	a := genMf.NewWorkflowOperationAction()
 	got := formatActionGen(nil, a)
-	want := "workflow operation ...;"
-	if got != want {
-		t.Errorf("got %q, want %q", got, want)
+	if got != "" {
+		t.Errorf("nil operation: got %q, want empty string (caller emits TODO)", got)
 	}
 }
 

@@ -17,10 +17,6 @@ import (
 // TestStore_InsertDelete_BSONShape inserts a unit for each document type
 // via Store.InsertUnit, reads back its BSON to verify $Type and Name fields,
 // then deletes it and confirms it is unreachable through a fresh reader.
-//
-// This replaces the FUSE-based goldenfs BSON comparison tests with a direct
-// modelsdk/codec-level validation that is faster, cross-platform, and pinpoints
-// Writer-layer issues without executor pipeline noise.
 func TestStore_InsertDelete_BSONShape(t *testing.T) {
 	srcDir := filepath.Join("..", "..", "testdata", "expr-checker")
 

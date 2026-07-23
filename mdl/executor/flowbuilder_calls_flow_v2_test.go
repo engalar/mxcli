@@ -15,7 +15,9 @@ import (
 	"testing"
 
 	"github.com/mendixlabs/mxcli/mdl/ast"
+	genDt "github.com/mendixlabs/mxcli/modelsdk/gen/datatypes"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
+	"github.com/mendixlabs/mxcli/model"
 )
 
 func TestCheckOutputVarCollision_Duplicate(t *testing.T) {
@@ -240,4 +242,185 @@ func TestAddCallMicroflowActionGenMissingMicroflowReportsError(t *testing.T) {
 	if len(fb.GetErrors()) == 0 {
 		t.Fatal("expected validation error for missing microflow")
 	}
+}
+
+// ────────────────────────────────────────────────────────────
+// Test doubles for varTypes-population tests
+// ────────────────────────────────────────────────────────────
+
+type fakeMicroflowRepoWithReturn struct {
+	mf *genMf.Microflow
+}
+
+func (f *fakeMicroflowRepoWithReturn) Get(_ model.ID) (*genMf.Microflow, error)              { return nil, nil }
+func (f *fakeMicroflowRepoWithReturn) List(_ model.ID) ([]*genMf.Microflow, error)            { return nil, nil }
+func (f *fakeMicroflowRepoWithReturn) ListAll() ([]*genMf.Microflow, error)                   { return nil, nil }
+func (f *fakeMicroflowRepoWithReturn) FindByQualifiedName(_ string) (*genMf.Microflow, error) { return f.mf, nil }
+func (f *fakeMicroflowRepoWithReturn) IsRule(_ string) (bool, error)                          { return false, nil }
+func (f *fakeMicroflowRepoWithReturn) GetContainerUUID(_ model.ID) (model.ID, error)          { return "", nil }
+func (f *fakeMicroflowRepoWithReturn) Create(_, _ string, _ *genMf.Microflow) error           { return nil }
+func (f *fakeMicroflowRepoWithReturn) Update(_ *genMf.Microflow) error                        { return nil }
+func (f *fakeMicroflowRepoWithReturn) Delete(_ model.ID) error                                { return nil }
+func (f *fakeMicroflowRepoWithReturn) Move(_ model.ID, _ string) error                        { return nil }
+
+type fakeNanoflowRepoWithReturn struct {
+	nf *genMf.Nanoflow
+}
+
+func (f *fakeNanoflowRepoWithReturn) Get(_ model.ID) (*genMf.Nanoflow, error)              { return nil, nil }
+func (f *fakeNanoflowRepoWithReturn) List(_ model.ID) ([]*genMf.Nanoflow, error)            { return nil, nil }
+func (f *fakeNanoflowRepoWithReturn) ListAll() ([]*genMf.Nanoflow, error)                   { return nil, nil }
+func (f *fakeNanoflowRepoWithReturn) FindByQualifiedName(_ string) (*genMf.Nanoflow, error) { return f.nf, nil }
+func (f *fakeNanoflowRepoWithReturn) GetContainerUUID(_ model.ID) (model.ID, error)          { return "", nil }
+func (f *fakeNanoflowRepoWithReturn) Create(_, _ string, _ *genMf.Nanoflow) error            { return nil }
+func (f *fakeNanoflowRepoWithReturn) Update(_ *genMf.Nanoflow) error                         { return nil }
+func (f *fakeNanoflowRepoWithReturn) Delete(_ model.ID) error                                { return nil }
+func (f *fakeNanoflowRepoWithReturn) Move(_ model.ID, _ string) error                        { return nil }
+
+// ────────────────────────────────────────────────────────────
+// varTypes-population tests — addCallMicroflowActionGen
+// ────────────────────────────────────────────────────────────
+
+func TestAddCallMicroflowActionGenRegistersObjectReturnTypeInVarTypes(t *testing.T) {
+	retType := genDt.NewObjectType()
+	retType.SetEntityQualifiedName("MyModule.MyEntity")
+	mf := genMf.NewMicroflow()
+	mf.SetMicroflowReturnType(retType)
+
+	fb := newActionTestFb()
+	fb.microflowsRepo = &fakeMicroflowRepoWithReturn{mf: mf}
+
+	stmt := &ast.CallMicroflowStmt{
+		MicroflowName:  ast.QualifiedName{Module: "MyModule", Name: "GetEntity"},
+		OutputVariable: "Result",
+	}
+	fb.addCallMicroflowActionGen(stmt)
+
+	if fb.varTypes["Result"] != "MyModule.MyEntity" {
+		t.Fatalf("varTypes[Result] = %q, want %q", fb.varTypes["Result"], "MyModule.MyEntity")
+	}
+}
+
+func TestAddCallMicroflowActionGenRegistersListReturnTypeInVarTypes(t *testing.T) {
+	retType := genDt.NewListType()
+	retType.SetEntityQualifiedName("MyModule.MyEntity")
+	mf := genMf.NewMicroflow()
+	mf.SetMicroflowReturnType(retType)
+
+	fb := newActionTestFb()
+	fb.microflowsRepo = &fakeMicroflowRepoWithReturn{mf: mf}
+
+	stmt := &ast.CallMicroflowStmt{
+		MicroflowName:  ast.QualifiedName{Module: "MyModule", Name: "GetList"},
+		OutputVariable: "Result",
+	}
+	fb.addCallMicroflowActionGen(stmt)
+
+	if fb.varTypes["Result"] != "List of MyModule.MyEntity" {
+		t.Fatalf("varTypes[Result] = %q, want %q", fb.varTypes["Result"], "List of MyModule.MyEntity")
+	}
+}
+
+func TestAddCallMicroflowActionGenNoOutputDoesNotSetVarTypes(t *testing.T) {
+	retType := genDt.NewObjectType()
+	retType.SetEntityQualifiedName("MyModule.MyEntity")
+	mf := genMf.NewMicroflow()
+	mf.SetMicroflowReturnType(retType)
+
+	fb := newActionTestFb()
+	fb.microflowsRepo = &fakeMicroflowRepoWithReturn{mf: mf}
+
+	stmt := &ast.CallMicroflowStmt{
+		MicroflowName: ast.QualifiedName{Module: "MyModule", Name: "GetEntity"},
+		// no OutputVariable
+	}
+	fb.addCallMicroflowActionGen(stmt)
+
+	if _, ok := fb.varTypes["Result"]; ok {
+		t.Fatal("varTypes should not be set when no output variable")
+	}
+}
+
+func TestAddCallMicroflowActionGenRepoNilDoesNotPanic(t *testing.T) {
+	// Offline mode: microflowsRepo is nil. Must not panic.
+	fb := newActionTestFb()
+	stmt := &ast.CallMicroflowStmt{
+		MicroflowName:  ast.QualifiedName{Module: "MyModule", Name: "GetEntity"},
+		OutputVariable: "Result",
+	}
+	fb.addCallMicroflowActionGen(stmt)
+	// no panic = pass; varTypes may or may not be set, that's ok
+}
+
+// ────────────────────────────────────────────────────────────
+// varTypes-population tests — addCallNanoflowActionGen
+// ────────────────────────────────────────────────────────────
+
+func TestAddCallNanoflowActionGenRegistersObjectReturnTypeInVarTypes(t *testing.T) {
+	retType := genDt.NewObjectType()
+	retType.SetEntityQualifiedName("MyModule.MyEntity")
+	nf := genMf.NewNanoflow()
+	nf.SetMicroflowReturnType(retType)
+
+	fb := newActionTestFb()
+	fb.nanoflowsRepo = &fakeNanoflowRepoWithReturn{nf: nf}
+
+	stmt := &ast.CallNanoflowStmt{
+		NanoflowName:   ast.QualifiedName{Module: "MyModule", Name: "GetEntity"},
+		OutputVariable: "Result",
+	}
+	fb.addCallNanoflowActionGen(stmt)
+
+	if fb.varTypes["Result"] != "MyModule.MyEntity" {
+		t.Fatalf("varTypes[Result] = %q, want %q", fb.varTypes["Result"], "MyModule.MyEntity")
+	}
+}
+
+func TestAddCallNanoflowActionGenRegistersListReturnTypeInVarTypes(t *testing.T) {
+	retType := genDt.NewListType()
+	retType.SetEntityQualifiedName("MyModule.MyEntity")
+	nf := genMf.NewNanoflow()
+	nf.SetMicroflowReturnType(retType)
+
+	fb := newActionTestFb()
+	fb.nanoflowsRepo = &fakeNanoflowRepoWithReturn{nf: nf}
+
+	stmt := &ast.CallNanoflowStmt{
+		NanoflowName:   ast.QualifiedName{Module: "MyModule", Name: "GetList"},
+		OutputVariable: "Result",
+	}
+	fb.addCallNanoflowActionGen(stmt)
+
+	if fb.varTypes["Result"] != "List of MyModule.MyEntity" {
+		t.Fatalf("varTypes[Result] = %q, want %q", fb.varTypes["Result"], "List of MyModule.MyEntity")
+	}
+}
+
+func TestAddCallNanoflowActionGenNoOutputDoesNotSetVarTypes(t *testing.T) {
+	retType := genDt.NewObjectType()
+	retType.SetEntityQualifiedName("MyModule.MyEntity")
+	nf := genMf.NewNanoflow()
+	nf.SetMicroflowReturnType(retType)
+
+	fb := newActionTestFb()
+	fb.nanoflowsRepo = &fakeNanoflowRepoWithReturn{nf: nf}
+
+	stmt := &ast.CallNanoflowStmt{
+		NanoflowName: ast.QualifiedName{Module: "MyModule", Name: "GetEntity"},
+		// no OutputVariable
+	}
+	fb.addCallNanoflowActionGen(stmt)
+
+	if _, ok := fb.varTypes["Result"]; ok {
+		t.Fatal("varTypes should not be set when no output variable")
+	}
+}
+
+func TestAddCallNanoflowActionGenRepoNilDoesNotPanic(t *testing.T) {
+	fb := newActionTestFb()
+	stmt := &ast.CallNanoflowStmt{
+		NanoflowName:   ast.QualifiedName{Module: "MyModule", Name: "GetEntity"},
+		OutputVariable: "Result",
+	}
+	fb.addCallNanoflowActionGen(stmt)
 }

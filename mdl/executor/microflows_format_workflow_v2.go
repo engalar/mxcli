@@ -162,7 +162,7 @@ func formatGetWorkflowActivityRecordsActionGen(a *genMf.GetWorkflowActivityRecor
 func formatWorkflowOperationActionGen(a *genMf.WorkflowOperationAction) string {
 	op := a.Operation()
 	if op == nil {
-		return "workflow operation ...;"
+		return ""
 	}
 	return formatWorkflowOperationGen(op)
 }

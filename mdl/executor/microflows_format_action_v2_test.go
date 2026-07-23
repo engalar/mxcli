@@ -647,22 +647,20 @@ func TestFormatActionGen_ChangeListAction(t *testing.T) {
 }
 
 func TestFormatActionGen_ListOperationAction_DefaultsAndNil(t *testing.T) {
-	t.Run("nil operation gives placeholder with default Result", func(t *testing.T) {
+	t.Run("nil operation returns empty (caller falls back to TODO)", func(t *testing.T) {
 		a := newGenAction(t, "Microflows$ListOperationsAction").(*genMf.ListOperationAction)
 		got := formatActionGen(nil, a)
-		want := "$Result = list operation ...;"
-		if got != want {
-			t.Errorf("got %q, want %q", got, want)
+		if got != "" {
+			t.Errorf("nil op: got %q, want empty string (caller emits TODO)", got)
 		}
 	})
 
-	t.Run("nil operation respects custom output var", func(t *testing.T) {
+	t.Run("nil operation with custom output var also returns empty", func(t *testing.T) {
 		a := newGenAction(t, "Microflows$ListOperationsAction").(*genMf.ListOperationAction)
 		a.SetOutputVariableName("Custom")
 		got := formatActionGen(nil, a)
-		want := "$Custom = list operation ...;"
-		if got != want {
-			t.Errorf("got %q, want %q", got, want)
+		if got != "" {
+			t.Errorf("nil op: got %q, want empty string", got)
 		}
 	})
 
@@ -953,7 +951,7 @@ func TestFormatActionGen_SortOperation(t *testing.T) {
 		}
 	})
 
-	t.Run("missing attribute substitutes ellipsis placeholder", func(t *testing.T) {
+	t.Run("missing attribute skips column (no illegal grammar)", func(t *testing.T) {
 		s := newGenAction(t, "Microflows$Sort").(*genMf.Sort)
 		s.SetListVariableName("Orders")
 
@@ -966,7 +964,7 @@ func TestFormatActionGen_SortOperation(t *testing.T) {
 
 		a := newListOpAction(t, "Sorted", s)
 		got := formatActionGen(nil, a)
-		want := "$Sorted = sort($Orders, ... asc);"
+		want := "$Sorted = sort($Orders);"
 		if got != want {
 			t.Errorf("got %q, want %q", got, want)
 		}
@@ -1069,24 +1067,20 @@ func TestFormatActionGen_ListRangeOperation(t *testing.T) {
 // ListOperationAction. This is the entry point the renderer uses for
 // any future caller that already has the inner operation in hand.
 func TestFormatListOperationGen_DirectDispatch(t *testing.T) {
-	t.Run("nil op placeholder", func(t *testing.T) {
+	t.Run("nil op returns empty (caller falls back to TODO)", func(t *testing.T) {
 		got := formatListOperationGen(nil, "X")
-		want := "$X = list operation ...;"
-		if got != want {
-			t.Errorf("got %q, want %q", got, want)
+		if got != "" {
+			t.Errorf("nil op: got %q, want empty string (caller emits TODO)", got)
 		}
 	})
 
-	t.Run("unsupported op type renders %T placeholder", func(t *testing.T) {
+	t.Run("unsupported op type returns empty (no illegal grammar)", func(t *testing.T) {
 		// Reach for an element kind that's a valid gen type but is
 		// not a list operation primitive — Annotation works.
 		ann := genMf.NewAnnotation()
 		got := formatListOperationGen(ann, "X")
-		if !strings.Contains(got, "$X = list operation ") {
-			t.Errorf("got %q, want containing %q", got, "$X = list operation ")
-		}
-		if !strings.Contains(got, "Annotation") {
-			t.Errorf("got %q, want containing %q", got, "Annotation")
+		if got != "" {
+			t.Errorf("unsupported op: got %q, want empty string", got)
 		}
 	})
 }

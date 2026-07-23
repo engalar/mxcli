@@ -230,8 +230,8 @@ func parameterEntityNameGen(paramType element.Element) string {
 // page identifier (e.g. raw-BSON widget tree readers) and want to skip
 // the legacy sdk-typed Page lookup.
 func findPageIDGen(ctx *ExecContext, name ast.QualifiedName, h *ContainerHierarchy) (model.ID, error) {
-	// Check session-created pages first (FUSE-backed goldenfs and MPR v2
-	// may not immediately surface newly written files via ListAll).
+	// Check session-created pages first (MPR v2 may not immediately
+	// surface newly written files via ListAll).
 	qualifiedName := name.Module + "." + name.Name
 	if info := ctx.getCreatedPage(qualifiedName); info != nil {
 		return info.ID, nil

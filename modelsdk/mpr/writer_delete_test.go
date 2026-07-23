@@ -15,9 +15,7 @@ import (
 // TestWriter_InsertThenDeleteUnit_NoBSONDrift verifies that Writer.DeleteUnit
 // cleanly removes a unit from both the SQLite Unit table and (for v2 format)
 // the mprcontents/.mxunit file. The test uses a real MPR project to exercise
-// the full write path — insert, read back, delete, verify gone — without the
-// FUSE overlay infrastructure that goldenfs/bsoncompare_integration_test.go
-// relied on.
+// the full write path — insert, read back, delete, verify gone.
 func TestWriter_InsertThenDeleteUnit_NoBSONDrift(t *testing.T) {
 	srcDir := filepath.Join("..", "..", "testdata", "expr-checker")
 	tmpDir := t.TempDir()

@@ -299,19 +299,17 @@ func TestFormatActionGen_RetrieveAction(t *testing.T) {
 		a.SetOutputVariableName("Customers")
 
 		got := formatActionGen(nil, a)
-		want := "retrieve $Customers from ...;"
-		if got != want {
-			t.Errorf("got %q, want %q", got, want)
+		if got != "" {
+			t.Errorf("nil source: got %q, want empty string (caller emits TODO)", got)
 		}
 	})
 
-	t.Run("missing output variable defaults to Result", func(t *testing.T) {
+	t.Run("missing output variable defaults to Result but nil source returns empty", func(t *testing.T) {
 		a := newGenAction(t, "Microflows$RetrieveAction").(*genMf.RetrieveAction)
 
 		got := formatActionGen(nil, a)
-		want := "retrieve $Result from ...;"
-		if got != want {
-			t.Errorf("got %q, want %q", got, want)
+		if got != "" {
+			t.Errorf("nil source: got %q, want empty string", got)
 		}
 	})
 

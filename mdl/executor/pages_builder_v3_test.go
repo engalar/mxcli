@@ -625,6 +625,83 @@ func TestBuildClientActionV3_NanoflowParamQualifiedName(t *testing.T) {
 	}
 }
 
+// TestBuildDataGridDataSourceBSON_MultiStepAssociation verifies that a multi-step
+// association path (e.g. Assoc1/Entity1/Assoc2/Entity2) produces multiple
+// EntityRefStep entries with correct Association/DestinationEntity pairs,
+// rather than one step with the full leftover path as DestinationEntity.
+func TestBuildDataGridDataSourceBSON_MultiStepAssociation(t *testing.T) {
+	ds := &ast.DataSourceV3{
+		Type:      "association",
+		Reference: "C01_Route.Route_RouteVersion/C01_Route.RouteVersion/C01_Route.RouteVersion_RouteNode/C01_Route.RouteNode",
+	}
+
+	var pb pageBuilder
+	doc, entityName, err := pb.buildDataGridDataSourceBSON(ds)
+	if err != nil {
+		t.Fatalf("buildDataGridDataSourceBSON: %v", err)
+	}
+	if entityName != "C01_Route.RouteNode" {
+		t.Errorf("entityName = %q, want C01_Route.RouteNode", entityName)
+	}
+
+	var entityRef bson.D
+	for _, elem := range doc {
+		if elem.Key == "EntityRef" {
+			entityRef, _ = elem.Value.(bson.D)
+			break
+		}
+	}
+	if entityRef == nil {
+		t.Fatal("EntityRef not found in BSON doc")
+	}
+
+	var steps bson.A
+	for _, elem := range entityRef {
+		if elem.Key == "Steps" {
+			steps, _ = elem.Value.(bson.A)
+			break
+		}
+	}
+	if steps == nil {
+		t.Fatal("Steps not found in entityRef")
+	}
+	if len(steps) < 3 {
+		t.Fatalf("Steps has %d elements, want >= 3 (marker + 2 steps)", len(steps))
+	}
+
+	step1, ok := steps[1].(bson.D)
+	if !ok {
+		t.Fatalf("Steps[1] is %T, want bson.D", steps[1])
+	}
+	checkStepField(t, step1, "Association", "C01_Route.Route_RouteVersion")
+	checkStepField(t, step1, "DestinationEntity", "C01_Route.RouteVersion")
+
+	step2, ok := steps[2].(bson.D)
+	if !ok {
+		t.Fatalf("Steps[2] is %T, want bson.D", steps[2])
+	}
+	checkStepField(t, step2, "Association", "C01_Route.RouteVersion_RouteNode")
+	checkStepField(t, step2, "DestinationEntity", "C01_Route.RouteNode")
+}
+
+func checkStepField(t *testing.T, step bson.D, key, want string) {
+	t.Helper()
+	for _, elem := range step {
+		if elem.Key == key {
+			got, ok := elem.Value.(string)
+			if !ok {
+				t.Errorf("%s is %T, want string", key, elem.Value)
+				return
+			}
+			if got != want {
+				t.Errorf("%s = %q, want %q", key, got, want)
+			}
+			return
+		}
+	}
+	t.Errorf("%s not found in step", key)
+}
+
 // TestBuildClientActionV3_NanoflowInvalidAttrPath verifies that attribute paths
 // using a module prefix for system attributes (e.g. $currentObject/System.changedDate)
 // are rejected as invalid syntax during action building.

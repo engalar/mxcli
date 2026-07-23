@@ -638,7 +638,7 @@ func formatListOperationActionGen(a *genMf.ListOperationAction) string {
 // four forms with the same MDL surface.
 func formatListOperationGen(op element.Element, outputVar string) string {
 	if op == nil {
-		return fmt.Sprintf("$%s = list operation ...;", outputVar)
+		return ""
 	}
 
 	switch o := op.(type) {
@@ -695,7 +695,7 @@ func formatListOperationGen(op element.Element, outputVar string) string {
 		}
 		return fmt.Sprintf("$%s = range($%s);", outputVar, o.ListVariableName())
 	default:
-		return fmt.Sprintf("$%s = list operation %T;", outputVar, op)
+		return ""
 	}
 }
 
@@ -754,7 +754,7 @@ func collectSortColumnsGen(s *genMf.Sort) []string {
 			}
 		}
 		if attrName == "" {
-			attrName = "..."
+			continue
 		}
 		cols = append(cols, fmt.Sprintf("%s %s", attrName, dir))
 	}

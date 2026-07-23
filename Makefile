@@ -331,68 +331,9 @@ test-profile-record: build
 		-resource-record
 	@echo "Profiles recorded in coverage/test-profiles/"
 	@echo "Profiles recorded in coverage/test-profiles/"
-
-# Regenerate testdata/helpdesk-golden-*/ from helpdesk-app.mdl (all HELPDESK_VERSIONS).
-# Run after intentional changes to helpdesk-app.mdl; then commit the result.
-update-helpdesk-golden:
-	@for v in $(HELPDESK_VERSIONS); do \
-	  echo "=== Rebuilding helpdesk golden $$v ==="; \
-	  HELPDESK_VERSION=$$v \
-	  CGO_ENABLED=0 go test ./internal/goldenfs/ \
-	    -tags linux,integration \
-	    -run '^TestHelpdeskGolden_Update$$' \
-	    -update-golden \
-	    -v -timeout 10m || exit 1; \
-	done
-	$(MAKE) update-snapshots
-
-# Rebuild describe-snapshot.mdl for all helpdesk versions from their existing golden MPRs.
-# Faster than update-helpdesk-golden (~5s vs ~10m). Run after describe logic changes.
-# Validates each snapshot with: mxcli check snapshot.mdl -p minimal.mpr --references
-update-snapshots: build
-	@for v in $(HELPDESK_VERSIONS); do \
-	  echo "=== Updating snapshot $$v ==="; \
-	  HELPDESK_VERSION=$$v \
-	  CGO_ENABLED=0 go test ./internal/goldenfs/ \
-	    -tags linux,integration \
-	    -run '^TestHelpdeskGolden_DescribeSnapshot$$' \
-	    -update-golden \
-	    -v -timeout 3m || exit 1; \
-	  echo "  mxcli check describe-snapshot.mdl ($$v)..."; \
-	  $(BUILD_DIR)/$(BINARY_NAME) check \
-	    testdata/helpdesk-golden-$$v/describe-snapshot.mdl \
-	    -p testdata/helpdesk-golden-$$v/minimal.mpr \
-	    --references 2>&1 || echo "  WARNING: mxcli check found errors in snapshot (pre-existing debt — see describe output quality)" >&2; \
-	done
-
-# Validate describe-snapshot.mdl for all versions without rebuilding.
-# Runs mxcli check + idempotency integration test. Suitable for CI.
-validate-snapshots: build
-	@for v in $(HELPDESK_VERSIONS); do \
-	  echo "=== Validating snapshot $$v ==="; \
-	  $(BUILD_DIR)/$(BINARY_NAME) check \
-	    testdata/helpdesk-golden-$$v/describe-snapshot.mdl \
-	    -p testdata/helpdesk-golden-$$v/minimal.mpr \
-	    --references 2>&1 || echo "  WARNING: mxcli check found errors in snapshot (pre-existing debt — see describe output quality)" >&2; \
-	  echo "  idempotency test ($$v)..."; \
-	  HELPDESK_VERSION=$$v \
-	  CGO_ENABLED=0 go test ./internal/goldenfs/ \
-	    -tags linux,integration \
-	    -run '^TestHelpdeskGolden_DescribeSnapshot_Idempotent$$' \
-	    -v -timeout 5m || exit 1; \
-	done
-
 ## validate-academy-capstone: full e2e validation of academy/zh capstone reference implementation
 validate-academy-capstone:
 	@./scripts/validate-academy-capstone.sh
-
-# Run both helpdesk regression layers (BSON + describe MDL) for all versions.
-# Requires testdata/helpdesk-golden-*/ to exist (run update-helpdesk-golden first).
-test-helpdesk-regression:
-	CGO_ENABLED=0 go test ./internal/goldenfs/ \
-		-tags linux,integration \
-		-run 'TestHelpdeskGolden_Regression' \
-		-v -timeout 15m
 
 # Run MDL integration tests (requires Docker and a Mendix project)
 # Usage: make test-mdl MPR=path/to/app.mpr

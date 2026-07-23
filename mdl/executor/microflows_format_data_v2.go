@@ -266,7 +266,7 @@ func formatRetrieveActionGen(ctx *ExecContext, a *genMf.RetrieveAction) string {
 	case *genMf.AssociationRetrieveSource:
 		return formatAssociationRetrieveSourceGen(source, outputVar)
 	default:
-		return fmt.Sprintf("retrieve $%s from ...;", outputVar)
+		return ""
 	}
 }
 
@@ -358,7 +358,7 @@ func formatAssociationRetrieveSourceGen(source *genMf.AssociationRetrieveSource,
 		assocName = genMf.AssociationRetrieveSourceAssociationId(source)
 	}
 	if assocName == "" {
-		assocName = "..."
+		return ""
 	}
 	return fmt.Sprintf("retrieve $%s from $%s/%s;", outputVar, startVar, assocName)
 }

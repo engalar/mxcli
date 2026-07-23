@@ -110,7 +110,7 @@ is written until a failing test pins the hypothesis.
 | | |
 |---|---|
 | **Counter-example prevented** | "Fixed A, broke B" regressions — the classic outcome of a guessed fix applied without a failing test as an anchor. Without the test, you cannot tell whether you fixed the bug or merely moved it, and the next release re-opens it. |
-| **How the code expresses it** | Bug fixes start with a failing test — a backend mutation test in `mdl/backend/mpr/` or an executor handler test in `mdl/executor/` using `MockBackend`. BSON-level correctness is pinned by golden snapshots in `internal/goldenfs/` (e.g. `helpdesk_regression_test.go`). The PR checklist in `CLAUDE.md` requires the failing test to exist *before* the implementation. |
+ | **How the code expresses it** | Bug fixes start with a failing test — a backend mutation test in `mdl/backend/mpr/` or an executor handler test in `mdl/executor/` using `MockBackend`. The PR checklist in `CLAUDE.md` requires the failing test to exist *before* the implementation. |
 
 ### 5 — Pure Go / no CGO
 
@@ -207,11 +207,11 @@ left-to-right; each arrow is a file or step.
 | Task | Touch order |
 |------|-------------|
 | **Add a new MDL command** (e.g. `alter image collection`) | `mdl/grammar/MDLParser.g4` → `make grammar` (commit the regenerated `mdl/grammar/parser/` files) → `mdl/ast/` (node type) → `mdl/visitor/` (build AST from parse tree) → `mdl/executor/cmd_*.go` (thin handler) → `mdl/backend/` (interface method) → `mdl/backend/mpr/` (BSON impl) → `mdl/backend/mock/` (Func-field stub) → tests |
-| **Fix a BSON write bug** | `mdl/backend/mpr/` (locate the write path) → compare against a fixture in `internal/goldenfs/` → write the failing test first → implement the minimal fix → `mx check` to confirm Studio Pro acceptance → add a regression guard |
+| **Fix a BSON write bug** | `mdl/backend/mpr/` (locate the write path) → write the failing test first → implement the minimal fix → `mx check` to confirm Studio Pro acceptance → add a regression guard |
 | **Add pluggable widget support** | `modelsdk/widgets/definitions/*.def.json` (or `mxcli widget extract` to scaffold one from a `.mpk`) → `mdl/executor/widget_engine.go` (operation registry) → `modelsdk/widgets/templates/` (template) → `modelsdk/widgets/augment.go` (reconcile against the project's `.mpk`) |
 | **Change existing MDL syntax** | `mdl/grammar/*.g4` → `make grammar` (commit regenerated parser alongside the `.g4` change) → `mdl/visitor/` → `mdl/ast/` |
 | **Write an executor unit test** | `mdl/backend/mock/` (set the relevant `*Func` field) → `mdl/executor/*_test.go` — no `.mpr` file involved |
-| **Write a BSON correctness test** | `internal/goldenfs/` (golden snapshot) → helpdesk regression test (`helpdesk_regression_test.go`) |
+| **Write a BSON correctness test** | `mdl/backend/mpr/` (BSON write path tests) |
 | **Gate a feature by Mendix version** | `modelsdk/version/mendix-{9,10,11}.yaml` (registry entry with `min_version`) → `mdl/executor` `checkFeature()` pre-check (actionable error + hint before any BSON write) |
 | **Add an external-SQL capability** | `sql/` (driver / connection / query / import / generate) — this subsystem is reached from the executor but lives outside the backend interface; it talks to PostgreSQL / Oracle / SQL Server, not to `.mpr` |
 | **Add an editor / IDE-assist feature** | `mdl/executor/autocomplete*.go` (completion logic) → `cmd/mxcli/serve.go` / `cmd/mxcli/cmd_expr_daemon.go` (the daemon that hosts editor requests over a socket) — all of it reuses the same parser, AST, and catalog |
@@ -233,10 +233,10 @@ test, treat it as no less binding — it simply has not been automated yet.
 | The executor must not import `sdk/mpr` or `modelsdk/codec`. | Breaks dependency inversion; forces unit tests to require a real `.mpr` and removes the seam for failure injection. | `TestNoDirectBSONImportInExecutor` (`mdl/executor/import_guard_test.go`) |
 | The executor must not contain raw BSON type strings (e.g. `"Forms$..."`, `"CustomWidgets$..."`). | Bypasses the type system; such literals silently break on a Mendix version upgrade where the storage name changes. | `TestNoRawBSONTypeStringsInExecutor` (`mdl/executor/import_guard_test.go`) |
 | Every new backend method needs a `Func`-field stub in `mdl/backend/mock/`. | Without a stub the mock returns the zero value silently, and tests miss the error path entirely. The stub's default must be a descriptive `"MockBackend.X not configured"` error, never `nil, nil`. | Compile-time `var _ backend.X = (*impl)(nil)` on both real and mock impls |
-| Any map iterated to produce serialized output must sort its keys first. | Non-deterministic iteration order → non-deterministic BSON → flaky golden diffs and unstable `.mpr` output. | Golden regression suite (`internal/goldenfs/`) |
+| Any map iterated to produce serialized output must sort its keys first. | Non-deterministic iteration order → non-deterministic BSON → flaky golden diffs and unstable `.mpr` output. | Code review + `mx check` validation |
 | Errors must route through `cmd.ErrOrStderr()` to the socket. No `os.Exit`, no bare `fmt.Fprintf(os.Stderr, ...)`. | In daemon mode a bare stderr write is invisible to the AI agent driving the tool — the canonical silent failure (see [§2 Principle 1](#1--ai-code-co-design)). | Code review |
 | New shared types belong in `mdl/types/`, not defined inside `mdl/backend/mpr/`. | Keeps a single source of truth and prevents a circular import between the execution and storage layers. | Compiler import graph + code review |
-| In a Mendix BSON array, index 0 is an `int32` version prefix; real entries start at index 1. | A missing prefix produces `CE0003` and similar Studio Pro consistency errors when the file is opened. Applies to `AccessRules`, `MemberAccesses`, `Entities`, `AllowedModuleRoles`, and friends. | `mx check` + golden snapshots |
+| In a Mendix BSON array, index 0 is an `int32` version prefix; real entries start at index 1. | A missing prefix produces `CE0003` and similar Studio Pro consistency errors when the file is opened. Applies to `AccessRules`, `MemberAccesses`, `Entities`, `AllowedModuleRoles`, and friends. | `mx check` |
 
 ---
 

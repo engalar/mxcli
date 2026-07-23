@@ -40,6 +40,7 @@ package executor
 import (
 	"github.com/mendixlabs/mxcli/mdl/ast"
 	"github.com/mendixlabs/mxcli/modelsdk/element"
+	genDt "github.com/mendixlabs/mxcli/modelsdk/gen/datatypes"
 	genMf "github.com/mendixlabs/mxcli/modelsdk/gen/microflows"
 )
 
@@ -93,12 +94,12 @@ func (fb *flowBuilderGen) addCallMicroflowActionGen(s *ast.CallMicroflowStmt) el
 	if !checkOutputVarCollision(fb, s.OutputVariable) {
 		action.SetOutputVariableName(s.OutputVariable)
 		action.SetUseReturnVariable(s.OutputVariable != "")
+		if s.OutputVariable != "" && fb.microflowsRepo != nil && fb.varTypes != nil {
+			if mf, err := fb.microflowsRepo.FindByQualifiedName(mfQN); err == nil && mf != nil {
+				fb.registerCallResultVarType(s.OutputVariable, mf.MicroflowReturnType())
+			}
+		}
 	}
-
-	// TODO Stage 3.2.3.j: track result variable's entity type via
-	// fb.microflowsRepo's ReturnType lookup so downstream CHANGE /
-	// retrieve / list-op statements can resolve members on the
-	// returned variable. Offline tests currently skip this.
 
 	return fb.genActivityWrap(action, s.ErrorHandling, s.OutputVariable)
 }
@@ -133,10 +134,31 @@ func (fb *flowBuilderGen) addCallNanoflowActionGen(s *ast.CallNanoflowStmt) elem
 	if !checkOutputVarCollision(fb, s.OutputVariable) {
 		action.SetOutputVariableName(s.OutputVariable)
 		action.SetUseReturnVariable(s.OutputVariable != "")
+		if s.OutputVariable != "" && fb.nanoflowsRepo != nil && fb.varTypes != nil {
+			if nf, err := fb.nanoflowsRepo.FindByQualifiedName(nfQN); err == nil && nf != nil {
+				fb.registerCallResultVarType(s.OutputVariable, nf.MicroflowReturnType())
+			}
+		}
 	}
 
-	// TODO Stage 3.2.3.j: same return-type tracking caveat as
-	// addCallMicroflowActionGen.
-
 	return fb.genActivityWrap(action, s.ErrorHandling, s.OutputVariable)
+}
+
+// registerCallResultVarType sets fb.varTypes[varName] from a
+// MicroflowReturnType element when it is an ObjectType or ListType
+// with a non-empty EntityQualifiedName. No-op for other types or nil.
+func (fb *flowBuilderGen) registerCallResultVarType(varName string, retType element.Element) {
+	if retType == nil {
+		return
+	}
+	switch t := retType.(type) {
+	case *genDt.ObjectType:
+		if entityQN := t.EntityQualifiedName(); entityQN != "" {
+			fb.varTypes[varName] = entityQN
+		}
+	case *genDt.ListType:
+		if entityQN := t.EntityQualifiedName(); entityQN != "" {
+			fb.varTypes[varName] = "List of " + entityQN
+		}
+	}
 }

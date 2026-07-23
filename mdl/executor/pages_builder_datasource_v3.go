@@ -223,24 +223,42 @@ func (pb *pageBuilder) buildDataGridDataSourceBSON(ds *ast.DataSourceV3) (bson.D
 		if ctxVar == "currentObject" {
 			ctxVar = ""
 		}
-		path := ds.Reference
-		destEntity := ""
-		if idx := strings.Index(path, "/"); idx >= 0 {
-			destEntity = path[idx+1:]
-			path = path[:idx]
+		raw := ds.Reference
+
+		var steps []bson.D
+		var destEntity string
+
+		if strings.Contains(raw, "/") {
+			parts := strings.Split(raw, "/")
+			for i := 0; i+1 < len(parts); i += 2 {
+				step := bson.D{
+					{Key: "$ID", Value: bsonutil.NewIDBsonBinary()},
+					{Key: "$Type", Value: "DomainModels$EntityRefStep"},
+					{Key: "Association", Value: parts[i]},
+					{Key: "DestinationEntity", Value: parts[i+1]},
+				}
+				steps = append(steps, step)
+			}
+			destEntity = parts[len(parts)-1]
 		} else {
-			destEntity = pb.resolveAssociationDestination(path, pb.entityContext)
+			destEntity = pb.resolveAssociationDestination(raw, pb.entityContext)
+			step := bson.D{
+				{Key: "$ID", Value: bsonutil.NewIDBsonBinary()},
+				{Key: "$Type", Value: "DomainModels$EntityRefStep"},
+				{Key: "Association", Value: raw},
+				{Key: "DestinationEntity", Value: destEntity},
+			}
+			steps = append(steps, step)
 		}
-		step := bson.D{
-			{Key: "$ID", Value: bsonutil.NewIDBsonBinary()},
-			{Key: "$Type", Value: "DomainModels$EntityRefStep"},
-			{Key: "Association", Value: path},
-			{Key: "DestinationEntity", Value: destEntity},
+
+		bsonSteps := bson.A{int32(2)}
+		for _, step := range steps {
+			bsonSteps = append(bsonSteps, step)
 		}
 		entityRef := bson.D{
 			{Key: "$ID", Value: bsonutil.NewIDBsonBinary()},
 			{Key: "$Type", Value: "DomainModels$IndirectEntityRef"},
-			{Key: "Steps", Value: bson.A{int32(2), step}},
+			{Key: "Steps", Value: bsonSteps},
 		}
 		var sourceVar any
 		if ctxVar != "" {
