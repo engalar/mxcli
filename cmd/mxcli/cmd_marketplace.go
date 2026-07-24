@@ -12,6 +12,7 @@ import (
 	"strings"
 	"text/tabwriter"
 
+	"github.com/mendixlabs/mxcli/cmd/mxcli/docker"
 	"github.com/mendixlabs/mxcli/internal/auth"
 	"github.com/mendixlabs/mxcli/internal/marketplace/application"
 	"github.com/mendixlabs/mxcli/internal/marketplace/domain"
@@ -168,7 +169,11 @@ func buildMarketplaceService(ctx context.Context, cmd *cobra.Command) (*applicat
 	downloader := infrastructure.NewDownloader(http.DefaultClient, cred.Token)
 	lister := projectModuleLister(cmd)
 
-	return application.NewService(apiClient, apiClient, downloader, lister, nil), nil
+	var installer domain.ModuleInstaller
+	if mxPath, err := docker.ResolveMx(""); err == nil {
+		installer = infrastructure.NewInstaller(mxPath)
+	}
+	return application.NewService(apiClient, apiClient, downloader, lister, installer), nil
 }
 
 func marketplaceCacheDir() (string, error) {
@@ -538,6 +543,10 @@ func renderContentDetail(cmd *cobra.Command, c *domain.Content) error {
 		fmt.Fprintf(w, "Latest:\t%s (%s)\n", v.VersionNumber, v.Name)
 		fmt.Fprintf(w, "Min Mendix:\t%s\n", v.MinSupportedMendixVersion)
 		fmt.Fprintf(w, "Published:\t%s\n", v.PublicationDate.Format("2006-01-02"))
+		if v.ReleaseNotes != "" {
+			plain := stripHTMLTags(v.ReleaseNotes)
+			fmt.Fprintf(w, "Release Notes:\t%s\n", plain)
+		}
 	}
 	return w.Flush()
 }
@@ -555,6 +564,25 @@ func renderVersionsTable(cmd *cobra.Command, items []*domain.Version) error {
 			v.PublicationDate.Format("2006-01-02"), v.Name)
 	}
 	return w.Flush()
+}
+
+func stripHTMLTags(s string) string {
+	var buf strings.Builder
+	inTag := false
+	for _, r := range s {
+		if r == '<' {
+			inTag = true
+			continue
+		}
+		if r == '>' {
+			inTag = false
+			continue
+		}
+		if !inTag {
+			buf.WriteRune(r)
+		}
+	}
+	return strings.TrimSpace(buf.String())
 }
 
 func resolveProjectPath(projectPath string) string {

@@ -88,6 +88,19 @@ func describeSettingsFuture(ctx context.Context, output io.Writer, cm backend.Co
 			if cfg.ApplicationRootUrl != "" {
 				parts = append(parts, fmt.Sprintf("  ApplicationRootUrl = '%s'", cfg.ApplicationRootUrl))
 			}
+			if cfg.Tracing != nil {
+				if cfg.Tracing.Enabled {
+					parts = append(parts, "  TracingEnabled = true")
+				} else {
+					parts = append(parts, "  TracingEnabled = false")
+				}
+				if cfg.Tracing.Endpoint != "" {
+					parts = append(parts, fmt.Sprintf("  TracingEndpoint = '%s'", cfg.Tracing.Endpoint))
+				}
+				if cfg.Tracing.ServiceName != "" {
+					parts = append(parts, fmt.Sprintf("  TracingServiceName = '%s'", cfg.Tracing.ServiceName))
+				}
+			}
 			fmt.Fprintf(output, "alter settings configuration '%s'\n%s;\n\n", cfg.Name, strings.Join(parts, ",\n"))
 
 			for _, cv := range cfg.ConstantValues {
