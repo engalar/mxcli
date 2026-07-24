@@ -438,6 +438,7 @@ func init() {
 	rootCmd.AddCommand(exprCmd)
 	rootCmd.AddCommand(buildCmd())
 	rootCmd.AddCommand(runCmd())
+	rootCmd.AddCommand(fixCmd)
 	rootCmd.AddCommand(reloadCmd())
 	rootCmd.AddCommand(mockCmd())
 	rootCmd.AddCommand(syntaxCmd)
