@@ -37,6 +37,13 @@ type LintReader interface {
 	ListModules() ([]*model.Module, error)
 	ListFolders() ([]*types.FolderInfo, error)
 	GetRawUnit(id model.ID) (map[string]any, error)
+
+	// ListAllUnitIDs returns all unit UUIDs from the MPR Unit table.
+	// Used by MPR017 to cross-reference against filesystem .mxunit files.
+	ListAllUnitIDs() ([]string, error)
+
+	// ContentsDir returns the mprcontents directory path for the opened MPR.
+	ContentsDir() string
 }
 
 // LintContext wraps the project graph and a deep reader, exposing rule-friendly

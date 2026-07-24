@@ -20,12 +20,13 @@ func mockCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "mock",
 		Short: "Manage Prism mock server for OpenAPI specs",
-		Long:  `Start, stop, or check the status of a Prism mock server for OpenAPI specifications.`,
+		Long:  `Start, stop, check, or check the status of a Prism mock server for OpenAPI specifications.`,
 	}
 
 	cmd.AddCommand(mockStartCmd())
 	cmd.AddCommand(mockStopCmd())
 	cmd.AddCommand(mockStatusCmd())
+	cmd.AddCommand(mockCheckCmd())
 
 	return cmd
 }
@@ -161,6 +162,41 @@ func mockStatusCmd() *cobra.Command {
 			fmt.Fprintf(cmd.OutOrStdout(), "  PID:  %d\n", l.PID)
 			fmt.Fprintf(cmd.OutOrStdout(), "  Spec: %s\n", l.SpecPath)
 			fmt.Fprintf(cmd.OutOrStdout(), "  Since: %s\n", l.StartedAt.Format(time.RFC3339))
+			return nil
+		},
+	}
+}
+
+func mockCheckCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "check",
+		Short: "Verify mock server is running and responding",
+		Long: `Check the Prism mock server health by verifying:
+  - The lock file exists with valid PID
+  - The process is still running
+  - The spec file exists
+  - The server responds to HTTP requests
+
+Example:
+  mxcli mock check -p app.mpr`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			projectPath, _ := cmd.Root().PersistentFlags().GetString("project")
+			if projectPath == "" {
+				return fmt.Errorf("-p is required")
+			}
+			projectDir := filepath.Dir(projectPath)
+			res := docker.CheckMockServer(projectDir)
+
+			if res.Error != "" {
+				fmt.Fprintf(cmd.OutOrStdout(), "✗ %s\n", res.Error)
+				return nil
+			}
+
+			fmt.Fprintf(cmd.OutOrStdout(), "✓ Mock server health check passed:\n")
+			fmt.Fprintf(cmd.OutOrStdout(), "  PID:     %d\n", res.PID)
+			fmt.Fprintf(cmd.OutOrStdout(), "  Port:    %d\n", res.Port)
+			fmt.Fprintf(cmd.OutOrStdout(), "  Spec:    %s (%s)\n", res.SpecPath, map[bool]string{true: "exists", false: "missing"}[res.SpecExists])
+			fmt.Fprintf(cmd.OutOrStdout(), "  HTTP:    %s\n", map[bool]string{true: "responding", false: "not responding"}[res.Responding])
 			return nil
 		},
 	}

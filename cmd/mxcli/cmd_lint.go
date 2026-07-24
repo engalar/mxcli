@@ -133,6 +133,9 @@ Examples:
 		// MPR016 - detect missing required page parameter mappings (CE1571 prevention)
 		lint.AddRule(rules.NewMissingPageParamRule())
 
+		// MPR017 - detect orphaned .mxunit files in mprcontents/
+		lint.AddRule(rules.NewOrphanedMxUnitRule())
+
 		// Convention rules (CONV011-CONV014) - require BSON inspection
 		lint.AddRule(rules.NewNoCommitInLoopRule())
 		lint.AddRule(rules.NewExclusiveSplitCaptionRule())
@@ -173,20 +176,41 @@ Examples:
 			return fmt.Errorf("formatting output: %w", err)
 		}
 
-		// Auto-fix MPR016 violations when --fix is set.
+		// Auto-fix violations when --fix is set.
 		if autoFix {
-			fixCount := 0
+			fixCount016 := 0
+			fixCount017 := 0
 			for _, v := range violations {
-				if v.RuleID == "MPR016" {
+				switch v.RuleID {
+				case "MPR016":
 					if fw, ok := exec.LintReader().(rules.MPR016Fixer); ok {
 						if err := rules.FixMPR016(v, fw); err == nil {
-							fixCount++
+							fixCount016++
+						}
+					}
+				case "MPR017":
+					path, ok := v.Extra.(string)
+					if ok && path != "" {
+						if err := os.Remove(path); err == nil {
+							// Clean up empty parent directories up to mprcontents/ root.
+							for dir := filepath.Dir(path); dir != "" && dir != filepath.Dir(dir); dir = filepath.Dir(dir) {
+								entries, _ := os.ReadDir(dir)
+								if len(entries) == 0 {
+									_ = os.Remove(dir)
+								} else {
+									break
+								}
+							}
+							fixCount017++
 						}
 					}
 				}
 			}
-			if fixCount > 0 {
-				fmt.Fprintf(cmd.OutOrStdout(), "\n✓ Fixed %d MPR016 violations (set IsRequired=false on target page parameters)\n", fixCount)
+			if fixCount016 > 0 {
+				fmt.Fprintf(cmd.OutOrStdout(), "\n✓ Fixed %d MPR016 violations (set IsRequired=false on target page parameters)\n", fixCount016)
+			}
+			if fixCount017 > 0 {
+				fmt.Fprintf(cmd.OutOrStdout(), "\n✓ Removed %d orphaned .mxunit files\n", fixCount017)
 			}
 		}
 

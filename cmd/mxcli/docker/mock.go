@@ -5,6 +5,7 @@ package docker
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -128,4 +129,56 @@ func MockServerStatus(projectDir string) (*MockLock, error) {
 		return nil, fmt.Errorf("mock server is not running (stale PID)")
 	}
 	return l, nil
+}
+
+// MockHealthCheckResult holds the results of checking a mock server.
+type MockHealthCheckResult struct {
+	Running    bool
+	PID        int
+	Port       int
+	SpecExists bool
+	SpecPath   string
+	Responding bool // true if GET / returns HTTP 200
+	Error      string
+}
+
+// CheckMockServer verifies the mock server is running, the spec exists,
+// and the server responds to HTTP requests.
+func CheckMockServer(projectDir string) *MockHealthCheckResult {
+	res := &MockHealthCheckResult{}
+
+	lock, err := ReadMockLock(projectDir)
+	if err != nil {
+		res.Error = fmt.Sprintf("no lock file: %v", err)
+		return res
+	}
+
+	res.Port = lock.Port
+	res.PID = lock.PID
+	res.SpecPath = lock.SpecPath
+
+	// Check process is alive.
+	if _, err := os.Stat(lock.SpecPath); err == nil {
+		res.SpecExists = true
+	}
+
+	proc, err := os.FindProcess(lock.PID)
+	if err != nil || proc.Signal(syscall.Signal(0)) != nil {
+		res.Error = "process not found (stale lock)"
+		return res
+	}
+	res.Running = true
+
+	// HTTP health check.
+	client := &http.Client{Timeout: 3 * time.Second}
+	url := fmt.Sprintf("http://localhost:%d/", lock.Port)
+	resp, err := client.Get(url)
+	if err != nil {
+		res.Error = fmt.Sprintf("server not responding: %v", err)
+		return res
+	}
+	defer resp.Body.Close()
+	res.Responding = resp.StatusCode >= 200 && resp.StatusCode < 500
+
+	return res
 }

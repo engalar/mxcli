@@ -81,9 +81,27 @@ type LocalRunOptions struct {
 	// Starter is the process runner. Nil = RealStarter (exec.Cmd.Run).
 	Starter ProcessStarter
 
+	// SecurityMode controls runtime authentication level.
+	// Valid values: "off" (no auth, DTAP=D), "demo" (demo users, DTAP=T),
+	// "production" (full auth, DTAP=P). Empty defaults to "off".
+	// Overridable via RUNTIME_PARAMS_DTAPMODE env var.
+	SecurityMode string
+
 	// SkipPortCheck skips the preflight port-binding check.
 	// Used by tests that capture the command without running it.
 	SkipPortCheck bool
+}
+
+// securityDTAPValue maps the semantic security mode to a Mendix DTAP code.
+func (o *LocalRunOptions) securityDTAPValue() string {
+	switch strings.ToLower(o.SecurityMode) {
+	case "production":
+		return "P"
+	case "demo":
+		return "T"
+	default: // "off" or empty
+		return "D"
+	}
 }
 
 func (o *LocalRunOptions) appPort() int {
@@ -237,7 +255,7 @@ func startFromDeployLayout(opts LocalRunOptions, stdout, stderr io.Writer) error
 		adminPass = "Admin123!"
 	}
 	hoconPath := filepath.Join(tmpDir, "local.conf")
-	if err := writeDeployHOCON(hoconPath, dcfg, opts.DB, adminPass, opts.appPort(), opts.adminPort()); err != nil {
+	if err := writeDeployHOCON(hoconPath, dcfg, opts.DB, adminPass, opts.appPort(), opts.adminPort(), opts.securityDTAPValue()); err != nil {
 		return fmt.Errorf("generating config: %w", err)
 	}
 
@@ -272,7 +290,7 @@ func startFromDeployLayout(opts LocalRunOptions, stdout, stderr io.Writer) error
 }
 
 // writeDeployHOCON writes a HOCON config file for a deploy-layout startup.
-func writeDeployHOCON(path string, dcfg deployConfig, dbURL, adminPass string, appPort, adminPort int) error {
+func writeDeployHOCON(path string, dcfg deployConfig, dbURL, adminPass string, appPort, adminPort int, dtapMode string) error {
 	cfg := dcfg.Configuration
 	dbType := cfg["DatabaseType"]
 	if dbType == "" {
@@ -305,7 +323,8 @@ func writeDeployHOCON(path string, dcfg deployConfig, dbURL, adminPass string, a
 	}
 	fmt.Fprintf(&sb, "  ApplicationRootUrl = \"%s\"\n", appURL)
 	fmt.Fprintf(&sb, "  HashAlgorithm = \"BCRYPT:12\"\n")
-	fmt.Fprintf(&sb, "  DTAPMode = D\n")
+	fmt.Fprintf(&sb, "  DTAPMode = %s\n", dtapMode)
+	fmt.Fprintf(&sb, "  DTAPMode = ${?RUNTIME_PARAMS_DTAPMODE}\n")
 	if s := cfg["ScheduledEventExecution"]; s != "" {
 		fmt.Fprintf(&sb, "  ScheduledEventExecution = \"%s\"\n", s)
 	} else {
@@ -359,7 +378,7 @@ func writeDeployHOCON(path string, dcfg deployConfig, dbURL, adminPass string, a
 
 // WriteDeployHOCON is the exported wrapper for tests.
 func WriteDeployHOCON(path string, dcfg map[string]string, constants map[string]string, dbURL, adminPass string, appPort, adminPort int) error {
-	return writeDeployHOCON(path, deployConfig{Configuration: dcfg, Constants: constants}, dbURL, adminPass, appPort, adminPort)
+	return writeDeployHOCON(path, deployConfig{Configuration: dcfg, Constants: constants}, dbURL, adminPass, appPort, adminPort, "D")
 }
 
 // resolveMxInstallPathForVersion finds the Mendix runtime installation directory

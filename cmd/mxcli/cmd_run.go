@@ -25,6 +25,7 @@ func runCmd() *cobra.Command {
 		adminPassword string
 		appPort       int
 		adminPort     int
+		securityMode  string
 		mock          bool
 		mockOnly      bool
 		mockPort      int
@@ -125,6 +126,7 @@ Override with --db for PostgreSQL.`,
 				AdminPassword: adminPassword,
 				AppPort:       appPort,
 				AdminPort:     adminPort,
+				SecurityMode:  securityMode,
 				CmdHint:       cmdHint,
 				Stdout:        os.Stdout,
 				Stderr:        os.Stderr,
@@ -136,6 +138,7 @@ Override with --db for PostgreSQL.`,
 	cmd.Flags().StringVar(&dbURL, "db", "", "Database URL (postgres://user:pass@host/db). Default: HSQLDB (embedded)")
 	cmd.Flags().StringVar(&padDir, "pad-dir", "", "Explicit PAD directory (overrides -p)")
 	cmd.Flags().StringVar(&adminPassword, "admin-password", "", "MxAdmin login password (default: Admin123!)")
+	cmd.Flags().StringVar(&securityMode, "security", "off", "Authentication mode: off (no auth), demo (demo users), production (full auth)")
 	cmd.Flags().IntVar(&appPort, "port", 0, "App HTTP port (default 8080)")
 	cmd.Flags().IntVar(&adminPort, "admin-port", 0, "Admin API port (default 8090)")
 	cmd.Flags().BoolVar(&mock, "mock", false, "Start Prism mock server before runtime")
