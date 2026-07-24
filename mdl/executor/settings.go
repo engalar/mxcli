@@ -46,6 +46,9 @@ func listSettings(ctx *ExecContext) error {
 			values = append(values, cfg.DatabaseUrl)
 			values = append(values, "db="+cfg.DatabaseName)
 			values = append(values, fmt.Sprintf("http=%d", cfg.HttpPortNumber))
+				if cfg.Tracing != nil && cfg.Tracing.Enabled {
+				values = append(values, "Tracing=on")
+			}
 			if len(cfg.ConstantValues) > 0 {
 				values = append(values, fmt.Sprintf("%d constants", len(cfg.ConstantValues)))
 			}
@@ -133,6 +136,22 @@ func describeSettings(ctx *ExecContext) error {
 				parts = append(parts, fmt.Sprintf("  ApplicationRootUrl = '%s'", cfg.ApplicationRootUrl))
 			}
 			fmt.Fprintf(ctx.Output, "alter settings configuration '%s'\n%s;\n\n", cfg.Name, strings.Join(parts, ",\n"))
+
+			if cfg.Tracing != nil {
+				var tp []string
+				if cfg.Tracing.Enabled {
+					tp = append(tp, "TracingEnabled = true")
+				} else {
+					tp = append(tp, "TracingEnabled = false")
+				}
+				if cfg.Tracing.Endpoint != "" {
+					tp = append(tp, fmt.Sprintf("TracingEndpoint = '%s'", cfg.Tracing.Endpoint))
+				}
+				if cfg.Tracing.ServiceName != "" {
+					tp = append(tp, fmt.Sprintf("TracingServiceName = '%s'", cfg.Tracing.ServiceName))
+				}
+				fmt.Fprintf(ctx.Output, "  %s\n", strings.Join(tp, ",\n  "))
+			}
 
 			// Output constant overrides
 			for _, cv := range cfg.ConstantValues {
@@ -318,6 +337,10 @@ func alterSettingsConfigurationDeps(deps *HandlerDeps, ps *model.ProjectSettings
 			}
 		case "ApplicationRootUrl":
 			cfg.ApplicationRootUrl = valStr
+		case "TracingEnabled", "TracingEndpoint", "TracingServiceName":
+			if err := setTracingProperty(cfg, key, valStr); err != nil {
+				return err
+			}
 		default:
 			return mdlerrors.NewUnsupported("unknown configuration setting: " + key)
 		}
@@ -438,6 +461,10 @@ func alterSettingsConfiguration(ctx *ExecContext, ps *model.ProjectSettings, stm
 			}
 		case "ApplicationRootUrl":
 			cfg.ApplicationRootUrl = valStr
+		case "TracingEnabled", "TracingEndpoint", "TracingServiceName":
+			if err := setTracingProperty(cfg, key, valStr); err != nil {
+				return err
+			}
 		default:
 			return mdlerrors.NewUnsupported("unknown configuration setting: " + key)
 		}
@@ -448,6 +475,21 @@ func alterSettingsConfiguration(ctx *ExecContext, ps *model.ProjectSettings, stm
 	}
 
 	fmt.Fprintf(ctx.Output, "Updated configuration '%s'\n", stmt.ConfigName)
+	return nil
+}
+
+func setTracingProperty(cfg *model.ServerConfiguration, key, valStr string) error {
+	if cfg.Tracing == nil {
+		cfg.Tracing = &model.TracingConfiguration{}
+	}
+	switch key {
+	case "TracingEnabled":
+		cfg.Tracing.Enabled = valStr == "true"
+	case "TracingEndpoint":
+		cfg.Tracing.Endpoint = valStr
+	case "TracingServiceName":
+		cfg.Tracing.ServiceName = valStr
+	}
 	return nil
 }
 
@@ -575,6 +617,21 @@ func createConfiguration(ctx *ExecContext, stmt *ast.CreateConfigurationStmt) er
 			}
 		case "ApplicationRootUrl":
 			newCfg.ApplicationRootUrl = valStr
+		case "TracingEnabled":
+			if newCfg.Tracing == nil {
+				newCfg.Tracing = &model.TracingConfiguration{}
+			}
+			newCfg.Tracing.Enabled = valStr == "true"
+		case "TracingEndpoint":
+			if newCfg.Tracing == nil {
+				newCfg.Tracing = &model.TracingConfiguration{}
+			}
+			newCfg.Tracing.Endpoint = valStr
+		case "TracingServiceName":
+			if newCfg.Tracing == nil {
+				newCfg.Tracing = &model.TracingConfiguration{}
+			}
+			newCfg.Tracing.ServiceName = valStr
 		default:
 			return mdlerrors.NewUnsupported("unknown configuration property: " + key)
 		}
@@ -692,6 +749,21 @@ func ExecCreateConfigurationFn(ctx context.Context, s *ast.CreateConfigurationSt
 			}
 		case "ApplicationRootUrl":
 			newCfg.ApplicationRootUrl = valStr
+		case "TracingEnabled":
+			if newCfg.Tracing == nil {
+				newCfg.Tracing = &model.TracingConfiguration{}
+			}
+			newCfg.Tracing.Enabled = valStr == "true"
+		case "TracingEndpoint":
+			if newCfg.Tracing == nil {
+				newCfg.Tracing = &model.TracingConfiguration{}
+			}
+			newCfg.Tracing.Endpoint = valStr
+		case "TracingServiceName":
+			if newCfg.Tracing == nil {
+				newCfg.Tracing = &model.TracingConfiguration{}
+			}
+			newCfg.Tracing.ServiceName = valStr
 		default:
 			return mdlerrors.NewUnsupported("unknown configuration property: " + key)
 		}

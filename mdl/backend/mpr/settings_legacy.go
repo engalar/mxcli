@@ -112,6 +112,14 @@ func parseServerConfiguration(raw map[string]any) *model.ServerConfiguration {
 	sc.OpenAdminPort = extractBool(raw["OpenAdminPort"], false)
 	sc.OpenHttpPort = extractBool(raw["OpenHttpPort"], false)
 
+	if tracingRaw := extractBsonMap(raw["Tracing"]); tracingRaw != nil {
+		tc := &model.TracingConfiguration{}
+		tc.Enabled = extractBool(tracingRaw["Enabled"], false)
+		tc.Endpoint = extractString(tracingRaw["Endpoint"])
+		tc.ServiceName = extractString(tracingRaw["ServiceName"])
+		sc.Tracing = tc
+	}
+
 	for _, cv := range extractBsonArray(raw["ConstantValues"]) {
 		if cvMap := extractBsonMap(cv); cvMap != nil {
 			sc.ConstantValues = append(sc.ConstantValues, parseConstantValue(cvMap))

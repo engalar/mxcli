@@ -192,6 +192,62 @@ if endpoint := os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT"); endpoint != "" {
 
 ---
 
+## Java Action 自定义 Span
+
+Mendix 11.10.0 引入了 `Core.tracing()` API，允许在 Java Action 中创建自定义 span，将业务逻辑的关键步骤纳入链路追踪。
+
+### 自动生命周期（`.run()`）
+
+`run` 方法自动管理 span 的启动和关闭，设置状态并处理异常：
+
+```java
+Core.tracing()
+  .createSpan("my span name")
+  .withAttribute("attribute_key", "attribute value")
+  .run(span -> {
+    // the code here will be wrapped by the span
+  });
+```
+
+### 手动生命周期（`.start()` / `.close()`）
+
+当控制流程较复杂时（如分支、循环、异步回调），可以手动控制 span 生命周期：
+
+```java
+var span = Core.tracing()
+  .createSpan("my span name")
+  .withAttribute("attribute_key", "attribute value")
+  .start();
+try {
+  // your code
+  span.setStatus(Span.Status.OK);
+} catch (Throwable exc) {
+  span.setError(exc);
+} finally {
+  span.close();
+}
+```
+
+### 最佳实践
+
+- span name 使用**有意义的操作名称**，格式建议 `Module.Action_Description`，便于在 Tempo 中快速定位
+- `withAttribute` 添加**结构化上下文**（如实体 ID、请求 URL、关键参数值），避免将大量数据塞入 span name
+- 优先使用 `.run()` 避免忘记 `close()` 导致内存泄漏
+- 仅在确实需要精细控制（如跨越多个 try-catch 块）时使用手动模式，且必须保证 `close()` 在 `finally` 中执行
+
+### 与 MDL TracingConfiguration 的关系
+
+| 配置 | 作用 |
+|------|------|
+| `TracingEnabled = true` | 开启 Mendix 运行时的 OTel agent |
+| `TracingEndpoint = "http://..."` | 指定 OTLP HTTP 接收端 |
+| `TracingServiceName = "MyApp"` | 指定服务名 |
+| Java Action 中 `Core.tracing()` | 在上述基础上创建**自定义业务 span** |
+
+三者是**叠加**关系：启用 TracingConfiguration 后，微流调用链 span 自动生成；Java Action 中的 `Core.tracing()` 在此基础上添加额外业务 span。若无 `TracingConfiguration`，`Core.tracing()` 仍可工作（使用进程级 OTel agent 配置）。
+
+---
+
 ## 不在此次范围内
 
 - mxcli 命令与 Mendix 运行时 span 的 trace context 跨进程关联（HTTP `traceparent` header 注入 M2EE/OQL 请求）

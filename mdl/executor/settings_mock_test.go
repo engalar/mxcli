@@ -93,6 +93,57 @@ func TestShowSettings_JSON(t *testing.T) {
 	assertValidJSON(t, buf.String())
 }
 
+func TestDescribeSettings_Tracing(t *testing.T) {
+	mb := &mock.MockBackend{
+		IsConnectedFunc: func() bool { return true },
+		GetProjectSettingsFunc: func() (*model.ProjectSettings, error) {
+			return &model.ProjectSettings{
+				Configuration: &model.ConfigurationSettings{
+					Configurations: []*model.ServerConfiguration{
+						{
+							Name: "Default",
+							Tracing: &model.TracingConfiguration{
+								Enabled:     true,
+								Endpoint:    "http://192.168.2.35:4318",
+								ServiceName: "MendixApp",
+							},
+						},
+					},
+				},
+			}, nil
+		},
+	}
+	ctx, buf := newMockCtx(t, withBackend(mb))
+	assertNoError(t, describeSettings(ctx))
+	out := buf.String()
+	assertContainsStr(t, out, "TracingEnabled = true")
+	assertContainsStr(t, out, "TracingEndpoint = 'http://192.168.2.35:4318'")
+	assertContainsStr(t, out, "TracingServiceName = 'MendixApp'")
+}
+
+func TestShowSettings_Tracing(t *testing.T) {
+	mb := &mock.MockBackend{
+		IsConnectedFunc: func() bool { return true },
+		GetProjectSettingsFunc: func() (*model.ProjectSettings, error) {
+			return &model.ProjectSettings{
+				Configuration: &model.ConfigurationSettings{
+					Configurations: []*model.ServerConfiguration{
+						{
+							Name: "Default",
+							Tracing: &model.TracingConfiguration{
+								Enabled: true,
+							},
+						},
+					},
+				},
+			}, nil
+		},
+	}
+	ctx, buf := newMockCtx(t, withBackend(mb))
+	assertNoError(t, listSettings(ctx))
+	assertContainsStr(t, buf.String(), "Tracing=on")
+}
+
 func TestDescribeSettings_Languages(t *testing.T) {
 	mb := &mock.MockBackend{
 		IsConnectedFunc: func() bool { return true },

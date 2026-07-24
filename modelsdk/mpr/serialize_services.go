@@ -252,7 +252,21 @@ func serPSServerConfiguration(cfg *model.ServerConfiguration) bson.D {
 		{Key: "OpenAdminPort", Value: cfg.OpenAdminPort},
 		{Key: "OpenHttpPort", Value: cfg.OpenHttpPort},
 		{Key: "CustomSettings", Value: bson.A{int32(2)}},
-		{Key: "Tracing", Value: nil},
+	}
+
+	if cfg.Tracing != nil {
+		tracingDoc := bson.D{
+			{Key: "$ID", Value: idToBsonBinary(generateUUID())},
+			{Key: "$Type", Value: "Settings$TracingConfiguration"},
+			{Key: "Enabled", Value: cfg.Tracing.Enabled},
+		}
+		if cfg.Tracing.Endpoint != "" {
+			tracingDoc = append(tracingDoc, bson.E{Key: "Endpoint", Value: cfg.Tracing.Endpoint})
+		}
+		if cfg.Tracing.ServiceName != "" {
+			tracingDoc = append(tracingDoc, bson.E{Key: "ServiceName", Value: cfg.Tracing.ServiceName})
+		}
+		cfgDoc = append(cfgDoc, bson.E{Key: "Tracing", Value: tracingDoc})
 	}
 
 	if len(cfg.ConstantValues) > 0 {
