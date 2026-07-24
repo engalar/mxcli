@@ -15,6 +15,7 @@ package auth
 // service and does not accept PAT auth — do not add it here.
 var hostSchemes = map[string]Scheme{
 	"marketplace-api.mendix.com": SchemePAT,
+	"marketplace.mendix.com":     SchemePAT,
 	"catalog.mendix.com":         SchemePAT,
 }
 
