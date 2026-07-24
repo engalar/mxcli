@@ -11,6 +11,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/mendixlabs/mxcli/internal/marketplace/application"
 	"github.com/mendixlabs/mxcli/internal/marketplace/infrastructure"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -23,7 +24,7 @@ const sampleContent = `{"contentId":170,"publisher":"Mendix","type":"Module","ca
 const sampleVersions = `{"items":[{"name":"Community Commons","versionId":"0a03e65a","versionNumber":"11.5.0","minSupportedMendixVersion":"10.24.0","publicationDate":"2026-01-13T06:57:14.512Z","releaseNotes":"<p>upgraded guava</p>"}]}`
 
 func resetMarketplaceFlags() {
-	for _, c := range []*cobra.Command{marketplaceSearchCmd, marketplaceInfoCmd, marketplaceVersionsCmd} {
+	for _, c := range []*cobra.Command{marketplaceSearchCmd, marketplaceInfoCmd, marketplaceVersionsCmd, marketplaceDownloadCmd, marketplaceInstallCmd, marketplaceListCmd, marketplaceUpdateCmd} {
 		c.Flags().VisitAll(func(f *pflag.Flag) {
 			_ = f.Value.Set(f.DefValue)
 			f.Changed = false
@@ -38,11 +39,13 @@ func runMarketplace(t *testing.T, handler http.HandlerFunc, args ...string) (str
 	ts := httptest.NewServer(handler)
 	t.Cleanup(ts.Close)
 
-	origFactory := marketplaceClientFactory
-	marketplaceClientFactory = func(_ context.Context, _ *cobra.Command) (*infrastructure.APIClient, error) {
-		return infrastructure.NewAPIClient(ts.Client(), ts.URL), nil
+	origFactory := marketplaceServiceFactory
+	marketplaceServiceFactory = func(_ context.Context, _ *cobra.Command) (*application.Service, error) {
+		client := infrastructure.NewAPIClient(ts.Client(), ts.URL)
+		downloader := infrastructure.NewDownloader(ts.Client(), "test-token")
+		return application.NewService(client, client, downloader, nil, nil), nil
 	}
-	t.Cleanup(func() { marketplaceClientFactory = origFactory })
+	t.Cleanup(func() { marketplaceServiceFactory = origFactory })
 
 	resetMarketplaceFlags()
 
@@ -209,5 +212,72 @@ func TestMarketplace_APIErrorSurfaces(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "500") {
 		t.Errorf("error should mention 500: %v", err)
+	}
+}
+
+func TestMarketplaceDownload_Success(t *testing.T) {
+	out, err := runMarketplace(t, func(w http.ResponseWriter, r *http.Request) {
+		base := "http://" + r.Host
+		if strings.Contains(r.URL.Path, "/versions") {
+			_, _ = w.Write([]byte(`{"items":[{"name":"Test","versionId":"abc","versionNumber":"1.0.0","minSupportedMendixVersion":"10.0.0","publicationDate":"2026-01-01T00:00:00Z","downloadUrl":"` + base + `/dl-auth"}]}`))
+			return
+		}
+		if r.URL.Path == "/dl-auth" {
+			w.Header().Set("Location", base+"/cdn/test.mpk")
+			w.WriteHeader(http.StatusSeeOther)
+			return
+		}
+		if strings.HasPrefix(r.URL.Path, "/cdn/") {
+			w.Header().Set("Content-Type", "application/octet-stream")
+			_, _ = w.Write([]byte("fake-mpk"))
+			return
+		}
+		w.WriteHeader(http.StatusNotFound)
+	}, "download", "170")
+
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(out, "Downloaded") {
+		t.Errorf("expected 'Downloaded' in output, got: %s", out)
+	}
+}
+
+func TestMarketplaceInstall_RequiresProject(t *testing.T) {
+	_, err := runMarketplace(t, func(_ http.ResponseWriter, _ *http.Request) {
+		t.Error("handler should not be called")
+	}, "install", "170")
+
+	if err == nil {
+		t.Fatal("expected error: --project is required")
+	}
+	if !strings.Contains(err.Error(), "--project") {
+		t.Errorf("expected project flag error, got: %v", err)
+	}
+}
+
+func TestMarketplaceList_RequiresProject(t *testing.T) {
+	_, err := runMarketplace(t, func(_ http.ResponseWriter, _ *http.Request) {
+		t.Error("handler should not be called")
+	}, "list")
+
+	if err == nil {
+		t.Fatal("expected error: --project is required")
+	}
+	if !strings.Contains(err.Error(), "--project") {
+		t.Errorf("expected project flag error, got: %v", err)
+	}
+}
+
+func TestMarketplaceUpdate_RequiresProject(t *testing.T) {
+	_, err := runMarketplace(t, func(_ http.ResponseWriter, _ *http.Request) {
+		t.Error("handler should not be called")
+	}, "update")
+
+	if err == nil {
+		t.Fatal("expected error: --project is required")
+	}
+	if !strings.Contains(err.Error(), "--project") {
+		t.Errorf("expected project flag error, got: %v", err)
 	}
 }
