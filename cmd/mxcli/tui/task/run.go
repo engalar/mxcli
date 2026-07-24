@@ -11,7 +11,7 @@ import (
 )
 
 type RunOptions struct {
-	PadDir        string
+	DeployDir     string
 	DB            string
 	AdminPassword string
 	AppPort       int
@@ -77,7 +77,7 @@ func (t *RunTask) projectDir() string {
 	if t.opts.ProjectDir != "" {
 		return t.opts.ProjectDir
 	}
-	return filepath.Dir(t.opts.PadDir)
+	return filepath.Dir(t.opts.DeployDir)
 }
 
 func (t *RunTask) run() {
@@ -125,7 +125,7 @@ func (t *RunTask) run() {
 	starter := &docker.RealStarter{}
 	startTime := time.Now()
 	err := docker.StartLocal(docker.LocalRunOptions{
-		PadDir:        t.opts.PadDir,
+		DeployDir:     t.opts.DeployDir,
 		DB:            t.opts.DB,
 		AdminPassword: t.opts.AdminPassword,
 		AppPort:       t.opts.AppPort,

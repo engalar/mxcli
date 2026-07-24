@@ -235,7 +235,7 @@ func TestInit_DetectsExistingBuildDir(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if !strings.Contains(buf.String(), "Found existing PAD build") {
-		t.Error("should detect existing PAD build directory")
+	if !strings.Contains(buf.String(), "Found existing build") {
+		t.Error("should detect existing build directory")
 	}
 }

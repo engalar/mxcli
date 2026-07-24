@@ -1,4 +1,3 @@
-// cmd/mxcli-local/cmd_run.go
 // SPDX-License-Identifier: Apache-2.0
 
 package main
@@ -21,7 +20,6 @@ func runCmd() *cobra.Command {
 	var (
 		projectPath   string
 		dbURL         string
-		padDir        string
 		adminPassword string
 		appPort       int
 		adminPort     int
@@ -34,40 +32,24 @@ func runCmd() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "run",
-		Short: "Start the Mendix runtime from a pre-built PAD (no Docker required)",
-		Long: `Run the Mendix runtime using the PAD built by 'mxcli local build'.
+		Short: "Start the Mendix runtime from deployment/ (no Docker required)",
+		Long: `Run the Mendix runtime using the deployment/ output from 'mxcli build'.
 Blocks in the foreground — press Ctrl+C to stop.
 
 Default database: HSQLDB (embedded, no external database needed).
 Override with --db for PostgreSQL.`,
-		Example: `  mxcli-local run -p app.mpr
-  mxcli-local run -p app.mpr --db postgres://user:pass@localhost/mendix`,
+		Example: `  mxcli run -p app.mpr
+  mxcli run -p app.mpr --db postgres://user:pass@localhost/mendix`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if projectPath != "" {
-				if abs, err := filepath.Abs(projectPath); err == nil {
-					projectPath = abs
-				}
+			if projectPath == "" {
+				return fmt.Errorf("-p is required\n\nSpecify the .mpr file path so mxcli can find the build output:\n\n  mxcli run -p /path/to/app.mpr [--admin-password pw]\n\nIf you haven't built yet, run first:\n\n  mxcli build -p /path/to/app.mpr")
 			}
-			if padDir != "" {
-				if abs, err := filepath.Abs(padDir); err == nil {
-					padDir = abs
-				}
-			}
-			dir := padDir
-			if dir == "" {
-				if projectPath == "" {
-					return fmt.Errorf("-p is required\n\nSpecify the .mpr file path so mxcli can find the build output:\n\n  mxcli local run -p /path/to/app.mpr [--admin-password pw]\n\nIf you haven't built yet, run first:\n\n  mxcli local build -p /path/to/app.mpr")
-				}
-				dir = docker.ResolveRunDir(filepath.Dir(projectPath))
-			}
-			// Build the hint for port-conflict error messages.
-			var cmdHint string
-			if projectPath != "" {
-				cmdHint = "-p " + projectPath
-			} else if padDir != "" {
-				cmdHint = "--pad-dir " + padDir
+			if abs, err := filepath.Abs(projectPath); err == nil {
+				projectPath = abs
 			}
 
+			dir := docker.ResolveRunDir(filepath.Dir(projectPath))
+			cmdHint := "-p " + projectPath
 			projectDir := filepath.Dir(projectPath)
 
 			// Start mock server if requested
@@ -121,7 +103,7 @@ Override with --db for PostgreSQL.`,
 			}
 
 			return docker.StartLocal(docker.LocalRunOptions{
-				PadDir:        dir,
+				DeployDir:     dir,
 				DB:            dbURL,
 				AdminPassword: adminPassword,
 				AppPort:       appPort,
@@ -134,9 +116,8 @@ Override with --db for PostgreSQL.`,
 		},
 	}
 
-	cmd.Flags().StringVarP(&projectPath, "project", "p", "", "Path to .mpr file (derives PAD dir as .docker/build/)")
+	cmd.Flags().StringVarP(&projectPath, "project", "p", "", "Path to .mpr file (derives deployment/ directory)")
 	cmd.Flags().StringVar(&dbURL, "db", "", "Database URL (postgres://user:pass@host/db). Default: HSQLDB (embedded)")
-	cmd.Flags().StringVar(&padDir, "pad-dir", "", "Explicit PAD directory (overrides -p)")
 	cmd.Flags().StringVar(&adminPassword, "admin-password", "", "MxAdmin login password (default: Admin123!)")
 	cmd.Flags().StringVar(&securityMode, "security", "off", "Authentication mode: off (no auth), demo (demo users), production (full auth)")
 	cmd.Flags().IntVar(&appPort, "port", 0, "App HTTP port (default 8080)")

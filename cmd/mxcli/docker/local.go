@@ -59,9 +59,8 @@ func (r *RealStarter) Run(cmd *exec.Cmd) error {
 
 // LocalRunOptions configures StartLocal.
 type LocalRunOptions struct {
-	// PadDir is the PAD output directory (.docker/build/ by default).
-	// Can also be a deploy-format directory (deployment/) when Studio Pro is installed.
-	PadDir string
+	// DeployDir is the deployment/ output directory.
+	DeployDir string
 	// DB is an optional postgres:// URL. Empty = use config defaults (HSQLDB).
 	DB string
 	// AdminPassword sets ADMIN_ADMINPASSWORD and RUNTIME_ADMINUSER_PASSWORD.
@@ -118,10 +117,8 @@ func (o *LocalRunOptions) adminPort() int {
 	return o.AdminPort
 }
 
-// StartLocal starts the Mendix runtime from a pre-built directory without Docker.
-// Supports two layouts:
-//   - PAD layout (.docker/build/): execs bin/start.bat (Windows) or bin/start (Unix).
-//   - Deploy layout (deployment/): uses Studio Pro runtime with generated config.
+// StartLocal starts the Mendix runtime from a deployment/ directory.
+// Uses the Mendix installation runtime (MX_INSTALL_PATH) and a generated HOCON config.
 func StartLocal(opts LocalRunOptions) error {
 	stdout := opts.Stdout
 	if stdout == nil {
@@ -132,57 +129,30 @@ func StartLocal(opts LocalRunOptions) error {
 		stderr = os.Stderr
 	}
 
-	// Deploy layout: Studio Pro --target=deploy output (no ZIP, no start.bat).
-	if isDeployLayout(opts.PadDir) {
-		if !opts.SkipPortCheck {
-			if err := preflightLocal(opts.PadDir, stderr, true, opts.appPort(), opts.adminPort(), opts.CmdHint); err != nil {
-				return err
-			}
-		}
-		return startFromDeployLayout(opts, stdout, stderr)
-	}
-
-	// PAD layout: classic portable-app-package output.
-	if !hasExtractedPADLayout(opts.PadDir) {
-		return fmt.Errorf("no PAD found at %s — run 'mxcli local build -p app.mpr' first", opts.PadDir)
+	if !isDeployLayout(opts.DeployDir) {
+		return fmt.Errorf("no deployment found at %s — run 'mxcli build -p app.mpr' first", opts.DeployDir)
 	}
 	if !opts.SkipPortCheck {
-		if err := preflightLocal(opts.PadDir, stderr, false, opts.appPort(), opts.adminPort(), opts.CmdHint); err != nil {
+		if err := preflightLocal(opts.DeployDir, stderr, opts.appPort(), opts.adminPort(), opts.CmdHint); err != nil {
 			return err
 		}
 	}
-	return startFromPADLayout(opts, stdout, stderr)
+	return startFromDeployLayout(opts, stdout, stderr)
 }
 
-// IsDeployLayout reports whether dir is a Studio Pro deploy-format directory.
-// Identified by having model/config.json and model/model.mdp but no bin/start.bat.
-func IsDeployLayout(dir string) bool {
-	return isDeployLayout(dir)
-}
-
-// ResolveRunDir selects the runtime directory for a project.
-// Prefers deploy layout (deployment/) when available, falls back to PAD (.docker/build/).
-// This is the single source of truth for run-directory selection — both CLI and TUI call it.
+// ResolveRunDir returns the deployment/ directory for a project.
 func ResolveRunDir(projectDir string) string {
-	deployDir := filepath.Join(projectDir, "deployment")
-	if isDeployLayout(deployDir) {
-		return deployDir
-	}
-	return filepath.Join(projectDir, ".docker", "build")
+	return filepath.Join(projectDir, "deployment")
 }
 
 func isDeployLayout(dir string) bool {
 	configJSON := filepath.Join(dir, "model", "config.json")
 	modelMdp := filepath.Join(dir, "model", "model.mdp")
-	startBat := filepath.Join(dir, "bin", "start.bat")
-	startSh := filepath.Join(dir, "bin", "start")
 
 	_, hasConfig := os.Stat(configJSON)
 	_, hasModel := os.Stat(modelMdp)
-	_, hasBat := os.Stat(startBat)
-	_, hasSh := os.Stat(startSh)
 
-	return hasConfig == nil && hasModel == nil && hasBat != nil && hasSh != nil
+	return hasConfig == nil && hasModel == nil
 }
 
 // deployConfig mirrors the structure of deployment/model/config.json.
@@ -201,7 +171,7 @@ type deployMetadata struct {
 // Uses the Mendix installation runtime (MX_INSTALL_PATH) and a generated HOCON config.
 func startFromDeployLayout(opts LocalRunOptions, stdout, stderr io.Writer) error {
 	// 1. Read config.json for DB config and constants.
-	cfgPath := filepath.Join(opts.PadDir, "model", "config.json")
+	cfgPath := filepath.Join(opts.DeployDir, "model", "config.json")
 	cfgData, err := os.ReadFile(cfgPath)
 	if err != nil {
 		return fmt.Errorf("reading deployment config: %w", err)
@@ -213,7 +183,7 @@ func startFromDeployLayout(opts LocalRunOptions, stdout, stderr io.Writer) error
 
 	// 1b. Read metadata.json to get the required Mendix runtime version.
 	var runtimeVersion string
-	if metaData, err2 := os.ReadFile(filepath.Join(opts.PadDir, "model", "metadata.json")); err2 == nil {
+	if metaData, err2 := os.ReadFile(filepath.Join(opts.DeployDir, "model", "metadata.json")); err2 == nil {
 		var meta deployMetadata
 		if json.Unmarshal(metaData, &meta) == nil {
 			runtimeVersion = meta.RuntimeVersion
@@ -265,6 +235,7 @@ func startFromDeployLayout(opts LocalRunOptions, stdout, stderr io.Writer) error
 		"M2EE_ADMIN_PASS="+adminPass,
 		"ADMIN_ADMINPASSWORD="+adminPass,
 		"RUNTIME_ADMINUSER_PASSWORD="+adminPass,
+		"RUNTIME_PARAMS_DTAPMODE="+opts.securityDTAPValue(),
 		"JAVA_HOME="+javaHome,
 		"PATH="+filepath.Join(javaHome, "bin")+string(os.PathListSeparator)+os.Getenv("PATH"),
 	)
@@ -274,7 +245,7 @@ func startFromDeployLayout(opts LocalRunOptions, stdout, stderr io.Writer) error
 		"-DMX_LOG_LEVEL=INFO",
 		"-Dfile.encoding=UTF-8",
 		"-jar", launcherJar,
-		opts.PadDir,
+		opts.DeployDir,
 		hoconPath,
 	)
 	cmd.Env = env
@@ -469,98 +440,7 @@ func resolveMxInstallPath() (string, error) {
 	return resolveMxInstallPathForVersion("")
 }
 
-// startFromPADLayout starts the runtime from a classic PAD output directory.
-func startFromPADLayout(opts LocalRunOptions, stdout, stderr io.Writer) error {
-	cmdArgs, err := resolveStartScript(opts.PadDir)
-	if err != nil {
-		return err
-	}
 
-	// Inject custom ports via a supplemental HOCON override file.
-	// bin/start passes all positional args as extra config files to runtimelauncher;
-	// later files override earlier ones, so this cleanly overrides the shipped defaults.
-	if opts.AppPort != 0 || opts.AdminPort != 0 {
-		tmpDir, err := os.MkdirTemp("", "mxcli-local-*")
-		if err != nil {
-			return fmt.Errorf("creating temp dir for port override: %w", err)
-		}
-		defer os.RemoveAll(tmpDir) // cleaned up after runtime exits
-		overridePath := filepath.Join(tmpDir, "port-override.conf")
-		overrideContent := fmt.Sprintf(
-			"admin { port = %d }\nruntime.http { port = %d }\n",
-			opts.adminPort(), opts.appPort(),
-		)
-		if err := os.WriteFile(overridePath, []byte(overrideContent), 0600); err != nil {
-			return fmt.Errorf("writing port override conf: %w", err)
-		}
-		cmdArgs = append(cmdArgs, overridePath)
-	}
-
-	cmd := exec.Command(cmdArgs[0], cmdArgs[1:]...)
-	cmd.Dir = opts.PadDir
-	cmd.Env = append(os.Environ(), buildLocalEnv(opts.DB, opts.AdminPassword)...)
-	cmd.Stdout = stdout
-	cmd.Stderr = stderr
-	cmd.Stdin = os.Stdin
-
-	starter := opts.Starter
-	if starter == nil {
-		starter = &RealStarter{}
-	}
-	return starter.Run(cmd)
-}
-
-// resolveStartScript returns [binary, args...] for the platform start script.
-func resolveStartScript(padDir string) ([]string, error) {
-	switch runtime.GOOS {
-	case "windows":
-		bat := filepath.Join(padDir, "bin", "start.bat")
-		if _, err := os.Stat(bat); err == nil {
-			return []string{"cmd.exe", "/c", bat}, nil
-		}
-		ps1 := filepath.Join(padDir, "bin", "start.ps1")
-		if _, err := os.Stat(ps1); err == nil {
-			return []string{"powershell.exe", "-ExecutionPolicy", "Bypass", "-File", ps1}, nil
-		}
-		return nil, fmt.Errorf("no Windows start script (start.bat or start.ps1) found in %s/bin/", padDir)
-	default:
-		sh := filepath.Join(padDir, "bin", "start")
-		if _, err := os.Stat(sh); err != nil {
-			return nil, fmt.Errorf("start script not found at %s", sh)
-		}
-		return []string{sh}, nil
-	}
-}
-
-// buildLocalEnv returns environment variables required by the Mendix runtime (PAD layout).
-func buildLocalEnv(dbURL, adminPassword string) []string {
-	if adminPassword == "" {
-		adminPassword = "Admin123!"
-	}
-	env := []string{
-		"ADMIN_ADMINPASSWORD=" + adminPassword,
-		"RUNTIME_ADMINUSER_PASSWORD=" + adminPassword,
-	}
-	if dbURL != "" {
-		if dbEnv, err := parseDBURL(dbURL); err == nil {
-			env = append(env, dbEnv...)
-		}
-	}
-
-	// Inject JAVA_HOME so bin/start can find java even when it is not in
-	// the shell PATH (common in Git Bash on Windows).
-	if javaHome, err := resolveJDK21(); err == nil {
-		env = append(env, "JAVA_HOME="+javaHome)
-		javaBin := filepath.Join(javaHome, "bin")
-		if currentPath := os.Getenv("PATH"); currentPath != "" {
-			env = append(env, "PATH="+javaBin+string(os.PathListSeparator)+currentPath)
-		} else {
-			env = append(env, "PATH="+javaBin)
-		}
-	}
-
-	return env
-}
 
 // preflightLocal detects port conflicts before starting a new runtime instance.
 //
@@ -568,8 +448,8 @@ func buildLocalEnv(dbURL, adminPassword string) []string {
 //     If either is taken, returns an actionable error with a ready-to-run command
 //     using the next simultaneously-available port pair.
 //
-//  2. HSQLDB stale lock cleanup: removes .lck files left by a killed JVM.
-func preflightLocal(dir string, stderr io.Writer, isDeployDir bool, appPort, adminPort int, cmdHint string) error {
+//  2. HSQLDB stale lock cleanup: removes .lck files from deployment/data/database/hsqldb.
+func preflightLocal(dir string, stderr io.Writer, appPort, adminPort int, cmdHint string) error {
 	// 1a. Admin port check.
 	if !canBind(adminPort) {
 		suggestApp, suggestAdm := FindAvailablePorts(appPort, adminPort)
@@ -590,13 +470,8 @@ func preflightLocal(dir string, stderr io.Writer, isDeployDir bool, appPort, adm
 			appPort, cmdHint, suggestApp, suggestAdm)
 	}
 
-	// 2. HSQLDB stale lock cleanup — path differs by layout.
-	var dbRoot string
-	if isDeployDir {
-		dbRoot = filepath.Join(dir, "data", "database", "hsqldb")
-	} else {
-		dbRoot = filepath.Join(dir, "app", "data", "database", "hsqldb")
-	}
+	// 2. HSQLDB stale lock cleanup.
+	dbRoot := filepath.Join(dir, "data", "database", "hsqldb")
 	_ = filepath.Walk(dbRoot, func(path string, info os.FileInfo, err error) error {
 		if err != nil || info == nil || info.IsDir() {
 			return nil

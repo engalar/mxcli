@@ -356,7 +356,7 @@ func (a *App) startRun() tea.Cmd {
 	}
 
 	rt := task.NewRunTask(task.RunOptions{
-		PadDir:     docker.ResolveRunDir(projectDir),
+		DeployDir:  docker.ResolveRunDir(projectDir),
 		CmdHint:    "-p " + projectPath,
 		ProjectDir: projectDir,
 	})
@@ -465,8 +465,7 @@ func (a *App) actionBuild() tea.Cmd {
 	}
 	Trace("actionBuild: project=%q version=%q useDeployLayout=true", projectPath, pv)
 	bt := task.NewBuildTask(task.BuildOptions{
-		ProjectPath:     projectPath,
-		UseDeployLayout: true,
+		ProjectPath: projectPath,
 	})
 	bv := NewBuildView(bt)
 	a.views.Push(bv)
@@ -521,8 +520,7 @@ func (a *App) actionMockRun() tea.Cmd {
 
 func (a *App) actionBuildRun() tea.Cmd {
 	bt := task.NewBuildTask(task.BuildOptions{
-		ProjectPath:     a.activeTabProjectPath(),
-		UseDeployLayout: true,
+		ProjectPath: a.activeTabProjectPath(),
 	})
 	bv := NewBuildView(bt)
 	bv.autoRun = true

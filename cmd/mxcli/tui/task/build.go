@@ -32,10 +32,9 @@ func taskDebug(format string, args ...interface{}) {
 }
 
 type BuildOptions struct {
-	ProjectPath     string
-	SkipCheck       bool
-	DryRun          bool
-	UseDeployLayout bool
+	ProjectPath string
+	SkipCheck   bool
+	DryRun      bool
 }
 
 type BuildTask struct {
@@ -127,7 +126,7 @@ func (t *BuildTask) run() {
 	err := docker.Build(docker.BuildOptions{
 		ProjectPath:     t.opts.ProjectPath,
 		SkipCheck:       t.opts.SkipCheck,
-		UseDeployLayout: t.opts.UseDeployLayout,
+
 		Stdout:          lw,
 		OnPhase: func(name, status string, pct int, msg string) {
 			taskDebug("OnPhase: name=%s status=%s pct=%d msg=%q", name, status, pct, msg)

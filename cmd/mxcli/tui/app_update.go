@@ -276,7 +276,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		projectDir := filepath.Dir(msg.ProjectPath)
 		dir := docker.ResolveRunDir(projectDir)
 		rt := task.NewRunTask(task.RunOptions{
-			PadDir:     dir,
+			DeployDir:  dir,
 			CmdHint:    "-p " + msg.ProjectPath,
 			ProjectDir: projectDir,
 		})

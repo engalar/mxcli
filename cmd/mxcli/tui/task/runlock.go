@@ -113,8 +113,8 @@ func projectDirFromProjectPath(projectPath string) string {
 func DefaultRunOptions(projectPath string) RunOptions {
 	projectDir := filepath.Dir(projectPath)
 	return RunOptions{
-		PadDir:  filepath.Join(projectDir, ".docker", "build"),
-		CmdHint: "-p " + projectPath,
+		DeployDir: filepath.Join(projectDir, "deployment"),
+		CmdHint:   "-p " + projectPath,
 	}
 }
 

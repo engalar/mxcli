@@ -37,21 +37,22 @@ type ConfigurationSettings struct {
 
 type ServerConfiguration struct {
 	BaseElement
-	Name                          string           `json:"name"`
-	DatabaseType                  string           `json:"databaseType,omitempty"`
-	DatabaseUrl                   string           `json:"databaseUrl,omitempty"`
-	DatabaseName                  string           `json:"databaseName,omitempty"`
-	DatabaseUserName              string           `json:"databaseUserName,omitempty"`
-	DatabasePassword              string           `json:"databasePassword,omitempty"`
-	DatabaseUseIntegratedSecurity bool             `json:"databaseUseIntegratedSecurity"`
-	HttpPortNumber                int              `json:"httpPortNumber,omitempty"`
-	ServerPortNumber              int              `json:"serverPortNumber,omitempty"`
-	ApplicationRootUrl            string           `json:"applicationRootUrl,omitempty"`
-	MaxJavaHeapSize               int              `json:"maxJavaHeapSize,omitempty"`
-	ExtraJvmParameters            string           `json:"extraJvmParameters,omitempty"`
-	OpenAdminPort                 bool             `json:"openAdminPort"`
-	OpenHttpPort                  bool             `json:"openHttpPort"`
-	ConstantValues                []*ConstantValue `json:"constantValues,omitempty"`
+	Name                          string                `json:"name"`
+	DatabaseType                  string                `json:"databaseType,omitempty"`
+	DatabaseUrl                   string                `json:"databaseUrl,omitempty"`
+	DatabaseName                  string                `json:"databaseName,omitempty"`
+	DatabaseUserName              string                `json:"databaseUserName,omitempty"`
+	DatabasePassword              string                `json:"databasePassword,omitempty"`
+	DatabaseUseIntegratedSecurity bool                  `json:"databaseUseIntegratedSecurity"`
+	HttpPortNumber                int                   `json:"httpPortNumber,omitempty"`
+	ServerPortNumber              int                   `json:"serverPortNumber,omitempty"`
+	ApplicationRootUrl            string                `json:"applicationRootUrl,omitempty"`
+	MaxJavaHeapSize               int                   `json:"maxJavaHeapSize,omitempty"`
+	ExtraJvmParameters            string                `json:"extraJvmParameters,omitempty"`
+	OpenAdminPort                 bool                  `json:"openAdminPort"`
+	OpenHttpPort                  bool                  `json:"openHttpPort"`
+	ConstantValues                []*ConstantValue      `json:"constantValues,omitempty"`
+	Tracing                       *TracingConfiguration `json:"tracing,omitempty"`
 }
 
 type ConstantValue struct {
@@ -116,4 +117,10 @@ type DistributionSettings struct {
 	BaseElement
 	IsDistributable bool   `json:"isDistributable"`
 	Version         string `json:"version,omitempty"`
+}
+
+type TracingConfiguration struct {
+	Enabled     bool   `json:"enabled,omitempty"`
+	Endpoint    string `json:"endpoint,omitempty"`
+	ServiceName string `json:"serviceName,omitempty"`
 }

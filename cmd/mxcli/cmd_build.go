@@ -19,9 +19,9 @@ func buildCmd() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "build",
-		Short: "Build a PAD package from an MPR file (no Docker required)",
-		Example: `  mxcli-local build -p app.mpr
-  mxcli-local build -p app.mpr --skip-check`,
+		Short: "Build a Mendix project to deployment/ using MxBuild",
+		Example: `  mxcli build -p app.mpr
+  mxcli build -p app.mpr --skip-check`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if projectPath != "" {
 				if abs, err := filepath.Abs(projectPath); err == nil {
@@ -29,10 +29,9 @@ func buildCmd() *cobra.Command {
 				}
 			}
 			return docker.Build(docker.BuildOptions{
-				ProjectPath:     projectPath,
-				SkipCheck:       skipCheck,
-				UseDeployLayout: true,
-				Stdout:          os.Stdout,
+				ProjectPath: projectPath,
+				SkipCheck:   skipCheck,
+				Stdout:      os.Stdout,
 			})
 		},
 	}

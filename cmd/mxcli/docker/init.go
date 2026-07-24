@@ -82,12 +82,12 @@ func Init(opts InitOptions) error {
 		fmt.Fprintf(w, "  Skipped %s (already exists)\n", envPath)
 	}
 
-	// Check if build directory has PAD content
+	// Check if build directory exists
 	buildDir := filepath.Join(dockerDir, "build")
-	if isPADDir(buildDir) {
-		fmt.Fprintf(w, "  Found existing PAD build in %s\n", buildDir)
+	if _, err := os.Stat(filepath.Join(buildDir, "Dockerfile")); err == nil {
+		fmt.Fprintf(w, "  Found existing build in %s\n", buildDir)
 	} else {
-		fmt.Fprintf(w, "  Note: Run 'mxcli docker build' to create the PAD package in %s\n", buildDir)
+		fmt.Fprintf(w, "  Note: Run 'mxcli docker build' to create the build in %s\n", buildDir)
 	}
 
 	fmt.Fprintln(w, "")

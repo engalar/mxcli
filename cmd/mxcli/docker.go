@@ -52,23 +52,14 @@ Examples:
 
 var dockerRunCmd = &cobra.Command{
 	Use:   "run",
-	Short: "Setup, build, and start in one command",
-	Long: `Setup all dependencies, build the PAD package, and start the application.
+	Short: "Build and run the app in Docker containers",
+	Long: `Build the project with MxBuild and start Docker containers.
 
-This is the easiest way to get a Mendix app running in Docker. It handles:
-1. Downloads MxBuild (if not cached)
-2. Downloads the Mendix runtime (if not cached)
-3. Initializes Docker stack (if not already done)
-4. Builds the PAD package using MxBuild
-5. Starts the Docker Compose stack
-6. Waits for the runtime to report successful startup (with --wait)
-
-All downloads are cached and reused across builds.
+Builds the project to deployment/, then starts the Docker Compose stack.
 
 Examples:
   mxcli docker run -p app.mpr
   mxcli docker run -p app.mpr --wait
-  mxcli docker run -p app.mpr --fresh --wait
   mxcli docker run -p app.mpr --skip-check
 `,
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -82,48 +73,63 @@ Examples:
 		fresh, _ := cmd.Flags().GetBool("fresh")
 		wait, _ := cmd.Flags().GetBool("wait")
 		waitTimeout, _ := cmd.Flags().GetInt("wait-timeout")
-		portOffset, _ := cmd.Flags().GetInt("port-offset")
 
-		opts := docker.RunOptions{
+		// Step 1: Build
+		if err := docker.Build(docker.BuildOptions{
 			ProjectPath: projectPath,
 			MxBuildPath: mxbuildPath,
 			SkipCheck:   skipCheck,
-			Fresh:       fresh,
-			Wait:        wait,
-			WaitTimeout: time.Duration(waitTimeout) * time.Second,
-			PortOffset:  portOffset,
+			Stdout:      os.Stdout,
+		}); err != nil {
+			return fmt.Errorf("build: %w", err)
+		}
+
+		// Step 2: Start Docker
+		rtOpts := docker.RuntimeOptions{
+			ProjectPath: projectPath,
 			Stdout:      os.Stdout,
 			Stderr:      os.Stderr,
 		}
+		if err := docker.Up(rtOpts, true, fresh); err != nil {
+			return fmt.Errorf("docker up: %w", err)
+		}
 
-		return docker.Run(opts)
+		// Step 3: Wait for ready (if requested)
+		if wait {
+			timeout := time.Duration(waitTimeout) * time.Second
+			if timeout == 0 {
+				timeout = 5 * time.Minute
+			}
+			if err := docker.WaitForReady(rtOpts, timeout); err != nil {
+				return err
+			}
+		} else {
+			fmt.Fprintln(os.Stdout, "")
+			fmt.Fprintln(os.Stdout, "Containers started in background.")
+			fmt.Fprintln(os.Stdout, "  Check status:  mxcli docker status -p "+projectPath)
+			fmt.Fprintln(os.Stdout, "  View logs:     mxcli docker logs -p "+projectPath+" --follow")
+		}
+
+		return nil
 	},
 }
 
 var dockerBuildCmd = &cobra.Command{
 	Use:   "build",
-	Short: "Build a Portable App Distribution package",
-	Long: `Build a Portable App Distribution (PAD) package using MxBuild.
+	Short: "Build the Mendix project to deployment/",
+	Long: `Build the Mendix project using MxBuild with --target=deploy.
 
 This command:
 1. Detects the Mendix project version (requires >= 11.6.1)
 2. Locates MxBuild and JDK 21 (auto-downloads MxBuild from CDN if not found)
-3. Runs MxBuild with --target=portable-app-package
-4. Applies version-aware patches to fix known PAD issues
+3. Runs MxBuild with --target=deploy
+4. Builds the React client frontend if rollup.config.mjs is present
 
 MxBuild is cached at ~/.mxcli/mxbuild/{version}/ and reused across builds.
-You can also pre-download with: mxcli setup mxbuild -p app.mpr
-
-Patches applied:
-  - [11.6.x] Fix missing execute permission on bin/start
-  - [11.6.x] Fix Dockerfile CMD referencing start.sh instead of start
-  - [all]    Replace deprecated openjdk:21 with eclipse-temurin:21-jre
-  - [all]    Add HEALTHCHECK instruction
 
 Examples:
   mxcli docker build -p app.mpr
-  mxcli docker build -p app.mpr --mxbuild-path /path/to/mxbuild -o ./output
-  mxcli docker build -p app.mpr --dry-run
+  mxcli docker build -p app.mpr --mxbuild-path /path/to/mxbuild
 `,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		projectPath, _ := cmd.Flags().GetString("project")
@@ -132,14 +138,10 @@ Examples:
 		}
 
 		mxbuildPath, _ := cmd.Flags().GetString("mxbuild-path")
-		outputDir, _ := cmd.Flags().GetString("output")
-		dryRun, _ := cmd.Flags().GetBool("dry-run")
 		skipCheck, _ := cmd.Flags().GetBool("skip-check")
 		opts := docker.BuildOptions{
 			ProjectPath: projectPath,
 			MxBuildPath: mxbuildPath,
-			OutputDir:   outputDir,
-			DryRun:      dryRun,
 			SkipCheck:   skipCheck,
 			Stdout:      os.Stdout,
 		}
