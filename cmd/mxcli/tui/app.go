@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/mendixlabs/mxcli/cmd/mxcli/docker"
 	"github.com/mendixlabs/mxcli/cmd/mxcli/tui/chrome"
 	"github.com/mendixlabs/mxcli/cmd/mxcli/tui/task"
 	"github.com/mendixlabs/mxcli/cmd/mxcli/tui/who"
@@ -20,6 +21,12 @@ var handledNoop tea.Msg = struct{}{}
 // consumed without producing a follow-up message.  Using a shared variable
 // avoids allocating a new closure on every handled keystroke.
 var handledCmd tea.Cmd = func() tea.Msg { return handledNoop }
+
+// BuildSucceededMsg is sent when a BuildView completes with autoRun=true.
+// The App handles it by popping the BuildView and starting the runtime.
+type BuildSucceededMsg struct {
+	ProjectPath string
+}
 
 // compareFlashClearMsg is sent 1 s after a clipboard copy in compare view.
 type compareFlashClearMsg struct{}
@@ -345,8 +352,8 @@ func (a *App) startRun() tea.Cmd {
 	}
 
 	rt := task.NewRunTask(task.RunOptions{
-		PadDir:    filepath.Join(projectDir, ".docker", "build"),
-		CmdHint:   "-p " + projectPath,
+		PadDir:     docker.ResolveRunDir(projectDir),
+		CmdHint:    "-p " + projectPath,
 		ProjectDir: projectDir,
 	})
 	rv := NewRunView(rt)
@@ -422,6 +429,13 @@ func (a *App) chordTree() who.ChordNode {
 				},
 			},
 			{
+				Key: "m", Label: "Mock/Dev",
+				Children: []who.ChordNode{
+					{Key: "m", Label: "Mock start", Action: p(a.actionMock)},
+					{Key: "r", Label: "Mock + Run", Action: p(a.actionMockRun)},
+				},
+			},
+			{
 				Key: "x", Label: "Create module", Action: p(a.actionCreateModule),
 			},
 			{
@@ -460,9 +474,45 @@ func (a *App) actionRun() tea.Cmd {
 	return a.startRun()
 }
 
+func (a *App) actionMock() tea.Cmd {
+	projectPath := a.activeTabProjectPath()
+	if projectPath == "" {
+		return nil
+	}
+	projectDir := filepath.Dir(projectPath)
+	specPath := filepath.Join(projectDir, "docs", "openapi", "c01-api.yaml")
+	mt := task.NewMockTask(task.MockOptions{
+		SpecPath: specPath,
+		Port:     4000,
+	})
+	mv := NewMockView(mt)
+	a.views.Push(mv)
+	return mt.Start()
+}
+
+func (a *App) actionMockRun() tea.Cmd {
+	projectPath := a.activeTabProjectPath()
+	if projectPath == "" {
+		return nil
+	}
+	projectDir := filepath.Dir(projectPath)
+	specPath := filepath.Join(projectDir, "docs", "openapi", "c01-api.yaml")
+	mt := task.NewMockTask(task.MockOptions{
+		SpecPath: specPath,
+		Port:     4000,
+	})
+	mv := NewMockView(mt)
+	a.views.Push(mv)
+	return mt.Start()
+}
+
 func (a *App) actionBuildRun() tea.Cmd {
-	bt := task.NewBuildTask(task.BuildOptions{ProjectPath: a.activeTabProjectPath()})
+	bt := task.NewBuildTask(task.BuildOptions{
+		ProjectPath:     a.activeTabProjectPath(),
+		UseDeployLayout: true,
+	})
 	bv := NewBuildView(bt)
+	bv.autoRun = true
 	a.views.Push(bv)
 	return bt.Start()
 }

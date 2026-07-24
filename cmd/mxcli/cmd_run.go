@@ -6,7 +6,12 @@ package main
 import (
 	"fmt"
 	"os"
+	"os/exec"
+	"os/signal"
 	"path/filepath"
+	"strconv"
+	"syscall"
+	"time"
 
 	"github.com/mendixlabs/mxcli/cmd/mxcli/docker"
 	"github.com/spf13/cobra"
@@ -20,6 +25,10 @@ func runCmd() *cobra.Command {
 		adminPassword string
 		appPort       int
 		adminPort     int
+		mock          bool
+		mockOnly      bool
+		mockPort      int
+		mockSpec      string
 	)
 
 	cmd := &cobra.Command{
@@ -48,14 +57,7 @@ Override with --db for PostgreSQL.`,
 				if projectPath == "" {
 					return fmt.Errorf("-p is required\n\nSpecify the .mpr file path so mxcli can find the build output:\n\n  mxcli local run -p /path/to/app.mpr [--admin-password pw]\n\nIf you haven't built yet, run first:\n\n  mxcli local build -p /path/to/app.mpr")
 				}
-				// Prefer deploy-layout (no ZIP, faster build) when Studio Pro is installed.
-				// Fall back to PAD layout (.docker/build/) otherwise.
-				deployDir := filepath.Join(filepath.Dir(projectPath), "deployment")
-				if docker.IsDeployLayout(deployDir) {
-					dir = deployDir
-				} else {
-					dir = filepath.Join(filepath.Dir(projectPath), ".docker", "build")
-				}
+				dir = docker.ResolveRunDir(filepath.Dir(projectPath))
 			}
 			// Build the hint for port-conflict error messages.
 			var cmdHint string
@@ -64,6 +66,50 @@ Override with --db for PostgreSQL.`,
 			} else if padDir != "" {
 				cmdHint = "--pad-dir " + padDir
 			}
+
+			projectDir := filepath.Dir(projectPath)
+
+			// Start mock server if requested
+			if mock || mockOnly {
+				specPath := mockSpec
+				if specPath == "" {
+					specPath = filepath.Join(projectDir, "docs", "openapi", "c01-api.yaml")
+				} else if !filepath.IsAbs(specPath) {
+					specPath = filepath.Join(projectDir, specPath)
+				}
+				if _, err := os.Stat(specPath); err != nil {
+					return fmt.Errorf("mock spec file not found: %s", specPath)
+				}
+				npxPath, err := exec.LookPath("npx")
+				if err != nil {
+					return fmt.Errorf("npx not found: %w", err)
+				}
+				mockCmd := exec.Command(npxPath, "@stoplight/prism-cli", "mock", specPath, "-p", strconv.Itoa(mockPort))
+				mockCmd.Stdout = os.Stdout
+				mockCmd.Stderr = os.Stderr
+				docker.CmdWithPdeathsig(mockCmd)
+				if err := mockCmd.Start(); err != nil {
+					return fmt.Errorf("starting mock server: %w", err)
+				}
+				mockPID := mockCmd.Process.Pid
+				_ = docker.WriteMockLock(projectDir, &docker.MockLock{
+					PID: mockPID, Port: mockPort, SpecPath: specPath, StartedAt: time.Now(),
+				})
+				defer func() {
+					_ = syscall.Kill(-mockPID, syscall.SIGTERM)
+					_ = docker.RemoveMockLock(projectDir)
+				}()
+				fmt.Fprintf(os.Stderr, "Mock server running on http://localhost:%d (PID %d)\n", mockPort, mockPID)
+
+				if mockOnly {
+					fmt.Fprintf(os.Stderr, "Press Ctrl+C to stop\n")
+					sigCh := make(chan os.Signal, 1)
+					signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
+					<-sigCh
+					return nil
+				}
+			}
+
 			return docker.StartLocal(docker.LocalRunOptions{
 				PadDir:        dir,
 				DB:            dbURL,
@@ -83,5 +129,9 @@ Override with --db for PostgreSQL.`,
 	cmd.Flags().StringVar(&adminPassword, "admin-password", "", "MxAdmin login password (default: Admin123!)")
 	cmd.Flags().IntVar(&appPort, "port", 0, "App HTTP port (default 8080)")
 	cmd.Flags().IntVar(&adminPort, "admin-port", 0, "Admin API port (default 8090)")
+	cmd.Flags().BoolVar(&mock, "mock", false, "Start Prism mock server before runtime")
+	cmd.Flags().BoolVar(&mockOnly, "mock-only", false, "Start Prism mock server only (no runtime)")
+	cmd.Flags().IntVar(&mockPort, "mock-port", 4000, "Port for the mock server")
+	cmd.Flags().StringVar(&mockSpec, "mock-spec", "", "Path to OpenAPI spec file (default: <project dir>/docs/openapi/c01-api.yaml)")
 	return cmd
 }
