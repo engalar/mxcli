@@ -484,7 +484,11 @@ func (a *App) actionMock() tea.Cmd {
 		return nil
 	}
 	projectDir := filepath.Dir(projectPath)
-	specPath := filepath.Join(projectDir, "docs", "openapi", "c01-api.yaml")
+	projectRoot := filepath.Dir(projectDir)
+	specPath := filepath.Join(projectRoot, "docs", "openapi", "c01-api.yaml")
+	if _, err := os.Stat(specPath); os.IsNotExist(err) {
+		specPath = filepath.Join(projectDir, "docs", "openapi", "c01-api.yaml")
+	}
 	mt := task.NewMockTask(task.MockOptions{
 		SpecPath: specPath,
 		Port:     4000,
@@ -500,7 +504,11 @@ func (a *App) actionMockRun() tea.Cmd {
 		return nil
 	}
 	projectDir := filepath.Dir(projectPath)
-	specPath := filepath.Join(projectDir, "docs", "openapi", "c01-api.yaml")
+	projectRoot := filepath.Dir(projectDir)
+	specPath := filepath.Join(projectRoot, "docs", "openapi", "c01-api.yaml")
+	if _, err := os.Stat(specPath); os.IsNotExist(err) {
+		specPath = filepath.Join(projectDir, "docs", "openapi", "c01-api.yaml")
+	}
 	mt := task.NewMockTask(task.MockOptions{
 		SpecPath: specPath,
 		Port:     4000,

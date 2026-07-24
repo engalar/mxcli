@@ -59,7 +59,14 @@ Example:
 			projectDir := filepath.Dir(absPath)
 
 			if specPath == "" {
-				specPath = filepath.Join(projectDir, "docs", "openapi", "c01-api.yaml")
+				projectRoot := filepath.Dir(projectDir)
+				if projectRoot == "." {
+					projectRoot = projectDir
+				}
+				specPath = filepath.Join(projectRoot, "docs", "openapi", "c01-api.yaml")
+				if _, err := os.Stat(specPath); os.IsNotExist(err) {
+					specPath = filepath.Join(projectDir, "docs", "openapi", "c01-api.yaml")
+				}
 			} else if !filepath.IsAbs(specPath) {
 				specPath = filepath.Join(projectDir, specPath)
 			}
