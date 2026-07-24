@@ -17,7 +17,10 @@ type DownloadRepository interface {
 	DownloadVersion(ctx context.Context, version *Version, destPath string) error
 }
 
-type ProjectRepository interface {
+type InstalledModuleLister interface {
 	ListInstalledModules(projectPath string) ([]InstalledModule, error)
+}
+
+type ModuleInstaller interface {
 	InstallModule(ctx context.Context, mpkPath, projectPath string) error
 }
