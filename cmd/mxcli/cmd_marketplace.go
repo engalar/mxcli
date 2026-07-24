@@ -16,6 +16,9 @@ import (
 	"github.com/mendixlabs/mxcli/internal/marketplace/application"
 	"github.com/mendixlabs/mxcli/internal/marketplace/domain"
 	"github.com/mendixlabs/mxcli/internal/marketplace/infrastructure"
+	"github.com/mendixlabs/mxcli/model"
+	modelsdkmpr "github.com/mendixlabs/mxcli/modelsdk/mpr"
+	"github.com/mendixlabs/mxcli/modelsdk/mprread"
 	"github.com/spf13/cobra"
 )
 
@@ -181,8 +184,6 @@ func projectModuleLister(cmd *cobra.Command) *infrastructure.ProjectReader {
 	if projectPath == "" {
 		return nil
 	}
-	// Try to open the project and get a module lister.
-	// This is a lightweight operation that returns only FromAppStore modules.
 	mprPath := resolveProjectPath(projectPath)
 	reader, err := openProjectForModuleList(mprPath)
 	if err != nil {
@@ -192,11 +193,40 @@ func projectModuleLister(cmd *cobra.Command) *infrastructure.ProjectReader {
 }
 
 func openProjectForModuleList(projectPath string) (*infrastructure.ProjectReader, error) {
-	// Use modelsdk to open the project and list modules.
-	// This requires importing the backend — currently delegates to
-	// a factory that returns nil in CLI context (the -p flag is
-	// primarily needed for install/list/update commands).
-	return nil, nil
+	mpr, err := modelsdkmpr.Open(projectPath)
+	if err != nil {
+		return nil, fmt.Errorf("open project: %w", err)
+	}
+	lister := &mprModuleLister{mpr: mpr}
+	return infrastructure.NewProjectReader(lister), nil
+}
+
+// mprModuleLister wraps a modelsdk MPR reader to implement ModuleLister.
+type mprModuleLister struct {
+	mpr *modelsdkmpr.Reader
+}
+
+func (l *mprModuleLister) ListModules() ([]*model.Module, error) {
+	units, err := mprread.ListModules(l.mpr)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]*model.Module, 0, len(units))
+	for _, u := range units {
+		m := u.Element
+		out = append(out, &model.Module{
+			BaseElement: model.BaseElement{
+				ID:       model.ID(m.ID()),
+				TypeName: "Projects$Module",
+			},
+			Name:                m.Name(),
+			FromAppStore:        m.FromAppStore(),
+			AppStoreVersion:     m.AppStoreVersion(),
+			AppStoreGuid:        m.AppStoreGuid(),
+			IsReusableComponent: m.IsReusableComponent(),
+		})
+	}
+	return out, nil
 }
 
 var marketplaceServiceFactory func(context.Context, *cobra.Command) (*application.Service, error)
