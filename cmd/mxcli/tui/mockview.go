@@ -22,14 +22,19 @@ type MockView struct {
 	running  bool
 	started  time.Time
 	port     int
+	autoRun  bool
 }
 
 func NewMockView(t *task.MockTask) MockView {
+	port := t.Opts().Port
+	if port == 0 {
+		port = 4000
+	}
 	return MockView{
 		task:    t,
 		running: true,
 		started: time.Now(),
-		port:    4000,
+		port:    port,
 	}
 }
 
@@ -63,6 +68,10 @@ func (mv MockView) Update(msg tea.Msg) (View, tea.Cmd) {
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "q":
+			if mv.running {
+				mv.task.Cancel()
+				mv.running = false
+			}
 			return mv, func() tea.Msg { return PopViewMsg{} }
 		case "c":
 			if mv.running {
@@ -78,6 +87,13 @@ func (mv MockView) Update(msg tea.Msg) (View, tea.Cmd) {
 		if msg.State == task.StateCompleted || msg.State == task.StateFailed || msg.State == task.StateCancelled {
 			mv.running = false
 			return mv, nil
+		}
+		if mv.autoRun && msg.State == task.StateRunning && msg.Phase == "running" {
+			mv.autoRun = false
+			return mv, tea.Sequence(
+				mv.task.StreamCmd(),
+				func() tea.Msg { return MockSucceededMsg{} },
+			)
 		}
 		if mv.task != nil {
 			return mv, mv.task.StreamCmd()

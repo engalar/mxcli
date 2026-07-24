@@ -28,6 +28,10 @@ type BuildSucceededMsg struct {
 	ProjectPath string
 }
 
+// MockSucceededMsg is sent when a MockView reaches StateRunning with autoRun=true.
+// The App handles it by starting the runtime.
+type MockSucceededMsg struct{}
+
 // compareFlashClearMsg is sent 1 s after a clipboard copy in compare view.
 type compareFlashClearMsg struct{}
 
@@ -502,6 +506,7 @@ func (a *App) actionMockRun() tea.Cmd {
 		Port:     4000,
 	})
 	mv := NewMockView(mt)
+	mv.autoRun = true
 	a.views.Push(mv)
 	return mt.Start()
 }

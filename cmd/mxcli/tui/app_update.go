@@ -3,13 +3,15 @@ package tui
 import (
 	"encoding/json"
 	"fmt"
+	"path/filepath"
 	"strings"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
-
+	"github.com/mendixlabs/mxcli/cmd/mxcli/docker"
 	"github.com/mendixlabs/mxcli/cmd/mxcli/tui/chrome"
 	"github.com/mendixlabs/mxcli/cmd/mxcli/tui/kernel"
+	"github.com/mendixlabs/mxcli/cmd/mxcli/tui/task"
 	"github.com/mendixlabs/mxcli/cmd/mxcli/tui/who"
 )
 
@@ -268,6 +270,23 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.views.Push(ev)
 		return a, nil
 
+	// --- Build → Run chaining ---
+	case BuildSucceededMsg:
+		a.views.Pop()
+		projectDir := filepath.Dir(msg.ProjectPath)
+		dir := docker.ResolveRunDir(projectDir)
+		rt := task.NewRunTask(task.RunOptions{
+			PadDir:     dir,
+			CmdHint:    "-p " + msg.ProjectPath,
+			ProjectDir: projectDir,
+		})
+		rv := NewRunView(rt)
+		a.views.Push(rv)
+		return a, rt.Start()
+
+	case MockSucceededMsg:
+		return a, a.startRun()
+
 	// --- Agent channel messages ---
 	case AgentExecMsg:
 		Trace("app: AgentExecMsg id=%d mdl=%q", msg.RequestID, msg.MDL)
@@ -389,6 +408,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		Trace("app: key=%q picker=%v mode=%v help=%v", msg.String(), a.picker != nil, a.views.Active().Mode(), a.showHelp)
 		if msg.String() == "ctrl+c" {
+			task.GlobalProcTracker.KillAll()
 			if a.watcher != nil {
 				a.watcher.Close()
 			}

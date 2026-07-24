@@ -87,12 +87,14 @@ Example:
 			}
 
 			pid := c.Process.Pid
-			_ = docker.WriteMockLock(projectDir, &docker.MockLock{
+			if err := docker.WriteMockLock(projectDir, &docker.MockLock{
 				PID:       pid,
 				Port:      port,
 				SpecPath:  specPath,
 				StartedAt: time.Now(),
-			})
+			}); err != nil {
+				fmt.Fprintf(os.Stderr, "Warning: failed to write mock lock file: %v\n", err)
+			}
 
 			fmt.Fprintf(os.Stderr, "Prism mock server started on http://localhost:%d (PID %d)\n", port, pid)
 			fmt.Fprintf(os.Stderr, "Press Ctrl+C to stop\n\n")

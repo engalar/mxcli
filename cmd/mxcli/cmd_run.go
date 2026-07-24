@@ -92,9 +92,11 @@ Override with --db for PostgreSQL.`,
 					return fmt.Errorf("starting mock server: %w", err)
 				}
 				mockPID := mockCmd.Process.Pid
-				_ = docker.WriteMockLock(projectDir, &docker.MockLock{
+				if err := docker.WriteMockLock(projectDir, &docker.MockLock{
 					PID: mockPID, Port: mockPort, SpecPath: specPath, StartedAt: time.Now(),
-				})
+				}); err != nil {
+					fmt.Fprintf(os.Stderr, "Warning: failed to write mock lock file: %v\n", err)
+				}
 				defer func() {
 					_ = syscall.Kill(-mockPID, syscall.SIGTERM)
 					_ = docker.RemoveMockLock(projectDir)

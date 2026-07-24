@@ -61,6 +61,12 @@ func mockLockPath(projectDir string) string {
 }
 
 func WriteMockLock(projectDir string, l *MockLock) error {
+	if existing, err := ReadMockLock(projectDir); err == nil {
+		if proc, err := os.FindProcess(existing.PID); err == nil && proc.Signal(syscall.Signal(0)) == nil {
+			return fmt.Errorf("mock server already running (PID %d on port %d)", existing.PID, existing.Port)
+		}
+		_ = RemoveMockLock(projectDir)
+	}
 	dir := filepath.Dir(mockLockPath(projectDir))
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return err
