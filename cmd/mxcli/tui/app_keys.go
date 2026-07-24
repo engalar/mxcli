@@ -2,12 +2,14 @@ package tui
 
 import (
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/mendixlabs/mxcli/cmd/mxcli/tui/task"
 	"github.com/mendixlabs/mxcli/cmd/mxcli/tui/who"
 )
 
 func (a *App) handleBrowserAppKeys(msg tea.KeyMsg) tea.Cmd {
 	switch msg.String() {
 	case "q":
+		task.GlobalProcTracker.KillAll()
 		if session := ExtractSession(a); session != nil {
 			_ = SaveSession(session)
 		}

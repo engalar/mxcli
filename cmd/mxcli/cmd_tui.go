@@ -5,9 +5,12 @@ package main
 import (
 	"fmt"
 	"os"
+	"os/signal"
+	"syscall"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/mendixlabs/mxcli/cmd/mxcli/tui"
+	"github.com/mendixlabs/mxcli/cmd/mxcli/tui/task"
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
 )
@@ -98,6 +101,17 @@ Example:
 		if agentSocket != "" {
 			m.SetAgentAutoProceed(agentAutoProceed)
 		}
+
+		// Global signal handler: kill all child processes on SIGTERM/SIGQUIT
+		// so orphaned mxbuild/node/Java processes don't leak if the TUI is
+		// killed externally (e.g. systemd stop, kill -TERM, terminal close).
+		sigCh := make(chan os.Signal, 1)
+		signal.Notify(sigCh, syscall.SIGTERM, syscall.SIGQUIT)
+		go func() {
+			<-sigCh
+			task.GlobalProcTracker.KillAll()
+			os.Exit(1)
+		}()
 
 		p := tea.NewProgram(m, tea.WithAltScreen(), tea.WithMouseCellMotion())
 		m.StartWatcher(p)

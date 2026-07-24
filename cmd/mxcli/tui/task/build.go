@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"syscall"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/mendixlabs/mxcli/cmd/mxcli/docker"
@@ -43,6 +44,7 @@ type BuildTask struct {
 	events    chan Event
 	done      bool
 	cancelled bool
+	buildPID  int // PID of mxbuild process, 0 if not started
 }
 
 func NewBuildTask(opts BuildOptions) *BuildTask {
@@ -55,10 +57,15 @@ func NewBuildTask(opts BuildOptions) *BuildTask {
 
 func (t *BuildTask) State() State { return t.state }
 func (t *BuildTask) Done() bool   { return t.done }
+func (t *BuildTask) Opts() BuildOptions { return t.opts }
 
 func (t *BuildTask) Cancel() {
 	t.cancelled = true
 	t.state = StateCancelled
+	if t.buildPID > 0 {
+		_ = syscall.Kill(-t.buildPID, syscall.SIGTERM)
+		GlobalProcTracker.Remove(t.buildPID)
+	}
 }
 
 func (t *BuildTask) emit(ev Event) {
@@ -77,6 +84,11 @@ func (t *BuildTask) Start() tea.Cmd {
 func (t *BuildTask) run() {
 	defer close(t.events)
 	defer func() { t.done = true }()
+	defer func() {
+		if t.buildPID > 0 {
+			GlobalProcTracker.Remove(t.buildPID)
+		}
+	}()
 	defer func() {
 		if r := recover(); r != nil {
 			taskDebug("BuildTask.run: PANIC: %v", r)
@@ -126,6 +138,10 @@ func (t *BuildTask) run() {
 				Message: msg,
 				Pct:     float64(pct),
 			})
+		},
+		OnBuildStart: func(pid int) {
+			t.buildPID = pid
+			GlobalProcTracker.Add(pid, "mxbuild", nil)
 		},
 	})
 	taskDebug("BuildTask: docker.Build returned err=%v", err)

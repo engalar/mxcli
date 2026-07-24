@@ -566,7 +566,9 @@ func (w *Writer) updateUnit(unitID string, contents []byte) error {
 			return fmt.Errorf("failed to rename unit file: %w", err)
 		}
 
-		// Update ContentsHash in database
+		// Update ContentsHash in database.
+		// MPR v2 stores content in external .mxunit files; the SQLite
+		// Contents BLOB may not exist so we only update the hash.
 		hash := sha256.Sum256(contents)
 		contentsHash := base64.StdEncoding.EncodeToString(hash[:])
 		_, err := w.reader.db.Exec(`

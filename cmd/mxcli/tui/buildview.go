@@ -25,6 +25,7 @@ type BuildView struct {
 	autoScroll bool
 	showRaw    bool
 	phaseIdx   int
+	autoRun    bool // when true, auto-starts runtime after successful build
 }
 
 type phaseState struct {
@@ -174,7 +175,16 @@ func (bv BuildView) Update(msg tea.Msg) (View, tea.Cmd) {
 		if bv.autoScroll {
 			bv.scroll = len(bv.logLines) - 1
 		}
-		if msg.State == task.StateCompleted || msg.State == task.StateFailed || msg.State == task.StateCancelled {
+		if msg.State == task.StateCompleted {
+			bv.running = false
+			if bv.autoRun {
+				return bv, func() tea.Msg {
+					return BuildSucceededMsg{ProjectPath: bv.task.Opts().ProjectPath}
+				}
+			}
+			return bv, nil
+		}
+		if msg.State == task.StateFailed || msg.State == task.StateCancelled {
 			bv.running = false
 			return bv, nil
 		}

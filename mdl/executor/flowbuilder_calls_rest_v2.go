@@ -220,18 +220,19 @@ func (fb *flowBuilderGen) buildRestResultHandlingGen(s *ast.RestCallStmt) (eleme
 	case ast.RestResultString:
 		if s.OutputVariable != "" {
 			rh.SetOutputVariableName(s.OutputVariable)
-			rh.SetStoreInVariable(true)
 		}
 		return rh, "String"
 
 	case ast.RestResultResponse:
-		rh.SetOutputVariableName(s.OutputVariable)
-		rh.SetStoreInVariable(true)
+		if s.OutputVariable != "" {
+			rh.SetOutputVariableName(s.OutputVariable)
+		}
 		return rh, "HttpResponse"
 
 	case ast.RestResultMapping:
-		rh.SetOutputVariableName(s.OutputVariable)
-		rh.SetStoreInVariable(true)
+		if s.OutputVariable != "" {
+			rh.SetOutputVariableName(s.OutputVariable)
+		}
 		call := genMf.NewImportMappingCall()
 		assignFreshID(call)
 		call.SetMappingID(fb.mappingID(s.Result.MappingName.Module, s.Result.MappingName.Name))

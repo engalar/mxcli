@@ -81,6 +81,7 @@ func BuildFrontend(opts FrontendBuildOptions) error {
 	fmt.Fprintln(w, "Building React client frontend...")
 
 	cmd := exec.Command(nodeExe, runnerMjs)
+	CmdWithPdeathsig(cmd)
 	cmd.Dir = filepath.Join(opts.DeployDir, "web")
 	cmd.Env = append(os.Environ(), "NODE_ENV=production")
 	cmd.Stdout = w

@@ -26,12 +26,17 @@ type ProcessStarter interface {
 // RealStarter executes the command for real (used in production).
 // It starts the process and waits, forwarding SIGINT/SIGTERM to the
 // child so the Java runtime shuts down cleanly on Ctrl+C.
-type RealStarter struct{}
+type RealStarter struct {
+	// ChildPID is set after Start() succeeds, before Wait().
+	ChildPID int
+}
 
 func (r *RealStarter) Run(cmd *exec.Cmd) error {
+	CmdWithPdeathsig(cmd)
 	if err := cmd.Start(); err != nil {
 		return err
 	}
+	r.ChildPID = cmd.Process.Pid
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, os.Interrupt, syscall.SIGTERM)
 	done := make(chan error, 1)
@@ -135,6 +140,17 @@ func StartLocal(opts LocalRunOptions) error {
 // Identified by having model/config.json and model/model.mdp but no bin/start.bat.
 func IsDeployLayout(dir string) bool {
 	return isDeployLayout(dir)
+}
+
+// ResolveRunDir selects the runtime directory for a project.
+// Prefers deploy layout (deployment/) when available, falls back to PAD (.docker/build/).
+// This is the single source of truth for run-directory selection — both CLI and TUI call it.
+func ResolveRunDir(projectDir string) string {
+	deployDir := filepath.Join(projectDir, "deployment")
+	if isDeployLayout(deployDir) {
+		return deployDir
+	}
+	return filepath.Join(projectDir, ".docker", "build")
 }
 
 func isDeployLayout(dir string) bool {

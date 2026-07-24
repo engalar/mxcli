@@ -48,6 +48,10 @@ type BuildOptions struct {
 
 	// OnOutput is called for each line written to stdout. nil = no callback.
 	OnOutput func(line string)
+
+	// OnBuildStart, if set, is called with the mxbuild process PID after it
+	// starts. The caller can use this to track or kill the build process.
+	OnBuildStart func(pid int)
 }
 
 // Build runs MxBuild to create a Portable App Distribution package and applies patches.
@@ -195,9 +199,16 @@ func Build(opts BuildOptions) error {
 			fmt.Sprintf("--java-exe-path=%s", javaExePath),
 			opts.ProjectPath,
 		)
+		CmdWithPdeathsig(cmd)
 		cmd.Stdout = w
 		cmd.Stderr = os.Stderr
-		if err := cmd.Run(); err != nil {
+		if err := cmd.Start(); err != nil {
+			return fmt.Errorf("mxbuild start failed: %w", err)
+		}
+		if opts.OnBuildStart != nil {
+			opts.OnBuildStart(cmd.Process.Pid)
+		}
+		if err := cmd.Wait(); err != nil {
 			return fmt.Errorf("mxbuild failed: %w", err)
 		}
 
@@ -244,10 +255,17 @@ func Build(opts BuildOptions) error {
 		fmt.Sprintf("-o=%s", outputDir),
 		opts.ProjectPath,
 	)
+	CmdWithPdeathsig(cmd)
 	cmd.Stdout = w
 	cmd.Stderr = os.Stderr
 
-	if err := cmd.Run(); err != nil {
+	if err := cmd.Start(); err != nil {
+		return fmt.Errorf("mxbuild start failed: %w", err)
+	}
+	if opts.OnBuildStart != nil {
+		opts.OnBuildStart(cmd.Process.Pid)
+	}
+	if err := cmd.Wait(); err != nil {
 		return fmt.Errorf("mxbuild failed: %w", err)
 	}
 
