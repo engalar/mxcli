@@ -10,7 +10,8 @@ import (
 	"text/tabwriter"
 
 	"github.com/mendixlabs/mxcli/internal/auth"
-	"github.com/mendixlabs/mxcli/internal/marketplace"
+	"github.com/mendixlabs/mxcli/internal/marketplace/domain"
+	"github.com/mendixlabs/mxcli/internal/marketplace/infrastructure"
 	"github.com/spf13/cobra"
 )
 
@@ -74,7 +75,7 @@ func init() {
 // newMarketplaceClient builds an authenticated marketplace client using
 // the profile flag on the given command. Overrideable by tests via
 // marketplaceClientFactory.
-func newMarketplaceClient(ctx context.Context, cmd *cobra.Command) (*marketplace.Client, error) {
+func newMarketplaceClient(ctx context.Context, cmd *cobra.Command) (*infrastructure.APIClient, error) {
 	if marketplaceClientFactory != nil {
 		return marketplaceClientFactory(ctx, cmd)
 	}
@@ -83,12 +84,12 @@ func newMarketplaceClient(ctx context.Context, cmd *cobra.Command) (*marketplace
 	if err != nil {
 		return nil, fmt.Errorf("%w\nhint: run 'mxcli auth login'", err)
 	}
-	return marketplace.New(httpClient), nil
+	return infrastructure.NewAPIClient(httpClient, infrastructure.DefaultBaseURL), nil
 }
 
 // marketplaceClientFactory, if set, overrides the default auth-backed
 // client construction. Tests use this to inject an httptest-backed client.
-var marketplaceClientFactory func(context.Context, *cobra.Command) (*marketplace.Client, error)
+var marketplaceClientFactory func(context.Context, *cobra.Command) (*infrastructure.APIClient, error)
 
 func runMarketplaceSearch(cmd *cobra.Command, args []string) error {
 	query := args[0]
@@ -99,14 +100,14 @@ func runMarketplaceSearch(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	list, err := client.Search(cmd.Context(), query, limit)
+	results, err := client.Search(cmd.Context(), query, limit)
 	if err != nil {
 		return err
 	}
 	if asJSON {
-		return emitJSON(cmd, list)
+		return emitJSON(cmd, results)
 	}
-	return renderContentTable(cmd, list.Items)
+	return renderContentTable(cmd, results)
 }
 
 func runMarketplaceInfo(cmd *cobra.Command, args []string) error {
@@ -120,7 +121,7 @@ func runMarketplaceInfo(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	content, err := client.Get(cmd.Context(), contentID)
+	content, err := client.Get(cmd.Context(), domain.ContentID(contentID))
 	if err != nil {
 		return err
 	}
@@ -142,18 +143,17 @@ func runMarketplaceVersions(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	list, err := client.Versions(cmd.Context(), contentID)
+	items, err := client.GetVersions(cmd.Context(), domain.ContentID(contentID))
 	if err != nil {
 		return err
 	}
 
-	items := list.Items
 	if minMendix != "" {
 		items = filterVersionsByMinMendix(items, minMendix)
 	}
 
 	if asJSON {
-		return emitJSON(cmd, &marketplace.VersionList{Items: items})
+		return emitJSON(cmd, items)
 	}
 	return renderVersionsTable(cmd, items)
 }
@@ -161,8 +161,8 @@ func runMarketplaceVersions(cmd *cobra.Command, args []string) error {
 // filterVersionsByMinMendix returns only versions whose
 // minSupportedMendixVersion is <= the provided version. Used to narrow
 // results to versions compatible with a target project.
-func filterVersionsByMinMendix(versions []marketplace.Version, maxVer string) []marketplace.Version {
-	out := make([]marketplace.Version, 0, len(versions))
+func filterVersionsByMinMendix(versions []*domain.Version, maxVer string) []*domain.Version {
+	out := make([]*domain.Version, 0, len(versions))
 	for _, v := range versions {
 		if compareSemverLike(v.MinSupportedMendixVersion, maxVer) <= 0 {
 			out = append(out, v)
@@ -236,7 +236,7 @@ func emitJSON(cmd *cobra.Command, v any) error {
 	return enc.Encode(v)
 }
 
-func renderContentTable(cmd *cobra.Command, items []marketplace.Content) error {
+func renderContentTable(cmd *cobra.Command, items []*domain.Content) error {
 	if len(items) == 0 {
 		fmt.Fprintln(cmd.OutOrStdout(), "No results.")
 		return nil
@@ -256,7 +256,7 @@ func renderContentTable(cmd *cobra.Command, items []marketplace.Content) error {
 	return w.Flush()
 }
 
-func renderContentDetail(cmd *cobra.Command, c *marketplace.Content) error {
+func renderContentDetail(cmd *cobra.Command, c *domain.Content) error {
 	w := tabwriter.NewWriter(cmd.OutOrStdout(), 0, 0, 2, ' ', 0)
 	fmt.Fprintf(w, "Content ID:\t%d\n", c.ContentID)
 	fmt.Fprintf(w, "Type:\t%s\n", c.Type)
@@ -282,7 +282,7 @@ func renderContentDetail(cmd *cobra.Command, c *marketplace.Content) error {
 	return w.Flush()
 }
 
-func renderVersionsTable(cmd *cobra.Command, items []marketplace.Version) error {
+func renderVersionsTable(cmd *cobra.Command, items []*domain.Version) error {
 	if len(items) == 0 {
 		fmt.Fprintln(cmd.OutOrStdout(), "No versions.")
 		return nil

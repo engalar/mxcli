@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-package marketplace
+package infrastructure
 
 import (
 	"context"
@@ -11,10 +11,6 @@ import (
 	"testing"
 	"time"
 )
-
-// Sample responses mirror what the 2026-04 spike recorded from the real
-// API. If Mendix changes the response shape, these sample strings are the
-// first place to update.
 
 const sampleContentList = `{
   "items": [
@@ -31,13 +27,13 @@ const sampleContentList = `{
         "versionId": "0a03e65a-d94f-47fa-ac40-4e8e054fdcd4",
         "versionNumber": "11.5.0",
         "minSupportedMendixVersion": "10.24.0",
-        "publicationDate": "2026-01-13T06:57:14.512Z"
+        "publicationDate": "2026-01-13T06:57:14.512Z",
+        "downloadUrl": "https://marketplace.mendix.com/v1/versions/0a03e65a-d94f-47fa-ac40-4e8e054fdcd4/download"
       }
     }
   ]
 }`
 
-// sampleMultiContentList has two items: one matching "database", one not.
 const sampleMultiContentList = `{
   "items": [
     {
@@ -87,12 +83,14 @@ const sampleContent = `{
   "supportCategory": "Platform",
   "licenseUrl": "http://www.apache.org/licenses/LICENSE-2.0.html",
   "isPrivate": false,
+  "isCompanyApproved": true,
   "latestVersion": {
     "name": "Community Commons",
     "versionId": "0a03e65a-d94f-47fa-ac40-4e8e054fdcd4",
     "versionNumber": "11.5.0",
     "minSupportedMendixVersion": "10.24.0",
-    "publicationDate": "2026-01-13T06:57:14.512Z"
+    "publicationDate": "2026-01-13T06:57:14.512Z",
+    "downloadUrl": "https://marketplace.mendix.com/v1/versions/0a03e65a-d94f-47fa-ac40-4e8e054fdcd4/download"
   }
 }`
 
@@ -104,16 +102,18 @@ const sampleVersions = `{
       "versionNumber": "11.5.0",
       "minSupportedMendixVersion": "10.24.0",
       "publicationDate": "2026-01-13T06:57:14.512Z",
-      "releaseNotes": "<p>We upgraded guava to 33.5.0-jre</p>"
+      "releaseNotes": "<p>We upgraded guava to 33.5.0-jre</p>",
+      "versionType": "Regular",
+      "downloadUrl": "https://marketplace.mendix.com/v1/versions/0a03e65a-d94f-47fa-ac40-4e8e054fdcd4/download"
     }
   ]
 }`
 
-func newMockServer(t *testing.T, handler http.HandlerFunc) (*Client, *httptest.Server) {
+func newMockServer(t *testing.T, handler http.HandlerFunc) (*APIClient, *httptest.Server) {
 	t.Helper()
 	ts := httptest.NewServer(handler)
 	t.Cleanup(ts.Close)
-	return NewWithBaseURL(ts.Client(), ts.URL), ts
+	return NewAPIClient(ts.Client(), ts.URL), ts
 }
 
 func TestSearch_PassesQueryAndLimit(t *testing.T) {
@@ -125,8 +125,6 @@ func TestSearch_PassesQueryAndLimit(t *testing.T) {
 		_, _ = w.Write([]byte(sampleMultiContentList))
 	})
 
-	// User requests limit=3 but because the API ignores ?search=, we fetch
-	// searchFetchLimit items and apply client-side filtering.
 	result, err := client.Search(context.Background(), "database", 3)
 	if err != nil {
 		t.Fatalf("Search: %v", err)
@@ -137,13 +135,11 @@ func TestSearch_PassesQueryAndLimit(t *testing.T) {
 	if !strings.Contains(gotQuery, "search=database") {
 		t.Errorf("query missing search param: %q", gotQuery)
 	}
-	// API receives searchFetchLimit, not the user's limit=3
 	if !strings.Contains(gotQuery, "limit="+strconv.Itoa(searchFetchLimit)) {
 		t.Errorf("expected API to receive limit=%d, got query %q", searchFetchLimit, gotQuery)
 	}
-	// Client-side filter: only items whose name contains "database"
-	if len(result.Items) != 2 {
-		t.Errorf("expected 2 filtered items (Database Connector + Advanced Database Tools), got %d", len(result.Items))
+	if len(result) != 2 {
+		t.Errorf("expected 2 filtered items, got %d", len(result))
 	}
 }
 
@@ -156,8 +152,8 @@ func TestSearch_ClientSideFiltering(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(result.Items) != 1 || result.Items[0].ContentID != 170 {
-		t.Errorf("expected only Community Commons (170), got %+v", result.Items)
+	if len(result) != 1 || result[0].ContentID != 170 {
+		t.Errorf("expected only Community Commons (170), got %+v", result)
 	}
 }
 
@@ -170,8 +166,8 @@ func TestSearch_ClientSideFiltering_NoMatch(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(result.Items) != 0 {
-		t.Errorf("expected 0 results for nonexistent query, got %d", len(result.Items))
+	if len(result) != 0 {
+		t.Errorf("expected 0 results for nonexistent query, got %d", len(result))
 	}
 }
 
@@ -180,13 +176,12 @@ func TestSearch_ClientSideFiltering_LimitApplied(t *testing.T) {
 		_, _ = w.Write([]byte(sampleMultiContentList))
 	})
 
-	// 2 items match "database", but user wants only 1
 	result, err := client.Search(context.Background(), "database", 1)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(result.Items) != 1 {
-		t.Errorf("expected limit of 1 applied after filtering, got %d items", len(result.Items))
+	if len(result) != 1 {
+		t.Errorf("expected limit of 1 applied after filtering, got %d items", len(result))
 	}
 }
 
@@ -199,8 +194,8 @@ func TestSearch_PublisherFiltering(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(result.Items) != 1 || result.Items[0].ContentID != 999 {
-		t.Errorf("expected ACME item (999), got %+v", result.Items)
+	if len(result) != 1 || result[0].ContentID != 999 {
+		t.Errorf("expected ACME item (999), got %+v", result)
 	}
 }
 
@@ -238,6 +233,12 @@ func TestGet_ParsesContentDetail(t *testing.T) {
 	if got.LatestVersion == nil || got.LatestVersion.VersionNumber != "11.5.0" {
 		t.Errorf("latestVersion not parsed: %+v", got.LatestVersion)
 	}
+	if got.LatestVersion.DownloadURL != "https://marketplace.mendix.com/v1/versions/0a03e65a-d94f-47fa-ac40-4e8e054fdcd4/download" {
+		t.Errorf("downloadUrl not parsed: %s", got.LatestVersion.DownloadURL)
+	}
+	if !got.IsCompanyApproved {
+		t.Error("isCompanyApproved should be true")
+	}
 	if len(got.Categories) != 1 || got.Categories[0].Name != "Utility" {
 		t.Errorf("categories not parsed: %+v", got.Categories)
 	}
@@ -252,14 +253,14 @@ func TestVersions_ParsesList(t *testing.T) {
 		_, _ = w.Write([]byte(sampleVersions))
 	})
 
-	got, err := client.Versions(context.Background(), 170)
+	got, err := client.GetVersions(context.Background(), 170)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(got.Items) != 1 {
-		t.Fatalf("expected 1 version, got %d", len(got.Items))
+	if len(got) != 1 {
+		t.Fatalf("expected 1 version, got %d", len(got))
 	}
-	v := got.Items[0]
+	v := got[0]
 	if v.VersionNumber != "11.5.0" {
 		t.Errorf("versionNumber: %q", v.VersionNumber)
 	}
@@ -268,6 +269,12 @@ func TestVersions_ParsesList(t *testing.T) {
 	}
 	if !strings.Contains(v.ReleaseNotes, "guava") {
 		t.Errorf("releaseNotes: %q", v.ReleaseNotes)
+	}
+	if v.VersionType != "Regular" {
+		t.Errorf("versionType: %q", v.VersionType)
+	}
+	if v.DownloadURL != "https://marketplace.mendix.com/v1/versions/0a03e65a-d94f-47fa-ac40-4e8e054fdcd4/download" {
+		t.Errorf("downloadUrl: %q", v.DownloadURL)
 	}
 	if v.PublicationDate.IsZero() {
 		t.Error("publicationDate did not parse")
@@ -308,11 +315,8 @@ func TestGet_InvalidJSONReported(t *testing.T) {
 }
 
 func TestNew_UsesDefaultBaseURL(t *testing.T) {
-	c := New(http.DefaultClient)
-	if c.baseURL != BaseURL {
-		t.Errorf("expected default BaseURL %q, got %q", BaseURL, c.baseURL)
-	}
+	c := NewAPIClient(http.DefaultClient, "https://marketplace-api.mendix.com")
 	if c.baseURL != "https://marketplace-api.mendix.com" {
-		t.Errorf("default BaseURL unexpected: %q", c.baseURL)
+		t.Errorf("baseURL: %q", c.baseURL)
 	}
 }

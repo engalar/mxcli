@@ -11,7 +11,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/mendixlabs/mxcli/internal/marketplace"
+	"github.com/mendixlabs/mxcli/internal/marketplace/infrastructure"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )
@@ -39,8 +39,8 @@ func runMarketplace(t *testing.T, handler http.HandlerFunc, args ...string) (str
 	t.Cleanup(ts.Close)
 
 	origFactory := marketplaceClientFactory
-	marketplaceClientFactory = func(_ context.Context, _ *cobra.Command) (*marketplace.Client, error) {
-		return marketplace.NewWithBaseURL(ts.Client(), ts.URL), nil
+	marketplaceClientFactory = func(_ context.Context, _ *cobra.Command) (*infrastructure.APIClient, error) {
+		return infrastructure.NewAPIClient(ts.Client(), ts.URL), nil
 	}
 	t.Cleanup(func() { marketplaceClientFactory = origFactory })
 
@@ -81,13 +81,12 @@ func TestMarketplaceSearch_JSON(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var got map[string]any
+	var got []map[string]any
 	if err := json.Unmarshal([]byte(out), &got); err != nil {
 		t.Fatalf("not JSON: %v\n%s", err, out)
 	}
-	items, ok := got["items"].([]any)
-	if !ok || len(items) != 1 {
-		t.Errorf("expected items[1], got: %v", got)
+	if len(got) != 1 {
+		t.Errorf("expected 1 item, got %d: %v", len(got), got)
 	}
 }
 
