@@ -1087,7 +1087,7 @@ func (ctx *ExecContext) GetThemeRegistry() *ThemeRegistry {
 		return nil
 	}
 	projectDir := filepath.Dir(ctx.MprPath)
-	registry, err := loadThemeRegistry(projectDir)
+	registry, err := LoadThemeRegistry(projectDir)
 	if err != nil {
 		if ctx.Logger != nil {
 			ctx.Logger.Warn("failed to load theme registry", "error", err)

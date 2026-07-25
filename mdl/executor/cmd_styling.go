@@ -42,7 +42,7 @@ func execShowDesignPropertiesFn(ctx context.Context, s *ast.ShowDesignProperties
 	}
 
 	projectDir := filepath.Dir(deps.MprPath)
-	registry, err := loadThemeRegistry(projectDir)
+	registry, err := LoadThemeRegistry(projectDir)
 	if err != nil {
 		return mdlerrors.NewBackend("load theme registry", err)
 	}

@@ -147,6 +147,15 @@ func getOrGenerateTemplate(widgetID, projectPath string) (*WidgetTemplate, error
 	return tmpl, nil
 }
 
+// GetCanonicalTemplate returns a widget template for the given widget ID.
+// The template is loaded from the MPK cache if available, or generated from
+// the project's .mpk file. Returns nil if the widget is unknown.
+// This is a lighter-weight alternative to GetTemplateFullBSON that returns
+// the JSON-format template without BSON conversion (useful for lint detection).
+func GetCanonicalTemplate(widgetID, projectPath string) (*WidgetTemplate, error) {
+	return getOrGenerateTemplate(widgetID, projectPath)
+}
+
 // ResetGeneratedCache clears the MPK-derived template cache (for testing).
 func ResetGeneratedCache() {
 	generatedCache.Range(func(k, _ any) bool {

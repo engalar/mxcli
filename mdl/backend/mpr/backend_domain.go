@@ -4,6 +4,8 @@ package mprbackend
 
 import (
 	"fmt"
+	"sort"
+	"strings"
 
 	"go.mongodb.org/mongo-driver/v2/bson"
 
@@ -926,4 +928,242 @@ func (b *MprBackend) commitScriptBuffer() error {
 		return nil
 	}
 	return b.msdkWriter.BatchWrite(ops)
+}
+
+// isPluggableWidget checks if a bson.D represents a pluggable widget.
+func isPluggableWidget(d *bson.D) bool {
+	for _, elem := range *d {
+		if elem.Key == "$Type" {
+			if s, ok := elem.Value.(string); ok && s == "CustomWidgets$CustomWidget" {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// getDString returns a string value from a bson.D by key.
+func getDString(d *bson.D, key string) string {
+	for _, elem := range *d {
+		if elem.Key == key {
+			if s, ok := elem.Value.(string); ok {
+				return s
+			}
+		}
+	}
+	return ""
+}
+
+// setDValue sets a value in a bson.D by key, replacing the first occurrence.
+func setDValue(d *bson.D, key string, value any) {
+	for i, elem := range *d {
+		if elem.Key == key {
+			(*d)[i].Value = value
+			return
+		}
+	}
+	*d = append(*d, bson.E{Key: key, Value: value})
+}
+
+// walkBSONDFunc recursively walks a bson.D tree calling fn for each bson.D.
+func walkBSONDFunc(d *bson.D, fn func(*bson.D) bool) {
+	if !fn(d) {
+		return
+	}
+	for i, elem := range *d {
+		switch v := elem.Value.(type) {
+		case bson.D:
+			vCopy := v
+			walkBSONDFunc(&vCopy, fn)
+			(*d)[i].Value = vCopy
+		case *bson.D:
+			walkBSONDFunc(v, fn)
+		case bson.A:
+			arr := v
+			for j := range arr {
+				if sub, ok := arr[j].(bson.D); ok {
+					subCopy := sub
+					walkBSONDFunc(&subCopy, fn)
+					arr[j] = subCopy
+				}
+			}
+			(*d)[i].Value = arr
+		}
+	}
+}
+
+// mapToOrderedBSOND recursively converts any value tree to bson.D with
+// $ID first, $Type second, then alphabetical — for use when injecting
+// new maps into a bson.D tree.
+func mapToOrderedBSOND(v any) any {
+	switch val := v.(type) {
+	case map[string]any:
+		d := make(bson.D, 0, len(val))
+		if id, ok := val["$ID"]; ok {
+			d = append(d, bson.E{Key: "$ID", Value: mapToOrderedBSOND(id)})
+		}
+		if t, ok := val["$Type"]; ok {
+			d = append(d, bson.E{Key: "$Type", Value: mapToOrderedBSOND(t)})
+		}
+		keys := make([]string, 0, len(val))
+		for k := range val {
+			if k != "$ID" && k != "$Type" {
+				keys = append(keys, k)
+			}
+		}
+		sort.Strings(keys)
+		for _, k := range keys {
+			d = append(d, bson.E{Key: k, Value: mapToOrderedBSOND(val[k])})
+		}
+		return d
+	case bson.D:
+		m := make(map[string]any, len(val))
+		for _, elem := range val {
+			m[elem.Key] = elem.Value
+		}
+		return mapToOrderedBSOND(m)
+	case bson.A:
+		arr := make(bson.A, len(val))
+		for i, item := range val {
+			arr[i] = mapToOrderedBSOND(item)
+		}
+		return arr
+	case []any:
+		arr := make(bson.A, len(val))
+		for i, item := range val {
+			arr[i] = mapToOrderedBSOND(item)
+		}
+		return arr
+	default:
+		return v
+	}
+}
+
+// ReplaceWidgetObjectInUnit implements MPR018Fixer. It reads a unit, finds a
+// widget by name, replaces only its Object section, and writes back.
+func (b *MprBackend) ReplaceWidgetObjectInUnit(unitID model.ID, widgetName string, newObj map[string]any) error {
+	b.initSubBackends()
+	rawBytes, err := b.msdkReader.GetRawUnitBytes(string(unitID))
+	if err != nil {
+		return fmt.Errorf("load raw unit bytes: %w", err)
+	}
+	var rawData bson.D
+	if err := bson.Unmarshal(rawBytes, &rawData); err != nil {
+		return fmt.Errorf("unmarshal unit BSON: %w", err)
+	}
+
+	var found bool
+	walkBSONDFunc(&rawData, func(d *bson.D) bool {
+		if found {
+			return false
+		}
+		if !isPluggableWidget(d) {
+			return true
+		}
+		if getDString(d, "Name") != widgetName {
+			return true
+		}
+		newObjD := mapToOrderedBSOND(newObj).(bson.D)
+		setDValue(d, "Object", newObjD)
+		found = true
+		return false
+	})
+	if !found {
+		return fmt.Errorf("widget %q not found in unit %s", widgetName, unitID)
+	}
+
+	newBytes, err := bson.Marshal(rawData)
+	if err != nil {
+		return fmt.Errorf("marshal unit BSON: %w", err)
+	}
+	return b.msdkWriter.UpdateRawUnit(string(unitID), newBytes)
+}
+
+// FixDesignPropertyNames walks a page/snippet/layout unit's BSON tree and
+// renames any DesignPropertyValue.Key (and option value) that matches an
+// old name from the theme's design-properties.json oldNames mapping.
+// propRenames maps old property name -> new property name.
+// optRenames maps old option name -> new option name (global across all props).
+func (b *MprBackend) FixDesignPropertyNames(unitID model.ID, propRenames, optRenames map[string]string) error {
+	b.initSubBackends()
+	rawBytes, err := b.msdkReader.GetRawUnitBytes(string(unitID))
+	if err != nil {
+		return fmt.Errorf("load raw unit bytes: %w", err)
+	}
+	var rawData bson.D
+	if err := bson.Unmarshal(rawBytes, &rawData); err != nil {
+		return fmt.Errorf("unmarshal unit BSON: %w", err)
+	}
+
+	var fixed bool
+	walkBSONDFunc(&rawData, func(d *bson.D) bool {
+		for i, elem := range *d {
+			if elem.Key != "DesignProperties" {
+				continue
+			}
+			arr, ok := elem.Value.(bson.A)
+			if !ok {
+				continue
+			}
+			for j, item := range arr {
+				dpDoc, ok := item.(bson.D)
+				if !ok {
+					continue
+				}
+				oldKey := dGetString(dpDoc, "Key")
+				if oldKey == "" {
+					continue
+				}
+				newKey, needsRename := propRenames[oldKey]
+				if !needsRename {
+					if dGetString(dpDoc, "Type") == "option" {
+						fixDPOptionSubValue(dpDoc, optRenames)
+					}
+					continue
+				}
+				setDValue(&dpDoc, "Key", newKey)
+				if dGetString(dpDoc, "Type") == "option" {
+					fixDPOptionSubValue(dpDoc, optRenames)
+				}
+				arr[j] = dpDoc
+				fixed = true
+			}
+			if fixed {
+				(*d)[i].Value = arr
+			}
+		}
+		return true
+	})
+
+	if !fixed {
+		return nil
+	}
+	newBytes, err := bson.Marshal(rawData)
+	if err != nil {
+		return fmt.Errorf("marshal fixed BSON: %w", err)
+	}
+	return b.msdkWriter.UpdateRawUnit(string(unitID), newBytes)
+}
+
+func fixDPOptionSubValue(dpDoc bson.D, optRename map[string]string) {
+	if len(optRename) == 0 {
+		return
+	}
+	valDoc := dGetDoc(dpDoc, "Value")
+	if len(valDoc) == 0 {
+		return
+	}
+	subType := dGetString(valDoc, "$Type")
+	if !strings.HasSuffix(subType, "OptionDesignPropertyValue") {
+		return
+	}
+	oldOpt := dGetString(valDoc, "Option")
+	if oldOpt == "" {
+		return
+	}
+	newOpt, ok := optRename[oldOpt]
+	if !ok {
+		return
+	}
+	setDValue(&valDoc, "Option", newOpt)
 }

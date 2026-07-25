@@ -244,13 +244,30 @@ func findAllFormActionButtons(v any) []map[string]any {
 	return result
 }
 
-// walkValue recursively walks any BSON-decoded value, calling fn for each map.
+// walkValue recursively walks any BSON-decoded value, calling fn for each map
+// or bson.D (treating both as BSON documents). Handles map[string]any, bson.D,
+// []any, and bson.A — the four forms that mongo-driver v2 produces when
+// decoding BSON into map[string]any.
+//
+// NOTE: bson.D must be converted to map[string]any before calling fn because
+// fn accepts map[string]any. Without this conversion, pluggable widgets
+// stored as bson.D (from bson.Unmarshal into map[string]any) would be skipped.
 func walkValue(v any, fn func(map[string]any)) {
 	switch val := v.(type) {
 	case map[string]any:
 		fn(val)
 		for _, child := range val {
 			walkValue(child, fn)
+		}
+	case bson.D:
+		// Convert to map[string]any and call fn (treat bson.D like map).
+		m := make(map[string]any, len(val))
+		for _, elem := range val {
+			m[elem.Key] = elem.Value
+		}
+		fn(m)
+		for _, elem := range val {
+			walkValue(elem.Value, fn)
 		}
 	case []any:
 		for _, child := range val {

@@ -443,6 +443,12 @@ func (a *App) chordTree() who.ChordNode {
 				Key: "x", Label: "Create module", Action: p(a.actionCreateModule),
 			},
 			{
+				Key: "s", Label: "Settings",
+				Children: []who.ChordNode{
+					{Key: "s", Label: "Project Config", Action: p(a.actionConfigView)},
+				},
+			},
+			{
 				Key: "D", Label: "Delete", Action: p(a.actionDelete),
 			},
 		},
@@ -733,6 +739,17 @@ func (a *App) actionHardReload() tea.Cmd {
 	cv := NewDiscardConfirmView(projectPath, a.mxcliPath)
 	a.views.Push(cv)
 	return nil
+}
+
+func (a *App) actionConfigView() tea.Cmd {
+	mxcliPath := a.mxcliPath
+	projectPath := a.activeTabProjectPath()
+	if projectPath == "" {
+		return nil
+	}
+	cv := NewConfigView(mxcliPath, projectPath)
+	a.views.Push(cv)
+	return cv.loadCmd()
 }
 
 func (a *App) actionCreateModule() tea.Cmd {

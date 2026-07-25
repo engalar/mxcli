@@ -13,6 +13,7 @@ const (
 	ModeCommandPalette
 	ModeInput
 	ModeConfirm
+	ModeConfigView
 )
 
 func (m ViewMode) String() string {
@@ -37,6 +38,8 @@ func (m ViewMode) String() string {
 		return "Input"
 	case ModeConfirm:
 		return "Confirm"
+	case ModeConfigView:
+		return "Config"
 	default:
 		return "Unknown"
 	}

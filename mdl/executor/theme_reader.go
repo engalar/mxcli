@@ -18,12 +18,14 @@ type ThemeProperty struct {
 	Description string        `json:"description"`
 	Class       string        `json:"class"`   // For Toggle type: the CSS class toggled
 	Options     []ThemeOption `json:"options"` // For Dropdown/ColorPicker/ToggleButtonGroup
+	OldNames    []string      `json:"oldNames"` // Previous names for backward compat
 }
 
 // ThemeOption represents a single option within a dropdown/picker design property.
 type ThemeOption struct {
-	Name  string `json:"name"`
-	Class string `json:"class"`
+	Name     string   `json:"name"`
+	Class    string   `json:"class"`
+	OldNames []string `json:"oldNames"` // Previous option names for backward compat
 }
 
 // ThemeRegistry holds all design property definitions loaded from the project's themesource.
@@ -33,9 +35,9 @@ type ThemeRegistry struct {
 	WidgetProperties map[string][]ThemeProperty
 }
 
-// loadThemeRegistry reads and merges all design-properties.json files from the project's
+// LoadThemeRegistry reads and merges all design-properties.json files from the project's
 // themesource directories (themesource/*/web/design-properties.json).
-func loadThemeRegistry(projectDir string) (*ThemeRegistry, error) {
+func LoadThemeRegistry(projectDir string) (*ThemeRegistry, error) {
 	registry := &ThemeRegistry{
 		WidgetProperties: make(map[string][]ThemeProperty),
 	}
@@ -96,6 +98,56 @@ func (r *ThemeRegistry) GetPropertiesForWidget(widgetTypeKey string) []ThemeProp
 		}
 	}
 
+	return result
+}
+
+// DesignPropMapping records a single old→new name mapping for a design property.
+type DesignPropMapping struct {
+	OldName  string
+	NewName  string
+	OldOpts  map[string]string // old option name → new option name
+}
+
+// BuildOldNameMapping builds a map from each old property name / old option name
+// to its replacement, keyed by the old name string (for property- and option-level
+// renames). Multiple properties can map to the same new name across widget types.
+//
+// The caller merges all mappings from all widget type keys and applies them across
+// all pages — the old names are globally unique in practice.
+func (r *ThemeRegistry) BuildOldNameMapping() map[string]DesignPropMapping {
+	result := make(map[string]DesignPropMapping)
+	for _, props := range r.WidgetProperties {
+		for _, p := range props {
+			newName := p.Name
+			for _, old := range p.OldNames {
+				result[old] = DesignPropMapping{
+					OldName: old,
+					NewName: newName,
+				}
+			}
+			if len(p.Options) == 0 {
+				continue
+			}
+			opts := make(map[string]string)
+			for _, o := range p.Options {
+				newOpt := o.Name
+				for _, old := range o.OldNames {
+					opts[old] = newOpt
+				}
+			}
+			if len(opts) == 0 {
+				continue
+			}
+			// Attach option mappings to each property-level entry
+			for oldName := range result {
+				if result[oldName].NewName == newName {
+					m := result[oldName]
+					m.OldOpts = opts
+					result[oldName] = m
+				}
+			}
+		}
+	}
 	return result
 }
 

@@ -2,6 +2,30 @@
 
 package widgets
 
+import (
+	"strings"
+
+	"go.mongodb.org/mongo-driver/v2/bson"
+
+	"github.com/mendixlabs/mxcli/mdl/types"
+)
+
+// extractBinary returns a []byte from an interface{} value, or nil.
+// BSON binary fields deserialize as bson.Binary (not []byte) when
+// unmarshalled into map[string]any, so we handle both forms.
+func extractBinary(v any) []byte {
+	if v == nil {
+		return nil
+	}
+	switch x := v.(type) {
+	case []byte:
+		return x
+	case bson.Binary:
+		return x.Data
+	}
+	return nil
+}
+
 // This file is the SINGLE source of truth for a pluggable widget's top-level
 // TextTemplate (Forms$ClientTemplate) states. Getting them wrong produces
 // CE0463 "the definition of this widget has changed".
@@ -57,6 +81,21 @@ var defaultHiddenTextTemplates = map[string]map[string]bool{
 		"refOptions":                    true,
 		"filterInputPlaceholderCaption": true,
 	},
+	"com.mendix.widget.web.image.Image": {
+		// imageUrl is a TextTemplate-type property hidden in the default editor mode;
+		// mx update-widgets nullifies it. Only visible when displayAs == "imageUrl".
+		"imageUrl": true,
+	},
+	"com.mendix.widget.web.treenode.TreeNode": {
+		// headerCaption is a TextTemplate-type property hidden in the default editor
+		// mode (headerType == "none"); mx update-widgets nullifies it.
+		"headerCaption": true,
+	},
+	"com.mendix.widget.web.accordion.Accordion": {
+		// groups.headerText is the TextTemplate of each Accordion group. In the default
+		// editor mode it is hidden, so mx update-widgets nullifies its TextTemplate.
+		"groups.headerText": true,
+	},
 }
 
 // normalizeTextTemplateStates nullifies the TextTemplate of every top-level
@@ -105,7 +144,6 @@ func normalizeTextTemplateStates(tmpl *WidgetTemplate) {
 			}
 		}
 	}
-
 	hidden := defaultHiddenTextTemplates[tmpl.WidgetID]
 
 	for _, op := range objProps {
@@ -115,20 +153,187 @@ func normalizeTextTemplateStates(tmpl *WidgetTemplate) {
 		}
 		tp, _ := opMap["TypePointer"].(string)
 		key := idToKey[tp]
-
 		wantNull := false
 		if !typeIsTextTemplate[tp] {
-			// Rule 1: non-TextTemplate-type property -- TextTemplate must be null.
 			wantNull = true
 		} else if hidden[key] {
-			// Rule 2: TextTemplate-type, hidden in default -- TextTemplate must be null.
 			wantNull = true
 		}
-		// Rule 3 (else): TextTemplate-type, visible -- keep the ClientTemplate as-is.
 
 		if wantNull {
 			if val, ok := getMapField(opMap, "Value"); ok {
 				val["TextTemplate"] = nil
+			}
+		}
+	}
+}
+
+// NormalizeNestedTextTemplates nullifies TextTemplate for nested Object-type
+// properties (e.g., Accordion groups[].headerText) after merge. These nested
+// properties don't exist in the canonical template (which has empty Object
+// arrays for Object-type values), so they must be normalized after the current
+// Object's nested data is merged in.
+//
+// Hidden entries in defaultHiddenTextTemplates use a dot separator: "groups.headerText"
+// means the top-level property "groups" has nested property "headerText" that should
+// have TextTemplate = null.
+func NormalizeNestedTextTemplates(mergedObj, typ map[string]any, widgetID string) {
+	if widgetID == "" {
+		return
+	}
+	hidden := defaultHiddenTextTemplates[widgetID]
+
+	nestedHidden := make(map[string]map[string]bool)
+	for key, val := range hidden {
+		if parts := strings.SplitN(key, ".", 2); len(parts) == 2 {
+			parent, child := parts[0], parts[1]
+			if nestedHidden[parent] == nil {
+				nestedHidden[parent] = make(map[string]bool)
+			}
+			nestedHidden[parent][child] = val
+		}
+	}
+	if len(nestedHidden) == 0 {
+		return
+	}
+
+	objType, ok := getMapField(typ, "ObjectType")
+	if !ok {
+		return
+	}
+	propTypes, ok := getArrayField(objType, "PropertyTypes")
+	if !ok {
+		return
+	}
+
+	// Build top-level PropertyType ID -> PropertyKey and
+	// parentKey -> nestedPropertyKey -> isTextTemplate for ObjectType properties.
+	// IDs in typ come from BSON, so $ID is []byte (binary blob).
+	// Use BlobToUUID for consistent matching.
+	idToKey := make(map[string]string, len(propTypes))
+	nestedTypeInfo := make(map[string]map[string]bool)  // parentKey -> childKey -> isTextTemplate
+	nestedIDToKey := make(map[string]map[string]string) // parentKey -> childID (UUID-with-dashes) -> childKey
+
+	for _, pt := range propTypes {
+		ptMap, ok := pt.(map[string]any)
+		if !ok {
+			continue
+		}
+		id := types.BlobToUUID(extractBinary(ptMap["$ID"]))
+		key, _ := ptMap["PropertyKey"].(string)
+		if id != "" && key != "" {
+			idToKey[id] = key
+		}
+
+		vt, ok := getMapField(ptMap, "ValueType")
+		if !ok {
+			continue
+		}
+		nestedOT, ok := getMapField(vt, "ObjectType")
+		if !ok || nestedOT == nil {
+			continue
+		}
+		nestedPTs, ok := getArrayField(nestedOT, "PropertyTypes")
+		if !ok {
+			continue
+		}
+
+		info := make(map[string]bool, len(nestedPTs))
+		nidMap := make(map[string]string, len(nestedPTs))
+		for _, npt := range nestedPTs {
+			nptMap, ok := npt.(map[string]any)
+			if !ok {
+				continue
+			}
+			nkey, _ := nptMap["PropertyKey"].(string)
+			nid := types.BlobToUUID(extractBinary(nptMap["$ID"]))
+			if nkey == "" || nid == "" {
+				continue
+			}
+			nidMap[nid] = nkey
+			nvt, ok := getMapField(nptMap, "ValueType")
+			if ok {
+				vtType, _ := nvt["Type"].(string)
+				info[nkey] = (vtType == "TextTemplate")
+			}
+		}
+		nestedTypeInfo[key] = info
+		nestedIDToKey[key] = nidMap
+	}
+
+	objProps, ok := getArrayField(mergedObj, "Properties")
+	if !ok {
+		return
+	}
+
+	for _, op := range objProps {
+		opMap, ok := op.(map[string]any)
+		if !ok {
+			continue
+		}
+
+		tp := types.BlobToUUID(extractBinary(opMap["TypePointer"]))
+		key := idToKey[tp]
+		if key == "" {
+			continue
+		}
+
+		childHidden := nestedHidden[key]
+		info := nestedTypeInfo[key]
+		nidMap := nestedIDToKey[key]
+		if len(childHidden) == 0 && info == nil {
+			continue
+		}
+
+		val, ok := getMapField(opMap, "Value")
+		if !ok {
+			continue
+		}
+		objects, ok := getArrayField(val, "Objects")
+		if !ok {
+			continue
+		}
+
+		for _, obj := range objects {
+			objMap, ok := obj.(map[string]any)
+			if !ok {
+				continue
+			}
+			nestedProps, ok := getArrayField(objMap, "Properties")
+			if !ok {
+				continue
+			}
+			for _, np := range nestedProps {
+				npMap, ok := np.(map[string]any)
+				if !ok {
+					continue
+				}
+
+				ntp := types.BlobToUUID(extractBinary(npMap["TypePointer"]))
+				if ntp == "" {
+					continue
+				}
+
+				nKey := nidMap[ntp]
+				if nKey == "" {
+					continue
+				}
+
+				isTextTemplate := info[nKey]
+				isHidden := childHidden[nKey]
+
+				wantNull := false
+				if !isTextTemplate {
+					wantNull = true
+				} else if isHidden {
+					wantNull = true
+				}
+
+				if wantNull {
+					if nval, ok := getMapField(npMap, "Value"); ok {
+						nval["TextTemplate"] = nil
+					}
+				}
 			}
 		}
 	}

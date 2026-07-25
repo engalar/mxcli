@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/mendixlabs/mxcli/mdl/executor"
 	"github.com/mendixlabs/mxcli/mdl/linter"
 	"github.com/mendixlabs/mxcli/mdl/linter/rules"
 	"github.com/mendixlabs/mxcli/mdl/visitor"
@@ -27,9 +28,11 @@ Built-in rules check for:
   - Unconfigured images (MPR005) - IMAGE widgets with no source configured
   - Empty containers (MPR006) - layout containers with no children
   - Navigation page security (MPR007) - pages in navigation need allowed roles
+  - DataGrid2 sortable columns (MPR009) - sortable columns need attributes
   - Entity access rules (SEC001) - persistent entities need access rules
   - Password policy (SEC002) - password minimum length should be 8+
   - Demo users (SEC003) - demo users should be off at Production security
+  - Navigation page exists (MPR019) - navigation references must point to actual pages
 
 Bundled Starlark rules (in .claude/lint-rules/):
   Security:
@@ -136,6 +139,16 @@ Examples:
 		// MPR017 - detect orphaned .mxunit files in mprcontents/
 		lint.AddRule(rules.NewOrphanedMxUnitRule())
 
+		// MPR018 - detect pluggable widget Object/Type property mismatches (CE0463 prevention)
+		lint.AddRule(rules.NewWidgetDefinitionRuleWithPath(projectPath))
+
+		// MPR019 - detect stale navigation page references (CE1613 prevention)
+		lint.AddRule(rules.NewNavPageExistsRule())
+
+		// MPR020 - detect old design property names (CE6087 prevention)
+		mpr020Mappings := loadDesignPropMappings(projectPath)
+		lint.AddRule(rules.NewDesignPropertyMigrationRuleWithMappings(mpr020Mappings))
+
 		// Convention rules (CONV011-CONV014) - require BSON inspection
 		lint.AddRule(rules.NewNoCommitInLoopRule())
 		lint.AddRule(rules.NewExclusiveSplitCaptionRule())
@@ -180,6 +193,9 @@ Examples:
 		if autoFix {
 			fixCount016 := 0
 			fixCount017 := 0
+			fixCount018 := 0
+			fixCount020 := 0
+			mpr020PropRenames, mpr020OptRenames := buildMPR020Renames(projectPath)
 			for _, v := range violations {
 				switch v.RuleID {
 				case "MPR016":
@@ -192,7 +208,6 @@ Examples:
 					path, ok := v.Extra.(string)
 					if ok && path != "" {
 						if err := os.Remove(path); err == nil {
-							// Clean up empty parent directories up to mprcontents/ root.
 							for dir := filepath.Dir(path); dir != "" && dir != filepath.Dir(dir); dir = filepath.Dir(dir) {
 								entries, _ := os.ReadDir(dir)
 								if len(entries) == 0 {
@@ -204,6 +219,18 @@ Examples:
 							fixCount017++
 						}
 					}
+				case "MPR018":
+					if fw, ok := exec.LintReader().(rules.MPR018Fixer); ok {
+						if err := rules.FixMPR018(v, fw, projectPath); err == nil {
+							fixCount018++
+						}
+					}
+				case "MPR020":
+					if fw, ok := exec.LintReader().(rules.MPR020Fixer); ok {
+						if err := rules.FixMPR020(v, fw, mpr020PropRenames, mpr020OptRenames); err == nil {
+							fixCount020++
+						}
+					}
 				}
 			}
 			if fixCount016 > 0 {
@@ -211,6 +238,12 @@ Examples:
 			}
 			if fixCount017 > 0 {
 				fmt.Fprintf(cmd.OutOrStdout(), "\n✓ Removed %d orphaned .mxunit files\n", fixCount017)
+			}
+			if fixCount018 > 0 {
+				fmt.Fprintf(cmd.OutOrStdout(), "\n✓ Fixed %d MPR018 violations (rebuilt widget Objects from canonical templates)\n", fixCount018)
+			}
+			if fixCount020 > 0 {
+				fmt.Fprintf(cmd.OutOrStdout(), "\n✓ Fixed %d MPR020 violations (updated design property names)\n", fixCount020)
 			}
 		}
 
@@ -221,4 +254,47 @@ Examples:
 		}
 		return nil
 	},
+}
+
+// loadDesignPropMappings loads the theme registry and builds old->new
+// design property name mappings for MPR020.
+func loadDesignPropMappings(projectPath string) []rules.DesignPropMapping {
+	projectDir := filepath.Dir(projectPath)
+	registry, err := executor.LoadThemeRegistry(projectDir)
+	if err != nil || registry == nil {
+		return nil
+	}
+	execMappings := registry.BuildOldNameMapping()
+	if len(execMappings) == 0 {
+		return nil
+	}
+	result := make([]rules.DesignPropMapping, 0, len(execMappings))
+	for _, v := range execMappings {
+		result = append(result, rules.DesignPropMapping{
+			OldName: v.OldName,
+			NewName: v.NewName,
+			OldOpts: v.OldOpts,
+		})
+	}
+	return result
+}
+
+// buildMPR020Renames loads the theme registry and extracts the raw
+// property-name and option-name rename maps for MPR020 --fix.
+func buildMPR020Renames(projectPath string) (propRenames, optRenames map[string]string) {
+	projectDir := filepath.Dir(projectPath)
+	registry, err := executor.LoadThemeRegistry(projectDir)
+	if err != nil || registry == nil {
+		return nil, nil
+	}
+	m := registry.BuildOldNameMapping()
+	propRenames = make(map[string]string, len(m))
+	optRenames = make(map[string]string)
+	for _, v := range m {
+		propRenames[v.OldName] = v.NewName
+		for oldOpt, newOpt := range v.OldOpts {
+			optRenames[oldOpt] = newOpt
+		}
+	}
+	return propRenames, optRenames
 }

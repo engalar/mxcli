@@ -40,6 +40,11 @@ var (
 		{Key: "Ctrl+P", Label: "preview"},
 		{Key: "Esc", Label: "close"},
 	}
+	ConfigViewHints = []kernel.Hint{
+		{Key: "j/k", Label: "scroll"},
+		{Key: "r", Label: "refresh"},
+		{Key: "q", Label: "close"},
+	}
 	DiffViewHints = []kernel.Hint{
 		{Key: "j/k", Label: "scroll"},
 		{Key: "Tab", Label: "mode"},
