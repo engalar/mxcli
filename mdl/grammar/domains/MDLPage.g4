@@ -70,6 +70,7 @@ layoutRegionName
 
 layoutRegionContent
     : PLACEHOLDER identifierOrKeyword
+    | widgetV3
     ;
 
 // =============================================================================

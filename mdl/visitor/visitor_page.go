@@ -68,8 +68,13 @@ func (b *Builder) ExitCreateLayoutStatement(ctx *parser.CreateLayoutStatementCon
 				}
 				for _, pcctx := range regionCtx.AllLayoutRegionContent() {
 					contentCtx := pcctx.(*parser.LayoutRegionContentContext)
-					region.Placeholders = append(region.Placeholders,
-						&ast.LayoutPlaceholderV3{Name: identifierOrKeywordText(contentCtx.IdentifierOrKeyword())})
+					if contentCtx.PLACEHOLDER() != nil {
+						region.Placeholders = append(region.Placeholders,
+							&ast.LayoutPlaceholderV3{Name: identifierOrKeywordText(contentCtx.IdentifierOrKeyword())})
+					} else if contentCtx.WidgetV3() != nil {
+						widget := buildWidgetV3(contentCtx.WidgetV3(), b)
+						region.Widgets = append(region.Widgets, widget)
+					}
 				}
 				w.Regions = append(w.Regions, region)
 			}

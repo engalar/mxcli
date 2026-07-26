@@ -36,6 +36,7 @@ type LayoutWidgetV3 struct {
 type LayoutRegionV3 struct {
 	Name         string // "center", "top", "bottom", "left", "right"
 	Placeholders []*LayoutPlaceholderV3
+	Widgets      []*WidgetV3
 }
 
 // LayoutPlaceholderV3 is a named placeholder slot within a layout region.
