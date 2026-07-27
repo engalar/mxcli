@@ -23,6 +23,9 @@ type BuildOptions struct {
 	// SkipCheck skips the 'mx check' pre-build validation.
 	SkipCheck bool
 
+	// SkipClean skips cleaning deployment/ and .mendix-cache/ before build.
+	SkipClean bool
+
 	// Stdout for output messages.
 	Stdout io.Writer
 
@@ -59,6 +62,22 @@ func Build(opts BuildOptions) error {
 
 	if !pv.IsAtLeastFull(11, 6, 1) {
 		return fmt.Errorf("Mendix >= 11.6.1 required, found %s", pv.ProductVersion)
+	}
+
+	// Step 1b: Clean build artifacts
+	if !opts.SkipClean {
+		projectDir := filepath.Dir(opts.ProjectPath)
+		cleanDirs := []string{
+			filepath.Join(projectDir, "deployment"),
+			filepath.Join(projectDir, ".mendix-cache"),
+		}
+		for _, d := range cleanDirs {
+			if err := os.RemoveAll(d); err != nil {
+				fmt.Fprintf(w, "  Warning: failed to clean %s: %v\n", d, err)
+			} else {
+				fmt.Fprintf(w, "  Cleaned: %s\n", d)
+			}
+		}
 	}
 
 	// Step 2: Resolve MxBuild

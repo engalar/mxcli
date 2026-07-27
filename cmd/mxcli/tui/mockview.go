@@ -22,6 +22,7 @@ type MockView struct {
 	running  bool
 	started  time.Time
 	port     int
+	host     string
 	autoRun  bool
 }
 
@@ -30,11 +31,16 @@ func NewMockView(t *task.MockTask) MockView {
 	if port == 0 {
 		port = 4000
 	}
+	mockHost := t.Opts().Host
+	if mockHost == "" {
+		mockHost = "0.0.0.0"
+	}
 	return MockView{
 		task:    t,
 		running: true,
 		started: time.Now(),
 		port:    port,
+		host:    mockHost,
 	}
 }
 
@@ -127,7 +133,11 @@ func (mv MockView) Render(width, height int) string {
 		var infoSb strings.Builder
 		infoSb.WriteString(kernel.CheckPassStyle.Render("●  Mock server is running"))
 		infoSb.WriteString("\n\n")
-		infoSb.WriteString(fmt.Sprintf("  URL:  http://localhost:%d\n", mv.port))
+		displayHost := mv.host
+		if displayHost == "0.0.0.0" {
+			displayHost = "localhost (all interfaces)"
+		}
+		infoSb.WriteString(fmt.Sprintf("  URL:  http://%s:%d\n", displayHost, mv.port))
 		infoSb.WriteString("\n")
 		infoSb.WriteString(kernel.HintLabelStyle.Render("  c=stop  q=close"))
 

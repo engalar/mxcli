@@ -35,6 +35,7 @@ func mockStartCmd() *cobra.Command {
 	var (
 		port     int
 		specPath string
+		mockHost string
 	)
 
 	startCmd := &cobra.Command{
@@ -85,7 +86,10 @@ Example:
 				return fmt.Errorf("npx not found in PATH: %w\n\nInstall Node.js/npx to use the mock server", err)
 			}
 
-			c := exec.Command(npxPath, "@stoplight/prism-cli", "mock", specPath, "-p", strconv.Itoa(port))
+			if mockHost == "" {
+				mockHost = "0.0.0.0"
+			}
+			c := exec.Command(npxPath, "@stoplight/prism-cli", "mock", specPath, "-p", strconv.Itoa(port), "-h", mockHost)
 			c.Stdout = os.Stdout
 			c.Stderr = os.Stderr
 			docker.CmdWithPdeathsig(c)
@@ -98,13 +102,18 @@ Example:
 			if err := docker.WriteMockLock(projectDir, &docker.MockLock{
 				PID:       pid,
 				Port:      port,
+				Host:      mockHost,
 				SpecPath:  specPath,
 				StartedAt: time.Now(),
 			}); err != nil {
 				fmt.Fprintf(os.Stderr, "Warning: failed to write mock lock file: %v\n", err)
 			}
 
-			fmt.Fprintf(os.Stderr, "Prism mock server started on http://localhost:%d (PID %d)\n", port, pid)
+			displayHost := mockHost
+			if displayHost == "0.0.0.0" {
+				displayHost = "localhost (all interfaces)"
+			}
+			fmt.Fprintf(os.Stderr, "Prism mock server started on http://%s:%d (PID %d)\n", displayHost, port, pid)
 			fmt.Fprintf(os.Stderr, "Press Ctrl+C to stop\n\n")
 
 			// Forward signals to child process group
@@ -122,6 +131,7 @@ Example:
 	}
 
 	startCmd.Flags().IntVar(&port, "port", 4000, "Port for the mock server")
+	startCmd.Flags().StringVar(&mockHost, "host", "0.0.0.0", "Host for the mock server (use 0.0.0.0 for LAN access)")
 	startCmd.Flags().StringVar(&specPath, "spec", "", "Path to OpenAPI spec file (default: docs/openapi/c01-api.yaml)")
 
 	return startCmd
@@ -158,7 +168,11 @@ func mockStatusCmd() *cobra.Command {
 				return nil
 			}
 			fmt.Fprintf(cmd.OutOrStdout(), "Mock server is running:\n")
-			fmt.Fprintf(cmd.OutOrStdout(), "  URL:  http://localhost:%d\n", l.Port)
+			displayHost := l.Host
+			if displayHost == "" {
+				displayHost = "localhost"
+			}
+			fmt.Fprintf(cmd.OutOrStdout(), "  URL:  http://%s:%d\n", displayHost, l.Port)
 			fmt.Fprintf(cmd.OutOrStdout(), "  PID:  %d\n", l.PID)
 			fmt.Fprintf(cmd.OutOrStdout(), "  Spec: %s\n", l.SpecPath)
 			fmt.Fprintf(cmd.OutOrStdout(), "  Since: %s\n", l.StartedAt.Format(time.RFC3339))

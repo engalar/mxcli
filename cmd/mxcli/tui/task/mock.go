@@ -11,6 +11,7 @@ import (
 type MockOptions struct {
 	SpecPath string
 	Port     int
+	Host     string
 }
 
 type MockTask struct {
@@ -89,6 +90,7 @@ func (t *MockTask) run() {
 	pid, err := docker.StartMockServer(docker.MockOptions{
 		SpecPath: t.opts.SpecPath,
 		Port:     t.opts.Port,
+		Host:     t.opts.Host,
 	})
 
 	if err != nil {
@@ -100,13 +102,21 @@ func (t *MockTask) run() {
 	t.prismPID = pid
 	GlobalProcTracker.Add(pid, "prism-mock", nil)
 
+	host := t.opts.Host
+	if host == "" {
+		host = "0.0.0.0"
+	}
 	port := t.opts.Port
 	if port == 0 {
 		port = 4000
 	}
 
+	displayHost := host
+	if displayHost == "0.0.0.0" {
+		displayHost = "localhost (all interfaces)"
+	}
 	t.emit(Event{Type: EventPhaseChange, State: StateRunning, Phase: "running",
-		Message: fmt.Sprintf("Prism mock server running on http://localhost:%d (PID %d)", port, pid), Pct: 100})
+		Message: fmt.Sprintf("Prism mock server running on http://%s:%d (PID %d)", displayHost, port, pid), Pct: 100})
 
 	<-t.stopCh
 

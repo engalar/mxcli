@@ -16,6 +16,7 @@ import (
 type MockOptions struct {
 	SpecPath string
 	Port     int
+	Host     string
 }
 
 func StartMockServer(opts MockOptions) (int, error) {
@@ -38,7 +39,11 @@ func StartMockServer(opts MockOptions) (int, error) {
 		port = 4000
 	}
 
-	cmd := exec.Command(npxPath, "@stoplight/prism-cli", "mock", specPath, "-p", fmt.Sprintf("%d", port))
+	host := opts.Host
+	if host == "" {
+		host = "0.0.0.0"
+	}
+	cmd := exec.Command(npxPath, "@stoplight/prism-cli", "mock", specPath, "-p", fmt.Sprintf("%d", port), "-h", host)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	CmdWithPdeathsig(cmd)
@@ -53,6 +58,7 @@ func StartMockServer(opts MockOptions) (int, error) {
 type MockLock struct {
 	PID       int       `json:"pid"`
 	Port      int       `json:"port"`
+	Host      string    `json:"host"`
 	SpecPath  string    `json:"specPath"`
 	StartedAt time.Time `json:"startedAt"`
 }

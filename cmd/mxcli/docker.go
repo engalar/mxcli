@@ -70,6 +70,7 @@ Examples:
 
 		mxbuildPath, _ := cmd.Flags().GetString("mxbuild-path")
 		skipCheck, _ := cmd.Flags().GetBool("skip-check")
+		noClean, _ := cmd.Flags().GetBool("no-clean")
 		fresh, _ := cmd.Flags().GetBool("fresh")
 		wait, _ := cmd.Flags().GetBool("wait")
 		waitTimeout, _ := cmd.Flags().GetInt("wait-timeout")
@@ -79,6 +80,7 @@ Examples:
 			ProjectPath: projectPath,
 			MxBuildPath: mxbuildPath,
 			SkipCheck:   skipCheck,
+			SkipClean:   noClean,
 			Stdout:      os.Stdout,
 		}); err != nil {
 			return fmt.Errorf("build: %w", err)
@@ -139,10 +141,12 @@ Examples:
 
 		mxbuildPath, _ := cmd.Flags().GetString("mxbuild-path")
 		skipCheck, _ := cmd.Flags().GetBool("skip-check")
+		noClean, _ := cmd.Flags().GetBool("no-clean")
 		opts := docker.BuildOptions{
 			ProjectPath: projectPath,
 			MxBuildPath: mxbuildPath,
 			SkipCheck:   skipCheck,
+			SkipClean:   noClean,
 			Stdout:      os.Stdout,
 		}
 
@@ -454,6 +458,7 @@ func init() {
 	// Run command flags
 	dockerRunCmd.Flags().String("mxbuild-path", "", "Path to MxBuild executable")
 	dockerRunCmd.Flags().Bool("skip-check", false, "Skip 'mx check' pre-build validation")
+	dockerRunCmd.Flags().Bool("no-clean", false, "Skip cleaning deployment/ and .mendix-cache/ before build")
 	dockerRunCmd.Flags().Bool("fresh", false, "Remove volumes and rebuild from scratch")
 	dockerRunCmd.Flags().BoolP("wait", "w", false, "Wait for runtime to start before returning")
 	dockerRunCmd.Flags().Int("wait-timeout", 300, "Timeout in seconds for --wait (default: 300)")
@@ -464,6 +469,7 @@ func init() {
 	dockerBuildCmd.Flags().StringP("output", "o", "", "Output directory for PAD package")
 	dockerBuildCmd.Flags().Bool("dry-run", false, "Detect tools and show patch plan without building")
 	dockerBuildCmd.Flags().Bool("skip-check", false, "Skip 'mx check' pre-build validation")
+	dockerBuildCmd.Flags().Bool("no-clean", false, "Skip cleaning deployment/ and .mendix-cache/ before build")
 
 	// Check command flags
 	dockerCheckCmd.Flags().String("mxbuild-path", "", "Path to MxBuild/Mendix installation (used to find mx)")

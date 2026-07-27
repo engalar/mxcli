@@ -27,7 +27,9 @@ func runCmd() *cobra.Command {
 		mock          bool
 		mockOnly      bool
 		mockPort      int
+		mockHost      string
 		mockSpec      string
+		watch         bool
 	)
 
 	cmd := &cobra.Command{
@@ -74,7 +76,10 @@ Override with --db for PostgreSQL.`,
 				if err != nil {
 					return fmt.Errorf("npx not found: %w", err)
 				}
-				mockCmd := exec.Command(npxPath, "@stoplight/prism-cli", "mock", specPath, "-p", strconv.Itoa(mockPort))
+				if mockHost == "" {
+					mockHost = "0.0.0.0"
+				}
+				mockCmd := exec.Command(npxPath, "@stoplight/prism-cli", "mock", specPath, "-p", strconv.Itoa(mockPort), "-h", mockHost)
 				mockCmd.Stdout = os.Stdout
 				mockCmd.Stderr = os.Stderr
 				docker.CmdWithPdeathsig(mockCmd)
@@ -83,7 +88,7 @@ Override with --db for PostgreSQL.`,
 				}
 				mockPID := mockCmd.Process.Pid
 				if err := docker.WriteMockLock(projectDir, &docker.MockLock{
-					PID: mockPID, Port: mockPort, SpecPath: specPath, StartedAt: time.Now(),
+					PID: mockPID, Port: mockPort, Host: mockHost, SpecPath: specPath, StartedAt: time.Now(),
 				}); err != nil {
 					fmt.Fprintf(os.Stderr, "Warning: failed to write mock lock file: %v\n", err)
 				}
@@ -91,7 +96,11 @@ Override with --db for PostgreSQL.`,
 					_ = syscall.Kill(-mockPID, syscall.SIGTERM)
 					_ = docker.RemoveMockLock(projectDir)
 				}()
-				fmt.Fprintf(os.Stderr, "Mock server running on http://localhost:%d (PID %d)\n", mockPort, mockPID)
+				displayHost := mockHost
+				if displayHost == "0.0.0.0" {
+					displayHost = "localhost (all interfaces)"
+				}
+				fmt.Fprintf(os.Stderr, "Mock server running on http://%s:%d (PID %d)\n", displayHost, mockPort, mockPID)
 
 				if mockOnly {
 					fmt.Fprintf(os.Stderr, "Press Ctrl+C to stop\n")
@@ -99,6 +108,36 @@ Override with --db for PostgreSQL.`,
 					signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
 					<-sigCh
 					return nil
+				}
+			}
+
+			// Start SCSS watcher if requested
+			if watch {
+				adminPass := adminPassword
+				if adminPass == "" {
+					adminPass = "Admin123!"
+				}
+				admPort := adminPort
+				if admPort == 0 {
+					admPort = 8090
+				}
+				watcher, err := docker.NewSCSSWatcher(docker.SCSSWatcherConfig{
+					DeployDir:     dir,
+					ProjectDir:    projectDir,
+					AdminHost:     "localhost",
+					AdminPort:     admPort,
+					AdminPassword: adminPass,
+					Stdout:        os.Stdout,
+				})
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "Warning: SCSS watcher not available: %v\n", err)
+				} else {
+					go func() {
+						if err := watcher.Start(); err != nil {
+							fmt.Fprintf(os.Stderr, "[scss] Watcher stopped: %v\n", err)
+						}
+					}()
+					defer watcher.Stop()
 				}
 			}
 
@@ -125,6 +164,8 @@ Override with --db for PostgreSQL.`,
 	cmd.Flags().BoolVar(&mock, "mock", false, "Start Prism mock server before runtime")
 	cmd.Flags().BoolVar(&mockOnly, "mock-only", false, "Start Prism mock server only (no runtime)")
 	cmd.Flags().IntVar(&mockPort, "mock-port", 4000, "Port for the mock server")
+	cmd.Flags().StringVar(&mockHost, "mock-host", "0.0.0.0", "Host for the mock server (use 0.0.0.0 for LAN access)")
 	cmd.Flags().StringVar(&mockSpec, "mock-spec", "", "Path to OpenAPI spec file (default: <project dir>/docs/openapi/c01-api.yaml)")
+	cmd.Flags().BoolVar(&watch, "watch", false, "Watch SCSS files and auto-reload theme on change")
 	return cmd
 }

@@ -497,6 +497,7 @@ func (a *App) actionMock() tea.Cmd {
 	mt := task.NewMockTask(task.MockOptions{
 		SpecPath: specPath,
 		Port:     4000,
+		Host:     "0.0.0.0",
 	})
 	mv := NewMockView(mt)
 	a.views.Push(mv)
@@ -517,6 +518,7 @@ func (a *App) actionMockRun() tea.Cmd {
 	mt := task.NewMockTask(task.MockOptions{
 		SpecPath: specPath,
 		Port:     4000,
+		Host:     "0.0.0.0",
 	})
 	mv := NewMockView(mt)
 	mv.autoRun = true
