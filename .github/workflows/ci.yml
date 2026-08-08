@@ -61,7 +61,7 @@ jobs:
         timeout-minutes: 35
 
       - name: Upload resource profiles
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: test-profiles-${{ github.sha }}
