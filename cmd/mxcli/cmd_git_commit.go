@@ -138,16 +138,22 @@ func commitRun(mprPath, message string, push, dryRun bool, out io.Writer) error 
 		fmt.Fprintln(out, "nothing to commit, working tree clean")
 		return nil
 	}
-	fmt.Fprintf(out, "Staged %d file(s):\n", len(staged)-len(junk))
-	kept := staged
-	if len(kept) > 10 {
-		kept = kept[:10]
+	kept := make([]string, 0, len(staged)-len(junk))
+	for _, f := range staged {
+		if !isJunkPath(f) {
+			kept = append(kept, f)
+		}
 	}
-	for _, f := range kept {
+	fmt.Fprintf(out, "Staged %d file(s):\n", len(kept))
+	shown := kept
+	if len(shown) > 10 {
+		shown = shown[:10]
+	}
+	for _, f := range shown {
 		fmt.Fprintf(out, "  %s\n", f)
 	}
-	if len(staged)-len(junk) > 10 {
-		fmt.Fprintf(out, "  … and %d more\n", len(staged)-len(junk)-10)
+	if len(kept) > 10 {
+		fmt.Fprintf(out, "  … and %d more\n", len(kept)-10)
 	}
 
 	if dryRun {

@@ -577,8 +577,33 @@ func TestGitCommit_DryRunLeavesHashDriftUntouched(t *testing.T) {
 	}
 }
 
-func TestGitCommit_DryRunWithPushRefused(t *testing.T) {
+// The staged-files summary must list what the commit will hold, not the junk
+// that was just unstaged (measured on the mx-git-lab lab: the list opened with
+// 10 .mxcli/ paths while the commit held 2 model files).
+func TestGitCommit_StagedListOmitsJunk(t *testing.T) {
 	dir, mprPath := doctorNoteRepo(t)
+	doctorEnv(t, dir)
+	units := baseUnits(t)
+	units[tPage] = tUnit{tFolder, unitDoc(t, "Forms$Page", "Home", bson.E{Key: "Title", Value: "List"})}
+	writeProject(t, dir, "11.13.0", units)
+	if err := os.WriteFile(filepath.Join(dir, "project-settings.user.json"), []byte("{}"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	var out bytes.Buffer
+	if err := commitRun(mprPath, "clean list", false, false, &out); err != nil {
+		t.Fatalf("commitRun: %v\n%s", err, out.String())
+	}
+	section := out.String()[strings.Index(out.String(), "Staged"):]
+	if strings.Contains(section, "project-settings.user.json") {
+		t.Errorf("the staged list names junk that was left out:\n%s", section)
+	}
+	if !strings.Contains(section, "App.mpr") {
+		t.Errorf("the staged list must name the model files:\n%s", section)
+	}
+}
+
+func TestGitCommit_DryRunWithPushRefused(t *testing.T) {	dir, mprPath := doctorNoteRepo(t)
 	doctorEnv(t, dir)
 
 	var out bytes.Buffer
