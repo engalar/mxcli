@@ -58,8 +58,7 @@ func TestGitDoctor_ConfigMissingReported(t *testing.T) {
 	}
 }
 
-func TestGitDoctor_FixWritesConfigAndPasses(t *testing.T) {
-	dir := t.TempDir()
+func TestGitDoctor_FixWritesConfigAndPasses(t *testing.T) {	dir := t.TempDir()
 	doctorEnv(t, dir)
 	gitIn(t, dir, "init", "-q", "-b", "main")
 
@@ -84,6 +83,44 @@ func TestGitDoctor_FixWritesConfigAndPasses(t *testing.T) {
 	// A repo without a remote is reported, but not broken.
 	if !strings.Contains(out.String(), "remote") {
 		t.Errorf("report must mention the remote check:\n%s", out.String())
+	}
+}
+
+// Measured on a real Studio Pro checkout (the mx-git-lab lab, S0): Studio Pro
+// writes core.autocrlf=false in lowercase, counts commits-since-gc up between
+// garbage collections (2 after two commits) and writes lineendingresetdone in
+// lowercase. A healthy Studio Pro checkout must pass untouched.
+func TestGitDoctor_StudioProValuesPass(t *testing.T) {
+	dir := t.TempDir()
+	doctorEnv(t, dir)
+	gitIn(t, dir, "init", "-q", "-b", "main")
+	gitIn(t, dir, "config", "--local", "core.autocrlf", "false")
+	gitIn(t, dir, "config", "--local", "mendix.commits-since-gc", "2")
+	gitIn(t, dir, "config", "--local", "mendix.lineendingresetdone", "true")
+
+	var out bytes.Buffer
+	if err := doctorRun(dir, "", "", "", false, &out); err != nil {
+		t.Fatalf("a healthy Studio Pro checkout must pass: %v\n%s", err, out.String())
+	}
+	if strings.Contains(out.String(), "mendix.commits-since-gc — ") {
+		t.Errorf("the gc counter must not be judged:\n%s", out.String())
+	}
+}
+
+// core.autocrlf=true is the one config value that damages a Mendix checkout:
+// a checkout rewrites line endings inside .mxunit files on Windows.
+func TestGitDoctor_AutoCRLFTrueIsFixed(t *testing.T) {
+	dir := t.TempDir()
+	doctorEnv(t, dir)
+	gitIn(t, dir, "init", "-q", "-b", "main")
+	gitIn(t, dir, "config", "--local", "core.autocrlf", "true")
+
+	var out bytes.Buffer
+	if err := doctorRun(dir, "", "", "", true, &out); err != nil {
+		t.Fatalf("--fix must repair autocrlf=true: %v\n%s", err, out.String())
+	}
+	if got := configLocal(t, dir, "core.autocrlf"); !strings.EqualFold(got, "false") {
+		t.Errorf("core.autocrlf = %q, want false", got)
 	}
 }
 
