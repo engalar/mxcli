@@ -179,16 +179,7 @@ func commitRun(mprPath, message string, push, dryRun bool, out io.Writer) error 
 		return fmt.Errorf("committed %s, but attaching the note failed (%v) — run 'mxcli git note -p %s --write' to attach it", shortCommit(head), err, mprPath)
 	}
 
-	if push {
-		if branch == "" {
-			return errors.New("detached HEAD; cannot push — check out a branch and push manually")
-		}
-		if _, err := gitOutIn(root, nil, "push", "origin", branch, mxMetadataRef); err != nil {
-			return fmt.Errorf("push %s and %s: %w", branch, mxMetadataRef, err)
-		}
-		fmt.Fprintf(out, "Pushed %s and %s to origin.\n", branch, mxMetadataRef)
-	}
-	return nil
+	return pushBranchAndNotes(out, root, branch, push)
 }
 
 // nulFields splits git's -z output (NUL-separated, no quoting) into paths.

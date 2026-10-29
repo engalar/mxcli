@@ -58,7 +58,8 @@ func TestGitDoctor_ConfigMissingReported(t *testing.T) {
 	}
 }
 
-func TestGitDoctor_FixWritesConfigAndPasses(t *testing.T) {	dir := t.TempDir()
+func TestGitDoctor_FixWritesConfigAndPasses(t *testing.T) {
+	dir := t.TempDir()
 	doctorEnv(t, dir)
 	gitIn(t, dir, "init", "-q", "-b", "main")
 
@@ -603,7 +604,8 @@ func TestGitCommit_StagedListOmitsJunk(t *testing.T) {
 	}
 }
 
-func TestGitCommit_DryRunWithPushRefused(t *testing.T) {	dir, mprPath := doctorNoteRepo(t)
+func TestGitCommit_DryRunWithPushRefused(t *testing.T) {
+	dir, mprPath := doctorNoteRepo(t)
 	doctorEnv(t, dir)
 
 	var out bytes.Buffer

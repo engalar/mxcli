@@ -140,6 +140,44 @@ commit the conflict markers. `--dry-run` verifies and reports (including
 ContentsHash drift, which it does not repair — a dry run writes nothing),
 stages, reports what it would commit, and unstages again without committing.
 
+## Merging branches: `mxcli git merge`
+
+`git merge` cannot merge Mendix models: the `.mpr` is SQLite and every
+`.mxunit` is BSON, so two sides changing the model always meet a binary
+`CONFLICT (content)` — there is nothing for git's textual merge to work on.
+Studio Pro's *Merge Changes Here* resolves it with a model-aware merge, and
+that engine ships as a command: `mx git-merge BASE MINE THEIRS …`.
+
+`mxcli git merge <ref>` puts the two together:
+
+```bash
+mxcli git merge feature/orders -p app.mpr
+mxcli git merge origin/main -p app.mpr --push
+```
+
+`git merge <ref>` runs first; a merge git resolves itself (disjoint files,
+a fast-forward) is annotated with the mx_metadata note like `mxcli git
+commit` does. On a model-file conflict the base and theirs revisions are
+checked out into temporary worktrees and `mx git-merge` runs (resolved for
+the project's Mendix version):
+
+- what mx auto-resolves is staged and committed as the normal two-parent
+  merge commit, with the note attached;
+- a conflict mx reports as `ManualResolutionRequired` is never merged
+  silently: the merge is aborted, and **both sides' changes are printed for
+  review** — unit by unit, ours and theirs. Then decide:
+  `--ours` or `--theirs` takes one side of every conflicted model file
+  (deterministic; mx is not consulted again), or resolve for real in
+  Studio Pro (*Version Control › Merge Changes Here*), which stays the tool
+  for mixed resolutions;
+- a conflict in non-model files (text sources) is left in place for manual
+  resolution, like plain git.
+
+Merging is still never done by plain `git merge` on a Mendix repository: use
+`mxcli git merge` or Studio Pro, never a textual merge of `mprcontents/`.
+Like every mxcli write, the command is refused while Studio Pro has the
+project open.
+
 ## Auditing a repository: `mxcli git doctor`
 
 A repository that has known only plain git misses several things Studio Pro
