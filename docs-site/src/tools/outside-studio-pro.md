@@ -165,11 +165,16 @@ the project's Mendix version):
   merge commit, with the note attached;
 - a conflict mx reports as `ManualResolutionRequired` is never merged
   silently: the merge is aborted, and **both sides' changes are printed for
-  review** — unit by unit, ours and theirs. Then decide:
+  review** — at property level, from `mx diff` ("New type > Length:
+  100 → 150" on ours, "→ 200" on theirs). Then decide:
+  `--plan <file>` resolves **per unit** from the plan template written beside
+  the .mpr (`<mpr>.merge-plan.json`): set `"take"` to `ours`/`theirs` per
+  unit, and the `.mpr` index is repaired from the mixed files (modified-on-
+  both units only; added/deleted/moved conflicts go to Studio Pro).
   `--ours` or `--theirs` takes one side of every conflicted model file
-  (deterministic; mx is not consulted again), or resolve for real in
-  Studio Pro (*Version Control › Merge Changes Here*), which stays the tool
-  for mixed resolutions;
+  (deterministic; mx is not consulted again). Resolutions that must mix both
+  sides *inside* one unit stay in Studio Pro (*Version Control › Merge
+  Changes Here*);
 - a conflict in non-model files (text sources) is left in place for manual
   resolution, like plain git.
 

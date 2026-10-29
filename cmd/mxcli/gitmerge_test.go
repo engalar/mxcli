@@ -5,6 +5,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -49,6 +50,38 @@ func modelConflictRepo(t *testing.T) (string, string) {
 	return dir, mprPath
 }
 
+// twoUnitConflictRepo is a modelConflictRepo where BOTH the domain model and
+// the microflow unit were changed on each side — two conflicted units, so a
+// plan can take one unit from ours and the other from theirs.
+func twoUnitConflictRepo(t *testing.T) (string, string) {
+	t.Helper()
+	dir, mprPath := doctorNoteRepo(t)
+	units := baseUnits(t)
+	units[tDM] = tUnit{tMod, unitDoc(t, "DomainModels$DomainModel", "", mainSideKey)}
+	units[tMf] = tUnit{tMod, unitDoc(t, "Microflows$Microflow", "ACT_Save", mainSideKey)}
+	writeProject(t, dir, "11.13.0", units)
+	gitIn(t, dir, "add", "-A")
+	gitIn(t, dir, "commit", "-q", "-m", "main side")
+	gitIn(t, dir, "switch", "-q", "-c", "side", "HEAD~1")
+	side := baseUnits(t)
+	side[tDM] = tUnit{tMod, unitDoc(t, "DomainModels$DomainModel", "", sideKey)}
+	side[tMf] = tUnit{tMod, unitDoc(t, "Microflows$Microflow", "ACT_Save", sideKey)}
+	writeProject(t, dir, "11.13.0", side)
+	gitIn(t, dir, "add", "-A")
+	gitIn(t, dir, "commit", "-q", "-m", "side change")
+	gitIn(t, dir, "switch", "-q", "feature")
+	_, err := gitInE(t, dir, "merge", "side")
+	if err != nil && !strings.Contains(err.Error(), "exit status") {
+		t.Fatalf("fixture: expected a conflicted merge, got %v", err)
+	}
+	return dir, mprPath
+}
+
+// unitRel is the mprcontents path of a unit id inside a work tree.
+func unitRel(id string) string {
+	return "mprcontents/" + id[:2] + "/" + id[2:4] + "/" + id + ".mxunit"
+}
+
 var (
 	mainSideKey = bsonKeyValue("DocA", "main")
 	sideKey     = bsonKeyValue("DocB", "side")
@@ -72,12 +105,12 @@ func TestGitMerge_CleanMergeTextFileWritesNote(t *testing.T) {
 	gitIn(t, dir, "commit", "-q", "-m", "docs side")
 	gitIn(t, dir, "switch", "-q", "feature")
 
-	noMx := func(base, mine, theirs string, shas [3]string) (int, string, error) {
+	noMx := mxRunners{merge: func(base, mine, theirs string, shas [3]string) (int, string, error) {
 		t.Fatal("mx must not run on a merge git resolves itself")
 		return 0, "", nil
-	}
+	}}
 	var out bytes.Buffer
-	if err := mergeRun(mprPath, "docs", "", "", false, noMx, &out); err != nil {
+	if err := mergeRun(mprPath, "docs", "", "", "", false, noMx, &out); err != nil {
 		t.Fatalf("mergeRun: %v\n%s", err, out.String())
 	}
 	parents := strings.Fields(gitOutT(t, dir, "rev-list", "--parents", "-n", "1", "HEAD"))
@@ -99,12 +132,12 @@ func TestGitMerge_ModelConflictAutoResolvedByMx(t *testing.T) {
 
 	var gotBase, gotMine, gotTheirs string
 	var gotShas [3]string
-	runner := func(base, mine, theirs string, shas [3]string) (int, string, error) {
+	runner := mxRunners{merge: func(base, mine, theirs string, shas [3]string) (int, string, error) {
 		gotBase, gotMine, gotTheirs, gotShas = base, mine, theirs, shas
 		return 0, "Merge successful.", nil
-	}
+	}}
 	var out bytes.Buffer
-	if err := mergeRun(mprPath, "side", "", "", false, runner, &out); err != nil {
+	if err := mergeRun(mprPath, "side", "", "", "", false, runner, &out); err != nil {
 		t.Fatalf("mergeRun: %v\n%s", err, out.String())
 	}
 	if !strings.Contains(gotBase, "mx-git-lab") && !strings.Contains(filepath.Base(gotBase), ".mpr") {
@@ -140,11 +173,11 @@ func TestGitMerge_ModelConflictUnresolvedAborts(t *testing.T) {
 	doctorEnv(t, dir)
 	before := commitSubject(t, dir)
 
-	fails := func(base, mine, theirs string, shas [3]string) (int, string, error) {
+	fails := mxRunners{merge: func(base, mine, theirs string, shas [3]string) (int, string, error) {
 		return 2, `[{"ConflictResolutionDetails":"ManualResolutionRequired"}]`, nil
-	}
+	}}
 	var out bytes.Buffer
-	err := mergeRun(mprPath, "side", "", "", false, fails, &out)
+	err := mergeRun(mprPath, "side", "", "", "", false, fails, &out)
 	if err == nil || !strings.Contains(err.Error(), "Studio Pro") {
 		t.Fatalf("want a Studio Pro referral, got %v", err)
 	}
@@ -181,12 +214,12 @@ func TestGitMerge_NonModelConflictLeftAlone(t *testing.T) {
 	}
 
 	calls := 0
-	counting := func(base, mine, theirs string, shas [3]string) (int, string, error) {
+	counting := mxRunners{merge: func(base, mine, theirs string, shas [3]string) (int, string, error) {
 		calls++
 		return 0, "", nil
-	}
+	}}
 	var out bytes.Buffer
-	merr := mergeRun(mprPath, "side", "", "", false, counting, &out)
+	merr := mergeRun(mprPath, "side", "", "", "", false, counting, &out)
 	if merr == nil {
 		t.Fatal("a non-model conflict must be reported, not silently passed")
 	}
@@ -205,12 +238,12 @@ func TestGitMerge_AlreadyUpToDate(t *testing.T) {
 	doctorEnv(t, dir)
 	before := commitSubject(t, dir)
 
-	noMx := func(base, mine, theirs string, shas [3]string) (int, string, error) {
+	noMx := mxRunners{merge: func(base, mine, theirs string, shas [3]string) (int, string, error) {
 		t.Fatal("mx must not run")
 		return 0, "", nil
-	}
+	}}
 	var out bytes.Buffer
-	if err := mergeRun(mprPath, "HEAD~1", "", "", false, noMx, &out); err != nil {
+	if err := mergeRun(mprPath, "HEAD~1", "", "", "", false, noMx, &out); err != nil {
 		t.Fatalf("mergeRun: %v", err)
 	}
 	if got := commitSubject(t, dir); got != before {
@@ -229,16 +262,16 @@ func TestGitMerge_ConflictReportShowsBothSidesAndAborts(t *testing.T) {
 	doctorEnv(t, dir)
 	before := commitSubject(t, dir)
 
-	noMx := func(base, mine, theirs string, shas [3]string) (int, string, error) {
+	noMx := mxRunners{merge: func(base, mine, theirs string, shas [3]string) (int, string, error) {
 		return 2, `[{"ConflictResolutionDetails":"ManualResolutionRequired"}]`, nil
-	}
+	}}
 	var out bytes.Buffer
-	err := mergeRun(mprPath, "side", "", "", false, noMx, &out)
+	err := mergeRun(mprPath, "side", "", "", "", false, noMx, &out)
 	if err == nil || !strings.Contains(err.Error(), "--ours") {
 		t.Fatalf("the report must point at the resolution flags, got %v", err)
 	}
 	report := out.String()
-	for _, want := range []string{"DomainModels$DomainModel", "also changed on the other side", "Yours", "Theirs"} {
+	for _, want := range []string{"Plan template", "merge-plan.json", "Merge aborted"} {
 		if !strings.Contains(report, want) {
 			t.Errorf("report must contain %q:\n%s", want, report)
 		}
@@ -260,12 +293,12 @@ func TestGitMerge_SideTakingResolves(t *testing.T) {
 	dir, mprPath := modelConflictRepo(t)
 	doctorEnv(t, dir)
 
-	noMx := func(base, mine, theirs string, shas [3]string) (int, string, error) {
+	noMx := mxRunners{merge: func(base, mine, theirs string, shas [3]string) (int, string, error) {
 		t.Fatal("--ours must not consult mx")
 		return 0, "", nil
-	}
+	}}
 	var out bytes.Buffer
-	if err := mergeRun(mprPath, "side", "", "ours", false, noMx, &out); err != nil {
+	if err := mergeRun(mprPath, "side", "", "ours", "", false, noMx, &out); err != nil {
 		t.Fatalf("mergeRun --ours: %v\n%s", err, out.String())
 	}
 	parents := strings.Fields(gitOutT(t, dir, "rev-list", "--parents", "-n", "1", "HEAD"))
@@ -286,12 +319,12 @@ func TestGitMerge_SideTakingResolves(t *testing.T) {
 
 	// --theirs flips to the other side, deterministically.
 	dir2, mprPath2 := modelConflictRepo(t)
-	theirs := func(base, mine, theirs string, shas [3]string) (int, string, error) {
+	theirs := mxRunners{merge: func(base, mine, theirs string, shas [3]string) (int, string, error) {
 		t.Fatal("--theirs must not consult mx")
 		return 0, "", nil
-	}
+	}}
 	var out2 bytes.Buffer
-	if err := mergeRun(mprPath2, "side", "", "theirs", false, theirs, &out2); err != nil {
+	if err := mergeRun(mprPath2, "side", "", "theirs", "", false, theirs, &out2); err != nil {
 		t.Fatalf("mergeRun --theirs: %v\n%s", err, out2.String())
 	}
 	page2 := filepath.Join(dir2, "mprcontents", tDM[:2], tDM[2:4], tDM+".mxunit")
@@ -302,4 +335,113 @@ func TestGitMerge_SideTakingResolves(t *testing.T) {
 	if !bytes.Contains(raw2, []byte("DocB")) || bytes.Contains(raw2, []byte("DocA")) {
 		t.Error("--theirs must leave their side of the unit on disk")
 	}
+}
+
+// A plan resolves per unit: tDM from ours, tMf from theirs — one merge commit,
+// hashes repaired from the mixed files, note attached.
+func TestGitMerge_PlanMixesPerUnit(t *testing.T) {
+	dir, mprPath := twoUnitConflictRepo(t)
+	doctorEnv(t, dir)
+	base := strings.TrimSpace(gitOutT(t, dir, "merge-base", "HEAD", "side"))
+	ours := strings.TrimSpace(gitOutT(t, dir, "rev-parse", "HEAD"))
+	theirs := strings.TrimSpace(gitOutT(t, dir, "rev-parse", "side"))
+	plan := fmt.Sprintf(`{"base":%q,"ours":%q,"theirs":%q,"units":[{"id":%q,"take":"ours"},{"id":%q,"take":"theirs"}]}`,
+		base, ours, theirs, tDM, tMf)
+	planPath := filepath.Join(dir, "merge-plan.json")
+	if err := os.WriteFile(planPath, []byte(plan), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	noMx := mxRunners{merge: func(base, mine, theirs string, shas [3]string) (int, string, error) {
+		t.Fatal("--plan must not consult mx")
+		return 0, "", nil
+	}}
+	var out bytes.Buffer
+	if err := mergeRun(mprPath, "side", "", "", planPath, false, noMx, &out); err != nil {
+		t.Fatalf("mergeRun --plan: %v\n%s", err, out.String())
+	}
+	assertUnitHas := func(id, key string, want bool) {
+		t.Helper()
+		raw, err := os.ReadFile(filepath.Join(dir, unitRel(id)))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := bytes.Contains(raw, []byte(key)); got != want {
+			t.Errorf("%s contains %q = %v, want %v", id, key, got, want)
+		}
+	}
+	assertUnitHas(tDM, "DocA", true)
+	assertUnitHas(tDM, "DocB", false)
+	assertUnitHas(tMf, "DocB", true)
+	assertUnitHas(tMf, "DocA", false)
+	parents := strings.Fields(gitOutT(t, dir, "rev-list", "--parents", "-n", "1", "HEAD"))
+	if len(parents) != 3 {
+		t.Fatalf("want a two-parent merge commit, got %v", parents)
+	}
+	var out2 bytes.Buffer
+	if err := fixHashes(mprPath, false, &out2); err != nil {
+		t.Errorf("hashes drift after the plan merge: %v\n%s", err, out2.String())
+	}
+}
+
+// A plan whose revisions no longer match the merge state is stale and refused.
+func TestGitMerge_PlanStaleRefused(t *testing.T) {
+	dir, mprPath := modelConflictRepo(t)
+	doctorEnv(t, dir)
+	plan := `{"base":"0000000000000000000000000000000000000000","ours":"0000000000000000000000000000000000000001","theirs":"0000000000000000000000000000000000000002","units":[]}`
+	planPath := filepath.Join(dir, "merge-plan.json")
+	if err := os.WriteFile(planPath, []byte(plan), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	noMx := mxRunners{}
+	var out bytes.Buffer
+	err := mergeRun(mprPath, "side", "", "", planPath, false, noMx, &out)
+	if err == nil || !strings.Contains(err.Error(), "stale") {
+		t.Fatalf("want a stale-plan refusal, got %v", err)
+	}
+	gitInE(t, dir, "merge", "--abort") // clean up the fixture
+}
+
+// On ManualResolutionRequired the report is property-level (from mx diff) and
+// a plan template is written beside the .mpr.
+func TestGitMerge_ManualWritesPlanAndPropertyReport(t *testing.T) {
+	dir, mprPath := modelConflictRepo(t)
+	doctorEnv(t, dir)
+	fixture := `{"unitDifferences":[{"id":"` + tDM + `","type":"DomainModels$DomainModel","change":"Modified","changeDetails":[{"change":"Modified","changeDescription":"Attribute 'MyFirstModule.CreatedByMxcli.Nickname'","changeDetails":[{"property":"New type > Length","baseValue":"100","mineValue":"150"}]}]}]}`
+	mx := mxRunners{
+		merge: func(base, mine, theirs string, shas [3]string) (int, string, error) {
+			return 2, `[{"ConflictResolutionDetails":"ManualResolutionRequired"}]`, nil
+		},
+		diff: func(base, mine, outJSON string) error {
+			return os.WriteFile(outJSON, []byte(fixture), 0o644)
+		},
+	}
+	var out bytes.Buffer
+	err := mergeRun(mprPath, "side", "", "", "", false, mx, &out)
+	if err == nil {
+		t.Fatal("a manual conflict must end with the decision error")
+	}
+	report := out.String()
+	for _, want := range []string{"Length", "100", "150", "Nickname"} {
+		if !strings.Contains(report, want) {
+			t.Errorf("report must contain %q:\n%s", want, report)
+		}
+	}
+	planRaw, err := os.ReadFile(mprPath + ".merge-plan.json")
+	if err != nil {
+		t.Fatalf("plan template not written: %v", err)
+	}
+	var plan struct {
+		Units []struct {
+			Id   string `json:"id"`
+			Take string `json:"take"`
+		} `json:"units"`
+	}
+	if err := json.Unmarshal(planRaw, &plan); err != nil {
+		t.Fatal(err)
+	}
+	if len(plan.Units) != 1 || plan.Units[0].Id != tDM || plan.Units[0].Take != "ours" {
+		t.Errorf("plan template: %+v", plan)
+	}
+	gitInE(t, dir, "merge", "--abort") // clean up the fixture
 }
