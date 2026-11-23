@@ -1,0 +1,592 @@
+{
+ "runs": 1,
+ "alerts": null,
+ "series": [
+  {
+   "session": "small",
+   "step": "(session-weighted total)",
+   "points": [
+    {
+     "date": "2026-11-23T10:50:39Z",
+     "commit": "a3fb30f",
+     "wall_ms": 110565.657,
+     "ratio": 0.791073451855058
+    }
+   ]
+  },
+  {
+   "session": "small",
+   "step": "open-cold",
+   "points": [
+    {
+     "date": "2026-11-23T10:50:39Z",
+     "commit": "a3fb30f",
+     "wall_ms": 197.243,
+     "ratio": 2.5448411111254465
+    }
+   ]
+  },
+  {
+   "session": "small",
+   "step": "open",
+   "points": [
+    {
+     "date": "2026-11-23T10:50:39Z",
+     "commit": "a3fb30f",
+     "wall_ms": 55.389,
+     "ratio": 0.9116431048279541
+    }
+   ]
+  },
+  {
+   "session": "small",
+   "step": "domain",
+   "points": [
+    {
+     "date": "2026-11-23T10:50:39Z",
+     "commit": "a3fb30f",
+     "wall_ms": 722.157,
+     "ratio": 0.26538226128057774
+    }
+   ]
+  },
+  {
+   "session": "small",
+   "step": "microflows",
+   "points": [
+    {
+     "date": "2026-11-23T10:50:39Z",
+     "commit": "a3fb30f",
+     "wall_ms": 994.819,
+     "ratio": 0.5070638620268749
+    }
+   ]
+  },
+  {
+   "session": "small",
+   "step": "pages",
+   "points": [
+    {
+     "date": "2026-11-23T10:50:39Z",
+     "commit": "a3fb30f",
+     "wall_ms": 2169.806,
+     "ratio": 0.39481053773658387
+    }
+   ]
+  },
+  {
+   "session": "small",
+   "step": "describe",
+   "points": [
+    {
+     "date": "2026-11-23T10:50:39Z",
+     "commit": "a3fb30f",
+     "wall_ms": 129.355,
+     "ratio": 0.9138916031296582
+    }
+   ]
+  },
+  {
+   "session": "small",
+   "step": "catalog",
+   "points": [
+    {
+     "date": "2026-11-23T10:50:39Z",
+     "commit": "a3fb30f",
+     "wall_ms": 226.904,
+     "ratio": 1.1155445865822362
+    }
+   ]
+  },
+  {
+   "session": "small",
+   "step": "catalog-full",
+   "points": [
+    {
+     "date": "2026-11-23T10:50:39Z",
+     "commit": "a3fb30f",
+     "wall_ms": 1090.968,
+     "ratio": 1.012626651415445
+    }
+   ]
+  },
+  {
+   "session": "small",
+   "step": "query",
+   "points": [
+    {
+     "date": "2026-11-23T10:50:39Z",
+     "commit": "a3fb30f",
+     "wall_ms": 82.868,
+     "ratio": 1.1093291923802895
+    }
+   ]
+  },
+  {
+   "session": "small",
+   "step": "check",
+   "points": [
+    {
+     "date": "2026-11-23T10:50:39Z",
+     "commit": "a3fb30f",
+     "wall_ms": 351.868,
+     "ratio": 0.8064621171184989
+    }
+   ]
+  },
+  {
+   "session": "small",
+   "step": "single-edit",
+   "points": [
+    {
+     "date": "2026-11-23T10:50:39Z",
+     "commit": "a3fb30f",
+     "wall_ms": 362.649,
+     "ratio": 0.9719131989204806
+    }
+   ]
+  },
+  {
+   "session": "small",
+   "step": "catalog-after-edit",
+   "points": [
+    {
+     "date": "2026-11-23T10:50:39Z",
+     "commit": "a3fb30f",
+     "wall_ms": 277.038,
+     "ratio": 0.2649271215647873
+    }
+   ]
+  },
+  {
+   "session": "small",
+   "step": "bulk-alter",
+   "points": [
+    {
+     "date": "2026-11-23T10:50:39Z",
+     "commit": "a3fb30f",
+     "wall_ms": 1395.94,
+     "ratio": 0.3658489971374807
+    }
+   ]
+  },
+  {
+   "session": "small",
+   "step": "re-exec",
+   "points": [
+    {
+     "date": "2026-11-23T10:50:39Z",
+     "commit": "a3fb30f",
+     "wall_ms": 600.12,
+     "ratio": 0.2538287571621688
+    }
+   ]
+  },
+  {
+   "session": "small",
+   "step": "rename",
+   "points": [
+    {
+     "date": "2026-11-23T10:50:39Z",
+     "commit": "a3fb30f",
+     "wall_ms": 682.234,
+     "ratio": 1.0913298232788016
+    }
+   ]
+  },
+  {
+   "session": "large",
+   "step": "(session-weighted total)",
+   "points": [
+    {
+     "date": "2026-11-23T10:50:39Z",
+     "commit": "a3fb30f",
+     "wall_ms": 162299.68099999998,
+     "ratio": 0.6013585067365235
+    }
+   ]
+  },
+  {
+   "session": "large",
+   "step": "open-cold",
+   "points": [
+    {
+     "date": "2026-11-23T10:50:39Z",
+     "commit": "a3fb30f",
+     "wall_ms": 369.441,
+     "ratio": 2.247939505726489
+    }
+   ]
+  },
+  {
+   "session": "large",
+   "step": "open",
+   "points": [
+    {
+     "date": "2026-11-23T10:50:39Z",
+     "commit": "a3fb30f",
+     "wall_ms": 67.248,
+     "ratio": 0.5679930412239259
+    }
+   ]
+  },
+  {
+   "session": "large",
+   "step": "domain",
+   "points": [
+    {
+     "date": "2026-11-23T10:50:39Z",
+     "commit": "a3fb30f",
+     "wall_ms": 864.953,
+     "ratio": 0.23156910919759485
+    }
+   ]
+  },
+  {
+   "session": "large",
+   "step": "microflows",
+   "points": [
+    {
+     "date": "2026-11-23T10:50:39Z",
+     "commit": "a3fb30f",
+     "wall_ms": 1415.258,
+     "ratio": 0.2683325202207749
+    }
+   ]
+  },
+  {
+   "session": "large",
+   "step": "pages",
+   "points": [
+    {
+     "date": "2026-11-23T10:50:39Z",
+     "commit": "a3fb30f",
+     "wall_ms": 2544.945,
+     "ratio": 0.21588795149439713
+    }
+   ]
+  },
+  {
+   "session": "large",
+   "step": "describe",
+   "points": [
+    {
+     "date": "2026-11-23T10:50:39Z",
+     "commit": "a3fb30f",
+     "wall_ms": 153.313,
+     "ratio": 0.7326349273876974
+    }
+   ]
+  },
+  {
+   "session": "large",
+   "step": "catalog",
+   "points": [
+    {
+     "date": "2026-11-23T10:50:39Z",
+     "commit": "a3fb30f",
+     "wall_ms": 387.824,
+     "ratio": 1.0498146933670902
+    }
+   ]
+  },
+  {
+   "session": "large",
+   "step": "catalog-full",
+   "points": [
+    {
+     "date": "2026-11-23T10:50:39Z",
+     "commit": "a3fb30f",
+     "wall_ms": 3460.045,
+     "ratio": 1.006777138452952
+    }
+   ]
+  },
+  {
+   "session": "large",
+   "step": "query",
+   "points": [
+    {
+     "date": "2026-11-23T10:50:39Z",
+     "commit": "a3fb30f",
+     "wall_ms": 85.249,
+     "ratio": 1.1128857753374268
+    }
+   ]
+  },
+  {
+   "session": "large",
+   "step": "check",
+   "points": [
+    {
+     "date": "2026-11-23T10:50:39Z",
+     "commit": "a3fb30f",
+     "wall_ms": 536.245,
+     "ratio": 0.551727011674601
+    }
+   ]
+  },
+  {
+   "session": "large",
+   "step": "single-edit",
+   "points": [
+    {
+     "date": "2026-11-23T10:50:39Z",
+     "commit": "a3fb30f",
+     "wall_ms": 541.933,
+     "ratio": 0.9483378280765149
+    }
+   ]
+  },
+  {
+   "session": "large",
+   "step": "catalog-after-edit",
+   "points": [
+    {
+     "date": "2026-11-23T10:50:39Z",
+     "commit": "a3fb30f",
+     "wall_ms": 377.93,
+     "ratio": 0.11199880512480548
+    }
+   ]
+  },
+  {
+   "session": "large",
+   "step": "bulk-alter",
+   "points": [
+    {
+     "date": "2026-11-23T10:50:39Z",
+     "commit": "a3fb30f",
+     "wall_ms": 1593.299,
+     "ratio": 0.2043209130990105
+    }
+   ]
+  },
+  {
+   "session": "large",
+   "step": "re-exec",
+   "points": [
+    {
+     "date": "2026-11-23T10:50:39Z",
+     "commit": "a3fb30f",
+     "wall_ms": 848.756,
+     "ratio": 0.19541715709425475
+    }
+   ]
+  },
+  {
+   "session": "large",
+   "step": "rename",
+   "points": [
+    {
+     "date": "2026-11-23T10:50:39Z",
+     "commit": "a3fb30f",
+     "wall_ms": 993.924,
+     "ratio": 1.1280618325029224
+    }
+   ]
+  },
+  {
+   "session": "scale",
+   "step": "(session-weighted total)",
+   "points": [
+    {
+     "date": "2026-11-23T10:50:39Z",
+     "commit": "a3fb30f",
+     "wall_ms": 8366.708999999999,
+     "ratio": 0.11036110348480171
+    }
+   ]
+  },
+  {
+   "session": "scale",
+   "step": "check-cold",
+   "statements": 1,
+   "points": [
+    {
+     "date": "2026-11-23T10:50:39Z",
+     "commit": "a3fb30f",
+     "wall_ms": 2040.683,
+     "ratio": 0.7679098220775185
+    }
+   ]
+  },
+  {
+   "session": "scale",
+   "step": "check-one",
+   "statements": 1,
+   "points": [
+    {
+     "date": "2026-11-23T10:50:39Z",
+     "commit": "a3fb30f",
+     "wall_ms": 598.109,
+     "ratio": 0.4301617653059358
+    }
+   ]
+  },
+  {
+   "session": "scale",
+   "step": "check-batch",
+   "statements": 100,
+   "points": [
+    {
+     "date": "2026-11-23T10:50:39Z",
+     "commit": "a3fb30f",
+     "wall_ms": 1094.908,
+     "ratio": 0.11761469389842112
+    }
+   ]
+  },
+  {
+   "session": "scale",
+   "step": "exec-batch",
+   "statements": 100,
+   "points": [
+    {
+     "date": "2026-11-23T10:50:39Z",
+     "commit": "a3fb30f",
+     "wall_ms": 1891.276,
+     "ratio": 0.08963494044933112
+    }
+   ]
+  },
+  {
+   "session": "scale",
+   "step": "re-exec-batch",
+   "statements": 100,
+   "points": [
+    {
+     "date": "2026-11-23T10:50:39Z",
+     "commit": "a3fb30f",
+     "wall_ms": 705.916,
+     "ratio": 0.0445568555376276
+    }
+   ]
+  },
+  {
+   "session": "scale",
+   "step": "new-batch",
+   "statements": 100,
+   "points": [
+    {
+     "date": "2026-11-23T10:50:39Z",
+     "commit": "a3fb30f",
+     "wall_ms": 2035.817,
+     "ratio": 0.08546505101370411
+    }
+   ]
+  },
+  {
+   "session": "runtime",
+   "step": "(session-weighted total)",
+   "points": [
+    {
+     "date": "2026-11-23T10:50:39Z",
+     "commit": "a3fb30f",
+     "wall_ms": 1665070.1979999999
+    }
+   ]
+  },
+  {
+   "session": "runtime",
+   "step": "mx-check",
+   "points": [
+    {
+     "date": "2026-11-23T10:50:39Z",
+     "commit": "a3fb30f",
+     "wall_ms": 6325.922,
+     "ratio": 0.4729461168222712
+    }
+   ]
+  },
+  {
+   "session": "runtime",
+   "step": "build",
+   "points": [
+    {
+     "date": "2026-11-23T10:50:39Z",
+     "commit": "a3fb30f",
+     "wall_ms": 51170.369,
+     "ratio": 0.9859961887212486
+    }
+   ]
+  },
+  {
+   "session": "runtime",
+   "step": "boot",
+   "points": [
+    {
+     "date": "2026-11-23T10:50:39Z",
+     "commit": "a3fb30f",
+     "wall_ms": 24340.736
+    }
+   ]
+  },
+  {
+   "session": "runtime",
+   "step": "page-check",
+   "points": [
+    {
+     "date": "2026-11-23T10:50:39Z",
+     "commit": "a3fb30f",
+     "wall_ms": 2929.517
+    }
+   ]
+  },
+  {
+   "session": "runtime",
+   "step": "hot-apply",
+   "points": [
+    {
+     "date": "2026-11-23T10:50:39Z",
+     "commit": "a3fb30f",
+     "wall_ms": 4682.772000000001
+    }
+   ]
+  },
+  {
+   "session": "runtime",
+   "step": "test-attach",
+   "points": [
+    {
+     "date": "2026-11-23T10:50:39Z",
+     "commit": "a3fb30f",
+     "wall_ms": 117.582
+    }
+   ]
+  },
+  {
+   "session": "runtime",
+   "step": "apply-entity",
+   "points": [
+    {
+     "date": "2026-11-23T10:50:39Z",
+     "commit": "a3fb30f",
+     "wall_ms": 16364.898
+    }
+   ]
+  },
+  {
+   "session": "runtime",
+   "step": "stop",
+   "points": [
+    {
+     "date": "2026-11-23T10:50:39Z",
+     "commit": "a3fb30f",
+     "wall_ms": 734.49
+    }
+   ]
+  },
+  {
+   "session": "runtime",
+   "step": "test-cold",
+   "points": [
+    {
+     "date": "2026-11-23T10:50:39Z",
+     "commit": "a3fb30f",
+     "wall_ms": 21245.238
+    }
+   ]
+  }
+ ]
+}
